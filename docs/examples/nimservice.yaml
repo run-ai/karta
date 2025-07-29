@@ -1,0 +1,96 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+metadata:
+  name: nimservice
+  namespace: kai-bolt-system
+  labels:
+    workload.type: model-inference
+    ai.framework: nim
+    example.type: functional
+spec:
+  # Target NVIDIA NIM inference services
+  kind:
+    group: apps.nvidia.com
+    version: v1alpha1
+    kind: NIMService
+  
+  # Child resources created but not represented as components
+  childKinds:
+  - group: apps
+    version: v1
+    kind: Deployment
+  
+  # Component structure - focused on inference runtime optimization with dependency
+  structureDefinition:
+  # NIMService component for service-level operations
+  - name: "nimservice"
+    specPath: ".spec"
+    kind:
+      group: "apps.nvidia.com"
+      version: "v1alpha1"
+      kind: "NIMService"
+    dependsOn: ["nimcache-ref"]
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "NIM_SERVICE_READY"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "NIM_SERVICE_FAILED"
+            status: "True"
+
+  # NIMCache reference - the pre-cached model that this service uses
+  - name: "nimcache-ref"
+    specPath: ".spec"
+    referenceDefinition:
+      componentKeyPath: ".spec.storage.nimCache.name"
+    kind:
+      group: "apps.nvidia.com"
+      version: "v1alpha1"
+      kind: "NIMCache"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "NIM_CACHE_JOB_COMPLETED"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "NIM_CACHE_RECONCILE_FAILED"
+            status: "True"
+
+  # Optimization instructions using new structure
+  optimizationsInstructions:
+    # Gang scheduling for inference pipeline coordination (preferred for serving)
+    gangScheduling:
+      podGroups:
+      - name: "inference-pipeline"
+        members:
+        - componentDefinitionName: "nimservice"
+          componentKeyPath: '.metadata.labels["app.kubernetes.io/name"]'
+
+    # GPU optimization for inference acceleration
+    multiNodeNVLink:
+      acceleratedComponents:
+      - componentDefinitionName: "nimservice"
+        componentKeyPath: '.metadata.labels["app.kubernetes.io/name"]'
+        filter: '(.spec.resources.limits["nvidia.com/gpu"] // 0) > 0'
+
+    # Node-level topology for low-latency inference
+    topologyAwareness:
+      topologyGroups:
+      - groupName: "inference-cluster"
+        preferredPlacement: "node"
+        members:
+        - componentDefinitionName: "nimservice"
+          componentKeyPath: '.metadata.labels["app.kubernetes.io/name"]' 

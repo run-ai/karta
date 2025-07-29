@@ -1,0 +1,131 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+metadata:
+  name: mpijob
+  namespace: kai-bolt-system
+  labels:
+    workload.type: distributed-training
+    ai.framework: mpi
+    example.type: functional
+spec:
+  # Target MPIJob distributed training workloads
+  kind:
+    group: kubeflow.org
+    version: v2beta1
+    kind: MPIJob
+  
+  # Component structure - focuses on MPI distributed training
+  structureDefinition:
+  # Root MPIJob resource
+  - name: "mpijob"
+    specPath: ".spec"
+    kind:
+      group: "kubeflow.org"
+      version: "v2beta1"
+      kind: "MPIJob"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Running"
+            status: "True"
+        completed:
+          byConditions:
+          - type: "Succeeded"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Failed"
+            status: "True"
+
+  # Launcher - coordinates MPI processes and job lifecycle
+  - name: "launcher"
+    specPath: ".spec.mpiReplicaSpecs.Launcher"
+    kind:
+      group: ""
+      version: "v1"
+      kind: "Pod"
+    ownerName: "mpijob"
+    scaleDefinition:
+      replicasPath: ".replicas"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Running"
+            status: "True"
+        completed:
+          byConditions:
+          - type: "Succeeded"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Failed"
+            status: "True"
+
+  # Worker nodes - execute MPI tasks under launcher coordination
+  - name: "worker"
+    specPath: ".spec.mpiReplicaSpecs.Worker"
+    kind:
+      group: ""
+      version: "v1"
+      kind: "Pod"
+    ownerName: "mpijob"
+    scaleDefinition:
+      replicasPath: ".replicas"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Running"
+            status: "True"
+        completed:
+          byConditions:
+          - type: "Succeeded"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Failed"
+            status: "True"
+
+  # Optimization instructions
+  optimizationsInstructions:
+    # Gang scheduling for MPI process coordination
+    gangScheduling:
+      podGroups:
+      - name: "mpi-gang"
+        members:
+        - componentDefinitionName: "launcher"
+          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
+        - componentDefinitionName: "worker"
+          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
+
+    # Multi-node NVLink for high-performance MPI communication
+    multiNodeNVLink:
+      acceleratedComponents:
+      - componentDefinitionName: "worker"
+        componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
+        filter: '(.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+
+    # Topology awareness for MPI network optimization
+    topologyAwareness:
+      topologyGroups:
+      - groupName: "mpi-cluster"
+        preferredPlacement: "zone"
+        members:
+        - componentDefinitionName: "launcher"
+          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
+        - componentDefinitionName: "worker"
+          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]' 

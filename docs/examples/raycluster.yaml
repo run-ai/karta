@@ -1,0 +1,122 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+metadata:
+  name: raycluster
+  namespace: kai-bolt-system
+  labels:
+    workload.type: distributed-computing
+    ai.framework: ray
+    example.type: functional
+spec:
+  # Target Ray distributed computing clusters
+  kind:
+    group: ray.io
+    version: v1
+    kind: RayCluster
+  
+  # Component structure - focuses on Ray cluster coordination
+  structureDefinition:
+  # Root RayCluster resource
+  - name: "raycluster"
+    specPath: ".spec"
+    kind:
+      group: "ray.io"
+      version: "v1"
+      kind: "RayCluster"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Ready"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Ready"
+            status: "False"
+
+  # Head node - Ray cluster coordinator and scheduler
+  - name: "head"
+    specPath: ".spec.headGroupSpec"
+    kind:
+      group: "apps"
+      version: "v1"
+      kind: "Deployment"
+    ownerName: "raycluster"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Ready"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Ready"
+            status: "False"
+
+  # Worker group - distributed computation nodes
+  - name: "worker"
+    specPath: ".spec.workerGroupSpecs[0]"
+    kind:
+      group: "apps"
+      version: "v1"
+      kind: "Deployment"
+    ownerName: "raycluster"
+    scaleDefinition:
+      replicasPath: ".replicas"
+      minReplicasPath: ".minReplicas"
+      maxReplicasPath: ".maxReplicas"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Ready"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Ready"
+            status: "False"
+
+  # Optimization instructions
+  optimizationsInstructions:
+    # Gang scheduling for Ray cluster startup coordination
+    gangScheduling:
+      podGroups:
+      - name: "ray-cluster"
+        members:
+        - componentDefinitionName: "head"
+          componentKeyPath: '.metadata.labels["ray.io/cluster"]'
+        - componentDefinitionName: "worker"
+          componentKeyPath: '.metadata.labels["ray.io/cluster"]'
+
+    # Multi-node NVLink for distributed Ray workloads
+    multiNodeNVLink:
+      acceleratedComponents:
+      - componentDefinitionName: "head"
+        componentKeyPath: '.metadata.labels["ray.io/cluster"]'
+        filter: '(.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+      - componentDefinitionName: "worker"
+        componentKeyPath: '.metadata.labels["ray.io/cluster"]'
+        filter: '(.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+
+    # Topology awareness for Ray cluster placement
+    topologyAwareness:
+      topologyGroups:
+      - groupName: "ray-computing"
+        preferredPlacement: "zone"
+        members:
+        - componentDefinitionName: "head"
+          componentKeyPath: '.metadata.labels["ray.io/cluster"]'
+        - componentDefinitionName: "worker"
+          componentKeyPath: '.metadata.labels["ray.io/cluster"]' 

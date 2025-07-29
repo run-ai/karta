@@ -1,0 +1,122 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+metadata:
+  name: lws
+  namespace: kai-bolt-system
+  labels:
+    workload.type: leader-worker
+    ai.framework: leaderworkerset
+    example.type: functional
+spec:
+  # Target LeaderWorkerSet workloads with leader-worker patterns
+  kind:
+    group: leaderworkerset.x-k8s.io
+    version: v1
+    kind: LeaderWorkerSet
+  
+  # Component structure - focuses on leader-worker coordination
+  structureDefinition:
+  # Root LeaderWorkerSet resource
+  - name: "leaderworkerset"
+    specPath: ".spec"
+    kind:
+      group: "leaderworkerset.x-k8s.io"
+      version: "v1"
+      kind: "LeaderWorkerSet"
+    scaleDefinition:
+      replicasPath: ".spec.replicas"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Available"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Available"
+            status: "False"
+
+  # Leader - coordinates and manages worker nodes
+  - name: "leader"
+    specPath: ".spec.leaderWorkerTemplate.leaderTemplate"
+    kind:
+      group: "apps"
+      version: "v1"
+      kind: "StatefulSet"
+    ownerName: "leaderworkerset"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Available"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Available"
+            status: "False"
+
+  # Worker group - executes tasks under leader coordination
+  - name: "worker"
+    specPath: ".spec.leaderWorkerTemplate.workerTemplate"
+    kind:
+      group: "apps"
+      version: "v1"
+      kind: "StatefulSet"
+    ownerName: "leaderworkerset"
+    scaleDefinition:
+      replicasPath: ".spec.leaderWorkerTemplate.size"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Available"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Available"
+            status: "False"
+
+  # Optimization instructions
+  optimizationsInstructions:
+    # Gang scheduling for leader-worker coordination
+    gangScheduling:
+      podGroups:
+      - name: "lws-gang"
+        members:
+        - componentDefinitionName: "leader"
+          componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
+        - componentDefinitionName: "worker"
+          componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
+
+    # Multi-node NVLink for distributed processing
+    multiNodeNVLink:
+      acceleratedComponents:
+      - componentDefinitionName: "leader"
+        componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
+        filter: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+      - componentDefinitionName: "worker"
+        componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
+        filter: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+
+    # Topology awareness for leader-worker placement
+    topologyAwareness:
+      topologyGroups:
+      - groupName: "lws-cluster"
+        preferredPlacement: "zone"
+        members:
+        - componentDefinitionName: "leader"
+          componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
+        - componentDefinitionName: "worker"
+          componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]' 

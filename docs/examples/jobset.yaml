@@ -1,0 +1,98 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+metadata:
+  name: jobset
+  namespace: kai-bolt-system
+  labels:
+    workload.type: batch-processing
+    ai.framework: jobset
+    example.type: functional
+spec:
+  # Target JobSet workloads for coordinated batch processing
+  kind:
+    group: jobset.x-k8s.io
+    version: v1alpha2
+    kind: JobSet
+  
+  # Component structure - focuses on replicated job management
+  structureDefinition:
+  # Root JobSet resource
+  - name: "jobset"
+    specPath: ".spec"
+    kind:
+      group: "jobset.x-k8s.io"
+      version: "v1alpha2"
+      kind: "JobSet"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "JobsReady"
+            status: "True"
+        completed:
+          byConditions:
+          - type: "Completed"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Failed"
+            status: "True"
+
+  # ReplicatedJob - represents the actual Job resources created by JobSet
+  - name: "replicatedjob"
+    specPath: ".spec.replicatedJobs[0]"
+    kind:
+      group: "batch"
+      version: "v1"
+      kind: "Job"
+    ownerName: "jobset"
+    scaleDefinition:
+      replicasPath: ".replicas"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "JobsReady"
+            status: "True"
+        completed:
+          byConditions:
+          - type: "Completed"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Failed"
+            status: "True"
+
+  # Optimization instructions
+  optimizationsInstructions:
+    # Gang scheduling for coordinated job execution
+    gangScheduling:
+      podGroups:
+      - name: "jobset-gang"
+        members:
+        - componentDefinitionName: "replicatedjob"
+          componentKeyPath: '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]'
+
+    # Multi-node NVLink for GPU-accelerated batch processing
+    multiNodeNVLink:
+      acceleratedComponents:
+      - componentDefinitionName: "replicatedjob"
+        componentKeyPath: '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]'
+        filter: '(.spec.template.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+
+    # Topology awareness for batch job placement
+    topologyAwareness:
+      topologyGroups:
+      - groupName: "batch-cluster"
+        preferredPlacement: "node"
+        members:
+        - componentDefinitionName: "replicatedjob"
+          componentKeyPath: '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]' 

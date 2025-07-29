@@ -14,9 +14,10 @@ vendor/
 !vendor/**/zz_generated.*
 config/crd/_.yaml
 
-# editor and IDE paraphernalia
+# editor and IDE
 *.iml
 *.swp
 *.swo
 *~
 .vscode/
+.idea

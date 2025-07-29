@@ -1,0 +1,196 @@
+@startuml RID Structure
+!theme plain
+skinparam backgroundColor white
+skinparam classBackgroundColor white
+skinparam classBorderColor black
+skinparam arrowColor black
+
+title Resource Interpretation Definition (RID) Architecture
+
+package "RID Core Structure" {
+  class ResourceInterpretationDefinition {
+    +apiVersion: string
+    +kind: string
+    +metadata: ObjectMeta
+    +spec: RIDSpec
+  }
+  
+  class RIDSpec {
+    +kind: GroupVersionKind
+    +structureDefinition: ComponentDefinition[]
+    +childKinds: GroupVersionKind[]
+    +optimizationsInstructions: OptimizationsInstructions
+  }
+  
+  class GroupVersionKind {
+    +group: string
+    +version: string
+    +kind: string
+  }
+}
+
+package "Component Architecture" {
+  class ComponentDefinition {
+    +name: string
+    +kind: GroupVersionKind
+    +specPath: string
+    +ownerName: string?
+    +dependsOn: string[]
+    +referenceDefinition: ReferenceDefinition?
+    +scaleDefinition: ScaleDefinition?
+    +statusDefinition: StatusDefinition?
+  }
+  
+  class ReferenceDefinition {
+    +componentKeyPath: string
+  }
+  
+  class ScaleDefinition {
+    +replicasPath: string?
+    +minReplicasPath: string?
+    +maxReplicasPath: string?
+  }
+  
+  class StatusDefinition {
+    +conditionsDefinition: ConditionsDefinition
+    +statusMappings: StatusMappings
+  }
+  
+  class ConditionsDefinition {
+    +conditionsPath: string
+    +typeFieldName: string
+    +statusFieldName: string
+  }
+  
+  class StatusMappings {
+    +running: ConditionMapping
+    +completed: ConditionMapping?
+    +failed: ConditionMapping
+  }
+}
+
+package "Optimization Instructions" {
+  class OptimizationsInstructions {
+    +gangScheduling: GangScheduling?
+    +multiNodeNVLink: MultiNodeNVLink?
+    +topologyAwareness: TopologyAwareness?
+  }
+  
+  class GangScheduling {
+    +podGroups: PodGroupDefinition[]
+  }
+  
+  class MultiNodeNVLink {
+    +acceleratedComponents: ComponentSelector[]
+  }
+  
+  class TopologyAwareness {
+    +topologyGroups: TopologyGroupDefinition[]
+  }
+  
+  class PodGroupDefinition {
+    +name: string
+    +members: ComponentSelector[]
+  }
+  
+  class ComponentSelector {
+    +componentDefinitionName: string
+    +componentKeyPath: string
+    +filter: string?
+  }
+  
+  class TopologyGroupDefinition {
+    +groupName: string
+    +preferredPlacement: string
+    +members: ComponentSelector[]
+  }
+}
+
+package "Framework Examples" {
+  class PyTorchJobRID {
+    <<example>>
+    +kind: PyTorchJob
+    +components: [pytorchjob, master, worker]
+    +instructions: [gangScheduling, multiNodeNVLink]
+  }
+  
+  class NIMServiceRID {
+    <<example>>
+    +kind: NIMService
+    +components: [nimservice, nimcache-ref]
+    +dependencies: nimservice → nimcache-ref
+    +instructions: [multiNodeNVLink]
+  }
+  
+  class KnativeServiceRID {
+    <<example>>
+    +kind: Service
+    +components: [service, revision]
+    +childKinds: [Deployment]
+    +instructions: [topologyAwareness]
+  }
+}
+
+' Core Relationships
+ResourceInterpretationDefinition ||--|| RIDSpec
+RIDSpec ||--|| GroupVersionKind : "targets"
+RIDSpec ||--o{ ComponentDefinition : "contains"
+RIDSpec ||--o{ GroupVersionKind : "childKinds"
+RIDSpec ||--|| OptimizationsInstructions
+
+' Component Relationships
+ComponentDefinition ||--|| GroupVersionKind : "defines"
+ComponentDefinition ||--o| ReferenceDefinition
+ComponentDefinition ||--o| ScaleDefinition
+ComponentDefinition ||--o| StatusDefinition
+ComponentDefinition ||--o{ ComponentDefinition : "dependsOn"
+ComponentDefinition ||--o{ ComponentDefinition : "ownerName"
+
+StatusDefinition ||--|| ConditionsDefinition
+StatusDefinition ||--|| StatusMappings
+
+' Instruction Relationships
+OptimizationsInstructions ||--o| GangScheduling
+OptimizationsInstructions ||--o| MultiNodeNVLink
+OptimizationsInstructions ||--o| TopologyAwareness
+
+GangScheduling ||--o{ PodGroupDefinition
+MultiNodeNVLink ||--o{ ComponentSelector
+TopologyAwareness ||--o{ TopologyGroupDefinition
+TopologyGroupDefinition ||--o{ ComponentSelector
+PodGroupDefinition ||--o{ ComponentSelector
+
+' Example Relationships
+PyTorchJobRID ..|> ResourceInterpretationDefinition : "implements"
+NIMServiceRID ..|> ResourceInterpretationDefinition : "implements"
+KnativeServiceRID ..|> ResourceInterpretationDefinition : "implements"
+
+note top of ResourceInterpretationDefinition
+  **Resource Interpretation Definition**
+  
+  Teaches Kai-bolt how to:
+  • Understand workload structure
+  • Monitor workload health  
+  • Optimize workload execution
+end note
+
+note top of ComponentDefinition
+  **Component Types:**
+  • Root: Main CRD (no ownerName)
+  • Sub: Child components (has ownerName)  
+  • Reference: "External" dependencies
+end note
+
+note top of OptimizationsInstructions
+  **Instruction Philosophy:**
+  • Present = Required
+  • Absent = Disabled
+end note
+
+note bottom of ReferenceDefinition
+  **Reference Pattern:**
+  • specPath points to referenced object's spec
+  • componentKeyPath points to where name is stored on the pod
+end note
+
+@enduml 

@@ -1,0 +1,122 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+metadata:
+  name: milvus
+  namespace: kai-bolt-system
+  labels:
+    workload.type: vector-database
+    ai.framework: milvus
+    example.type: functional
+spec:
+  # Target Milvus vector database deployments
+  kind:
+    group: milvus.io
+    version: v1beta1
+    kind: Milvus
+  
+  # Component structure - focuses on distributed vector processing
+  structureDefinition:
+  # Root Milvus resource
+  - name: "milvus"
+    specPath: ".spec"
+    kind:
+      group: "milvus.io"
+      version: "v1beta1"
+      kind: "Milvus"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "MilvusReady"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "MilvusReady"
+            status: "False"
+
+  # QueryNode - handles vector search queries
+  - name: "querynode"
+    specPath: ".spec.components.queryNode"
+    kind:
+      group: "apps"
+      version: "v1"
+      kind: "StatefulSet"
+    ownerName: "milvus"
+    scaleDefinition:
+      replicasPath: ".replicas"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "MilvusReady"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "MilvusReady"
+            status: "False"
+
+  # DataNode - processes and stores vector data
+  - name: "datanode"
+    specPath: ".spec.components.dataNode"
+    kind:
+      group: "apps"
+      version: "v1"
+      kind: "StatefulSet"
+    ownerName: "milvus"
+    scaleDefinition:
+      replicasPath: ".replicas"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "MilvusReady"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "MilvusReady"
+            status: "False"
+
+  # Optimization instructions
+  optimizationsInstructions:
+    # Gang scheduling for Milvus component coordination
+    gangScheduling:
+      podGroups:
+      - name: "milvus-cluster"
+        members:
+        - componentDefinitionName: "querynode"
+          componentKeyPath: '.metadata.labels["app.kubernetes.io/instance"]'
+        - componentDefinitionName: "datanode"
+          componentKeyPath: '.metadata.labels["app.kubernetes.io/instance"]'
+
+    # Multi-node NVLink for vector search acceleration
+    multiNodeNVLink:
+      acceleratedComponents:
+      - componentDefinitionName: "querynode"
+        componentKeyPath: '.metadata.labels["app.kubernetes.io/instance"]'
+        filter: '(.spec.resources.limits["nvidia.com/gpu"] // 0) > 0'
+      - componentDefinitionName: "datanode"
+        componentKeyPath: '.metadata.labels["app.kubernetes.io/instance"]'
+        filter: '(.spec.resources.limits["nvidia.com/gpu"] // 0) > 0'
+
+    # Topology awareness for distributed vector operations
+    topologyAwareness:
+      topologyGroups:
+      - groupName: "vector-cluster"
+        preferredPlacement: "zone"
+        members:
+        - componentDefinitionName: "querynode"
+          componentKeyPath: '.metadata.labels["app.kubernetes.io/instance"]'
+        - componentDefinitionName: "datanode"
+          componentKeyPath: '.metadata.labels["app.kubernetes.io/instance"]' 

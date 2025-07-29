@@ -1,0 +1,134 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+metadata:
+  name: pytorch
+  namespace: kai-bolt-system
+  labels:
+    workload.type: distributed-training
+    ai.framework: pytorch
+    example.type: functional
+spec:
+  # Target PyTorchJob distributed training workloads
+  kind:
+    group: kubeflow.org
+    version: v1
+    kind: PyTorchJob
+  
+  # Component structure - focuses on critical training components
+  structureDefinition:
+  # Root PyTorchJob resource
+  - name: "pytorchjob"
+    specPath: ".spec"
+    kind:
+      group: "kubeflow.org"
+      version: "v1"
+      kind: "PyTorchJob"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Running"
+            status: "True"
+        completed:
+          byConditions:
+          - type: "Succeeded"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Failed"
+            status: "True"
+
+  # Master node - coordinates training and handles model checkpointing
+  - name: "master"
+    specPath: ".spec.pytorchReplicaSpecs.Master"
+    kind:
+      group: ""
+      version: "v1"
+      kind: "Pod"
+    ownerName: "pytorchjob"
+    scaleDefinition:
+      replicasPath: ".replicas"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Running"
+            status: "True"
+        completed:
+          byConditions:
+          - type: "Succeeded"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Failed"
+            status: "True"
+
+  # Worker nodes - perform distributed training computation
+  - name: "worker"
+    specPath: ".spec.pytorchReplicaSpecs.Worker"
+    kind:
+      group: ""
+      version: "v1"
+      kind: "Pod"
+    ownerName: "pytorchjob"
+    scaleDefinition:
+      replicasPath: ".replicas"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Running"
+            status: "True"
+        completed:
+          byConditions:
+          - type: "Succeeded"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Failed"
+            status: "True"
+
+  # Optimization instructions
+  optimizationsInstructions:
+    # Gang scheduling for distributed training coordination
+    gangScheduling:
+      podGroups:
+      - name: "training-gang"
+        members:
+        - componentDefinitionName: "master"
+          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
+        - componentDefinitionName: "worker"
+          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
+
+    # Multi-node NVLink for GPU-accelerated training
+    multiNodeNVLink:
+      acceleratedComponents:
+      - componentDefinitionName: "master"
+        componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
+        filter: '(.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+      - componentDefinitionName: "worker"
+        componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
+        filter: '(.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+
+    # Topology awareness for training performance
+    topologyAwareness:
+      topologyGroups:
+      - groupName: "training-cluster"
+        preferredPlacement: "zone"
+        members:
+        - componentDefinitionName: "master"
+          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
+        - componentDefinitionName: "worker"
+          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]' 

@@ -1,0 +1,99 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+metadata:
+  name: knative-serving
+  namespace: kai-bolt-system
+  labels:
+    workload.type: serverless
+    ai.framework: knative
+    example.type: functional
+spec:
+  # Target Knative Service deployments for serverless workloads
+  kind:
+    group: serving.knative.dev
+    version: v1
+    kind: Service
+  
+  # Child resources created but not represented as components
+  childKinds:
+  - group: apps
+    version: v1
+    kind: Deployment
+  
+  # Component structure - focuses on serverless autoscaling
+  structureDefinition:
+  # Service - top-level traffic management
+  - name: "service"
+    specPath: ".spec"
+    kind:
+      group: "serving.knative.dev"
+      version: "v1"
+      kind: "Service"
+    scaleDefinition:
+      minReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"]'
+      maxReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]'
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Ready"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Ready"
+            status: "False"
+
+  # Knative Revision component for revision-level optimization
+  - name: "revision"
+    specPath: ".spec"
+    referenceDefinition:
+      componentKeyPath: ".status.latestCreatedRevisionName"
+    ownerName: "service"
+    kind:
+      group: "serving.knative.dev"
+      version: "v1"
+      kind: "Revision"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Ready"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Ready"
+            status: "False"
+
+  # Optimization instructions
+  optimizationsInstructions:
+    # Gang scheduling for serverless workload coordination
+    gangScheduling:
+      podGroups:
+      - name: "serverless-pipeline"
+        members:
+        - componentDefinitionName: "service"
+          componentKeyPath: '.metadata.labels["serving.knative.dev/service"]'
+
+    # Multi-node NVLink for GPU-accelerated serverless functions
+    multiNodeNVLink:
+      acceleratedComponents:
+      - componentDefinitionName: "service"
+        componentKeyPath: '.metadata.labels["serving.knative.dev/service"]'
+        filter: '(.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+
+    # Topology awareness for serverless placement
+    topologyAwareness:
+      topologyGroups:
+      - groupName: "serverless-cluster"
+        preferredPlacement: "node"
+        members:
+        - componentDefinitionName: "service"
+          componentKeyPath: '.metadata.labels["serving.knative.dev/service"]' 

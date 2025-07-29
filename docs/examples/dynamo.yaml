@@ -1,0 +1,112 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+metadata:
+  name: dynamo
+  namespace: kai-bolt-system
+  labels:
+    workload.type: graph-inference
+    ai.framework: dynamo
+    example.type: functional
+spec:
+  # Target NVIDIA Dynamo inference graph deployments
+  kind:
+    group: nvidia.com
+    version: v1alpha1
+    kind: DynamoGraphDeployment
+  
+  # Child resources created but not represented as components
+  childKinds:
+  - group: apps
+    version: v1
+    kind: Deployment
+  - group: ""
+    version: v1
+    kind: Service
+  - group: ""
+    version: v1
+    kind: ConfigMap
+  - group: autoscaling
+    version: v2
+    kind: HorizontalPodAutoscaler
+  - group: leaderworkerset.x-k8s.io
+    version: v1
+    kind: LeaderWorkerSet
+  - group: scheduling.volcano.sh
+    version: v1beta1
+    kind: PodGroup
+  
+  # Component structure - focused on core optimization
+  structureDefinition:
+  # DynamoGraphDeployment component for deployment-level operations
+  - name: "dynamographdeployment"
+    specPath: ".spec"
+    kind:
+      group: "nvidia.com"
+      version: "v1alpha1"
+      kind: "DynamoGraphDeployment"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Available"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Available"
+            status: "False"
+
+  # Service component - handles inference serving requests  
+  - name: "service"
+    specPath: ".spec.services"
+    kind:
+      group: "nvidia.com"
+      version: "v1alpha1"
+      kind: "DynamoComponentDeployment"
+    ownerName: "dynamographdeployment"
+    scaleDefinition:
+      replicasPath: ".replicas"
+    statusDefinition:
+      conditionsDefinition:
+        conditionsPath: "status.conditions"
+        typeFieldName: "type"
+        statusFieldName: "status"
+      statusMappings:
+        running:
+          byConditions:
+          - type: "Available"
+            status: "True"
+        failed:
+          byConditions:
+          - type: "Available"
+            status: "False"
+
+  # Optimization instructions
+  optimizationsInstructions:
+    # Gang scheduling for graph service coordination
+    gangScheduling:
+      podGroups:
+      - name: "dynamo-graph"
+        members:
+        - componentDefinitionName: "service"
+          componentKeyPath: '.metadata.labels["nvidia.com/dynamo-service"]'
+
+    # GPU optimization for inference acceleration
+    multiNodeNVLink:
+      acceleratedComponents:
+      - componentDefinitionName: "service"
+        componentKeyPath: '.metadata.labels["nvidia.com/dynamo-service"]'
+        filter: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+
+    # Topology optimization for inference latency
+    topologyAwareness:
+      topologyGroups:
+      - groupName: "inference-cluster"
+        preferredPlacement: "node"
+        members:
+        - componentDefinitionName: "service"
+          componentKeyPath: '.metadata.labels["nvidia.com/dynamo-service"]'
+          filter: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0' 

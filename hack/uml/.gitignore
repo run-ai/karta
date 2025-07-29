@@ -1,0 +1,14 @@
+# Virtual environment
+venv/
+
+# Temporary files
+temp_generate.py
+*.tmp
+
+# Downloaded JAR files
+plantuml.jar
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo 
