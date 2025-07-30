@@ -19,21 +19,9 @@ spec:
   - group: apps
     version: v1
     kind: Deployment
-  - group: ""
-    version: v1
-    kind: Service
-  - group: ""
-    version: v1
-    kind: ConfigMap
-  - group: autoscaling
-    version: v2
-    kind: HorizontalPodAutoscaler
   - group: leaderworkerset.x-k8s.io
     version: v1
     kind: LeaderWorkerSet
-  - group: scheduling.volcano.sh
-    version: v1beta1
-    kind: PodGroup
   
   # Component structure - focused on core optimization
   structureDefinition:
