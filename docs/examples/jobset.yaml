@@ -87,7 +87,7 @@ spec:
       acceleratedComponents:
       - componentDefinitionName: "replicatedjob"
         componentKeyPath: '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]'
-        filter: '(.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+        filter: 'any(.spec.template.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
 
     # Topology awareness for batch job placement
     topologyAwareness:

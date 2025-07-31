@@ -118,10 +118,10 @@ spec:
       acceleratedComponents:
       - componentDefinitionName: "launcher"
         componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
-        filter: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+        filter: 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
       - componentDefinitionName: "worker"
         componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
-        filter: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+        filter: 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
 
     # Topology awareness for MPI network optimization
     topologyAwareness:

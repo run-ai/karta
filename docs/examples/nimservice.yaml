@@ -88,7 +88,7 @@ spec:
       acceleratedComponents:
       - componentDefinitionName: "nimservice"
         componentKeyPath: '.metadata.labels["nim.nvidia.com/service-name"]'
-        filter: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+        filter: 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
 
     # Node-level topology for low-latency inference
     topologyAwareness:

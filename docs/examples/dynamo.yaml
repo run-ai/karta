@@ -91,7 +91,7 @@ spec:
       acceleratedComponents:
       - componentDefinitionName: "service"
         componentKeyPath: '.metadata.labels["nvidia.com/dynamo-service"]'
-        filter: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+        filter: 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
 
     # Topology optimization for inference latency
     topologyAwareness:
@@ -101,4 +101,4 @@ spec:
         members:
         - componentDefinitionName: "service"
           componentKeyPath: '.metadata.labels["nvidia.com/dynamo-service"]'
-          filter: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0' 
+          filter: 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)' 
