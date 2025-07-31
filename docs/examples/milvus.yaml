@@ -26,7 +26,7 @@ spec:
       kind: "Milvus"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -51,7 +51,7 @@ spec:
       replicasPath: ".spec.components.queryNode.replicas"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -76,7 +76,7 @@ spec:
       replicasPath: ".spec.components.dataNode.replicas"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:

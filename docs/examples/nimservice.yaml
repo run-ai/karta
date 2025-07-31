@@ -37,7 +37,7 @@ spec:
       dependsOn: ["nimcache-ref"]
       statusDefinition:
         conditionsDefinition:
-          conditionsPath: ".status.conditions"
+          path: ".status.conditions"
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:
@@ -60,7 +60,7 @@ spec:
         kind: "NIMCache"
       statusDefinition:
         conditionsDefinition:
-          conditionsPath: ".status.conditions"
+          path: ".status.conditions"
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:

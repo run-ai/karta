@@ -26,7 +26,7 @@ spec:
       kind: "MPIJob"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -55,7 +55,7 @@ spec:
       replicasPath: ".spec.mpiReplicaSpecs.Launcher.replicas"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -84,7 +84,7 @@ spec:
       replicasPath: ".spec.mpiReplicaSpecs.Worker.replicas"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:

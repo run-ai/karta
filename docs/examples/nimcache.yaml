@@ -33,7 +33,7 @@ spec:
         kind: "NIMCache"
       statusDefinition:
         conditionsDefinition:
-          conditionsPath: ".status.conditions"
+          path: ".status.conditions"
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:

@@ -26,7 +26,7 @@ spec:
       kind: "LeaderWorkerSet"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -49,7 +49,7 @@ spec:
     ownerName: "leaderworkerset"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -74,7 +74,7 @@ spec:
       replicasPath: ".spec.leaderWorkerTemplate.size"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:

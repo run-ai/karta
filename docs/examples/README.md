@@ -76,7 +76,7 @@ All paths in component definitions use **absolute JQ expressions** from the main
     minReplicasPath: ".spec.elasticPolicy.minReplicas"        # Absolute from PyTorchJob
     maxReplicasPath: ".spec.elasticPolicy.maxReplicas"        # Absolute from PyTorchJob
   statusDefinition:
-    conditionsPath: ".status.conditions"                     # Absolute from PyTorchJob
+    path: ".status.conditions"                     # Absolute from PyTorchJob
 ```
 
 **Key Rules:**
@@ -155,7 +155,7 @@ For workloads that depend on external components (like NIMService → NIMCache):
   specPath: ".spec"                                    # NIMCache resource context
   isReference: true
   statusDefinition:
-    conditionsPath: ".status.conditions"              # Absolute from NIMCache resource
+    path: ".status.conditions"              # Absolute from NIMCache resource
 ```
 
 **Key Rules:**

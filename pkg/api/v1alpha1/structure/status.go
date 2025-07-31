@@ -21,7 +21,7 @@ type PhaseDefinition struct {
 }
 
 type ConditionsDefinition struct {
-	ConditionsPath   string `json:"conditionsPath"`
+	Path             string `json:"path"`
 	TypeFieldName    string `json:"typeFieldName"`
 	StatusFieldName  string `json:"statusFieldName"`
 	MessageFieldName string `json:"messageFieldName"` // a string field that contains a message regarding the condition's status

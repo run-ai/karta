@@ -26,7 +26,7 @@ spec:
       kind: "RayCluster"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -49,7 +49,7 @@ spec:
     ownerName: "raycluster"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -76,7 +76,7 @@ spec:
       maxReplicasPath: ".spec.workerGroupSpecs[].maxReplicas"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:

@@ -26,7 +26,7 @@ spec:
       kind: "InferenceService"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -52,7 +52,7 @@ spec:
       maxReplicasPath: ".spec.predictor.maxReplicas"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -78,7 +78,7 @@ spec:
       maxReplicasPath: ".spec.transformer.maxReplicas"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: ".status.conditions"
+        path: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:

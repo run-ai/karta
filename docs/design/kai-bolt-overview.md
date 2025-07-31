@@ -123,7 +123,7 @@ scaleDefinition:
 ```yaml
 statusDefinition:
   conditionsDefinition:
-    conditionsPath: "status.conditions"    # Where to find conditions
+    path: "status.conditions"    # Where to find conditions
     typeFieldName: "type"                  # Condition type field name
     statusFieldName: "status"              # Condition status field name
   statusMappings:
