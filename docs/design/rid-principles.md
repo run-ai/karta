@@ -143,7 +143,7 @@ Avoid complex OR logic on parent components.
 
 **✅ Correct**: Target specific components
 ```yaml
-optimizationsInstructions:
+optimizationInstructions:
   multiNodeNVLink:
     acceleratedComponents:
     - componentDefinitionName: "master"
@@ -154,7 +154,7 @@ optimizationsInstructions:
 
 **❌ Wrong**: Complex filters on parent
 ```yaml
-optimizationsInstructions:
+optimizationInstructions:
   multiNodeNVLink:
     acceleratedComponents:
     - componentDefinitionName: "pytorchjob"
@@ -166,7 +166,7 @@ Use single instruction instances with multiple members, not multiple instruction
 
 **✅ Correct**:
 ```yaml
-optimizationsInstructions:
+optimizationInstructions:
   gangScheduling:  # Single instruction type
     podGroups:
     - name: "training-cluster"

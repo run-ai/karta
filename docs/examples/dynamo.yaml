@@ -9,71 +9,75 @@ metadata:
     example.type: functional
 spec:
   # Target NVIDIA Dynamo inference graph deployments
-  kind:
+  topOwnerKind:
     group: nvidia.com
     version: v1alpha1
     kind: DynamoGraphDeployment
   
-  # Child resources created but not represented as components
-  childKinds:
-  - group: apps
-    version: v1
-    kind: Deployment
-  - group: leaderworkerset.x-k8s.io
-    version: v1
-    kind: LeaderWorkerSet
-  
   # Component structure - focused on core optimization
   structureDefinition:
-  # DynamoGraphDeployment component for deployment-level operations
-  - name: "dynamographdeployment"
-    specPath: ".spec"
-    kind:
-      group: "nvidia.com"
-      version: "v1alpha1"
-      kind: "DynamoGraphDeployment"
-    statusDefinition:
-      conditionsDefinition:
-        conditionsPath: "status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Available"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Available"
-            status: "False"
+    # Child resources created but not represented as components
+    additionalChildKinds:
+    - group: apps
+      version: v1
+      kind: Deployment
+    - group: leaderworkerset.x-k8s.io
+      version: v1
+      kind: LeaderWorkerSet
+    
+    # Component definitions
+    components:
+    # Root DynamoGraphDeployment resource
+    - name: "dynamographdeployment"
+      specPath: ".spec"
+      kind:
+        group: "nvidia.com"
+        version: "v1alpha1"
+        kind: "DynamoGraphDeployment"
+      statusDefinition:
+        conditionsDefinition:
+          conditionsPath: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Available"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Available"
+              status: "False"
 
-  # Service component - handles inference serving requests  
-  - name: "service"
-    specPath: ".spec.services"
-    kind:
-      group: "nvidia.com"
-      version: "v1alpha1"
-      kind: "DynamoComponentDeployment"
-    ownerName: "dynamographdeployment"
-    scaleDefinition:
-      replicasPath: ".replicas"
-    statusDefinition:
-      conditionsDefinition:
-        conditionsPath: "status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Available"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Available"
-            status: "False"
+    # Service component - handles inference serving requests  
+    - name: "service"
+      specPath: ".spec.services[]"
+      kind:
+        group: "nvidia.com"
+        version: "v1alpha1"
+        kind: "DynamoComponentDeployment"
+      ownerName: "dynamographdeployment"
+      scaleDefinition:
+        replicasPath: ".spec.services[].replicas"
+        minReplicasPath: ".spec.services[].autoscaling.minReplicas"
+        maxReplicasPath: ".spec.services[].autoscaling.maxReplicas"
+      statusDefinition:
+        conditionsDefinition:
+          conditionsPath: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Available"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Available"
+              status: "False"
 
   # Optimization instructions
-  optimizationsInstructions:
+  optimizationInstructions:
     # Gang scheduling for graph service coordination
     gangScheduling:
       podGroups:
@@ -83,7 +87,7 @@ spec:
           componentKeyPath: '.metadata.labels["nvidia.com/dynamo-service"]'
 
     # GPU optimization for inference acceleration
-    multiNodeNVLink:
+    gpuInterconnect:
       acceleratedComponents:
       - componentDefinitionName: "service"
         componentKeyPath: '.metadata.labels["nvidia.com/dynamo-service"]'

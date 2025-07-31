@@ -9,47 +9,49 @@ metadata:
     example.type: functional
 spec:
   # Target NVIDIA NIM model caching workloads
-  kind:
+  topOwnerKind:
     group: apps.nvidia.com
     version: v1alpha1
     kind: NIMCache
   
-  # Child resources created but not represented as components
-  childKinds:
-  - group: batch
-    version: v1
-    kind: Job
-  
   # Component structure - focuses on model caching operations
   structureDefinition:
-  # Root NIMCache resource for caching operations
-  - name: "nimcache"
-    specPath: ".spec"
-    kind:
-      group: "apps.nvidia.com"
-      version: "v1alpha1"
-      kind: "NIMCache"
-    statusDefinition:
-      conditionsDefinition:
-        conditionsPath: "status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "NIM_CACHE_JOB_COMPLETED"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "NIM_CACHE_RECONCILE_FAILED"
-            status: "True"
-        pending:
-          byConditions:
-          - type: "NIM_CACHE_JOB_PENDING"
-            status: "True"
+    # Child resources created but not represented as components
+    additionalChildKinds:
+    - group: batch
+      version: v1
+      kind: Job
+    
+    # Component definitions
+    components:
+    # Root NIMCache resource
+    - name: "nimcache"
+      specPath: ".spec"
+      kind:
+        group: "apps.nvidia.com"
+        version: "v1alpha1"
+        kind: "NIMCache"
+      statusDefinition:
+        conditionsDefinition:
+          conditionsPath: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "NIM_CACHE_JOB_COMPLETED"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "NIM_CACHE_RECONCILE_FAILED"
+              status: "True"
+          pending:
+            byConditions:
+            - type: "NIM_CACHE_JOB_PENDING"
+              status: "True"
 
   # Optimization instructions
-  optimizationsInstructions:
+  optimizationInstructions:
     # Gang scheduling for cache job coordination (no multi-replica typically)
     gangScheduling:
       podGroups:

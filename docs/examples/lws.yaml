@@ -9,13 +9,14 @@ metadata:
     example.type: functional
 spec:
   # Target LeaderWorkerSet workloads with leader-worker patterns
-  kind:
+  topOwnerKind:
     group: leaderworkerset.x-k8s.io
     version: v1
     kind: LeaderWorkerSet
   
   # Component structure - focuses on leader-worker coordination
   structureDefinition:
+    components:
   # Root LeaderWorkerSet resource
   - name: "leaderworkerset"
     specPath: ".spec"
@@ -23,11 +24,9 @@ spec:
       group: "leaderworkerset.x-k8s.io"
       version: "v1"
       kind: "LeaderWorkerSet"
-    scaleDefinition:
-      replicasPath: ".spec.replicas"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: "status.conditions"
+        conditionsPath: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -50,7 +49,7 @@ spec:
     ownerName: "leaderworkerset"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: "status.conditions"
+        conditionsPath: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -75,7 +74,7 @@ spec:
       replicasPath: ".spec.leaderWorkerTemplate.size"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: "status.conditions"
+        conditionsPath: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -89,7 +88,7 @@ spec:
             status: "False"
 
   # Optimization instructions
-  optimizationsInstructions:
+  optimizationInstructions:
     # Gang scheduling for leader-worker coordination
     gangScheduling:
       podGroups:
@@ -100,8 +99,8 @@ spec:
         - componentDefinitionName: "worker"
           componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
 
-    # Multi-node NVLink for distributed processing
-    multiNodeNVLink:
+    # GPU optimization for accelerated workloads
+    gpuInterconnect:
       acceleratedComponents:
       - componentDefinitionName: "leader"
         componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'

@@ -9,13 +9,14 @@ metadata:
     example.type: functional
 spec:
   # Target JobSet workloads for coordinated batch processing
-  kind:
+  topOwnerKind:
     group: jobset.x-k8s.io
     version: v1alpha2
     kind: JobSet
   
   # Component structure - focuses on replicated job management
   structureDefinition:
+    components:
   # Root JobSet resource
   - name: "jobset"
     specPath: ".spec"
@@ -25,7 +26,7 @@ spec:
       kind: "JobSet"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: "status.conditions"
+        conditionsPath: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -44,17 +45,17 @@ spec:
 
   # ReplicatedJob - represents the actual Job resources created by JobSet
   - name: "replicatedjob"
-    specPath: ".spec.replicatedJobs[0]"
+    specPath: ".spec.replicatedJobs[]"
     kind:
       group: "batch"
       version: "v1"
       kind: "Job"
     ownerName: "jobset"
     scaleDefinition:
-      replicasPath: ".replicas"
+      replicasPath: ".spec.replicatedJobs[].replicas"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: "status.conditions"
+        conditionsPath: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -72,7 +73,7 @@ spec:
             status: "True"
 
   # Optimization instructions
-  optimizationsInstructions:
+  optimizationInstructions:
     # Gang scheduling for coordinated job execution
     gangScheduling:
       podGroups:
@@ -81,12 +82,12 @@ spec:
         - componentDefinitionName: "replicatedjob"
           componentKeyPath: '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]'
 
-    # Multi-node NVLink for GPU-accelerated batch processing
-    multiNodeNVLink:
+    # GPU optimization for distributed training
+    gpuInterconnect:
       acceleratedComponents:
       - componentDefinitionName: "replicatedjob"
         componentKeyPath: '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]'
-        filter: '(.spec.template.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+        filter: '(.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
 
     # Topology awareness for batch job placement
     topologyAwareness:

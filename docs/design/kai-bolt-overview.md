@@ -36,7 +36,7 @@ spec:
     version: v1
     kind: Deployment       # Example: Knative creates Deployments
   
-  optimizationsInstructions:  # Optimization directives (Iteration 02)
+  optimizationInstructions:  # Optimization directives (Iteration 02)
     gangScheduling:
       podGroups: [...]
     multiNodeNVLink:
@@ -163,14 +163,14 @@ statusMappings:
 ### 4. Instructions (Optimization Directives)
 **Purpose**: Specify how the scheduler should optimize workload placement and execution.
 
-**New Structure**: Instructions are now organized under `optimizationsInstructions` hierarchy with no individual `enforcement` fields. Presence implies "required", absence implies "disabled".
+**New Structure**: Instructions are now organized under `optimizationInstructions` hierarchy with no individual `enforcement` fields. Presence implies "required", absence implies "disabled".
 
 ```yaml
 spec:
-  optimizationsInstructions:
+  optimizationInstructions:
     gangScheduling:           # Optional - only present if needed
       podGroups: [...]
-    multiNodeNVLink:          # Optional - only present if needed  
+    gpuInterconnect:          # Optional - only present if needed  
       acceleratedComponents: [...]
     topologyAwareness:        # Optional - only present if needed
       topologyGroups: [...]
@@ -193,10 +193,12 @@ gangScheduling:
 - **`componentKeyPath`**: JQ expression to extract pod grouping identifier
 - **Must point to resource instance names, not component types**
 
-#### Multi-Node NVLink (`multiNodeNVLink`)
-Optimizes GPU-accelerated workloads for high-bandwidth interconnects:
+#### GPU Interconnect (`gpuInterconnect`)
+
+Optimizes workloads requiring high-bandwidth GPU interconnects for multi-node GPU communication:
+
 ```yaml
-multiNodeNVLink:
+gpuInterconnect:
   acceleratedComponents:
   - componentDefinitionName: "worker"
     componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'

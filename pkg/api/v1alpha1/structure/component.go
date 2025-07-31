@@ -14,7 +14,8 @@ type ComponentDefinition struct {
 }
 
 type ReferenceDefinition struct {
-	ComponentKeyPath string `json:"componentKeyPath"` // JQ path to where main resource stores this component's identifier
+	ComponentKeyPath string  `json:"componentKeyPath"`    // JQ path to where main resource stores this component's identifier
+	Namespace        *string `json:"namespace,omitempty"` // optional - if the referenced component is in another namespace
 }
 
 type ScaleDefinition struct {

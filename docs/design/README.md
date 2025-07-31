@@ -159,7 +159,7 @@ spec:
     specPath: ".spec"
     kind: { group, version, kind }
     statusDefinition: { conditionsDefinition, statusMappings }
-  optimizationsInstructions:
+  optimizationInstructions:
     gangScheduling:
       podGroups: [...]
     multiNodeNVLink:

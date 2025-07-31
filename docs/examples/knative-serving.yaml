@@ -9,71 +9,73 @@ metadata:
     example.type: functional
 spec:
   # Target Knative Service deployments for serverless workloads
-  kind:
+  topOwnerKind:
     group: serving.knative.dev
     version: v1
     kind: Service
   
-  # Child resources created but not represented as components
-  childKinds:
-  - group: apps
-    version: v1
-    kind: Deployment
-  
   # Component structure - focuses on serverless autoscaling
   structureDefinition:
-  # Service - top-level traffic management
-  - name: "service"
-    specPath: ".spec"
-    kind:
-      group: "serving.knative.dev"
-      version: "v1"
-      kind: "Service"
-    scaleDefinition:
-      minReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"]'
-      maxReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]'
-    statusDefinition:
-      conditionsDefinition:
-        conditionsPath: "status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Ready"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Ready"
-            status: "False"
+    # Child resources created but not represented as components
+    additionalChildKinds:
+    - group: apps
+      version: v1
+      kind: Deployment
+    
+    # Component definitions
+    components:
+    # Root Knative Service resource
+    - name: "service"
+      specPath: ".spec"
+      kind:
+        group: "serving.knative.dev"
+        version: "v1"
+        kind: "Service"
+      scaleDefinition:
+        minReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"]'
+        maxReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]'
+      statusDefinition:
+        conditionsDefinition:
+          conditionsPath: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Ready"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Ready"
+              status: "False"
 
-  # Knative Revision component for revision-level optimization
-  - name: "revision"
-    specPath: ".spec"
-    referenceDefinition:
-      componentKeyPath: ".status.latestCreatedRevisionName"
-    ownerName: "service"
-    kind:
-      group: "serving.knative.dev"
-      version: "v1"
-      kind: "Revision"
-    statusDefinition:
-      conditionsDefinition:
-        conditionsPath: "status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Ready"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Ready"
-            status: "False"
+    # Knative Revision component for revision-level optimization
+    - name: "revision"
+      specPath: ".spec"
+      referenceDefinition:
+        componentKeyPath: ".status.latestCreatedRevisionName"
+      ownerName: "service"
+      kind:
+        group: "serving.knative.dev"
+        version: "v1"
+        kind: "Revision"
+      statusDefinition:
+        conditionsDefinition:
+          conditionsPath: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Ready"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Ready"
+              status: "False"
 
   # Optimization instructions
-  optimizationsInstructions:
+  optimizationInstructions:
     # Gang scheduling for serverless workload coordination
     gangScheduling:
       podGroups:
@@ -82,12 +84,12 @@ spec:
         - componentDefinitionName: "service"
           componentKeyPath: '.metadata.labels["serving.knative.dev/service"]'
 
-    # Multi-node NVLink for GPU-accelerated serverless functions
-    multiNodeNVLink:
+    # GPU optimization for inference workloads
+    gpuInterconnect:
       acceleratedComponents:
-      - componentDefinitionName: "service"
+      - componentDefinitionName: "revision"
         componentKeyPath: '.metadata.labels["serving.knative.dev/service"]'
-        filter: '(.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+        filter: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
 
     # Topology awareness for serverless placement
     topologyAwareness:

@@ -9,13 +9,14 @@ metadata:
     example.type: functional
 spec:
   # Target Ray distributed computing clusters
-  kind:
+  topOwnerKind:
     group: ray.io
     version: v1
     kind: RayCluster
   
   # Component structure - focuses on Ray cluster coordination
   structureDefinition:
+    components:
   # Root RayCluster resource
   - name: "raycluster"
     specPath: ".spec"
@@ -25,7 +26,7 @@ spec:
       kind: "RayCluster"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: "status.conditions"
+        conditionsPath: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -48,7 +49,7 @@ spec:
     ownerName: "raycluster"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: "status.conditions"
+        conditionsPath: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -63,19 +64,19 @@ spec:
 
   # Worker group - distributed computation nodes
   - name: "worker"
-    specPath: ".spec.workerGroupSpecs[0]"
+    specPath: ".spec.workerGroupSpecs[]"
     kind:
       group: "apps"
       version: "v1"
       kind: "Deployment"
     ownerName: "raycluster"
     scaleDefinition:
-      replicasPath: ".replicas"
-      minReplicasPath: ".minReplicas"
-      maxReplicasPath: ".maxReplicas"
+      replicasPath: ".spec.workerGroupSpecs[].replicas"
+      minReplicasPath: ".spec.workerGroupSpecs[].minReplicas"
+      maxReplicasPath: ".spec.workerGroupSpecs[].maxReplicas"
     statusDefinition:
       conditionsDefinition:
-        conditionsPath: "status.conditions"
+        conditionsPath: ".status.conditions"
         typeFieldName: "type"
         statusFieldName: "status"
       statusMappings:
@@ -89,7 +90,7 @@ spec:
             status: "False"
 
   # Optimization instructions
-  optimizationsInstructions:
+  optimizationInstructions:
     # Gang scheduling for Ray cluster startup coordination
     gangScheduling:
       podGroups:
@@ -100,15 +101,15 @@ spec:
         - componentDefinitionName: "worker"
           componentKeyPath: '.metadata.labels["ray.io/cluster"]'
 
-    # Multi-node NVLink for distributed Ray workloads
-    multiNodeNVLink:
+    # GPU optimization for distributed Ray workloads
+    gpuInterconnect:
       acceleratedComponents:
       - componentDefinitionName: "head"
         componentKeyPath: '.metadata.labels["ray.io/cluster"]'
-        filter: '(.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+        filter: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
       - componentDefinitionName: "worker"
         componentKeyPath: '.metadata.labels["ray.io/cluster"]'
-        filter: '(.spec.template.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+        filter: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
 
     # Topology awareness for Ray cluster placement
     topologyAwareness:

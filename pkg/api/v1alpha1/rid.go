@@ -16,15 +16,19 @@ type ResourceInterpretationDefinition struct {
 }
 
 type ResourceInterpretationDefinitionSpec struct {
-	Kind                schema.GroupVersionKind         `json:"kind"`
+	TopOwnerKind        schema.GroupVersionKind         `json:"topOwnerKind"`
 	StructureDefinition []structure.ComponentDefinition `json:"structureDefinition"`
 	Instructions        OptimizationInstructions        `json:"optimizationInstructions"`
-	ChildKinds          []schema.GroupVersionKind       `json:"childKinds,omitempty"` // make sure contains all the referenced components' types
+}
+
+type StructureDefinition struct {
+	Components           []structure.ComponentDefinition `json:"components"`
+	AdditionalChildKinds []schema.GroupVersionKind       `json:"additionalChildKinds,omitempty"` // make sure contains all the unspecified child components' kinds
 }
 
 type OptimizationInstructions struct {
 	GangScheduling    *instructions.GangScheduling    `json:"gangScheduling,omitempty"`
-	MultiNodeNVLink   *instructions.MultiNodeNVLink   `json:"multiNodeNVLink,omitempty"`
+	GPUInterconnect   *instructions.GPUInterconnect   `json:"gpuInterconnect,omitempty"`
 	TopologyAwareness *instructions.TopologyAwareness `json:"topologyAwareness,omitempty"`
 }
 
