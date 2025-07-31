@@ -16,9 +16,9 @@ type ResourceInterpretationDefinition struct {
 }
 
 type ResourceInterpretationDefinitionSpec struct {
-	TopOwnerKind        schema.GroupVersionKind         `json:"topOwnerKind"`
-	StructureDefinition []structure.ComponentDefinition `json:"structureDefinition"`
-	Instructions        OptimizationInstructions        `json:"optimizationInstructions"`
+	TopOwnerKind        schema.GroupVersionKind  `json:"topOwnerKind"`
+	StructureDefinition StructureDefinition      `json:"structureDefinition"`
+	Instructions        OptimizationInstructions `json:"optimizationInstructions"`
 }
 
 type StructureDefinition struct {
