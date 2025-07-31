@@ -31,6 +31,9 @@ spec:
         group: "apps.nvidia.com"
         version: "v1alpha1"
         kind: "NIMService"
+      references:
+        - componentName: "nimcache-ref"
+          componentKeyPath: ".spec.storage.nimCache.name"
       dependsOn: ["nimcache-ref"]
       statusDefinition:
         conditionsDefinition:
@@ -50,8 +53,7 @@ spec:
     # NIMCache reference - the pre-cached model that this service uses
     - name: "nimcache-ref"
       specPath: ".spec"
-      referenceDefinition:
-        componentKeyPath: ".spec.storage.nimCache.name"
+      isReference: true
       kind:
         group: "apps.nvidia.com"
         version: "v1alpha1"

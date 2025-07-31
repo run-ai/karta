@@ -142,17 +142,26 @@ optimizationInstructions:
 For workloads that depend on external components (like NIMService → NIMCache):
 
 ```yaml
+# Referencing component owns the relationship
+- name: "nimservice"
+  specPath: ".spec"                                    # NIMService resource context
+  references:
+    - componentName: "nimcache-ref"
+      componentKeyPath: ".spec.storage.nimCache.name"  # Absolute from NIMService (main RID)
+  dependsOn: ["nimcache-ref"]
+
+# Referenced component marked as external  
 - name: "nimcache-ref"
   specPath: ".spec"                                    # NIMCache resource context
-  referenceDefinition:
-    componentKeyPath: ".spec.storage.nimCache.name"   # Absolute from NIMService (main RID)
+  isReference: true
   statusDefinition:
     conditionsPath: ".status.conditions"              # Absolute from NIMCache resource
 ```
 
 **Key Rules:**
-- **`referenceDefinition.componentKeyPath`**: Absolute from **main RID resource**
-- **`specPath`, `statusDefinition` paths**: Absolute from **referenced resource**
+- **Referencing component `references[].componentKeyPath`**: Absolute from **main RID resource**
+- **Referenced component `specPath`, `statusDefinition` paths**: Absolute from **referenced resource**
+- **`isReference: true`**: Marks component as external dependency
 
 ### Why This Architecture?
 
@@ -319,10 +328,10 @@ Guides pod placement based on cluster topology to minimize network latency and o
 
 For workloads that depend on external components (like NIMService → NIMCache):
 
-1. **Main Component**: Defines the primary workload
-2. **Reference Component**: Points to external dependency
+1. **Referencing Component**: Owns the reference relationship via `references` list
+2. **Referenced Component**: Marked as external with `isReference: true`
 3. **Dependency**: Expressed via `dependsOn` field
-4. **Status Integration**: Reference components include status definitions for dependency checking
+4. **Status Integration**: Referenced components include status definitions for dependency checking
 
 Example:
 ```yaml
@@ -330,13 +339,15 @@ structureDefinition:
   components:
   - name: "nimservice"
     specPath: ".spec"
+    references:
+      - componentName: "nimcache-ref"
+        componentKeyPath: ".spec.storage.nimCache.name"
     dependsOn: ["nimcache-ref"]
     # ... status and other definitions
 
   - name: "nimcache-ref"
     specPath: ".spec"
-    referenceDefinition:
-      componentKeyPath: ".spec.storage.nimCache.name"
+    isReference: true
     kind:
       group: "apps.nvidia.com"
       version: "v1alpha1"
@@ -344,6 +355,14 @@ structureDefinition:
     statusDefinition:
       # ... status mappings for dependency validation
 ```
+
+**Critical Rules**:
+- Referencing components use `references` list to specify dependencies  
+- `componentKeyPath` is evaluated against the referencing component's resource
+- Referenced components are marked with `isReference: true`
+- Referenced components must have `statusDefinition` for monitoring
+- Creates orchestration order: cache → service
+- Prevents invalid startup sequences
 
 ## Validation Notes
 

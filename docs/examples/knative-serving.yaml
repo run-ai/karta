@@ -31,6 +31,9 @@ spec:
         group: "serving.knative.dev"
         version: "v1"
         kind: "Service"
+      references:
+        - componentName: "revision"
+          componentKeyPath: ".status.latestCreatedRevisionName"
       scaleDefinition:
         minReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"]'
         maxReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]'
@@ -52,8 +55,7 @@ spec:
     # Knative Revision component for revision-level optimization
     - name: "revision"
       specPath: ".spec"
-      referenceDefinition:
-        componentKeyPath: ".status.latestCreatedRevisionName"
+      isReference: true
       ownerName: "service"
       kind:
         group: "serving.knative.dev"

@@ -76,17 +76,28 @@ spec:
     version: "v1"
     kind: "Pod"
 
+# Referencing Component (Has Dependencies)
+- name: "nimservice"
+  specPath: ".spec"
+  references:
+    - componentName: "nimcache-ref"
+      componentKeyPath: ".spec.storage.nimCache.name"
+  dependsOn: ["nimcache-ref"]
+  kind:
+    group: "apps.nvidia.com"
+    version: "v1alpha1"
+    kind: "NIMService"
+
 # Reference Component (External Dependency)
 - name: "nimcache-ref"
   specPath: ".spec"
-  referenceDefinition:                 # Indicates separate K8s object
-    componentKeyPath: ".spec.storage.nimCache.name"
+  isReference: true                      # Indicates separate K8s object
   ownerName: "nimservice"
   kind:
     group: "apps.nvidia.com"
     version: "v1alpha1"
     kind: "NIMCache"
-  statusDefinition: { ... }           # Required for monitoring
+  statusDefinition: { ... }              # Required for monitoring
 ```
 
 ### 2. Scale Definition
@@ -400,3 +411,43 @@ This component structure enables Kai-bolt to understand complex AI/ML workloads,
 3. Use `validation-checklist.md` for RID quality assurance
 4. Reference existing RIDs in `docs/examples/` (current implementations)
 5. Follow `iteration-process.md` for development methodology
+
+## Component Referencing Pattern
+
+For workloads that depend on external components (like NIMService → NIMCache):
+
+1. **Referencing Component**: Owns the reference relationship
+2. **Referenced Component**: Marked as external with `isReference: true`
+3. **Dependency**: Expressed via `dependsOn` field
+4. **Status Integration**: Referenced components include status definitions for dependency checking
+
+Example:
+```yaml
+structureDefinition:
+  components:
+  - name: "nimservice"
+    specPath: ".spec"
+    references:
+      - componentName: "nimcache-ref"
+        componentKeyPath: ".spec.storage.nimCache.name"
+    dependsOn: ["nimcache-ref"]
+    # ... status and other definitions
+
+  - name: "nimcache-ref"
+    specPath: ".spec"
+    isReference: true
+    kind:
+      group: "apps.nvidia.com"
+      version: "v1alpha1"
+      kind: "NIMCache"
+    statusDefinition:
+      # ... status mappings for dependency validation
+```
+
+**Critical Rules**:
+- Referencing components use `references` list to specify dependencies
+- `componentKeyPath` is evaluated against the referencing component's resource
+- Referenced components are marked with `isReference: true`
+- Referenced components must have `statusDefinition` for monitoring
+- Creates orchestration order: cache → service
+- Prevents invalid startup sequences

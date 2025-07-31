@@ -46,38 +46,46 @@ The script will:
 6. **[`common-mistakes.md`](common-mistakes.md)** - Mistakes to avoid based on real experience
 7. **[`iteration-process.md`](iteration-process.md)** - Systematic approach to RID development
 
-## 🎯 Usage Scenarios
+## Usage Scenarios
 
 ### **Starting Fresh on Kai-bolt**
 **Read**: `kai-bolt-overview.md` → `rid-principles.md` → `framework-patterns.md`  
-**Goal**: Understand the system, fundamental rules, and established patterns
+**Purpose**: Understand core concepts and design patterns
 
-### **Creating a New RID**
-**Read**: `iteration-process.md` → `validation-checklist.md` → `common-mistakes.md`  
-**Goal**: Follow systematic development process while avoiding known pitfalls
+### **Adding a New Framework**
+**Read**: `framework-patterns.md` → `validation-checklist.md` → `common-mistakes.md`  
+**Purpose**: Model framework correctly and avoid common issues
 
-### **Reviewing an Existing RID**
-**Use**: `validation-checklist.md` + `rid-principles.md`  
-**Goal**: Ensure quality and architectural compliance
+### **Troubleshooting RID Issues**
+**Read**: `common-mistakes.md` → `architectural-decisions.md` → `validation-checklist.md`  
+**Purpose**: Debug problems and understand architectural constraints
 
-### **Understanding Past Decisions**
-**Read**: `architectural-decisions.md` + `common-mistakes.md`  
-**Goal**: Understand why things are designed the way they are
+### **Understanding Design Decisions**
+**Read**: `architectural-decisions.md` → `rid-principles.md`  
+**Purpose**: Learn why specific patterns were chosen
 
-### **Debugging RID Issues**
-**Use**: `common-mistakes.md` → `validation-checklist.md`  
-**Goal**: Identify and fix typical problems
+### **Framework Research and Analysis**
+**Read**: `framework-patterns.md` → Examples in `docs/examples/`  
+**Purpose**: Understand how different frameworks are modeled
 
-## 🚨 Critical Knowledge ("Pins")
+## Critical Knowledge ("Pins")
 
-These are the most important rules that must never be forgotten:
+These are the **most important rules** that cannot be broken:
 
-1. **RIDs match Kubernetes resource boundaries** - One RID per CRD type
-2. **Dependencies require status definitions** - `dependsOn` needs status monitoring
-3. **Kind fields are full GVK objects** - Never use strings
-4. **componentKeyPath points to instance names** - Not component types
-5. **Status definitions must be research-based** - Never assume condition types
-6. **Instructions target individual components** - Avoid complex parent filters
+### **1. JQ Path Architecture**
+- **Component Definition Paths**: Always absolute from main RID resource root (`.spec.pytorchReplicaSpecs.Worker.replicas`)
+- **Instruction Filter Paths**: Always relative to component's resource type (`.spec.containers[0].resources`)
+
+### **2. Reference Architecture**  
+- **Referencing component**: Owns the relationship via `references` list
+- **Referenced component**: Marked with `isReference: true`
+- **Path evaluation**: All paths within a component evaluate against same resource
+
+### **3. Status Definitions Must Be Research-Based**
+All condition types must match actual framework APIs - never use generic assumptions.
+
+### **4. Component Kinds Must Match Reality**
+Every component `kind` must match the actual Kubernetes resource created by the framework.
 
 ## 📁 Related Directories
 
@@ -106,7 +114,7 @@ common-mistakes.md (prevention)
 architectural-decisions.md (rationale)
 ```
 
-## 📚 Framework Coverage
+## Framework Coverage
 
 The design documents cover patterns for:
 
@@ -130,7 +138,7 @@ The design documents cover patterns for:
 - NVIDIA NIM (NIMCache + NIMService)
 - Separate optimization domains, Explicit dependencies
 
-## 🛠️ Quick Reference
+## Quick Reference
 
 ### **Design Validation Commands**
 ```bash
@@ -185,7 +193,7 @@ spec:
 - Contribute to architectural decisions
 - Mentor new contributors
 
-## 🔧 Maintenance
+## Maintenance
 
 ### **Keeping Documents Current**
 - Update when new framework patterns emerge

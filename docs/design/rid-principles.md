@@ -1,28 +1,8 @@
 # RID Design Principles
 
-## 🚨 Non-Negotiable Architectural Rules
+## Non-Negotiable Architectural Rules
 
-### 1. **Match Kubernetes Resource Boundaries**
-RIDs must reflect actual Kubernetes CRD structures, not idealized abstractions.
-
-**✅ Correct**: Separate RIDs for separate CRDs
-```yaml
-# nimcache.yaml - for NIMCache CRD
-kind:
-  group: apps.nvidia.com
-  version: v1alpha1  
-  kind: NIMCache
-
-# nimservice.yaml - for NIMService CRD  
-kind:
-  group: apps.nvidia.com
-  version: v1alpha1
-  kind: NIMService
-```
-
-**❌ Wrong**: Single RID trying to model multiple unrelated CRDs
-
-### 2. **Dependencies Require Status Definitions**
+### 1. **Dependencies Require Status Definitions**
 Any component referenced in `dependsOn` MUST have a `statusDefinition`.
 
 **✅ Correct**: 
@@ -42,7 +22,7 @@ Any component referenced in `dependsOn` MUST have a `statusDefinition`.
 
 **❌ Wrong**: `dependsOn` without status monitoring has no way to check readiness
 
-### 3. **kind Fields Must Be Full GVK Objects**
+### 2. **kind Fields Must Be Full GVK Objects**
 Never use strings for `kind` fields - always use complete GroupVersionKind structure.
 
 **✅ Correct**:
@@ -58,7 +38,7 @@ kind:
 kind: "PyTorchJob"  # String - missing group/version
 ```
 
-### 4. **componentKeyPath Points to Owning Resource Names**
+### 3. **componentKeyPath Points to Owning Resource Names**
 Must point to the actual resource instance name, not component types.
 
 **✅ Correct**:
@@ -73,7 +53,7 @@ componentKeyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
 # Returns: "Master" - this is a type, not an instance identifier
 ```
 
-### 5. **Research-Based Status Definitions**
+### 4. **Research-Based Status Definitions**
 Status conditions must match actual framework APIs, not assumptions.
 
 **✅ Correct**: Based on actual PyTorchJob API
@@ -98,7 +78,7 @@ statusMappings:
       status: "True"
 ```
 
-## 🎯 Component Design Rules
+## Component Design Rules
 
 ### 1. **Owner Hierarchies Are Explicit**
 Use `ownerName` to establish clear parent-child relationships.
@@ -136,7 +116,7 @@ Include components only if they provide additional optimization granularity.
 - ❌ ConfigMaps (configuration, not workload optimization)
 - ❌ 1:1 mappings that don't add optimization value
 
-## 🔧 Instruction Design Rules
+## Instruction Design Rules
 
 ### 1. **Target Individual Components with Simple Filters**
 Avoid complex OR logic on parent components.
@@ -192,7 +172,7 @@ Choose topology levels based on workload characteristics.
 - **Batch Processing**: `zone` (resource efficiency)
 - **Caching/Storage**: `zone` (storage locality)
 
-## 🛡️ JQ Expression Safety
+## JQ Expression Safety
 
 ### 1. **Null Safety with Default Values**
 Always provide defaults for optional fields.
@@ -220,7 +200,7 @@ Use `tonumber` when comparing string values.
 filter: '(.spec.limits["nvidia.com/gpu"] // "0" | tonumber) > 1'
 ```
 
-## 📋 Validation Requirements
+## Validation Requirements
 
 Every RID must pass these checks:
 
@@ -231,7 +211,7 @@ Every RID must pass these checks:
 5. **All status conditions match actual framework APIs**
 6. **All JQ expressions are null-safe with proper defaults**
 
-## 🎪 Complex Framework Patterns
+## Complex Framework Patterns
 
 ### Multi-CRD Frameworks (like NIM)
 When frameworks use multiple independent CRDs with different optimization domains:

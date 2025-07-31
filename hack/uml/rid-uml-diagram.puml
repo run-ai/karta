@@ -36,13 +36,16 @@ package "Component Architecture" {
     +specPath: string
     +ownerName: string?
     +dependsOn: string[]
-    +referenceDefinition: ReferenceDefinition?
+    +references: ReferenceDefinition[]
+    +isReference: bool
     +scaleDefinition: ScaleDefinition?
     +statusDefinition: StatusDefinition?
   }
   
   class ReferenceDefinition {
+    +componentName: string
     +componentKeyPath: string
+    +namespace: string?
   }
   
   class ScaleDefinition {
@@ -140,7 +143,7 @@ RIDSpec ||--|| OptimizationInstructions
 
 ' Component Relationships
 ComponentDefinition ||--|| GroupVersionKind : "defines"
-ComponentDefinition ||--o| ReferenceDefinition
+ComponentDefinition ||--o{ ReferenceDefinition : "references"
 ComponentDefinition ||--o| ScaleDefinition
 ComponentDefinition ||--o| StatusDefinition
 ComponentDefinition ||--o{ ComponentDefinition : "dependsOn"
@@ -189,8 +192,9 @@ end note
 
 note bottom of ReferenceDefinition
   **Reference Pattern:**
-  • specPath points to referenced object's spec
-  • componentKeyPath points to where name is stored on the pod
+  • Referencing component owns relationship
+  • componentKeyPath evaluated against referencing resource
+  • Referenced components marked with isReference: true
 end note
 
 @enduml 
