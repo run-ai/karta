@@ -7,6 +7,7 @@ type ComponentDefinition struct {
 	Kind             *schema.GroupVersionKind `json:"kind,omitempty"`
 	OwnerName        *string                  `json:"ownerName,omitempty"`       // name of the owning component. nil if root?
 	SpecPath         string                   `json:"specPath"`                  // JQ path to the component spec (e.g., '.spec.services[]' or '.spec.template')
+	MetadataPath     *string                  `json:"metadataPath"`              // JQ path to the component metadata. optional - defaults to ".metadata"
 	References       []ReferenceDefinition    `json:"references,omitempty"`      // list of components this component references
 	IsReference      bool                     `json:"isReference,omitempty"`     // true = this component is an external reference
 	ScaleDefinition  *ScaleDefinition         `json:"scaleDefinition,omitempty"` // path to the scale/size struct
