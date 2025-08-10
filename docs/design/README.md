@@ -96,6 +96,12 @@ Every component `kind` must match the actual Kubernetes resource created by the 
 - **`docs/examples/iteration-02/`** - Archived: Previous iteration showing evolution
 - **`pkg/api/v1alpha1/`** - Go struct definitions for RID schema
 
+### Framework Technical Documentation
+- **`docs/design/frameworks/`** - CRD and controller analysis for each framework
+- **`docs/design/frameworks/README.md`** - Overview of framework documentation standards
+- Individual framework docs: PyTorchJob, NIMService, JobSet, Knative Serving, etc.
+- Source code verified architecture patterns and resource creation behaviors
+
 ## 🔄 Document Relationships
 
 ```

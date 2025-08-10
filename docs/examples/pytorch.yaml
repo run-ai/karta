@@ -19,7 +19,7 @@ spec:
     components:
     # Root PyTorchJob resource
     - name: "pytorchjob"
-      specPath: ".spec"
+      # specPath omitted for root component (defaults to .spec)
       kind:
         group: "kubeflow.org"
         version: "v1"
@@ -51,6 +51,8 @@ spec:
         version: "v1"
         kind: "Pod"
       ownerName: "pytorchjob"
+      childSpecDefinition:
+        podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Master.template"
       scaleDefinition:
         replicasPath: ".spec.pytorchReplicaSpecs.Master.replicas"
 
@@ -62,6 +64,8 @@ spec:
         version: "v1"
         kind: "Pod"
       ownerName: "pytorchjob"
+      childSpecDefinition:
+        podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Worker.template"
       scaleDefinition:
         replicasPath: ".spec.pytorchReplicaSpecs.Worker.replicas"
         minReplicasPath: ".spec.elasticPolicy.minReplicas"

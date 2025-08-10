@@ -17,75 +17,79 @@ spec:
   # Component structure - focuses on leader-worker coordination
   structureDefinition:
     components:
-  # Root LeaderWorkerSet resource
-  - name: "leaderworkerset"
-    specPath: ".spec"
-    kind:
-      group: "leaderworkerset.x-k8s.io"
-      version: "v1"
-      kind: "LeaderWorkerSet"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Available"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Available"
-            status: "False"
+    # Root LeaderWorkerSet resource
+    - name: "leaderworkerset"
+      # specPath omitted for root component (defaults to .spec)
+      kind:
+        group: "leaderworkerset.x-k8s.io"
+        version: "v1"
+        kind: "LeaderWorkerSet"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Available"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Available"
+              status: "False"
 
-  # Leader - coordinates and manages worker nodes
-  - name: "leader"
-    specPath: ".spec.leaderWorkerTemplate.leaderTemplate"
-    kind:
-      group: "apps"
-      version: "v1"
-      kind: "StatefulSet"
-    ownerName: "leaderworkerset"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Available"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Available"
-            status: "False"
+    # Leader - coordinates and manages worker nodes
+    - name: "leader"
+      specPath: ".spec.leaderWorkerTemplate.leaderTemplate"
+      kind:
+        group: "apps"
+        version: "v1"
+        kind: "StatefulSet"
+      ownerName: "leaderworkerset"
+      childSpecDefinition:
+        podTemplateSpecPath: ".spec.leaderWorkerTemplate.leaderTemplate.spec.template"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Available"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Available"
+              status: "False"
 
-  # Worker group - executes tasks under leader coordination
-  - name: "worker"
-    specPath: ".spec.leaderWorkerTemplate.workerTemplate"
-    kind:
-      group: "apps"
-      version: "v1"
-      kind: "StatefulSet"
-    ownerName: "leaderworkerset"
-    scaleDefinition:
-      replicasPath: ".spec.leaderWorkerTemplate.size"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Available"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Available"
-            status: "False"
+    # Worker group - executes tasks under leader coordination
+    - name: "worker"
+      specPath: ".spec.leaderWorkerTemplate.workerTemplate"
+      kind:
+        group: "apps"
+        version: "v1"
+        kind: "StatefulSet"
+      ownerName: "leaderworkerset"
+      childSpecDefinition:
+        podTemplateSpecPath: ".spec.leaderWorkerTemplate.workerTemplate.spec.template"
+      scaleDefinition:
+        replicasPath: ".spec.leaderWorkerTemplate.size"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Available"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Available"
+              status: "False"
 
   # Optimization instructions
   optimizationInstructions:

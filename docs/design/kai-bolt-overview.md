@@ -71,6 +71,8 @@ spec:
 - name: "master"
   specPath: ".spec.pytorchReplicaSpecs.Master.template"
   ownerName: "pytorchjob"             # Child of pytorchjob
+  childSpecDefinition:                # Pod-level optimization access
+    podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Master.template"
   kind:
     group: ""
     version: "v1"
@@ -83,6 +85,11 @@ spec:
     - componentName: "nimcache-ref"
       componentKeyPath: ".spec.storage.nimCache.name"
   dependsOn: ["nimcache-ref"]
+  childSpecDefinition:                # Fragmented pod properties
+    fragmentedPodDefinition:
+      labelsPath: ".spec.labels"
+      resourcesPath: ".spec.resources"
+      schedulerNamePath: ".spec.schedulerName"
   kind:
     group: "apps.nvidia.com"
     version: "v1alpha1"
@@ -93,6 +100,7 @@ spec:
   specPath: ".spec"
   isReference: true                      # Indicates separate K8s object
   ownerName: "nimservice"
+  # No childSpecDefinition - management resource
   kind:
     group: "apps.nvidia.com"
     version: "v1alpha1"
@@ -100,7 +108,64 @@ spec:
   statusDefinition: { ... }              # Required for monitoring
 ```
 
-### 2. Scale Definition
+### 2. Child Specification Definition
+**Purpose**: Defines how to access pod specifications within parent resources for pod-level optimization.
+
+#### Three Patterns:
+
+**PodTemplateSpec Pattern** (Preferred):
+Complete template with metadata and spec
+```yaml
+childSpecDefinition:
+  podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Master.template"  # Absolute path
+```
+
+**PodSpec Pattern**:
+Spec-only access without metadata
+```yaml
+childSpecDefinition:
+  podSpecPath: ".spec.podSpec"  # Absolute path
+```
+
+**Fragmented Pattern**:
+Pod properties scattered across parent fields
+```yaml
+childSpecDefinition:
+  fragmentedPodDefinition:
+    labelsPath: ".spec.labels"                    # Absolute path
+    annotationsPath: ".spec.annotations"         # Absolute path
+    resourcesPath: ".spec.resources"              # Absolute path
+    resourceClaimsPath: ".spec.draResources"     # Absolute path
+    schedulerNamePath: ".spec.schedulerName"     # Absolute path
+    podAffinityPath: ".spec.podAffinity"         # Absolute path
+```
+
+#### Resource Classification:
+
+**Serving Resources** (require childSpecDefinition):
+- Training workloads (PyTorchJob, MPIJob)
+- Inference services (NIMService, KServe)
+- Distributed computing (RayCluster)
+- All runtime optimization targets
+
+**Management Resources** (no childSpecDefinition):
+- Model caching (NIMCache)
+- Setup operations (InitJob, CronJob)
+- Temporary coordination tasks
+
+#### Controlling vs Generated Pattern:
+
+**Controlling Components**: Can modify specifications, optimization target
+- Knative Service (controls template)
+- Deployment (controls pod template)
+- NIMService (controls fragmented properties)
+
+**Generated/Referenced Components**: Read-only, not optimization targets
+- Knative Revision (generated from Service)
+- ReplicaSet (generated from Deployment)
+- Referenced NIMCache (external dependency)
+
+### 3. Scale Definition
 **Purpose**: Defines how components can be scaled up or down for resource optimization.
 
 #### Structure:
@@ -116,7 +181,7 @@ scaleDefinition:
 - **Auto-scaling**: Min/max bounds for automatic scaling
 - **Resource Planning**: Understanding capacity constraints
 
-### 3. Status Definition
+### 4. Status Definition
 **Purpose**: Maps framework-specific Kubernetes conditions to abstract states that Kai-bolt can understand and act upon.
 
 #### Structure:
@@ -171,7 +236,7 @@ statusMappings:
       status: "False"
 ```
 
-### 4. Instructions (Optimization Directives)
+### 5. Instructions (Optimization Directives)
 **Purpose**: Specify how the scheduler should optimize workload placement and execution.
 
 **New Structure**: Instructions are now organized under `optimizationInstructions` hierarchy with no individual `enforcement` fields. Presence implies "required", absence implies "disabled".
@@ -237,7 +302,7 @@ topologyAwareness:
 - **`node`**: Same physical node (latency-critical workloads)
 - **`zone`**: Same availability zone (bandwidth-critical workloads)
 
-### 5. Dependency Relationships
+### 6. Dependency Relationships
 **Purpose**: Model explicit dependencies between components for proper orchestration.
 
 #### Requirements:
@@ -263,7 +328,7 @@ topologyAwareness:
 - Creates orchestration order: cache → service
 - Prevents invalid startup sequences
 
-### 6. JQ Expression Patterns
+### 7. JQ Expression Patterns
 **Purpose**: Safe, reliable data extraction from Kubernetes resources.
 
 #### Safety Requirements:
@@ -287,7 +352,7 @@ componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
 - **Type conversion**: `| tonumber` for string-to-number conversion
 - **Instance identification**: Point to workload instance names, not types
 
-### 7. Child Resources (`childKinds`)
+### 8. Child Resources (`childKinds`)
 **Purpose**: Specify custom Kubernetes resources created by the main RID kind that require operator traversal but are not modeled as explicit components.
 
 #### Definition and Rules
@@ -299,6 +364,8 @@ componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
 3. **Compute-Related**: Actually runs containers/workloads
 4. **Not Component**: NOT already in `structureDefinition`
 5. **Traversal Needed**: Operator requires read access for optimization
+
+**Exclusion Rule**: Must exclude any resource types that have explicit component definitions to prevent duplication.
 
 #### Framework Examples
 

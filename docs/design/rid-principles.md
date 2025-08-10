@@ -78,6 +78,82 @@ statusMappings:
       status: "True"
 ```
 
+### 5. **Child Specification Patterns**
+Use appropriate pattern based on how framework embeds pod specifications.
+
+**PodTemplateSpec Pattern** (preferred):
+```yaml
+childSpecDefinition:
+  podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Master.template"  # Absolute path
+```
+
+**Fragmented Pattern** (when properties are scattered):
+```yaml
+childSpecDefinition:
+  fragmentedPodDefinition:
+    labelsPath: ".spec.labels"                    # Absolute path
+    resourcesPath: ".spec.resources"              # Absolute path
+    schedulerNamePath: ".spec.schedulerName"     # Absolute path
+```
+
+### 6. **Absolute Path Requirement**
+All paths within `childSpecDefinition` must be absolute from root RID resource.
+
+**✅ Correct**:
+```yaml
+childSpecDefinition:
+  podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Master.template"  # From PyTorchJob root
+```
+
+**❌ Wrong**:
+```yaml
+childSpecDefinition:
+  podTemplateSpecPath: ".template"  # Relative path - ambiguous
+```
+
+### 7. **Controlling vs Generated Components**
+`childSpecDefinition` belongs on controlling components, not generated ones.
+
+**✅ Controlling Component** (optimization target):
+```yaml
+- name: "service"
+  childSpecDefinition:
+    podTemplateSpecPath: ".spec.template"
+```
+
+**✅ Generated Component** (no optimization):
+```yaml
+- name: "revision"
+  isReference: true
+  # No childSpecDefinition - generated/read-only
+```
+
+### 8. **additionalChildKinds Exclusion Rule**
+Must exclude resource types that have explicit component definitions.
+
+**✅ Correct**:
+```yaml
+additionalChildKinds:
+- group: apps
+  version: v1
+  kind: Deployment  # No explicit Deployment component
+
+components:
+- name: "worker"
+  kind:
+    group: apps
+    version: v1
+    kind: StatefulSet  # Has explicit component - NOT in additionalChildKinds
+```
+
+**❌ Wrong**:
+```yaml
+additionalChildKinds:
+- group: apps
+  version: v1
+  kind: StatefulSet    # Also has explicit component - duplicated!
+```
+
 ## Component Design Rules
 
 ### 1. **Owner Hierarchies Are Explicit**
@@ -210,6 +286,10 @@ Every RID must pass these checks:
 4. **All `ownerName` values reference existing component names**
 5. **All status conditions match actual framework APIs**
 6. **All JQ expressions are null-safe with proper defaults**
+7. **All `childSpecDefinition` paths are absolute from root resource**
+8. **`childSpecDefinition` only on controlling components, not generated**
+9. **`additionalChildKinds` excludes resource types with explicit components**
+10. **Serving resources have `childSpecDefinition`, management resources do not**
 
 ## Complex Framework Patterns
 

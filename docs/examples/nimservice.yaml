@@ -21,12 +21,21 @@ spec:
     - group: apps
       version: v1
       kind: Deployment
+    - group: apps
+      version: v1
+      kind: StatefulSet
+    - group: leaderworkerset.x-k8s.io
+      version: v1
+      kind: LeaderWorkerSet
+    - group: serving.kserve.io
+      version: v1beta1
+      kind: InferenceService
     
     # Component definitions
     components:
     # NIMService component for service-level operations
     - name: "nimservice"
-      specPath: ".spec"
+      # specPath omitted for root component (defaults to .spec)
       kind:
         group: "apps.nvidia.com"
         version: "v1alpha1"
@@ -35,6 +44,16 @@ spec:
         - componentName: "nimcache-ref"
           componentKeyPath: ".spec.storage.nimCache.name"
       dependsOn: ["nimcache-ref"]
+      childSpecDefinition:
+        fragmentedPodDefinition:
+          labelsPath: ".spec.labels"
+          annotationsPath: ".spec.annotations"
+          resourcesPath: ".spec.resources"
+          resourceClaimsPath: ".spec.draResources"
+          schedulerNamePath: ".spec.schedulerName"
+          podAffinityPath: ".spec.podAffinity"
+      scaleDefinition:
+        replicasPath: ".spec.replicas"
       statusDefinition:
         conditionsDefinition:
           path: ".status.conditions"
@@ -52,7 +71,7 @@ spec:
 
     # NIMCache reference - the pre-cached model that this service uses
     - name: "nimcache-ref"
-      specPath: ".spec"
+      # specPath omitted for referenced component (defaults to .spec)
       isReference: true
       kind:
         group: "apps.nvidia.com"

@@ -26,14 +26,12 @@ spec:
     components:
     # Root Knative Service resource
     - name: "service"
-      specPath: ".spec"
+      # specPath omitted for root component (defaults to .spec)
       kind:
         group: "serving.knative.dev"
         version: "v1"
         kind: "Service"
-      references:
-        - componentName: "revision"
-          componentKeyPath: ".status.latestCreatedRevisionName"
+      # No childSpecDefinition - service generates revisions, revision is optimization target
       scaleDefinition:
         minReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"]'
         maxReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]'
@@ -54,13 +52,14 @@ spec:
 
     # Knative Revision component for revision-level optimization
     - name: "revision"
-      specPath: ".spec"
-      isReference: true
+      # specPath omitted for child component (defaults to .spec)
       ownerName: "service"
       kind:
         group: "serving.knative.dev"
         version: "v1"
         kind: "Revision"
+      childSpecDefinition:
+        podTemplateSpecPath: ".spec.template"
       statusDefinition:
         conditionsDefinition:
           path: ".status.conditions"

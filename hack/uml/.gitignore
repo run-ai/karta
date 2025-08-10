@@ -4,6 +4,7 @@ venv/
 # Temporary files
 temp_generate.py
 *.tmp
+*.puml
 
 # Downloaded JAR files
 plantuml.jar

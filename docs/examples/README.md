@@ -9,6 +9,34 @@ This directory contains Resource Interpretation Definition (RID) examples for ma
 - **Enhanced**: `childKinds` for compute resource traversal
 - **Enhanced**: Root component ordering for clear hierarchy
 - **Enhanced**: Elastic training support for autoscaling workloads
+- **Added**: Child specification patterns for pod-level optimization
+- **Enhanced**: Management vs serving resource classification
+
+### Child Specification Patterns
+
+RIDs now support three distinct patterns for accessing pod specifications:
+
+1. **PodTemplateSpec Pattern** (preferred): Complete template with metadata
+2. **PodSpec Pattern**: Spec-only access without metadata  
+3. **Fragmented Pattern**: Scattered pod properties across parent fields
+
+```yaml
+# Pattern 1: PodTemplateSpec (PyTorchJob, MPIJob, etc.)
+childSpecDefinition:
+  podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Master.template"
+
+# Pattern 2: PodSpec (when only spec available)
+childSpecDefinition:
+  podSpecPath: ".spec.podSpec"
+
+# Pattern 3: Fragmented (NIMService, Dynamo)
+childSpecDefinition:
+  fragmentedPodDefinition:
+    labelsPath: ".spec.labels"
+    resourcesPath: ".spec.resources"
+    schedulerNamePath: ".spec.schedulerName"
+    podAffinityPath: ".spec.podAffinity"
+```
 
 ### Instruction Structure
 ```yaml

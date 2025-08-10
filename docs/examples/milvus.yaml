@@ -17,77 +17,81 @@ spec:
   # Component structure - focuses on distributed vector processing
   structureDefinition:
     components:
-  # Root Milvus resource
-  - name: "milvus"
-    specPath: ".spec"
-    kind:
-      group: "milvus.io"
-      version: "v1beta1"
-      kind: "Milvus"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "MilvusReady"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "MilvusReady"
-            status: "False"
+    # Root Milvus resource
+    - name: "milvus"
+      # specPath omitted for root component (defaults to .spec)
+      kind:
+        group: "milvus.io"
+        version: "v1beta1"
+        kind: "Milvus"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "MilvusReady"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "MilvusReady"
+              status: "False"
 
-  # QueryNode - handles vector search queries
-  - name: "querynode"
-    specPath: ".spec.components.queryNode"
-    kind:
-      group: "apps"
-      version: "v1"
-      kind: "StatefulSet"
-    ownerName: "milvus"
-    scaleDefinition:
-      replicasPath: ".spec.components.queryNode.replicas"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "MilvusReady"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "MilvusReady"
-            status: "False"
+    # QueryNode - handles vector search queries
+    - name: "querynode"
+      specPath: ".spec.components.queryNode"
+      kind:
+        group: "apps"
+        version: "v1"
+        kind: "StatefulSet"
+      ownerName: "milvus"
+      childSpecDefinition:
+        podTemplateSpecPath: ".spec.components.queryNode.template"
+      scaleDefinition:
+        replicasPath: ".spec.components.queryNode.replicas"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "MilvusReady"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "MilvusReady"
+              status: "False"
 
-  # DataNode - processes and stores vector data
-  - name: "datanode"
-    specPath: ".spec.components.dataNode"
-    kind:
-      group: "apps"
-      version: "v1"
-      kind: "StatefulSet"
-    ownerName: "milvus"
-    scaleDefinition:
-      replicasPath: ".spec.components.dataNode.replicas"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "MilvusReady"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "MilvusReady"
-            status: "False"
+    # DataNode - processes and stores vector data
+    - name: "datanode"
+      specPath: ".spec.components.dataNode"
+      kind:
+        group: "apps"
+        version: "v1"
+        kind: "StatefulSet"
+      ownerName: "milvus"
+      childSpecDefinition:
+        podTemplateSpecPath: ".spec.components.dataNode.template"
+      scaleDefinition:
+        replicasPath: ".spec.components.dataNode.replicas"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "MilvusReady"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "MilvusReady"
+              status: "False"
 
   # Optimization instructions
   optimizationInstructions:

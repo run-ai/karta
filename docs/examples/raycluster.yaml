@@ -17,77 +17,81 @@ spec:
   # Component structure - focuses on Ray cluster coordination
   structureDefinition:
     components:
-  # Root RayCluster resource
-  - name: "raycluster"
-    specPath: ".spec"
-    kind:
-      group: "ray.io"
-      version: "v1"
-      kind: "RayCluster"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Ready"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Ready"
-            status: "False"
+    # Root RayCluster resource
+    - name: "raycluster"
+      # specPath omitted for root component (defaults to .spec)
+      kind:
+        group: "ray.io"
+        version: "v1"
+        kind: "RayCluster"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Ready"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Ready"
+              status: "False"
 
-  # Head node - Ray cluster coordinator and scheduler
-  - name: "head"
-    specPath: ".spec.headGroupSpec"
-    kind:
-      group: "apps"
-      version: "v1"
-      kind: "Deployment"
-    ownerName: "raycluster"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Ready"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Ready"
-            status: "False"
+    # Head node - Ray cluster coordinator and scheduler
+    - name: "head"
+      specPath: ".spec.headGroupSpec"
+      kind:
+        group: "apps"
+        version: "v1"
+        kind: "Deployment"
+      ownerName: "raycluster"
+      childSpecDefinition:
+        podTemplateSpecPath: ".spec.headGroupSpec.template"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Ready"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Ready"
+              status: "False"
 
-  # Worker group - distributed computation nodes
-  - name: "worker"
-    specPath: ".spec.workerGroupSpecs[]"
-    kind:
-      group: "apps"
-      version: "v1"
-      kind: "Deployment"
-    ownerName: "raycluster"
-    scaleDefinition:
-      replicasPath: ".spec.workerGroupSpecs[].replicas"
-      minReplicasPath: ".spec.workerGroupSpecs[].minReplicas"
-      maxReplicasPath: ".spec.workerGroupSpecs[].maxReplicas"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Ready"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Ready"
-            status: "False"
+    # Worker group - distributed computation nodes
+    - name: "worker"
+      specPath: ".spec.workerGroupSpecs[]"
+      kind:
+        group: "apps"
+        version: "v1"
+        kind: "Deployment"
+      ownerName: "raycluster"
+      childSpecDefinition:
+        podTemplateSpecPath: ".spec.workerGroupSpecs[].template"
+      scaleDefinition:
+        replicasPath: ".spec.workerGroupSpecs[].replicas"
+        minReplicasPath: ".spec.workerGroupSpecs[].minReplicas"
+        maxReplicasPath: ".spec.workerGroupSpecs[].maxReplicas"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Ready"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Ready"
+              status: "False"
 
   # Optimization instructions
   optimizationInstructions:

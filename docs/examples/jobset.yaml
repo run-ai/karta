@@ -17,60 +17,62 @@ spec:
   # Component structure - focuses on replicated job management
   structureDefinition:
     components:
-  # Root JobSet resource
-  - name: "jobset"
-    specPath: ".spec"
-    kind:
-      group: "jobset.x-k8s.io"
-      version: "v1alpha2"
-      kind: "JobSet"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "JobsReady"
-            status: "True"
-        completed:
-          byConditions:
-          - type: "Completed"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Failed"
-            status: "True"
+    # Root JobSet resource
+    - name: "jobset"
+      # specPath omitted for root component (defaults to .spec)
+      kind:
+        group: "jobset.x-k8s.io"
+        version: "v1alpha2"
+        kind: "JobSet"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "JobsReady"
+              status: "True"
+          completed:
+            byConditions:
+            - type: "Completed"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Failed"
+              status: "True"
 
-  # ReplicatedJob - represents the actual Job resources created by JobSet
-  - name: "replicatedjob"
-    specPath: ".spec.replicatedJobs[]"
-    kind:
-      group: "batch"
-      version: "v1"
-      kind: "Job"
-    ownerName: "jobset"
-    scaleDefinition:
-      replicasPath: ".spec.replicatedJobs[].replicas"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "JobsReady"
-            status: "True"
-        completed:
-          byConditions:
-          - type: "Completed"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Failed"
-            status: "True"
+    # ReplicatedJob - represents the actual Job resources created by JobSet
+    - name: "replicatedjob"
+      specPath: ".spec.replicatedJobs[]"
+      kind:
+        group: "batch"
+        version: "v1"
+        kind: "Job"
+      ownerName: "jobset"
+      childSpecDefinition:
+        podTemplateSpecPath: ".spec.replicatedJobs[].template"
+      scaleDefinition:
+        replicasPath: ".spec.replicatedJobs[].replicas"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "JobsReady"
+              status: "True"
+          completed:
+            byConditions:
+            - type: "Completed"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Failed"
+              status: "True"
 
   # Optimization instructions
   optimizationInstructions:

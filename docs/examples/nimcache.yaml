@@ -26,7 +26,7 @@ spec:
     components:
     # Root NIMCache resource
     - name: "nimcache"
-      specPath: ".spec"
+      # specPath omitted for root component (defaults to .spec)
       kind:
         group: "apps.nvidia.com"
         version: "v1alpha1"

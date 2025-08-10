@@ -1,0 +1,14 @@
+# Virtual environment
+venv/
+
+# Generated images
+*.png
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# System files
+.DS_Store
+.vscode/ 

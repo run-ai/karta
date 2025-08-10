@@ -17,89 +17,93 @@ spec:
   # Component structure - focuses on MPI distributed training
   structureDefinition:
     components:
-  # Root MPIJob resource
-  - name: "mpijob"
-    specPath: ".spec"
-    kind:
-      group: "kubeflow.org"
-      version: "v2beta1"
-      kind: "MPIJob"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Running"
-            status: "True"
-        completed:
-          byConditions:
-          - type: "Succeeded"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Failed"
-            status: "True"
+    # Root MPIJob resource
+    - name: "mpijob"
+      # specPath omitted for root component (defaults to .spec)
+      kind:
+        group: "kubeflow.org"
+        version: "v2beta1"
+        kind: "MPIJob"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Running"
+              status: "True"
+          completed:
+            byConditions:
+            - type: "Succeeded"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Failed"
+              status: "True"
 
-  # Launcher node - orchestrates MPI job execution
-  - name: "launcher"
-    specPath: ".spec.mpiReplicaSpecs.Launcher"
-    kind:
-      group: ""
-      version: "v1"
-      kind: "Pod"
-    ownerName: "mpijob"
-    scaleDefinition:
-      replicasPath: ".spec.mpiReplicaSpecs.Launcher.replicas"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Running"
-            status: "True"
-        completed:
-          byConditions:
-          - type: "Succeeded"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Failed"
-            status: "True"
+    # Launcher node - orchestrates MPI job execution
+    - name: "launcher"
+      specPath: ".spec.mpiReplicaSpecs.Launcher"
+      kind:
+        group: ""
+        version: "v1"
+        kind: "Pod"
+      ownerName: "mpijob"
+      childSpecDefinition:
+        podTemplateSpecPath: ".spec.mpiReplicaSpecs.Launcher.template"
+      scaleDefinition:
+        replicasPath: ".spec.mpiReplicaSpecs.Launcher.replicas"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Running"
+              status: "True"
+          completed:
+            byConditions:
+            - type: "Succeeded"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Failed"
+              status: "True"
 
-  # Worker nodes - execute MPI tasks under launcher coordination
-  - name: "worker"
-    specPath: ".spec.mpiReplicaSpecs.Worker"
-    kind:
-      group: ""
-      version: "v1"
-      kind: "Pod"
-    ownerName: "mpijob"
-    scaleDefinition:
-      replicasPath: ".spec.mpiReplicaSpecs.Worker.replicas"
-    statusDefinition:
-      conditionsDefinition:
-        path: ".status.conditions"
-        typeFieldName: "type"
-        statusFieldName: "status"
-      statusMappings:
-        running:
-          byConditions:
-          - type: "Running"
-            status: "True"
-        completed:
-          byConditions:
-          - type: "Succeeded"
-            status: "True"
-        failed:
-          byConditions:
-          - type: "Failed"
-            status: "True"
+    # Worker nodes - execute MPI tasks under launcher coordination
+    - name: "worker"
+      specPath: ".spec.mpiReplicaSpecs.Worker"
+      kind:
+        group: ""
+        version: "v1"
+        kind: "Pod"
+      ownerName: "mpijob"
+      childSpecDefinition:
+        podTemplateSpecPath: ".spec.mpiReplicaSpecs.Worker.template"
+      scaleDefinition:
+        replicasPath: ".spec.mpiReplicaSpecs.Worker.replicas"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          running:
+            byConditions:
+            - type: "Running"
+              status: "True"
+          completed:
+            byConditions:
+            - type: "Succeeded"
+              status: "True"
+          failed:
+            byConditions:
+            - type: "Failed"
+              status: "True"
 
   # Optimization instructions
   optimizationInstructions:
@@ -134,4 +138,4 @@ spec:
         - componentDefinitionName: "launcher"
           componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
         - componentDefinitionName: "worker"
-          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]' 
+          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'

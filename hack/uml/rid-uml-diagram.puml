@@ -38,6 +38,7 @@ package "Component Architecture" {
     +dependsOn: string[]
     +references: ReferenceDefinition[]
     +isReference: bool
+    +childSpecDefinition: ChildSpecDefinition?
     +scaleDefinition: ScaleDefinition?
     +statusDefinition: StatusDefinition?
   }
@@ -69,6 +70,23 @@ package "Component Architecture" {
     +running: ConditionMapping
     +completed: ConditionMapping?
     +failed: ConditionMapping
+  }
+  
+  class ChildSpecDefinition {
+    +podTemplateSpecPath: string?
+    +podSpecPath: string?
+    +fragmentedPodDefinition: FragmentedPodDefinition?
+  }
+  
+  class FragmentedPodDefinition {
+    +labelsPath: string?
+    +annotationsPath: string?
+    +resourcesPath: string?
+    +resourceClaimsPath: string?
+    +schedulerNamePath: string?
+    +nodeAffinityPath: string?
+    +podAffinityPath: string?
+    +containersPath: string?
   }
 }
 
@@ -162,6 +180,10 @@ GPUInterconnect ||--o{ ComponentSelector
 TopologyAwareness ||--o{ TopologyGroupDefinition
 TopologyGroupDefinition ||--o{ ComponentSelector
 PodGroupDefinition ||--o{ ComponentSelector
+
+' Child Specification Relationships
+ComponentDefinition ||--o| ChildSpecDefinition
+ChildSpecDefinition ||--o| FragmentedPodDefinition
 
 ' Example Relationships
 PyTorchJobRID ..|> ResourceInterpretationDefinition : "implements"
