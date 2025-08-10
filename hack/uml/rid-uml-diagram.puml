@@ -16,10 +16,15 @@ package "RID Core Structure" {
   }
   
   class RIDSpec {
-    +kind: GroupVersionKind
-    +structureDefinition: ComponentDefinition[]
-    +childKinds: GroupVersionKind[]
+    +structureDefinition: StructureDefinition
     +optimizationInstructions: OptimizationInstructions
+  }
+  
+  class StructureDefinition {
+    +rootComponent: ComponentDefinition
+    +childComponents: ComponentDefinition[]
+    +referencedComponents: ComponentDefinition[]
+    +additionalChildKinds: GroupVersionKind[]
   }
   
   class GroupVersionKind {
@@ -37,7 +42,6 @@ package "Component Architecture" {
     +ownerName: string?
     +dependsOn: string[]
     +references: ReferenceDefinition[]
-    +isReference: bool
     +childSpecDefinition: ChildSpecDefinition?
     +scaleDefinition: ScaleDefinition?
     +statusDefinition: StatusDefinition?
@@ -216,7 +220,6 @@ note bottom of ReferenceDefinition
   **Reference Pattern:**
   • Referencing component owns relationship
   • componentKeyPath evaluated against referencing resource
-  • Referenced components marked with isReference: true
 end note
 
 @enduml 

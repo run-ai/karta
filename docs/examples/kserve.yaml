@@ -8,17 +8,9 @@ metadata:
     ai.framework: kserve
     example.type: functional
 spec:
-  # Target KServe inference services
-  topOwnerKind:
-    group: serving.kserve.io
-    version: v1beta1
-    kind: InferenceService
-  
-  # Component structure - focuses on serverless ML inference
   structureDefinition:
-    components:
-    # Root InferenceService resource
-    - name: "inferenceservice"
+    rootComponent:
+      name: "inferenceservice"
       # specPath omitted for root component (defaults to .spec)
       kind:
         group: "serving.kserve.io"
@@ -39,6 +31,7 @@ spec:
             - type: "Ready"
               status: "False"
 
+    childComponents:
     # Predictor - main inference endpoint
     - name: "predictor"
       specPath: ".spec.predictor"

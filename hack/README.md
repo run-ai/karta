@@ -10,6 +10,12 @@ This directory contains utility scripts, build tools, and development helpers fo
   - `generate_uml_diagram.py` - Automated script to generate PNG diagram
   - `README.md` - Detailed documentation for UML tools
 
+### Structure Definition Visualization
+- **`structureDefinition/`** - Visual diagram generation for individual RID component structures
+  - `generate_structure_definition.py` - Automated script to generate structure diagrams from RID YAML files
+  - `requirements.txt` - Python dependencies for visualization
+  - `venv/` - Virtual environment (auto-created)
+
 ## Usage
 
 ### Generate RID Architecture Diagram
@@ -21,19 +27,48 @@ python3 hack/uml/generate_uml_diagram.py
 
 **Output**: `docs/design/rid-architecture.png`
 
+This generates the overall RID API architecture diagram showing the new explicit structure with `rootComponent`, `childComponents`, and `referencedComponents`.
+
+### Generate RID Structure Definition Diagrams
+
+```bash
+# Generate all RID structure diagrams
+cd hack/structureDefinition
+python3 generate_structure_definition.py --input-dir ../../docs/examples
+
+# Generate specific framework diagrams
+python3 generate_structure_definition.py --frameworks pytorch nimservice kserve
+
+# Generate with custom input/output
+python3 generate_structure_definition.py --input-dir /path/to/rids --output-path /path/to/output
+```
+
+**Output**: `docs/examples/*-structure-definition.png` (one per RID file)
+
+This generates individual component hierarchy diagrams for each RID, showing:
+- Root component (blue) with target Kubernetes resource
+- Child components (white) owned by parent components
+- Referenced components (gray) as external dependencies
+- Ownership relationships (solid arrows)
+- Reference relationships (dashed blue arrows)
+
 The script handles:
-- Virtual environment creation and management
-- Dependency installation (`plantuml`, `six`, `httplib2`)
-- Multiple generation methods (Python module, JAR fallback)
-- Clear error reporting and manual alternatives
+- Virtual environment creation and dependency management
+- Automatic discovery of RID YAML files
+- Visual distinction between component types
+- Support for the new explicit structure format
+- Network graph layout optimization
+- High-resolution PNG output
 
-### Manual PlantUML Generation
+## New Explicit Structure Support
 
-If the automated script fails:
+Both tools have been updated to support the new explicit RID structure:
 
-1. Visit [PlantUML Online](http://www.plantuml.com/plantuml/uml/)
-2. Copy content from `hack/uml/rid-uml-diagram.puml`
-3. Generate PNG and save as `docs/design/rid-architecture.png`
+- **Removed**: `topOwnerKind` field (target kind now in `rootComponent.kind`)
+- **Removed**: `isReference` field (component type determined by section placement)
+- **Added**: Explicit `rootComponent`, `childComponents`, `referencedComponents` sections
+- **Enhanced**: Clear visual distinction between component types
+- **Improved**: Self-documenting structure that eliminates ambiguity
 
 ## Requirements
 
@@ -41,24 +76,20 @@ If the automated script fails:
 - **Java** (optional, for PlantUML JAR fallback)
 - **Internet access** for dependency installation and PlantUML service
 
-## Conventions
-
-- **Input files**: Source code, templates, build configurations stay in hack/
-- **Output files**: Generated content goes to appropriate `docs/` or project directories
-- **Virtual environments**: Contained within tool directories for isolation
-- **Temporary files**: Created and cleaned up automatically (e.g., downloaded JARs)
-- **Scripts**: Self-contained with dependency management and error handling
-
 ## Directory Structure
 
 ```
 hack/
-├── README.md              # This file
-└── uml/                   # UML generation tools
-    ├── README.md          # UML-specific documentation
-    ├── generate_uml_diagram.py
-    ├── rid-uml-diagram.puml
-    └── venv/              # Virtual environment (auto-created)
+├── README.md                    # This file
+├── uml/                         # UML generation tools
+│   ├── README.md                # UML-specific documentation
+│   ├── generate_uml_diagram.py
+│   ├── rid-uml-diagram.puml
+│   └── venv/                    # Virtual environment (auto-created)
+└── structureDefinition/         # Structure diagram generation
+    ├── generate_structure_definition.py
+    ├── requirements.txt
+    └── venv/                    # Virtual environment (auto-created)
 ```
 
 ## Adding New Tools
@@ -69,4 +100,5 @@ When adding new utility scripts:
 2. Use virtual environments for Python dependencies
 3. Include README.md with usage instructions
 4. Output generated files to appropriate project directories
-5. Handle errors gracefully with clear messages 
+5. Handle errors gracefully with clear messages
+6. Support the current RID API structure and conventions 

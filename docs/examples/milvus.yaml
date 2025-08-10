@@ -8,17 +8,9 @@ metadata:
     ai.framework: milvus
     example.type: functional
 spec:
-  # Target Milvus vector database deployments
-  topOwnerKind:
-    group: milvus.io
-    version: v1beta1
-    kind: Milvus
-  
-  # Component structure - focuses on distributed vector processing
   structureDefinition:
-    components:
-    # Root Milvus resource
-    - name: "milvus"
+    rootComponent:
+      name: "milvus"
       # specPath omitted for root component (defaults to .spec)
       kind:
         group: "milvus.io"
@@ -39,6 +31,7 @@ spec:
             - type: "MilvusReady"
               status: "False"
 
+    childComponents:
     # QueryNode - handles vector search queries
     - name: "querynode"
       specPath: ".spec.components.queryNode"

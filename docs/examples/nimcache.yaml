@@ -8,24 +8,9 @@ metadata:
     ai.framework: nim
     example.type: functional
 spec:
-  # Target NVIDIA NIM model caching workloads
-  topOwnerKind:
-    group: apps.nvidia.com
-    version: v1alpha1
-    kind: NIMCache
-  
-  # Component structure - focuses on model caching operations
   structureDefinition:
-    # Child resources created but not represented as components
-    additionalChildKinds:
-    - group: batch
-      version: v1
-      kind: Job
-    
-    # Component definitions
-    components:
-    # Root NIMCache resource
-    - name: "nimcache"
+    rootComponent:
+      name: "nimcache"
       # specPath omitted for root component (defaults to .spec)
       kind:
         group: "apps.nvidia.com"
@@ -49,6 +34,12 @@ spec:
             byConditions:
             - type: "NIM_CACHE_JOB_PENDING"
               status: "True"
+    
+    # Child resources created but not represented as components
+    additionalChildKinds:
+    - group: batch
+      version: v1
+      kind: Job
 
   # Optimization instructions
   optimizationInstructions:

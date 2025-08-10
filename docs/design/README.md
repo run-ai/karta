@@ -77,8 +77,8 @@ These are the **most important rules** that cannot be broken:
 - **Instruction Filter Paths**: Always relative to component's resource type (`.spec.containers[0].resources`)
 
 ### **2. Reference Architecture**  
-- **Referencing component**: Owns the relationship via `references` list
-- **Referenced component**: Marked with `isReference: true`
+- **Referencing component**: Owns the relationship via `references` list (in rootComponent or childComponents)
+- **Referenced component**: Placed in `referencedComponents` section
 - **Path evaluation**: All paths within a component evaluate against same resource
 
 ### **3. Status Definitions Must Be Research-Based**
@@ -167,16 +167,32 @@ kind: ResourceInterpretationDefinition
 metadata:
   name: "[framework]"
 spec:
-  kind: { group, version, kind }
   structureDefinition:
-  - name: "[main-component]"
-    specPath: ".spec"
-    kind: { group, version, kind }
-    statusDefinition: { conditionsDefinition, statusMappings }
+    rootComponent:
+      name: "[main-component]"
+      kind: { group, version, kind }
+      statusDefinition: { conditionsDefinition, statusMappings }
+    
+    childComponents:              # Optional - if framework has child resources
+    - name: "[child-component]"
+      ownerName: "[main-component]"
+      kind: { group, version, kind }
+      childSpecDefinition: { ... }
+    
+    referencedComponents:         # Optional - if framework has dependencies
+    - name: "[reference-name]"
+      kind: { group, version, kind }
+      statusDefinition: { ... }
+    
+    additionalChildKinds:         # Optional - unmodeled child resources
+    - group: apps
+      version: v1
+      kind: Deployment
+      
   optimizationInstructions:
     gangScheduling:
       podGroups: [...]
-    multiNodeNVLink:
+    gpuInterconnect:
       acceleratedComponents: [...]
     topologyAwareness:
       topologyGroups: [...]

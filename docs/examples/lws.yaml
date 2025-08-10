@@ -8,17 +8,9 @@ metadata:
     ai.framework: leaderworkerset
     example.type: functional
 spec:
-  # Target LeaderWorkerSet workloads with leader-worker patterns
-  topOwnerKind:
-    group: leaderworkerset.x-k8s.io
-    version: v1
-    kind: LeaderWorkerSet
-  
-  # Component structure - focuses on leader-worker coordination
   structureDefinition:
-    components:
-    # Root LeaderWorkerSet resource
-    - name: "leaderworkerset"
+    rootComponent:
+      name: "leaderworkerset"
       # specPath omitted for root component (defaults to .spec)
       kind:
         group: "leaderworkerset.x-k8s.io"
@@ -39,6 +31,7 @@ spec:
             - type: "Available"
               status: "False"
 
+    childComponents:
     # Leader - coordinates and manages worker nodes
     - name: "leader"
       specPath: ".spec.leaderWorkerTemplate.leaderTemplate"

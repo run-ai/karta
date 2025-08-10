@@ -18,28 +18,40 @@ kind: ResourceInterpretationDefinition
 metadata:
   name: framework
 spec:
-  kind:                    # Target Kubernetes CRD
-    group: kubeflow.org
-    version: v1
-    kind: PyTorchJob
+  structureDefinition:          # Explicit component hierarchy
+    rootComponent:              # Main target CRD
+      name: "pytorchjob"
+      kind: 
+        group: kubeflow.org
+        version: v1
+        kind: PyTorchJob
+      statusDefinition: { ... }
+      scaleDefinition: { ... }
+    
+    childComponents:            # Owned child resources
+    - name: "master"
+      ownerName: "pytorchjob"
+      kind: { group, version, kind }
+      childSpecDefinition: { ... }
+    - name: "worker" 
+      ownerName: "pytorchjob"
+      kind: { group, version, kind }
+      scaleDefinition: { ... }
+    
+    referencedComponents:       # External dependencies
+    - name: "storage-ref"
+      kind: { group, version, kind }
+      statusDefinition: { ... }
+    
+    additionalChildKinds:       # Custom resources needing traversal
+    - group: apps
+      version: v1
+      kind: Deployment          # Example: Knative creates Deployments
   
-  structureDefinition:     # Component hierarchy and relationships
-  - name: "pytorchjob"
-    specPath: ".spec"
-    kind: { group, version, kind }
-    statusDefinition: { ... }
-    scaleDefinition: { ... }
-    dependsOn: [...]
-  
-  childKinds:              # Optional - custom resources needing traversal
-  - group: apps
-    version: v1
-    kind: Deployment       # Example: Knative creates Deployments
-  
-  optimizationInstructions:  # Optimization directives (Iteration 02)
+  optimizationInstructions:    # Optimization directives
     gangScheduling:
       podGroups: [...]
-    multiNodeNVLink:
+    gpuInterconnect:
       acceleratedComponents: [...]
 ```
 
@@ -98,8 +110,7 @@ spec:
 # Reference Component (External Dependency)
 - name: "nimcache-ref"
   specPath: ".spec"
-  isReference: true                      # Indicates separate K8s object
-  ownerName: "nimservice"
+  # No ownerName - external resource
   # No childSpecDefinition - management resource
   kind:
     group: "apps.nvidia.com"
@@ -107,6 +118,8 @@ spec:
     kind: "NIMCache"
   statusDefinition: { ... }              # Required for monitoring
 ```
+
+**Note**: Reference components are now identified by being placed in the `referencedComponents` section rather than using an `isReference` flag.
 
 ### 2. Child Specification Definition
 **Purpose**: Defines how to access pod specifications within parent resources for pod-level optimization.
@@ -483,16 +496,16 @@ This component structure enables Kai-bolt to understand complex AI/ML workloads,
 
 For workloads that depend on external components (like NIMService → NIMCache):
 
-1. **Referencing Component**: Owns the reference relationship
-2. **Referenced Component**: Marked as external with `isReference: true`
-3. **Dependency**: Expressed via `dependsOn` field
+1. **Referencing Component**: Owns the reference relationship (in rootComponent or childComponents)
+2. **Referenced Component**: External dependency (in referencedComponents section)
+3. **Dependency**: Expressed via `dependsOn` field and `references` list
 4. **Status Integration**: Referenced components include status definitions for dependency checking
 
 Example:
 ```yaml
 structureDefinition:
-  components:
-  - name: "nimservice"
+  rootComponent:
+    name: "nimservice"
     specPath: ".spec"
     references:
       - componentName: "nimcache-ref"
@@ -500,9 +513,9 @@ structureDefinition:
     dependsOn: ["nimcache-ref"]
     # ... status and other definitions
 
+  referencedComponents:
   - name: "nimcache-ref"
     specPath: ".spec"
-    isReference: true
     kind:
       group: "apps.nvidia.com"
       version: "v1alpha1"
@@ -514,7 +527,7 @@ structureDefinition:
 **Critical Rules**:
 - Referencing components use `references` list to specify dependencies
 - `componentKeyPath` is evaluated against the referencing component's resource
-- Referenced components are marked with `isReference: true`
+- Referenced components are placed in the `referencedComponents` section
 - Referenced components must have `statusDefinition` for monitoring
 - Creates orchestration order: cache → service
 - Prevents invalid startup sequences

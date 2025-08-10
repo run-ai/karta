@@ -123,10 +123,13 @@ childSpecDefinition:
 
 **✅ Generated Component** (no optimization):
 ```yaml
+# In referencedComponents section - indicates external resource
 - name: "revision"
-  isReference: true
   # No childSpecDefinition - generated/read-only
+  # No ownerName - external to main workload
 ```
+
+**Note**: Components are now categorized by their placement in `rootComponent`, `childComponents`, or `referencedComponents` sections rather than using flags.
 
 ### 8. **additionalChildKinds Exclusion Rule**
 Must exclude resource types that have explicit component definitions.

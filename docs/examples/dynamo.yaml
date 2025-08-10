@@ -8,27 +8,9 @@ metadata:
     ai.framework: dynamo
     example.type: functional
 spec:
-  # Target NVIDIA Dynamo inference graph deployments
-  topOwnerKind:
-    group: nvidia.com
-    version: v1alpha1
-    kind: DynamoGraphDeployment
-  
-  # Component structure - focused on core optimization
   structureDefinition:
-    # Child resources created but not represented as components
-    additionalChildKinds:
-    - group: apps
-      version: v1
-      kind: Deployment
-    - group: leaderworkerset.x-k8s.io
-      version: v1
-      kind: LeaderWorkerSet
-    
-    # Component definitions
-    components:
-    # Root DynamoGraphDeployment resource
-    - name: "dynamographdeployment"
+    rootComponent:
+      name: "dynamographdeployment"
       # specPath omitted for root component (defaults to .spec)
       kind:
         group: "nvidia.com"
@@ -49,7 +31,7 @@ spec:
             - type: "Available"
               status: "False"
 
-    # Service component - handles inference serving requests  
+    childComponents:
     - name: "service"
       specPath: ".spec.services[]"
       kind:
@@ -84,6 +66,15 @@ spec:
             byConditions:
             - type: "Available"
               status: "False"
+    
+    # Child resources created but not represented as components
+    additionalChildKinds:
+    - group: apps
+      version: v1
+      kind: Deployment
+    - group: leaderworkerset.x-k8s.io
+      version: v1
+      kind: LeaderWorkerSet
 
   # Optimization instructions
   optimizationInstructions:

@@ -8,17 +8,9 @@ metadata:
     ai.framework: pytorch
     example.type: functional
 spec:
-  # Target PyTorchJob distributed training workloads
-  topOwnerKind:
-    group: kubeflow.org
-    version: v1
-    kind: PyTorchJob
-  
-  # Component structure - focuses on critical training components
   structureDefinition:
-    components:
-    # Root PyTorchJob resource
-    - name: "pytorchjob"
+    rootComponent:
+      name: "pytorchjob"
       # specPath omitted for root component (defaults to .spec)
       kind:
         group: "kubeflow.org"
@@ -43,7 +35,7 @@ spec:
             - type: "Failed"
               status: "True"
 
-    # Master node - coordinates training and handles model checkpointing
+    childComponents:
     - name: "master"
       specPath: ".spec.pytorchReplicaSpecs.Master"
       kind:
@@ -56,7 +48,6 @@ spec:
       scaleDefinition:
         replicasPath: ".spec.pytorchReplicaSpecs.Master.replicas"
 
-    # Worker nodes - perform distributed training computation
     - name: "worker"
       specPath: ".spec.pytorchReplicaSpecs.Worker"
       kind:
@@ -70,7 +61,6 @@ spec:
         replicasPath: ".spec.pytorchReplicaSpecs.Worker.replicas"
         minReplicasPath: ".spec.elasticPolicy.minReplicas"
         maxReplicasPath: ".spec.elasticPolicy.maxReplicas"
-
 
   # Optimization instructions
   optimizationInstructions:

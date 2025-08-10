@@ -8,17 +8,9 @@ metadata:
     ai.framework: mpi
     example.type: functional
 spec:
-  # Target MPIJob distributed training workloads
-  topOwnerKind:
-    group: kubeflow.org
-    version: v2beta1
-    kind: MPIJob
-  
-  # Component structure - focuses on MPI distributed training
   structureDefinition:
-    components:
-    # Root MPIJob resource
-    - name: "mpijob"
+    rootComponent:
+      name: "mpijob"
       # specPath omitted for root component (defaults to .spec)
       kind:
         group: "kubeflow.org"
@@ -43,6 +35,7 @@ spec:
             - type: "Failed"
               status: "True"
 
+    childComponents:
     # Launcher node - orchestrates MPI job execution
     - name: "launcher"
       specPath: ".spec.mpiReplicaSpecs.Launcher"

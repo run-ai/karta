@@ -654,21 +654,46 @@ class StructureDefinitionGenerator:
         # Extract framework name from metadata
         self.framework_name = rid_data.get('metadata', {}).get('name', 'unknown')
         
+        # Extract components from new explicit structure
+        all_components = []
+        
+        # Add root component
+        root_component = structure_def.get('rootComponent', {})
+        if root_component:
+            all_components.append(root_component)
+        
+        # Add child components
+        child_components = structure_def.get('childComponents', [])
+        all_components.extend(child_components)
+        
+        # Add referenced components
+        referenced_components = structure_def.get('referencedComponents', [])
+        all_components.extend(referenced_components)
+        
         # Extract components and build relationships
-        self._extract_components(structure_def.get('components', []))
+        self._extract_components(all_components, referenced_components)
         self.child_kinds = structure_def.get('additionalChildKinds', [])
     
-    def _extract_components(self, components_list: List[Dict]):
+    def _extract_components(self, components_list: List[Dict], referenced_components: List[Dict] = None):
         """Extract components and build relationship mappings."""
+        if referenced_components is None:
+            referenced_components = []
+        
+        # Create set of referenced component names for quick lookup
+        referenced_names = {comp.get('name') for comp in referenced_components if comp.get('name')}
+        
         # First pass: extract all components
         for comp in components_list:
             name = comp.get('name')
             if name:
+                # Determine if this is a reference component based on whether it's in referencedComponents section
+                is_reference = name in referenced_names
+                
                 self.components[name] = {
                     'kind': extract_kind_with_group(comp.get('kind')),
                     'specPath': comp.get('specPath', '.spec'),
                     'ownerName': comp.get('ownerName'),
-                    'isReference': comp.get('isReference', False),
+                    'isReference': is_reference,  # Keep for internal visualization logic
                     'references': comp.get('references', []),
                     'childSpecDefinition': comp.get('childSpecDefinition'),
                 }

@@ -8,17 +8,9 @@ metadata:
     ai.framework: ray
     example.type: functional
 spec:
-  # Target Ray distributed computing clusters
-  topOwnerKind:
-    group: ray.io
-    version: v1
-    kind: RayCluster
-  
-  # Component structure - focuses on Ray cluster coordination
   structureDefinition:
-    components:
-    # Root RayCluster resource
-    - name: "raycluster"
+    rootComponent:
+      name: "raycluster"
       # specPath omitted for root component (defaults to .spec)
       kind:
         group: "ray.io"
@@ -39,6 +31,7 @@ spec:
             - type: "Ready"
               status: "False"
 
+    childComponents:
     # Head node - Ray cluster coordinator and scheduler
     - name: "head"
       specPath: ".spec.headGroupSpec"
@@ -112,7 +105,7 @@ spec:
         componentKeyPath: '.metadata.labels["ray.io/cluster"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
-      - componentDefinitionName: "workergroup"
+      - componentDefinitionName: "worker"
         componentKeyPath: '.metadata.labels["ray.io/cluster"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'

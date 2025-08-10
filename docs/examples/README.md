@@ -4,13 +4,53 @@ This directory contains Resource Interpretation Definition (RID) examples for ma
 
 ## Current Iteration Features
 
-- **Added**: `optimizationInstructions` hierarchy in RID spec
+- **Added**: Explicit component structure with `rootComponent`, `childComponents`, and `referencedComponents`
+- **Removed**: `topOwnerKind` field - target kind now specified in `rootComponent.kind`
+- **Removed**: `isReference` field - component type determined by section placement
 - **Enhanced**: Component kinds match actual framework implementations  
-- **Enhanced**: `childKinds` for compute resource traversal
-- **Enhanced**: Root component ordering for clear hierarchy
+- **Enhanced**: `additionalChildKinds` for compute resource traversal
+- **Enhanced**: Clear component hierarchy without ambiguity
 - **Enhanced**: Elastic training support for autoscaling workloads
 - **Added**: Child specification patterns for pod-level optimization
 - **Enhanced**: Management vs serving resource classification
+
+### Explicit Structure Organization
+
+RIDs now use a clear, explicit structure that eliminates ambiguity:
+
+```yaml
+structureDefinition:
+  rootComponent:              # Main target CRD (exactly one)
+    name: "framework-name"
+    kind: { group, version, kind }
+    # Root-level properties
+  
+  childComponents:            # Owned child resources (optional)
+  - name: "master"
+    ownerName: "framework-name"
+    kind: { group, version, kind }
+  - name: "worker"
+    ownerName: "framework-name"
+    kind: { group, version, kind }
+  
+  referencedComponents:       # External dependencies (optional)
+  - name: "cache-ref"
+    kind: { group, version, kind }
+    statusDefinition: { ... }  # Required for monitoring
+  
+  additionalChildKinds:       # Unmodeled resources needing traversal
+  - group: apps
+    version: v1
+    kind: Deployment
+```
+
+### Benefits of Explicit Structure
+
+1. **🎯 Clear Intent**: No guessing which component is root
+2. **📋 Explicit References**: `referencedComponents` section makes dependencies obvious
+3. **🏗️ Clean Hierarchy**: Separate sections for different component types
+4. **🔍 Better Validation**: Structure-specific validation rules
+5. **📖 Self-Documenting**: RID purpose immediately clear from structure
 
 ### Child Specification Patterns
 

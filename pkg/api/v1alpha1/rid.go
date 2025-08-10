@@ -16,13 +16,14 @@ type ResourceInterpretationDefinition struct {
 }
 
 type ResourceInterpretationDefinitionSpec struct {
-	TopOwnerKind        schema.GroupVersionKind  `json:"topOwnerKind"`
 	StructureDefinition StructureDefinition      `json:"structureDefinition"`
 	Instructions        OptimizationInstructions `json:"optimizationInstructions"`
 }
 
 type StructureDefinition struct {
-	Components           []structure.ComponentDefinition `json:"components"`
+	RootComponent        structure.ComponentDefinition   `json:"rootComponent"`
+	ChildComponents      []structure.ComponentDefinition `json:"childComponents,omitempty"`
+	ReferencedComponents []structure.ComponentDefinition `json:"referencedComponents,omitempty"`
 	AdditionalChildKinds []schema.GroupVersionKind       `json:"additionalChildKinds,omitempty"` // make sure contains all the unspecified child components' kinds
 }
 

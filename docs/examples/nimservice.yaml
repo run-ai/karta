@@ -8,33 +8,9 @@ metadata:
     ai.framework: nim
     example.type: functional
 spec:
-  # Target NVIDIA NIM inference services
-  topOwnerKind:
-    group: apps.nvidia.com
-    version: v1alpha1
-    kind: NIMService
-  
-  # Component structure - focused on inference runtime optimization with dependency
   structureDefinition:
-    # Child resources created but not represented as components
-    additionalChildKinds:
-    - group: apps
-      version: v1
-      kind: Deployment
-    - group: apps
-      version: v1
-      kind: StatefulSet
-    - group: leaderworkerset.x-k8s.io
-      version: v1
-      kind: LeaderWorkerSet
-    - group: serving.kserve.io
-      version: v1beta1
-      kind: InferenceService
-    
-    # Component definitions
-    components:
-    # NIMService component for service-level operations
-    - name: "nimservice"
+    rootComponent:
+      name: "nimservice"
       # specPath omitted for root component (defaults to .spec)
       kind:
         group: "apps.nvidia.com"
@@ -43,7 +19,6 @@ spec:
       references:
         - componentName: "nimcache-ref"
           componentKeyPath: ".spec.storage.nimCache.name"
-      dependsOn: ["nimcache-ref"]
       childSpecDefinition:
         fragmentedPodDefinition:
           labelsPath: ".spec.labels"
@@ -69,10 +44,11 @@ spec:
             - type: "NIM_SERVICE_FAILED"
               status: "True"
 
+    # Referenced components - external dependencies
+    referencedComponents:
     # NIMCache reference - the pre-cached model that this service uses
     - name: "nimcache-ref"
       # specPath omitted for referenced component (defaults to .spec)
-      isReference: true
       kind:
         group: "apps.nvidia.com"
         version: "v1alpha1"
@@ -91,6 +67,21 @@ spec:
             byConditions:
             - type: "NIM_CACHE_RECONCILE_FAILED"
               status: "True"
+    
+    # Child resources created but not represented as components
+    additionalChildKinds:
+    - group: apps
+      version: v1
+      kind: Deployment
+    - group: apps
+      version: v1
+      kind: StatefulSet
+    - group: leaderworkerset.x-k8s.io
+      version: v1
+      kind: LeaderWorkerSet
+    - group: serving.kserve.io
+      version: v1beta1
+      kind: InferenceService
 
   # Optimization instructions using new structure
   optimizationInstructions:

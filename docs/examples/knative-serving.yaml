@@ -8,24 +8,9 @@ metadata:
     ai.framework: knative
     example.type: functional
 spec:
-  # Target Knative Service deployments for serverless workloads
-  topOwnerKind:
-    group: serving.knative.dev
-    version: v1
-    kind: Service
-  
-  # Component structure - focuses on serverless autoscaling
   structureDefinition:
-    # Child resources created but not represented as components
-    additionalChildKinds:
-    - group: apps
-      version: v1
-      kind: Deployment
-    
-    # Component definitions
-    components:
-    # Root Knative Service resource
-    - name: "service"
+    rootComponent:
+      name: "service"
       # specPath omitted for root component (defaults to .spec)
       kind:
         group: "serving.knative.dev"
@@ -50,7 +35,7 @@ spec:
             - type: "Ready"
               status: "False"
 
-    # Knative Revision component for revision-level optimization
+    childComponents:
     - name: "revision"
       # specPath omitted for child component (defaults to .spec)
       ownerName: "service"
@@ -74,6 +59,12 @@ spec:
             byConditions:
             - type: "Ready"
               status: "False"
+    
+    # Child resources created but not represented as components
+    additionalChildKinds:
+    - group: apps
+      version: v1
+      kind: Deployment
 
   # Optimization instructions
   optimizationInstructions:
