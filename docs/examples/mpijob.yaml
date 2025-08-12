@@ -100,24 +100,26 @@ spec:
 
   # Optimization instructions
   optimizationInstructions:
-    # Gang scheduling for MPI process coordination
+    # Gang scheduling for distributed training coordination
     gangScheduling:
       podGroups:
-      - name: "mpi-gang"
+      - name: "training-gang"
         members:
-        - componentDefinitionName: "launcher"
-          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
-        - componentDefinitionName: "worker"
-          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
+        - componentName: "launcher"
+          groupByKeyPaths:
+          - '.metadata.labels["training.kubeflow.org/job-name"]'
+        - componentName: "worker"
+          groupByKeyPaths:
+          - '.metadata.labels["training.kubeflow.org/job-name"]'
 
     # GPU optimization for distributed MPI workloads
     gpuInterconnect:
       acceleratedComponents:
-      - componentDefinitionName: "launcher"
+      - componentName: "launcher"
         componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
-      - componentDefinitionName: "worker"
+      - componentName: "worker"
         componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
@@ -128,7 +130,7 @@ spec:
       - groupName: "mpi-cluster"
         preferredPlacement: "zone"
         members:
-        - componentDefinitionName: "launcher"
+        - componentName: "launcher"
           componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
-        - componentDefinitionName: "worker"
+        - componentName: "worker"
           componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'

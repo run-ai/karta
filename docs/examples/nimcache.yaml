@@ -48,8 +48,9 @@ spec:
       podGroups:
       - name: "cache-pipeline"
         members:
-        - componentDefinitionName: "nimcache"
-          componentKeyPath: '.metadata.labels["app.kubernetes.io/name"]'
+        - componentName: "nimcache"
+          groupByKeyPaths:
+          - '.metadata.labels["app.kubernetes.io/name"]'
 
     # Topology awareness for cache storage placement (prefer node affinity for storage)
     topologyAwareness:
@@ -57,5 +58,5 @@ spec:
       - groupName: "cache-storage"
         preferredPlacement: "node"
         members:
-        - componentDefinitionName: "nimcache"
+        - componentName: "nimcache"
           componentKeyPath: '.metadata.labels["app.kubernetes.io/name"]' 

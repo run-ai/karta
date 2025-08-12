@@ -95,19 +95,21 @@ spec:
       podGroups:
       - name: "inference-pipeline"
         members:
-        - componentDefinitionName: "predictor"
-          componentKeyPath: '.metadata.labels["serving.kserve.io/inferenceservice"]'
-        - componentDefinitionName: "transformer"
-          componentKeyPath: '.metadata.labels["serving.kserve.io/inferenceservice"]'
+        - componentName: "predictor"
+          groupByKeyPaths:
+          - '.metadata.labels["serving.kserve.io/inferenceservice"]'
+        - componentName: "transformer"
+          groupByKeyPaths:
+          - '.metadata.labels["serving.kserve.io/inferenceservice"]'
 
     # GPU optimization for inference acceleration  
     gpuInterconnect:
       acceleratedComponents:
-      - componentDefinitionName: "predictor"
+      - componentName: "predictor"
         componentKeyPath: '.metadata.labels["serving.kserve.io/inferenceservice"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
-      - componentDefinitionName: "transformer"
+      - componentName: "transformer"
         componentKeyPath: '.metadata.labels["serving.kserve.io/inferenceservice"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
@@ -118,7 +120,7 @@ spec:
       - groupName: "serving-cluster"
         preferredPlacement: "node"
         members:
-        - componentDefinitionName: "predictor"
+        - componentName: "predictor"
           componentKeyPath: '.metadata.labels["serving.kserve.io/inferenceservice"]'
-        - componentDefinitionName: "transformer"
+        - componentName: "transformer"
           componentKeyPath: '.metadata.labels["serving.kserve.io/inferenceservice"]' 

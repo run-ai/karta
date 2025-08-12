@@ -93,19 +93,21 @@ spec:
       podGroups:
       - name: "milvus-cluster"
         members:
-        - componentDefinitionName: "querynode"
-          componentKeyPath: '.metadata.labels["app.kubernetes.io/instance"]'
-        - componentDefinitionName: "datanode"
-          componentKeyPath: '.metadata.labels["app.kubernetes.io/instance"]'
+        - componentName: "querynode"
+          groupByKeyPaths:
+          - '.metadata.labels["app.kubernetes.io/instance"]'
+        - componentName: "datanode"
+          groupByKeyPaths:
+          - '.metadata.labels["app.kubernetes.io/instance"]'
 
     # GPU optimization for vector operations
     gpuInterconnect:
       acceleratedComponents:
-      - componentDefinitionName: "querynode"
+      - componentName: "querynode"
         componentKeyPath: '.metadata.labels["app.kubernetes.io/name"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
-      - componentDefinitionName: "datanode"
+      - componentName: "datanode"
         componentKeyPath: '.metadata.labels["app.kubernetes.io/name"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
@@ -116,7 +118,7 @@ spec:
       - groupName: "vector-cluster"
         preferredPlacement: "zone"
         members:
-        - componentDefinitionName: "querynode"
+        - componentName: "querynode"
           componentKeyPath: '.metadata.labels["app.kubernetes.io/instance"]'
-        - componentDefinitionName: "datanode"
+        - componentName: "datanode"
           componentKeyPath: '.metadata.labels["app.kubernetes.io/instance"]' 

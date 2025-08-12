@@ -90,13 +90,14 @@ spec:
       podGroups:
       - name: "inference-pipeline"
         members:
-        - componentDefinitionName: "nimservice"
-          componentKeyPath: '.metadata.labels["app.kubernetes.io/name"]'
+        - componentName: "nimservice"
+          groupByKeyPaths:
+          - '.metadata.labels["app.kubernetes.io/name"]'
 
     # GPU optimization for NIM inference
     gpuInterconnect:
       acceleratedComponents:
-      - componentDefinitionName: "nimservice"
+      - componentName: "nimservice"
         componentKeyPath: '.metadata.labels["nim.nvidia.com/service-name"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
@@ -107,5 +108,5 @@ spec:
       - groupName: "inference-cluster"
         preferredPlacement: "node"
         members:
-        - componentDefinitionName: "nimservice"
+        - componentName: "nimservice"
           componentKeyPath: '.metadata.labels["app.kubernetes.io/name"]' 

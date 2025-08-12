@@ -73,13 +73,14 @@ spec:
       podGroups:
       - name: "serverless-pipeline"
         members:
-        - componentDefinitionName: "service"
-          componentKeyPath: '.metadata.labels["serving.knative.dev/service"]'
+        - componentName: "revision"
+          groupByKeyPaths:
+          - '.metadata.labels["serving.knative.dev/revision"]'
 
     # GPU optimization for inference workloads
     gpuInterconnect:
       acceleratedComponents:
-      - componentDefinitionName: "revision"
+      - componentName: "revision"
         componentKeyPath: '.metadata.labels["serving.knative.dev/service"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
@@ -90,5 +91,5 @@ spec:
       - groupName: "serverless-cluster"
         preferredPlacement: "node"
         members:
-        - componentDefinitionName: "service"
+        - componentName: "service"
           componentKeyPath: '.metadata.labels["serving.knative.dev/service"]' 

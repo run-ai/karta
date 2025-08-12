@@ -74,13 +74,14 @@ spec:
       podGroups:
       - name: "jobset-gang"
         members:
-        - componentDefinitionName: "replicatedjob"
-          componentKeyPath: '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]'
+        - componentName: "replicatedjob"
+          groupByKeyPaths:
+          - '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]'
 
     # GPU optimization for distributed training
     gpuInterconnect:
       acceleratedComponents:
-      - componentDefinitionName: "replicatedjob"
+      - componentName: "replicatedjob"
         componentKeyPath: '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]'
         filter: 
         - 'any(.spec.template.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
@@ -91,5 +92,5 @@ spec:
       - groupName: "batch-cluster"
         preferredPlacement: "node"
         members:
-        - componentDefinitionName: "replicatedjob"
+        - componentName: "replicatedjob"
           componentKeyPath: '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]' 

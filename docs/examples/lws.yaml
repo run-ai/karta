@@ -87,23 +87,29 @@ spec:
   # Optimization instructions
   optimizationInstructions:
     # Gang scheduling for leader-worker coordination
+    # Multi-group pattern: podgroup-lws-{name}-group-{index}
+    # Uses default group-index "0" for single-replica LWS
     gangScheduling:
       podGroups:
       - name: "lws-gang"
         members:
-        - componentDefinitionName: "leader"
-          componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
-        - componentDefinitionName: "worker"
-          componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
+        - componentName: "leader"
+          groupByKeyPaths:
+          - '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
+          - '.metadata.labels["leaderworkerset.sigs.k8s.io/group-index"] // "0"'
+        - componentName: "worker"
+          groupByKeyPaths:
+          - '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
+          - '.metadata.labels["leaderworkerset.sigs.k8s.io/group-index"] // "0"'
 
     # GPU optimization for accelerated workloads
     gpuInterconnect:
       acceleratedComponents:
-      - componentDefinitionName: "leader"
+      - componentName: "leader"
         componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
-      - componentDefinitionName: "worker"
+      - componentName: "worker"
         componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
@@ -114,7 +120,7 @@ spec:
       - groupName: "lws-cluster"
         preferredPlacement: "zone"
         members:
-        - componentDefinitionName: "leader"
+        - componentName: "leader"
           componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
-        - componentDefinitionName: "worker"
+        - componentName: "worker"
           componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]' 

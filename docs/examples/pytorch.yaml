@@ -69,19 +69,21 @@ spec:
       podGroups:
       - name: "training-gang"
         members:
-        - componentDefinitionName: "master"
-          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
-        - componentDefinitionName: "worker"
-          componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
+        - componentName: "master"
+          groupByKeyPaths: 
+          - '.metadata.labels["training.kubeflow.org/job-name"]'
+        - componentName: "worker"
+          groupByKeyPaths:
+          - '.metadata.labels["training.kubeflow.org/job-name"]'
 
     # GPU optimization for multi-node training
     gpuInterconnect:
       acceleratedComponents:
-      - componentDefinitionName: "master"
+      - componentName: "master"
         componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
-      - componentDefinitionName: "worker"
+      - componentName: "worker"
         componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
@@ -92,7 +94,7 @@ spec:
       - groupName: "training-cluster"
         preferredPlacement: "zone"
         members:
-        - componentDefinitionName: "master"
+        - componentName: "master"
           componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
-        - componentDefinitionName: "worker"
+        - componentName: "worker"
           componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]' 

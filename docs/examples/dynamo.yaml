@@ -83,13 +83,14 @@ spec:
       podGroups:
       - name: "dynamo-graph"
         members:
-        - componentDefinitionName: "service"
-          componentKeyPath: '.metadata.labels["nvidia.com/dynamo-service"]'
+        - componentName: "service"
+          groupByKeyPaths:
+          - '.metadata.labels["nvidia.com/dynamo-service"]'
 
     # GPU optimization for inference acceleration
     gpuInterconnect:
       acceleratedComponents:
-      - componentDefinitionName: "service"
+      - componentName: "service"
         componentKeyPath: '.metadata.labels["nvidia.com/dynamo-service"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
@@ -100,7 +101,7 @@ spec:
       - groupName: "inference-cluster"
         preferredPlacement: "node"
         members:
-        - componentDefinitionName: "service"
+        - componentName: "service"
           componentKeyPath: '.metadata.labels["nvidia.com/dynamo-service"]'
           filter: 
           - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)' 

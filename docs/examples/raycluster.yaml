@@ -93,19 +93,21 @@ spec:
       podGroups:
       - name: "ray-cluster"
         members:
-        - componentDefinitionName: "head"
-          componentKeyPath: '.metadata.labels["ray.io/cluster"]'
-        - componentDefinitionName: "worker"
-          componentKeyPath: '.metadata.labels["ray.io/cluster"]'
+        - componentName: "head"
+          groupByKeyPaths:
+          - '.metadata.labels["ray.io/cluster"]'
+        - componentName: "worker"
+          groupByKeyPaths:
+          - '.metadata.labels["ray.io/cluster"]'
 
     # GPU optimization for distributed Ray workloads
     gpuInterconnect:
       acceleratedComponents:
-      - componentDefinitionName: "head"
+      - componentName: "head"
         componentKeyPath: '.metadata.labels["ray.io/cluster"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
-      - componentDefinitionName: "worker"
+      - componentName: "worker"
         componentKeyPath: '.metadata.labels["ray.io/cluster"]'
         filter: 
         - 'any(.spec.containers[]; (.resources.limits["nvidia.com/gpu"] // 0) > 0)'
@@ -116,7 +118,7 @@ spec:
       - groupName: "ray-computing"
         preferredPlacement: "zone"
         members:
-        - componentDefinitionName: "head"
+        - componentName: "head"
           componentKeyPath: '.metadata.labels["ray.io/cluster"]'
-        - componentDefinitionName: "worker"
+        - componentName: "worker"
           componentKeyPath: '.metadata.labels["ray.io/cluster"]' 
