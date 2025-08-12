@@ -33,7 +33,7 @@ spec:
 
     childComponents:
     - name: "service"
-      specPath: ".spec.services[]"
+      specPath: ".spec.services | .[]"
       kind:
         group: "nvidia.com"
         version: "v1alpha1"
@@ -41,17 +41,17 @@ spec:
       ownerName: "dynamographdeployment"
       childSpecDefinition:
         fragmentedPodDefinition:
-          labelsPath: ".spec.services[].labels"
-          annotationsPath: ".spec.services[].annotations"
-          resourcesPath: ".spec.services[].resources"
-          containersPath: ".spec.services[].extraPodSpec.containers"
-          schedulerNamePath: ".spec.services[].extraPodSpec.schedulerName"
-          nodeAffinityPath: ".spec.services[].extraPodSpec.affinity.nodeAffinity"
-          podAffinityPath: ".spec.services[].extraPodSpec.affinity.podAffinity"
+          labelsPath: ".spec.services | .[] | .labels"
+          annotationsPath: ".spec.services | .[] | .annotations"
+          resourcesPath: ".spec.services | .[] | .resources"
+          containersPath: ".spec.services | .[] | .extraPodSpec.containers"
+          schedulerNamePath: ".spec.services | .[] | .extraPodSpec.schedulerName"
+          nodeAffinityPath: ".spec.services | .[] | .extraPodSpec.affinity.nodeAffinity"
+          podAffinityPath: ".spec.services | .[] | .extraPodSpec.affinity.podAffinity"
       scaleDefinition:
-        replicasPath: ".spec.services[].replicas"
-        minReplicasPath: ".spec.services[].autoscaling.minReplicas"
-        maxReplicasPath: ".spec.services[].autoscaling.maxReplicas"
+        replicasPath: ".spec.services | .[] | .replicas"
+        minReplicasPath: ".spec.services | .[] | .autoscaling.minReplicas"
+        maxReplicasPath: ".spec.services | .[] | .autoscaling.maxReplicas"
       statusDefinition:
         conditionsDefinition:
           path: ".status.conditions"
