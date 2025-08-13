@@ -50,24 +50,22 @@ spec:
     childComponents:
     # Head node - Ray cluster coordinator and scheduler
     - name: "head"
-      specPath: ".spec.headGroupSpec"
       kind:
         group: "apps"
         version: "v1"
         kind: "Deployment"
       ownerName: "raycluster"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.headGroupSpec.template"
 
     # Worker group - distributed computation nodes
     - name: "worker"
-      specPath: ".spec.workerGroupSpecs[]"
       kind:
         group: "apps"
         version: "v1"
         kind: "Deployment"
       ownerName: "raycluster"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.workerGroupSpecs[].template"
       scaleDefinition:
         replicasPath: ".spec.workerGroupSpecs[].replicas"

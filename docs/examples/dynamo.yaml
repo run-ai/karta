@@ -29,13 +29,12 @@ spec:
 
     childComponents:
     - name: "service"
-      specPath: ".spec.services | .[]"
       kind:
         group: "nvidia.com"
         version: "v1alpha1"
         kind: "DynamoComponentDeployment"
       ownerName: "dynamographdeployment"
-      childSpecDefinition:
+      specDefinition:
         fragmentedPodDefinition:
           labelsPath: ".spec.services | .[] | .labels"
           annotationsPath: ".spec.services | .[] | .annotations"
@@ -44,6 +43,8 @@ spec:
           schedulerNamePath: ".spec.services | .[] | .extraPodSpec.schedulerName"
           nodeAffinityPath: ".spec.services | .[] | .extraPodSpec.affinity.nodeAffinity"
           podAffinityPath: ".spec.services | .[] | .extraPodSpec.affinity.podAffinity"
+          priorityClassNamePath: ".spec.services | .[] | .extraPodSpec.priorityClassName"
+          imagePath: ".spec.services | .[] | .extraPodSpec.mainContainer.image"
       scaleDefinition:
         replicasPath: ".spec.services | .[] | .replicas"
         minReplicasPath: ".spec.services | .[] | .autoscaling.minReplicas"

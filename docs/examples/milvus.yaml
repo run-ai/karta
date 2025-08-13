@@ -56,26 +56,24 @@ spec:
     childComponents:
     # QueryNode - handles vector search queries
     - name: "querynode"
-      specPath: ".spec.components.queryNode"
       kind:
         group: "apps"
         version: "v1"
         kind: "StatefulSet"
       ownerName: "milvus"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.components.queryNode.template"
       scaleDefinition:
         replicasPath: ".spec.components.queryNode.replicas"
 
     # DataNode - processes and stores vector data
     - name: "datanode"
-      specPath: ".spec.components.dataNode"
       kind:
         group: "apps"
         version: "v1"
         kind: "StatefulSet"
       ownerName: "milvus"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.components.dataNode.template"
       scaleDefinition:
         replicasPath: ".spec.components.dataNode.replicas"

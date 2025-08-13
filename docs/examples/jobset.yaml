@@ -46,13 +46,12 @@ spec:
     childComponents:
     # ReplicatedJob - represents the actual Job resources created by JobSet
     - name: "replicatedjob"
-      specPath: ".spec.replicatedJobs[]"
       kind:
         group: "batch"
         version: "v1"
         kind: "Job"
       ownerName: "jobset"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.replicatedJobs[].template"
       scaleDefinition:
         replicasPath: ".spec.replicatedJobs[].replicas"

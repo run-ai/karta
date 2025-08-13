@@ -48,26 +48,24 @@ spec:
     childComponents:
     # Launcher node - orchestrates MPI job execution
     - name: "launcher"
-      specPath: ".spec.mpiReplicaSpecs.Launcher"
       kind:
         group: ""
         version: "v1"
         kind: "Pod"
       ownerName: "mpijob"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.mpiReplicaSpecs.Launcher.template"
       scaleDefinition:
         replicasPath: ".spec.mpiReplicaSpecs.Launcher.replicas"
 
     # Worker nodes - execute MPI tasks under launcher coordination
     - name: "worker"
-      specPath: ".spec.mpiReplicaSpecs.Worker"
       kind:
         group: ""
         version: "v1"
         kind: "Pod"
       ownerName: "mpijob"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.mpiReplicaSpecs.Worker.template"
       scaleDefinition:
         replicasPath: ".spec.mpiReplicaSpecs.Worker.replicas"

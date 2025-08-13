@@ -52,13 +52,12 @@ spec:
     childComponents:
     # Predictor - main inference endpoint
     - name: "predictor"
-      specPath: ".spec.predictor"
       kind:
         group: "apps"
         version: "v1"
         kind: "Deployment"
       ownerName: "inferenceservice"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.predictor.template"
       scaleDefinition:
         minReplicasPath: ".spec.predictor.minReplicas"
@@ -66,13 +65,12 @@ spec:
 
     # Transformer - pre/post-processing pipeline
     - name: "transformer"
-      specPath: ".spec.transformer"
       kind:
         group: "apps"
         version: "v1"
         kind: "Deployment"
       ownerName: "inferenceservice"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.transformer.template"
       scaleDefinition:
         minReplicasPath: ".spec.transformer.minReplicas"

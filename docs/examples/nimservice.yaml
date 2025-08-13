@@ -19,7 +19,7 @@ spec:
       references:
         - componentName: "nimcache-ref"
           componentKeyPath: ".spec.storage.nimCache.name"
-      childSpecDefinition:
+      specDefinition:
         fragmentedPodDefinition:
           labelsPath: ".spec.labels"
           annotationsPath: ".spec.annotations"
@@ -27,6 +27,8 @@ spec:
           resourceClaimsPath: ".spec.draResources"
           schedulerNamePath: ".spec.schedulerName"
           podAffinityPath: ".spec.podAffinity"
+          priorityClassNamePath: ".spec.priorityClassName"
+          imagePath: ".spec.image"
       scaleDefinition:
         replicasPath: ".spec.replicas"
       statusDefinition:

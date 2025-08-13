@@ -47,25 +47,23 @@ spec:
 
     childComponents:
     - name: "master"
-      specPath: ".spec.pytorchReplicaSpecs.Master"
       kind:
         group: ""
         version: "v1"
         kind: "Pod"
       ownerName: "pytorchjob"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Master.template"
       scaleDefinition:
         replicasPath: ".spec.pytorchReplicaSpecs.Master.replicas"
 
     - name: "worker"
-      specPath: ".spec.pytorchReplicaSpecs.Worker"
       kind:
         group: ""
         version: "v1"
         kind: "Pod"
       ownerName: "pytorchjob"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Worker.template"
       scaleDefinition:
         replicasPath: ".spec.pytorchReplicaSpecs.Worker.replicas"

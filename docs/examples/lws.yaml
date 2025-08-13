@@ -50,24 +50,22 @@ spec:
     childComponents:
     # Leader - coordinates and manages worker nodes
     - name: "leader"
-      specPath: ".spec.leaderWorkerTemplate.leaderTemplate"
       kind:
         group: "apps"
         version: "v1"
         kind: "StatefulSet"
       ownerName: "leaderworkerset"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.leaderWorkerTemplate.leaderTemplate.spec.template"
 
     # Worker group - executes tasks under leader coordination
     - name: "worker"
-      specPath: ".spec.leaderWorkerTemplate.workerTemplate"
       kind:
         group: "apps"
         version: "v1"
         kind: "StatefulSet"
       ownerName: "leaderworkerset"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.leaderWorkerTemplate.workerTemplate.spec.template"
       scaleDefinition:
         replicasPath: ".spec.leaderWorkerTemplate.size"

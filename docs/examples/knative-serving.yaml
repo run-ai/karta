@@ -59,7 +59,7 @@ spec:
         group: "serving.knative.dev"
         version: "v1"
         kind: "Revision"
-      childSpecDefinition:
+      specDefinition:
         podTemplateSpecPath: ".spec.template"
     
     # Child resources created but not represented as components
