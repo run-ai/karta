@@ -22,13 +22,29 @@ spec:
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:
+          initializing:
+          - byConditions:
+            - type: "Available"
+              status: "False"
+            - type: "Progressing"
+              status: "False"
+            - type: "UpdateInProgress"
+              status: "False"
           running:
-            byConditions:
+          - byConditions:
             - type: "Available"
               status: "True"
+            - type: "Progressing"
+              status: "False"
+            - type: "UpdateInProgress"
+              status: "False"
           failed:
-            byConditions:
+          - byConditions:
             - type: "Available"
+              status: "False"
+            - type: "Progressing"
+              status: "False"
+            - type: "UpdateInProgress"
               status: "False"
 
     childComponents:
@@ -42,20 +58,6 @@ spec:
       ownerName: "leaderworkerset"
       childSpecDefinition:
         podTemplateSpecPath: ".spec.leaderWorkerTemplate.leaderTemplate.spec.template"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "Available"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "Available"
-              status: "False"
 
     # Worker group - executes tasks under leader coordination
     - name: "worker"
@@ -69,20 +71,6 @@ spec:
         podTemplateSpecPath: ".spec.leaderWorkerTemplate.workerTemplate.spec.template"
       scaleDefinition:
         replicasPath: ".spec.leaderWorkerTemplate.size"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "Available"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "Available"
-              status: "False"
 
   # Optimization instructions
   optimizationInstructions:

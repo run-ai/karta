@@ -26,13 +26,29 @@ spec:
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:
+          initializing:
+          - byConditions:
+            - type: "Ready"
+              status: "False"
+            - type: "RoutesReady"
+              status: "False"
+            - type: "ConfigurationsReady"
+              status: "False"
           running:
-            byConditions:
+          - byConditions:
             - type: "Ready"
               status: "True"
+            - type: "RoutesReady"
+              status: "True"
+            - type: "ConfigurationsReady"
+              status: "True"
           failed:
-            byConditions:
+          - byConditions:
             - type: "Ready"
+              status: "False"
+            - type: "RoutesReady"
+              status: "False"
+            - type: "ConfigurationsReady"
               status: "False"
 
     childComponents:
@@ -45,20 +61,6 @@ spec:
         kind: "Revision"
       childSpecDefinition:
         podTemplateSpecPath: ".spec.template"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "Ready"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "Ready"
-              status: "False"
     
     # Child resources created but not represented as components
     additionalChildKinds:

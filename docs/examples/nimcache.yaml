@@ -22,17 +22,25 @@ spec:
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:
+          initializing:
+          - byConditions:
+            - type: "NIM_CACHE_PVC_CREATED"
+              status: "True"
+            - type: "NIM_CACHE_JOB_COMPLETED"
+              status: "False"
           running:
-            byConditions:
+          - byConditions:
+            - type: "NIM_CACHE_JOB_CREATED"
+              status: "True"
+            - type: "NIM_CACHE_JOB_COMPLETED"
+              status: "False"
+          completed:
+          - byConditions:
             - type: "NIM_CACHE_JOB_COMPLETED"
               status: "True"
           failed:
-            byConditions:
+          - byConditions:
             - type: "NIM_CACHE_RECONCILE_FAILED"
-              status: "True"
-          pending:
-            byConditions:
-            - type: "NIM_CACHE_JOB_PENDING"
               status: "True"
     
     # Child resources created but not represented as components

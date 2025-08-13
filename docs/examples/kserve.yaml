@@ -22,13 +22,31 @@ spec:
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:
+          initializing:
+          - byConditions:
+            - type: "PredictorConfigurationReady"
+              status: "False"
+            - type: "PredictorReady"
+              status: "False"
+            - type: "RoutesReady"
+              status: "False"
+            - type: "LatestDeploymentReady"
+              status: "False"
           running:
-            byConditions:
-            - type: "Ready"
+          - byConditions:
+            - type: "PredictorReady"
+              status: "True"
+            - type: "RoutesReady"
+              status: "True"
+            - type: "LatestDeploymentReady"
               status: "True"
           failed:
-            byConditions:
-            - type: "Ready"
+          - byConditions:
+            - type: "PredictorReady"
+              status: "False"
+            - type: "PredictorConfigurationReady"
+              status: "False"
+            - type: "RoutesReady"
               status: "False"
 
     childComponents:
@@ -45,20 +63,6 @@ spec:
       scaleDefinition:
         minReplicasPath: ".spec.predictor.minReplicas"
         maxReplicasPath: ".spec.predictor.maxReplicas"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "PredictorReady"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "PredictorReady"
-              status: "False"
 
     # Transformer - pre/post-processing pipeline
     - name: "transformer"
@@ -73,20 +77,6 @@ spec:
       scaleDefinition:
         minReplicasPath: ".spec.transformer.minReplicas"
         maxReplicasPath: ".spec.transformer.maxReplicas"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "TransformerReady"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "TransformerReady"
-              status: "False"
 
   # Optimization instructions
   optimizationInstructions:

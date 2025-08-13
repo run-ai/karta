@@ -14,7 +14,7 @@ spec:
       # specPath omitted for root component (defaults to .spec)
       kind:
         group: "kubeflow.org"
-        version: "v2beta1"
+        version: "v1"
         kind: "MPIJob"
       statusDefinition:
         conditionsDefinition:
@@ -22,16 +22,26 @@ spec:
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:
+          initializing:
+          - byConditions:
+            - type: "Created"
+              status: "True"
+            - type: "Running"
+              status: "False"
           running:
-            byConditions:
+          - byConditions:
             - type: "Running"
               status: "True"
+            - type: "Succeeded"
+              status: "False"
+            - type: "Failed"
+              status: "False"
           completed:
-            byConditions:
+          - byConditions:
             - type: "Succeeded"
               status: "True"
           failed:
-            byConditions:
+          - byConditions:
             - type: "Failed"
               status: "True"
 
@@ -48,24 +58,6 @@ spec:
         podTemplateSpecPath: ".spec.mpiReplicaSpecs.Launcher.template"
       scaleDefinition:
         replicasPath: ".spec.mpiReplicaSpecs.Launcher.replicas"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "Running"
-              status: "True"
-          completed:
-            byConditions:
-            - type: "Succeeded"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "Failed"
-              status: "True"
 
     # Worker nodes - execute MPI tasks under launcher coordination
     - name: "worker"
@@ -79,24 +71,6 @@ spec:
         podTemplateSpecPath: ".spec.mpiReplicaSpecs.Worker.template"
       scaleDefinition:
         replicasPath: ".spec.mpiReplicaSpecs.Worker.replicas"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "Running"
-              status: "True"
-          completed:
-            byConditions:
-            - type: "Succeeded"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "Failed"
-              status: "True"
 
   # Optimization instructions
   optimizationInstructions:

@@ -17,19 +17,15 @@ spec:
         version: "v1alpha1"
         kind: "DynamoGraphDeployment"
       statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
+        phaseDefinition:
+          path: ".status.state"
         statusMappings:
+          initializing:
+          - byPhase: "pending"
           running:
-            byConditions:
-            - type: "Available"
-              status: "True"
+          - byPhase: "successful"
           failed:
-            byConditions:
-            - type: "Available"
-              status: "False"
+          - byPhase: "failed"
 
     childComponents:
     - name: "service"
@@ -52,20 +48,6 @@ spec:
         replicasPath: ".spec.services | .[] | .replicas"
         minReplicasPath: ".spec.services | .[] | .autoscaling.minReplicas"
         maxReplicasPath: ".spec.services | .[] | .autoscaling.maxReplicas"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "Available"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "Available"
-              status: "False"
     
     # Child resources created but not represented as components
     additionalChildKinds:

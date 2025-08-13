@@ -22,13 +22,35 @@ spec:
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:
+          initializing:
+          - byConditions:
+            - type: "EtcdReady"
+              status: "False"
+            - type: "StorageReady"
+              status: "False"
+            - type: "MsgStreamReady"
+              status: "False"
+            - type: "MilvusReady"
+              status: "False"
           running:
-            byConditions:
+          - byConditions:
+            - type: "EtcdReady"
+              status: "True"
+            - type: "StorageReady"
+              status: "True"
+            - type: "MsgStreamReady"
+              status: "True"
             - type: "MilvusReady"
               status: "True"
           failed:
-            byConditions:
+          - byConditions:
             - type: "MilvusReady"
+              status: "False"
+            - type: "EtcdReady"
+              status: "False"
+            - type: "StorageReady"
+              status: "False"
+            - type: "MsgStreamReady"
               status: "False"
 
     childComponents:
@@ -44,20 +66,6 @@ spec:
         podTemplateSpecPath: ".spec.components.queryNode.template"
       scaleDefinition:
         replicasPath: ".spec.components.queryNode.replicas"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "MilvusReady"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "MilvusReady"
-              status: "False"
 
     # DataNode - processes and stores vector data
     - name: "datanode"
@@ -71,20 +79,6 @@ spec:
         podTemplateSpecPath: ".spec.components.dataNode.template"
       scaleDefinition:
         replicasPath: ".spec.components.dataNode.replicas"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "MilvusReady"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "MilvusReady"
-              status: "False"
 
   # Optimization instructions
   optimizationInstructions:

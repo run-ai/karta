@@ -22,16 +22,26 @@ spec:
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:
+          initializing:
+          - byConditions:
+            - type: "Created"
+              status: "True"
+            - type: "Running"
+              status: "False"
           running:
-            byConditions:
+          - byConditions:
             - type: "Running"
               status: "True"
+            - type: "Succeeded"
+              status: "False"
+            - type: "Failed"
+              status: "False"
           completed:
-            byConditions:
+          - byConditions:
             - type: "Succeeded"
               status: "True"
           failed:
-            byConditions:
+          - byConditions:
             - type: "Failed"
               status: "True"
 

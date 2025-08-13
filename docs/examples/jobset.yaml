@@ -22,16 +22,24 @@ spec:
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:
-          running:
-            byConditions:
-            - type: "JobsReady"
+          initializing:
+          - byConditions:
+            - type: "StartupPolicyInProgress"
               status: "True"
+          running:
+          - byConditions:
+            - type: "StartupPolicyCompleted"
+              status: "True"
+            - type: "Completed"
+              status: "False"
+            - type: "Failed"
+              status: "False"
           completed:
-            byConditions:
+          - byConditions:
             - type: "Completed"
               status: "True"
           failed:
-            byConditions:
+          - byConditions:
             - type: "Failed"
               status: "True"
 
@@ -48,24 +56,6 @@ spec:
         podTemplateSpecPath: ".spec.replicatedJobs[].template"
       scaleDefinition:
         replicasPath: ".spec.replicatedJobs[].replicas"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "JobsReady"
-              status: "True"
-          completed:
-            byConditions:
-            - type: "Completed"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "Failed"
-              status: "True"
 
   # Optimization instructions
   optimizationInstructions:

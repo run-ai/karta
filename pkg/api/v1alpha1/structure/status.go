@@ -1,13 +1,14 @@
 package structure
 
-type WorkloadStatus string
+type ResourceStatus string
 
 const (
-	RunningStatus   WorkloadStatus = "Running"
-	CompletedStatus WorkloadStatus = "Completed"
-	FailedStatus    WorkloadStatus = "Failed"
-	UndefinedStatus WorkloadStatus = "Undefined" // default for when the user did not provide a status definition, and we couldn't infer it naively
-	// StoppedStatus WorkloadStatus = "Stopped"
+	InitializingStatus ResourceStatus = "Initializing" // "sink" for all pre running statuses
+	RunningStatus      ResourceStatus = "Running"
+	CompletedStatus    ResourceStatus = "Completed"
+	FailedStatus       ResourceStatus = "Failed"
+	UndefinedStatus    ResourceStatus = "Undefined" // default for when the user did not provide a status definition, and we couldn't infer it naively
+	// StoppedStatus ResourceStatus = "Stopped"
 )
 
 type StatusDefinition struct {
@@ -28,13 +29,14 @@ type ConditionsDefinition struct {
 }
 
 type StatusMappings struct {
-	Running   *StatusMatcher `json:"running,omitempty"`
-	Completed *StatusMatcher `json:"completed,omitempty"`
-	Failed    *StatusMatcher `json:"failed,omitempty"`
+	Initializing []StatusMatcher `json:"initializing,omitempty"`
+	Running      []StatusMatcher `json:"running,omitempty"`
+	Completed    []StatusMatcher `json:"completed,omitempty"`
+	Failed       []StatusMatcher `json:"failed,omitempty"`
 }
 
 type StatusMatcher struct {
-	ByPhase      []string            `json:"byPhase,omitempty"`      // ORed
+	ByPhase      string              `json:"byPhase,omitempty"`
 	ByConditions []ExpectedCondition `json:"byConditions,omitempty"` // ANDed
 	// Implicit logic: if both provided, ALL must match (AND)
 }

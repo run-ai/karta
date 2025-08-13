@@ -35,14 +35,24 @@ spec:
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:
+          initializing:
+          - byConditions:
+            - type: "NIM_SERVICE_READY"
+              status: "False"
+            - type: "NIM_SERVICE_FAILED"
+              status: "False"
           running:
-            byConditions:
+          - byConditions:
             - type: "NIM_SERVICE_READY"
               status: "True"
+            - type: "NIM_SERVICE_FAILED"
+              status: "False"
           failed:
-            byConditions:
+          - byConditions:
             - type: "NIM_SERVICE_FAILED"
               status: "True"
+            - type: "NIM_SERVICE_READY"
+              status: "False"
 
     # Referenced components - external dependencies
     referencedComponents:
@@ -53,20 +63,6 @@ spec:
         group: "apps.nvidia.com"
         version: "v1alpha1"
         kind: "NIMCache"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "NIM_CACHE_JOB_COMPLETED"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "NIM_CACHE_RECONCILE_FAILED"
-              status: "True"
     
     # Child resources created but not represented as components
     additionalChildKinds:

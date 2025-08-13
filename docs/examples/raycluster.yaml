@@ -22,13 +22,29 @@ spec:
           typeFieldName: "type"
           statusFieldName: "status"
         statusMappings:
+          initializing:
+          - byConditions:
+            - type: "RayClusterProvisioned"
+              status: "False"
+            - type: "HeadPodReady"
+              status: "False"
+            - type: "ReplicaFailure"
+              status: "False"
           running:
-            byConditions:
-            - type: "Ready"
+          - byConditions:
+            - type: "RayClusterProvisioned"
               status: "True"
+            - type: "HeadPodReady"
+              status: "True"
+            - type: "ReplicaFailure"
+              status: "False"
           failed:
-            byConditions:
-            - type: "Ready"
+          - byConditions:
+            - type: "ReplicaFailure"
+              status: "True"
+            - type: "RayClusterProvisioned"
+              status: "False"
+            - type: "HeadPodReady"
               status: "False"
 
     childComponents:
@@ -42,20 +58,6 @@ spec:
       ownerName: "raycluster"
       childSpecDefinition:
         podTemplateSpecPath: ".spec.headGroupSpec.template"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "Ready"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "Ready"
-              status: "False"
 
     # Worker group - distributed computation nodes
     - name: "worker"
@@ -71,20 +73,6 @@ spec:
         replicasPath: ".spec.workerGroupSpecs[].replicas"
         minReplicasPath: ".spec.workerGroupSpecs[].minReplicas"
         maxReplicasPath: ".spec.workerGroupSpecs[].maxReplicas"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          running:
-            byConditions:
-            - type: "Ready"
-              status: "True"
-          failed:
-            byConditions:
-            - type: "Ready"
-              status: "False"
 
   # Optimization instructions
   optimizationInstructions:
