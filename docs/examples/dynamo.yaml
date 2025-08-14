@@ -64,8 +64,7 @@ spec:
     # Gang scheduling for graph service coordination
     gangScheduling:
       podGroups:
-      - name: "dynamo-graph"
-        members:
+      - members:
         - componentName: "service"
           groupByKeyPaths:
           - '.metadata.labels["nvidia.com/dynamo-service"]'
@@ -81,8 +80,7 @@ spec:
     # Topology optimization for inference latency
     topologyAwareness:
       topologyGroups:
-      - groupName: "inference-cluster"
-        preferredPlacement: "node"
+      - preferredPlacement: "node"
         members:
         - componentName: "service"
           componentKeyPath: '.metadata.labels["nvidia.com/dynamo-service"]'

@@ -73,8 +73,7 @@ spec:
     # Gang scheduling for serverless workload coordination
     gangScheduling:
       podGroups:
-      - name: "serverless-pipeline"
-        members:
+      - members:
         - componentName: "revision"
           groupByKeyPaths:
           - '.metadata.labels["serving.knative.dev/revision"]'
@@ -90,8 +89,7 @@ spec:
     # Topology awareness for serverless placement
     topologyAwareness:
       topologyGroups:
-      - groupName: "serverless-cluster"
-        preferredPlacement: "node"
+      - preferredPlacement: "node"
         members:
         - componentName: "service"
           componentKeyPath: '.metadata.labels["serving.knative.dev/service"]' 

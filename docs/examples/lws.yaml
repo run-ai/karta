@@ -16,6 +16,8 @@ spec:
         group: "leaderworkerset.x-k8s.io"
         version: "v1"
         kind: "LeaderWorkerSet"
+      scaleDefinition:
+        replicasPath: ".spec.replicas"
       statusDefinition:
         conditionsDefinition:
           path: ".status.conditions"
@@ -48,15 +50,23 @@ spec:
               status: "False"
 
     childComponents:
+    - name: "group"
+      ownerName: "leaderworkerset"
+      scaleDefinition:
+        replicasPath: ".spec.leaderWorkerTemplate.size"
+
     # Leader - coordinates and manages worker nodes
     - name: "leader"
       kind:
         group: "apps"
         version: "v1"
         kind: "StatefulSet"
-      ownerName: "leaderworkerset"
+      ownerName: "group"
       specDefinition:
         podTemplateSpecPath: ".spec.leaderWorkerTemplate.leaderTemplate.spec.template"
+      podSelector:
+        keyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/worker-index"]'
+        value: "0"
 
     # Worker group - executes tasks under leader coordination
     - name: "worker"
@@ -64,11 +74,12 @@ spec:
         group: "apps"
         version: "v1"
         kind: "StatefulSet"
-      ownerName: "leaderworkerset"
+      ownerName: "group"
       specDefinition:
         podTemplateSpecPath: ".spec.leaderWorkerTemplate.workerTemplate.spec.template"
-      scaleDefinition:
-        replicasPath: ".spec.leaderWorkerTemplate.size"
+      podSelector:
+        keyPath: '.metadata.annotations["leaderworkerset.sigs.k8s.io/leader-name"]'
+      
 
   # Optimization instructions
   optimizationInstructions:
@@ -77,13 +88,8 @@ spec:
     # Uses default group-index "0" for single-replica LWS
     gangScheduling:
       podGroups:
-      - name: "lws-gang"
-        members:
-        - componentName: "leader"
-          groupByKeyPaths:
-          - '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
-          - '.metadata.labels["leaderworkerset.sigs.k8s.io/group-index"] // "0"'
-        - componentName: "worker"
+      - members:
+        - componentName: "group"
           groupByKeyPaths:
           - '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
           - '.metadata.labels["leaderworkerset.sigs.k8s.io/group-index"] // "0"'
@@ -103,8 +109,7 @@ spec:
     # Topology awareness for leader-worker placement
     topologyAwareness:
       topologyGroups:
-      - groupName: "lws-cluster"
-        preferredPlacement: "zone"
+      - preferredPlacement: "zone"
         members:
         - componentName: "leader"
           componentKeyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'

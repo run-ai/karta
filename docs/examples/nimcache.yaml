@@ -54,8 +54,7 @@ spec:
     # Gang scheduling for cache job coordination (no multi-replica typically)
     gangScheduling:
       podGroups:
-      - name: "cache-pipeline"
-        members:
+      - members:
         - componentName: "nimcache"
           groupByKeyPaths:
           - '.metadata.labels["app.kubernetes.io/name"]'
@@ -63,8 +62,7 @@ spec:
     # Topology awareness for cache storage placement (prefer node affinity for storage)
     topologyAwareness:
       topologyGroups:
-      - groupName: "cache-storage"
-        preferredPlacement: "node"
+      - preferredPlacement: "node"
         members:
         - componentName: "nimcache"
           componentKeyPath: '.metadata.labels["app.kubernetes.io/name"]' 

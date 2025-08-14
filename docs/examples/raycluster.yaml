@@ -57,6 +57,9 @@ spec:
       ownerName: "raycluster"
       specDefinition:
         podTemplateSpecPath: ".spec.headGroupSpec.template"
+      podSelector:
+        keyPath: '.metadata.labels["ray.io/node-type"]'
+        value: "head"
 
     # Worker group - distributed computation nodes
     - name: "worker"
@@ -69,6 +72,9 @@ spec:
         podTemplateSpecPath: ".spec.workerGroupSpecs[].template"
       scaleDefinition:
         replicasPath: ".spec.workerGroupSpecs[].replicas"
+      podSelector:
+        keyPath: '.metadata.labels["ray.io/node-type"]'
+        value: "worker"
         minReplicasPath: ".spec.workerGroupSpecs[].minReplicas"
         maxReplicasPath: ".spec.workerGroupSpecs[].maxReplicas"
 
@@ -77,8 +83,7 @@ spec:
     # Gang scheduling for Ray cluster startup coordination
     gangScheduling:
       podGroups:
-      - name: "ray-cluster"
-        members:
+      - members:
         - componentName: "head"
           groupByKeyPaths:
           - '.metadata.labels["ray.io/cluster"]'
@@ -101,8 +106,7 @@ spec:
     # Topology awareness for Ray cluster placement
     topologyAwareness:
       topologyGroups:
-      - groupName: "ray-computing"
-        preferredPlacement: "zone"
+      - preferredPlacement: "zone"
         members:
         - componentName: "head"
           componentKeyPath: '.metadata.labels["ray.io/cluster"]'

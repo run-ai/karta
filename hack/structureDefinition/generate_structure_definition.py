@@ -840,6 +840,14 @@ class StructureDefinitionGenerator:
 
 def main():
     """Main entry point."""
+    # Check if we're running with the venv python, if not, restart with it
+    script_dir = Path(__file__).parent
+    venv_python = script_dir / "venv" / "bin" / "python"
+    
+    if venv_python.exists() and sys.executable != str(venv_python):
+        # Restart with venv python
+        os.execv(str(venv_python), [str(venv_python)] + sys.argv)
+    
     parser = argparse.ArgumentParser(
         description='Generate structure definition diagrams from RID files',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -875,10 +883,6 @@ Examples:
     # Setup environment
     script_dir = Path(__file__).parent
     venv_dir = setup_virtual_environment(script_dir)
-    
-    # Add virtual environment to Python path
-    venv_site_packages = venv_dir / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
-    sys.path.insert(0, str(venv_site_packages))
     
     # Find and process RID files
     rid_files = _find_rid_files(args)

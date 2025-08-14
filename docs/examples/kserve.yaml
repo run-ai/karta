@@ -62,6 +62,9 @@ spec:
       scaleDefinition:
         minReplicasPath: ".spec.predictor.minReplicas"
         maxReplicasPath: ".spec.predictor.maxReplicas"
+      podSelector:
+        keyPath: '.metadata.labels["component"]'
+        value: "predictor"
 
     # Transformer - pre/post-processing pipeline
     - name: "transformer"
@@ -75,14 +78,16 @@ spec:
       scaleDefinition:
         minReplicasPath: ".spec.transformer.minReplicas"
         maxReplicasPath: ".spec.transformer.maxReplicas"
+      podSelector:
+        keyPath: '.metadata.labels["component"]'
+        value: "transformer"
 
   # Optimization instructions
   optimizationInstructions:
     # Gang scheduling for inference pipeline coordination
     gangScheduling:
       podGroups:
-      - name: "inference-pipeline"
-        members:
+      - members:
         - componentName: "predictor"
           groupByKeyPaths:
           - '.metadata.labels["serving.kserve.io/inferenceservice"]'
@@ -105,8 +110,7 @@ spec:
     # Topology awareness for low-latency serving
     topologyAwareness:
       topologyGroups:
-      - groupName: "serving-cluster"
-        preferredPlacement: "node"
+      - preferredPlacement: "node"
         members:
         - componentName: "predictor"
           componentKeyPath: '.metadata.labels["serving.kserve.io/inferenceservice"]'

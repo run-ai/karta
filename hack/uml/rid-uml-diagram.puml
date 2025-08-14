@@ -38,13 +38,13 @@ package "Component Architecture" {
   class ComponentDefinition {
     +name: string
     +kind: GroupVersionKind
-    +specPath: string
     +ownerName: string?
-    +dependsOn: string[]
-    +references: ReferenceDefinition[]
-    +childSpecDefinition: ChildSpecDefinition?
+    +metadataPath: string?
+    +specDefinition: SpecDefinition?
     +scaleDefinition: ScaleDefinition?
     +statusDefinition: StatusDefinition?
+    +podSelector: PodSelector?
+    +references: ReferenceDefinition[]
   }
   
   class ReferenceDefinition {
@@ -71,12 +71,23 @@ package "Component Architecture" {
   }
   
   class StatusMappings {
-    +running: ConditionMapping
-    +completed: ConditionMapping?
-    +failed: ConditionMapping
+    +initializing: StatusMatcher[]?
+    +running: StatusMatcher[]?
+    +completed: StatusMatcher[]?
+    +failed: StatusMatcher[]?
   }
   
-  class ChildSpecDefinition {
+  class StatusMatcher {
+    +byPhase: string?
+    +byConditions: ExpectedCondition[]?
+  }
+  
+  class PodSelector {
+    +keyPath: string
+    +value: string?
+  }
+  
+  class SpecDefinition {
     +podTemplateSpecPath: string?
     +podSpecPath: string?
     +fragmentedPodDefinition: FragmentedPodDefinition?
@@ -91,6 +102,8 @@ package "Component Architecture" {
     +nodeAffinityPath: string?
     +podAffinityPath: string?
     +containersPath: string?
+    +priorityClassNamePath: string?
+    +imagePath: string?
   }
 }
 
@@ -106,7 +119,7 @@ package "Optimization Instructions" {
   }
   
   class GPUInterconnect {
-    +acceleratedComponents: ComponentSelector[]
+    +acceleratedComponents: GeneralSelector[]
   }
   
   class TopologyAwareness {
@@ -114,20 +127,25 @@ package "Optimization Instructions" {
   }
   
   class PodGroupDefinition {
-    +name: string
-    +members: ComponentSelector[]
+    +members: GroupingSelector[]
   }
   
-  class ComponentSelector {
-    +componentDefinitionName: string
-    +componentKeyPath: string
-    +filter: string?
+  class ComponentSelectorBase {
+    +componentName: string
+    +filters: string[]?
+  }
+  
+  class GroupingSelector {
+    +groupByKeyPaths: string[]?
+  }
+  
+  class GeneralSelector {
+    +componentKeyPath: string?
   }
   
   class TopologyGroupDefinition {
-    +groupName: string
     +preferredPlacement: string
-    +members: ComponentSelector[]
+    +members: GeneralSelector[]
   }
 }
 
@@ -180,14 +198,20 @@ OptimizationInstructions ||--o| GPUInterconnect
 OptimizationInstructions ||--o| TopologyAwareness
 
 GangScheduling ||--o{ PodGroupDefinition
-GPUInterconnect ||--o{ ComponentSelector
+GPUInterconnect ||--o{ GeneralSelector
 TopologyAwareness ||--o{ TopologyGroupDefinition
-TopologyGroupDefinition ||--o{ ComponentSelector
-PodGroupDefinition ||--o{ ComponentSelector
+TopologyGroupDefinition ||--o{ GeneralSelector
+PodGroupDefinition ||--o{ GroupingSelector
 
-' Child Specification Relationships
-ComponentDefinition ||--o| ChildSpecDefinition
-ChildSpecDefinition ||--o| FragmentedPodDefinition
+' Selector inheritance
+GroupingSelector --|> ComponentSelectorBase
+GeneralSelector --|> ComponentSelectorBase
+
+' Component Definition Relationships
+ComponentDefinition ||--o| SpecDefinition
+ComponentDefinition ||--o| PodSelector
+SpecDefinition ||--o| FragmentedPodDefinition
+StatusMappings ||--o{ StatusMatcher
 
 ' Example Relationships
 PyTorchJobRID ..|> ResourceInterpretationDefinition : "implements"
@@ -206,8 +230,12 @@ end note
 note top of ComponentDefinition
   **Component Types:**
   • Root: Main CRD (no ownerName)
-  • Sub: Child components (has ownerName)  
-  • Reference: External dependencies
+  • Child: Components with ownerName & specDefinition
+  • Referenced: External dependencies
+  
+  **Pod Identification:**
+  • podSelector: Identifies component type from pod labels
+  • Required for multi-component RIDs
 end note
 
 note top of OptimizationInstructions

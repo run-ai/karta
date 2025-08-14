@@ -61,8 +61,7 @@ spec:
     # Gang scheduling for coordinated job execution
     gangScheduling:
       podGroups:
-      - name: "jobset-gang"
-        members:
+      - members:
         - componentName: "replicatedjob"
           groupByKeyPaths:
           - '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]'
@@ -78,8 +77,7 @@ spec:
     # Topology awareness for batch job placement
     topologyAwareness:
       topologyGroups:
-      - groupName: "batch-cluster"
-        preferredPlacement: "node"
+      - preferredPlacement: "node"
         members:
         - componentName: "replicatedjob"
           componentKeyPath: '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]' 

@@ -57,6 +57,9 @@ spec:
         podTemplateSpecPath: ".spec.mpiReplicaSpecs.Launcher.template"
       scaleDefinition:
         replicasPath: ".spec.mpiReplicaSpecs.Launcher.replicas"
+      podSelector:
+        keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
+        value: "launcher"
 
     # Worker nodes - execute MPI tasks under launcher coordination
     - name: "worker"
@@ -69,14 +72,16 @@ spec:
         podTemplateSpecPath: ".spec.mpiReplicaSpecs.Worker.template"
       scaleDefinition:
         replicasPath: ".spec.mpiReplicaSpecs.Worker.replicas"
+      podSelector:
+        keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
+        value: "worker"
 
   # Optimization instructions
   optimizationInstructions:
     # Gang scheduling for distributed training coordination
     gangScheduling:
       podGroups:
-      - name: "training-gang"
-        members:
+      - members:
         - componentName: "launcher"
           groupByKeyPaths:
           - '.metadata.labels["training.kubeflow.org/job-name"]'
@@ -99,8 +104,7 @@ spec:
     # Topology awareness for MPI network optimization
     topologyAwareness:
       topologyGroups:
-      - groupName: "mpi-cluster"
-        preferredPlacement: "zone"
+      - preferredPlacement: "zone"
         members:
         - componentName: "launcher"
           componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'

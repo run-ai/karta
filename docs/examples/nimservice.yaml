@@ -86,8 +86,7 @@ spec:
     # Gang scheduling for inference pipeline coordination (preferred for serving)
     gangScheduling:
       podGroups:
-      - name: "inference-pipeline"
-        members:
+      - members:
         - componentName: "nimservice"
           groupByKeyPaths:
           - '.metadata.labels["app.kubernetes.io/name"]'
@@ -103,8 +102,7 @@ spec:
     # Node-level topology for low-latency inference
     topologyAwareness:
       topologyGroups:
-      - groupName: "inference-cluster"
-        preferredPlacement: "node"
+      - preferredPlacement: "node"
         members:
         - componentName: "nimservice"
           componentKeyPath: '.metadata.labels["app.kubernetes.io/name"]' 

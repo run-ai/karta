@@ -4,15 +4,23 @@ This directory contains Resource Interpretation Definition (RID) examples for ma
 
 ## Current Iteration Features
 
-- **Added**: Explicit component structure with `rootComponent`, `childComponents`, and `referencedComponents`
-- **Removed**: `topOwnerKind` field - target kind now specified in `rootComponent.kind`
-- **Removed**: `isReference` field - component type determined by section placement
-- **Enhanced**: Component kinds match actual framework implementations  
-- **Enhanced**: `additionalChildKinds` for compute resource traversal
-- **Enhanced**: Clear component hierarchy without ambiguity
-- **Enhanced**: Elastic training support for autoscaling workloads
-- **Added**: Child specification patterns for pod-level optimization
-- **Enhanced**: Management vs serving resource classification
+### **Updated Field Structure** ✅
+- **`childSpecDefinition` → `specDefinition`** - Field renamed for clarity
+- **`specPath` removed** - No longer needed after adding specDefinition
+- **Enhanced `fragmentedPodDefinition`** - New fields: `priorityClassNamePath`, `imagePath`
+- **Pod Selector Support** - New `podSelector` field for component identification in multi-component RIDs
+
+### **Framework Coverage**
+- **11 Frameworks** - Complete coverage of major AI/ML workloads
+- **Research-Based Accuracy** - All framework details verified from source code
+- **Mutually Exclusive Statuses** - No overlaps between status definitions
+- **Framework-Appropriate Lifecycles** - Training jobs have completion, inference services don't
+
+### **RID Structure**
+- **Root Component** - Main workload resource with status definition
+- **Child Components** - Sub-resources with `specDefinition` and optional `podSelector`
+- **Referenced Components** - External dependencies
+- **Additional Child Kinds** - Unmodeled child resources
 
 ### Explicit Structure Organization
 
@@ -29,9 +37,15 @@ structureDefinition:
   - name: "master"
     ownerName: "framework-name"
     kind: { group, version, kind }
+    podSelector:                # Optional - identifies component type from pod labels
+      keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
+      value: "master"
   - name: "worker"
     ownerName: "framework-name"
     kind: { group, version, kind }
+    podSelector:
+      keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
+      value: "worker"
   
   referencedComponents:       # External dependencies (optional)
   - name: "cache-ref"
@@ -51,6 +65,29 @@ structureDefinition:
 3. **🏗️ Clean Hierarchy**: Separate sections for different component types
 4. **🔍 Better Validation**: Structure-specific validation rules
 5. **📖 Self-Documenting**: RID purpose immediately clear from structure
+6. **🏷️ Pod Component Identification**: `podSelector` enables precise pod-to-component mapping
+
+### Pod Selector Configuration
+
+For RIDs with multiple components that create pods, `podSelector` enables kai-bolt to identify which component type a specific pod belongs to:
+
+```yaml
+podSelector:
+  keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
+  value: "master"  # Optional - if nil, checks for key existence only
+```
+
+**Framework Examples:**
+- **PyTorchJob/MPIJob**: Uses `training.kubeflow.org/replica-type` with values `master`/`worker`/`launcher`
+- **RayCluster**: Uses `ray.io/node-type` with values `head`/`worker`
+- **KServe**: Uses `component` label with values `predictor`/`transformer`
+- **Milvus**: Uses `app.kubernetes.io/component` with values `querynode`/`datanode`
+- **LWS**: Uses `leaderworkerset.sigs.k8s.io/worker-index` label (`0` for leader) and `leaderworkerset.sigs.k8s.io/leader-name` annotation (presence indicates worker)
+
+**Requirements:**
+- **Mutually Exclusive**: Selectors within the same RID must not overlap
+- **Framework-Verified**: All selectors verified against actual framework source code
+- **Only for Multi-Component RIDs**: Single-component RIDs don't need pod selectors
 
 ### Child Specification Patterns
 

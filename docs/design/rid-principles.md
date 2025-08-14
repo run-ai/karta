@@ -157,6 +157,47 @@ additionalChildKinds:
   kind: StatefulSet    # Also has explicit component - duplicated!
 ```
 
+## Field Structure Requirements
+
+### **Component Definition Fields**
+- **`name`** - Required string identifier for the component
+- **`kind`** - Required GVK specification (group, version, kind)
+- **`ownerName`** - Required for child components, nil for root
+- **`metadataPath`** - Optional JQ path to metadata (defaults to `.metadata`)
+- **`specDefinition`** - Required for child components (renamed from `childSpecDefinition`)
+- **`scaleDefinition`** - Optional scaling configuration
+- **`statusDefinition`** - Required for root components only
+- **`podSelector`** - Optional pod identification for multi-component RIDs
+- **`references`** - Optional list of referenced components
+
+### **SpecDefinition Requirements**
+- **One of three patterns must be specified**:
+  - `podTemplateSpecPath` - JQ path to complete pod template spec
+  - `podSpecPath` - JQ path to pod spec
+  - `fragmentedPodDefinition` - Scattered pod specification fields
+- **`specPath` field is deprecated** - No longer needed after adding specDefinition
+
+### **FragmentedPodDefinition Fields**
+- **Core fields**: `labelsPath`, `annotationsPath`, `resourcesPath`, `containersPath`
+- **Scheduling fields**: `schedulerNamePath`, `podAffinityPath`, `nodeAffinityPath`
+- **Enhanced fields**: `priorityClassNamePath`, `imagePath`, `resourceClaimsPath`
+- **All fields are optional** - Using `omitempty` for flexibility
+
+### **PodSelector Configuration**
+Used to identify which component type a specific pod belongs to in multi-component RIDs:
+
+```yaml
+podSelector:
+  keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
+  value: "master"  # Optional - if nil, checks for key existence only
+```
+
+**Required for**: RIDs with multiple components that have `specDefinition` (PyTorchJob, MPIJob, RayCluster, KServe, Milvus, LWS)
+
+**Not needed for**: Single-component RIDs (JobSet, NIMService, NIMCache, Dynamo, Knative)
+
+**Mutually exclusive requirement**: Pod selectors within the same RID must be mutually exclusive to avoid ambiguity.
+
 ## Component Design Rules
 
 ### 1. **Owner Hierarchies Are Explicit**
@@ -289,10 +330,12 @@ Every RID must pass these checks:
 4. **All `ownerName` values reference existing component names**
 5. **All status conditions match actual framework APIs**
 6. **All JQ expressions are null-safe with proper defaults**
-7. **All `childSpecDefinition` paths are absolute from root resource**
-8. **`childSpecDefinition` only on controlling components, not generated**
+7. **All `specDefinition` paths are absolute from root resource**
+8. **`specDefinition` only on controlling components, not generated**
 9. **`additionalChildKinds` excludes resource types with explicit components**
-10. **Serving resources have `childSpecDefinition`, management resources do not**
+10. **Serving resources have `specDefinition`, management resources do not**
+11. **Multi-component RIDs have mutually exclusive `podSelector` definitions**
+12. **Pod selectors reference actual framework-generated labels/annotations**
 
 ## Complex Framework Patterns
 

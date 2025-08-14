@@ -10,7 +10,8 @@ type ComponentDefinition struct {
 	SpecDefinition   *SpecDefinition          `json:"specDefinition,omitempty"`
 	ScaleDefinition  *ScaleDefinition         `json:"scaleDefinition,omitempty"` // path to the scale/size struct
 	StatusDefinition *StatusDefinition        `json:"statusDefinition,omitempty"`
-	References       []ReferenceDefinition    `json:"references,omitempty"` // list of components this component references
+	PodSelector      *PodSelector             `json:"podSelector,omitempty"` // A key-value pair that if exists on a pod, indicates it's component type
+	References       []ReferenceDefinition    `json:"references,omitempty"`  // list of components this component references
 }
 
 type SpecDefinition struct {
@@ -43,4 +44,9 @@ type ScaleDefinition struct {
 	ReplicasPath    *string `json:"replicasPath"`    // JQ path to replica count (e.g., '.replicas')
 	MinReplicasPath *string `json:"minReplicasPath"` // JQ path to minimum replicas (e.g., '.minReplicas')
 	MaxReplicasPath *string `json:"maxReplicasPath"` // JQ path to maximum replicas (e.g., '.maxReplicas')
+}
+
+type PodSelector struct {
+	KeyPath string  `json:"keyPath"`         // JQ path to the key
+	Value   *string `json:"value,omitempty"` // optional - if the key exists, the pod is this component type
 }

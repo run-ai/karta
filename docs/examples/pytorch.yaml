@@ -56,6 +56,9 @@ spec:
         podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Master.template"
       scaleDefinition:
         replicasPath: ".spec.pytorchReplicaSpecs.Master.replicas"
+      podSelector:
+        keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
+        value: "master"
 
     - name: "worker"
       kind:
@@ -69,14 +72,16 @@ spec:
         replicasPath: ".spec.pytorchReplicaSpecs.Worker.replicas"
         minReplicasPath: ".spec.elasticPolicy.minReplicas"
         maxReplicasPath: ".spec.elasticPolicy.maxReplicas"
+      podSelector:
+        keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
+        value: "worker"
 
   # Optimization instructions
   optimizationInstructions:
     # Gang scheduling for distributed training coordination
     gangScheduling:
       podGroups:
-      - name: "training-gang"
-        members:
+      - members:
         - componentName: "master"
           groupByKeyPaths: 
           - '.metadata.labels["training.kubeflow.org/job-name"]'
@@ -99,8 +104,7 @@ spec:
     # Topology awareness for training performance
     topologyAwareness:
       topologyGroups:
-      - groupName: "training-cluster"
-        preferredPlacement: "zone"
+      - preferredPlacement: "zone"
         members:
         - componentName: "master"
           componentKeyPath: '.metadata.labels["training.kubeflow.org/job-name"]'
