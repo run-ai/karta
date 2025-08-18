@@ -89,7 +89,8 @@ spec:
     # Gang scheduling for Milvus component coordination
     gangScheduling:
       podGroups:
-      - members:
+      - name: "cluster"
+        members:
         - componentName: "querynode"
           groupByKeyPaths:
           - '.metadata.labels["app.kubernetes.io/instance"]'

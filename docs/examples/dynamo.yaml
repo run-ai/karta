@@ -64,7 +64,8 @@ spec:
     # Gang scheduling for graph service coordination
     gangScheduling:
       podGroups:
-      - members:
+      - name: "service"
+        members:
         - componentName: "service"
           groupByKeyPaths:
           - '.metadata.labels["nvidia.com/dynamo-service"]'

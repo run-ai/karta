@@ -81,7 +81,8 @@ spec:
     # Gang scheduling for distributed training coordination
     gangScheduling:
       podGroups:
-      - members:
+      - name: "job"
+        members:
         - componentName: "master"
           groupByKeyPaths: 
           - '.metadata.labels["training.kubeflow.org/job-name"]'

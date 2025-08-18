@@ -61,7 +61,8 @@ spec:
     # Gang scheduling for coordinated job execution
     gangScheduling:
       podGroups:
-      - members:
+      - name: "jobset"
+        members:
         - componentName: "replicatedjob"
           groupByKeyPaths:
           - '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]'

@@ -72,18 +72,20 @@ spec:
         podTemplateSpecPath: ".spec.workerGroupSpecs[].template"
       scaleDefinition:
         replicasPath: ".spec.workerGroupSpecs[].replicas"
+        minReplicasPath: ".spec.workerGroupSpecs[].minReplicas"
+        maxReplicasPath: ".spec.workerGroupSpecs[].maxReplicas"
       podSelector:
         keyPath: '.metadata.labels["ray.io/node-type"]'
         value: "worker"
-        minReplicasPath: ".spec.workerGroupSpecs[].minReplicas"
-        maxReplicasPath: ".spec.workerGroupSpecs[].maxReplicas"
+        
 
   # Optimization instructions
   optimizationInstructions:
     # Gang scheduling for Ray cluster startup coordination
     gangScheduling:
       podGroups:
-      - members:
+      - name: "cluster"
+        members:
         - componentName: "head"
           groupByKeyPaths:
           - '.metadata.labels["ray.io/cluster"]'

@@ -54,7 +54,8 @@ spec:
     # Gang scheduling for cache job coordination (no multi-replica typically)
     gangScheduling:
       podGroups:
-      - members:
+      - name: "cache"
+        members:
         - componentName: "nimcache"
           groupByKeyPaths:
           - '.metadata.labels["app.kubernetes.io/name"]'

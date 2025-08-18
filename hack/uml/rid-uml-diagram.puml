@@ -12,12 +12,12 @@ package "RID Core Structure" {
     +apiVersion: string
     +kind: string
     +metadata: ObjectMeta
-    +spec: RIDSpec
+    +spec: ResourceInterpretationDefinitionSpec
   }
   
-  class RIDSpec {
+  class ResourceInterpretationDefinitionSpec {
     +structureDefinition: StructureDefinition
-    +optimizationInstructions: OptimizationInstructions
+    +instructions: OptimizationInstructions
   }
   
   class StructureDefinition {
@@ -60,14 +60,20 @@ package "Component Architecture" {
   }
   
   class StatusDefinition {
-    +conditionsDefinition: ConditionsDefinition
+    +phaseDefinition: PhaseDefinition?
+    +conditionsDefinition: ConditionsDefinition?
     +statusMappings: StatusMappings
   }
   
+  class PhaseDefinition {
+    +path: string
+  }
+  
   class ConditionsDefinition {
-    +conditionsPath: string
+    +path: string
     +typeFieldName: string
     +statusFieldName: string
+    +messageFieldName: string
   }
   
   class StatusMappings {
@@ -80,6 +86,11 @@ package "Component Architecture" {
   class StatusMatcher {
     +byPhase: string?
     +byConditions: ExpectedCondition[]?
+  }
+  
+  class ExpectedCondition {
+    +type: string
+    +status: string
   }
   
   class PodSelector {
@@ -127,7 +138,9 @@ package "Optimization Instructions" {
   }
   
   class PodGroupDefinition {
+    +name: string
     +members: GroupingSelector[]
+    +dependsOn: string[]?
   }
   
   class ComponentSelectorBase {
@@ -144,7 +157,9 @@ package "Optimization Instructions" {
   }
   
   class TopologyGroupDefinition {
-    +preferredPlacement: string
+    +topologyName: string?
+    +preferredPlacement: string?
+    +requiredPlacement: string?
     +members: GeneralSelector[]
   }
 }
@@ -175,22 +190,24 @@ package "Framework Examples" {
 }
 
 ' Core Relationships
-ResourceInterpretationDefinition ||--|| RIDSpec
-RIDSpec ||--|| GroupVersionKind : "targets"
-RIDSpec ||--o{ ComponentDefinition : "contains"
-RIDSpec ||--o{ GroupVersionKind : "childKinds"
-RIDSpec ||--|| OptimizationInstructions
+ResourceInterpretationDefinition ||--|| ResourceInterpretationDefinitionSpec
+ResourceInterpretationDefinitionSpec ||--|| StructureDefinition
+ResourceInterpretationDefinitionSpec ||--|| OptimizationInstructions
+StructureDefinition ||--|| ComponentDefinition : "rootComponent"
+StructureDefinition ||--o{ ComponentDefinition : "childComponents"
+StructureDefinition ||--o{ ComponentDefinition : "referencedComponents"
+StructureDefinition ||--o{ GroupVersionKind : "additionalChildKinds"
 
 ' Component Relationships
 ComponentDefinition ||--|| GroupVersionKind : "defines"
 ComponentDefinition ||--o{ ReferenceDefinition : "references"
 ComponentDefinition ||--o| ScaleDefinition
 ComponentDefinition ||--o| StatusDefinition
-ComponentDefinition ||--o{ ComponentDefinition : "dependsOn"
-ComponentDefinition ||--o{ ComponentDefinition : "ownerName"
-
-StatusDefinition ||--|| ConditionsDefinition
+StatusDefinition ||--o| PhaseDefinition
+StatusDefinition ||--o| ConditionsDefinition
 StatusDefinition ||--|| StatusMappings
+StatusMappings ||--o{ StatusMatcher
+StatusMatcher ||--o{ ExpectedCondition
 
 ' Instruction Relationships
 OptimizationInstructions ||--o| GangScheduling
@@ -211,7 +228,6 @@ GeneralSelector --|> ComponentSelectorBase
 ComponentDefinition ||--o| SpecDefinition
 ComponentDefinition ||--o| PodSelector
 SpecDefinition ||--o| FragmentedPodDefinition
-StatusMappings ||--o{ StatusMatcher
 
 ' Example Relationships
 PyTorchJobRID ..|> ResourceInterpretationDefinition : "implements"

@@ -87,7 +87,8 @@ spec:
     # Gang scheduling for inference pipeline coordination
     gangScheduling:
       podGroups:
-      - members:
+      - name: "service"
+        members:
         - componentName: "predictor"
           groupByKeyPaths:
           - '.metadata.labels["serving.kserve.io/inferenceservice"]'

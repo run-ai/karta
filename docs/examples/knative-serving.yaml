@@ -16,10 +16,7 @@ spec:
         group: "serving.knative.dev"
         version: "v1"
         kind: "Service"
-      # No childSpecDefinition - service generates revisions, revision is optimization target
-      scaleDefinition:
-        minReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"]'
-        maxReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]'
+      # No specDefinition - service generates revisions, revision is optimization target
       statusDefinition:
         conditionsDefinition:
           path: ".status.conditions"
@@ -61,6 +58,9 @@ spec:
         kind: "Revision"
       specDefinition:
         podTemplateSpecPath: ".spec.template"
+      scaleDefinition:
+        minReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"]'
+        maxReplicasPath: '.spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]'
     
     # Child resources created but not represented as components
     additionalChildKinds:
@@ -73,7 +73,8 @@ spec:
     # Gang scheduling for serverless workload coordination
     gangScheduling:
       podGroups:
-      - members:
+      - name: "revision"
+        members:
         - componentName: "revision"
           groupByKeyPaths:
           - '.metadata.labels["serving.knative.dev/revision"]'
