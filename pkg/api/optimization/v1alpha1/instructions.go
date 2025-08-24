@@ -1,17 +1,39 @@
 package v1alpha1
 
 type GangSchedulingInstruction struct {
+	// PodGroups defines the groups of pods that should be scheduled together
+	// +listType=map
+	// +listMapKey=name
 	PodGroups []PodGroupDefinition `json:"podGroups"`
 }
 
+// PodGroupDefinition defines a group of pods that should be scheduled together.
 type PodGroupDefinition struct {
-	Name    string             `json:"name"`    // the name of the pod group
-	Members []GroupingSelector `json:"members"` // the members of the pod group by components
+	// Name is the unique identifier for this pod group
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// Members defines which components belong to this pod group
+	// +listType=map
+	// +listMapKey=componentName
+	Members []GroupingSelector `json:"members"`
 }
 
-// GroupingSelector defines how to select and filter components for grouping instructions
+// GroupingSelector defines how to select and filter components for grouping instructions.
 type GroupingSelector struct {
-	ComponentName   string   `json:"componentName"`             // References a component defined in the RID's structureDefinition
-	GroupByKeyPaths []string `json:"groupByKeyPaths,omitempty"` // JQ path of values to group by (e.g owner name, replica key, etc.). optional - if nil, can find owning component via owner ref traversal
-	Filters         []string `json:"filters,omitempty"`         // Optional, List of JQ filter expressions to select specific components (e.g., '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'). Expressions are ANDed
+	// ComponentName references a component defined in the RID's structureDefinition
+	// +kubebuilder:validation:Required
+	ComponentName string `json:"componentName"`
+
+	// GroupByKeyPaths are JQ paths to values used for grouping (e.g., owner name, replica key)
+	// If empty, grouping is done via owner reference traversal
+	// +kubebuilder:validation:Optional
+	// +listType=set
+	GroupByKeyPaths []string `json:"groupByKeyPaths,omitempty"`
+
+	// Filters are JQ filter expressions to select specific components (expressions are ANDed)
+	// Example: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+	// +kubebuilder:validation:Optional
+	// +listType=set
+	Filters []string `json:"filters,omitempty"`
 }

@@ -1,3 +1,5 @@
+// +kubebuilder:object:generate=true
+// +groupName=optimization.nvidia.com
 package v1alpha1
 
 import (
