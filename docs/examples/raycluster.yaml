@@ -1,0 +1,89 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+spec:
+  structureDefinition:
+    rootComponent:
+      name: "raycluster"
+      # specPath omitted for root component (defaults to .spec)
+      kind:
+        group: "ray.io"
+        version: "v1"
+        kind: "RayCluster"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          initializing:
+          - byConditions:
+            - type: "RayClusterProvisioned"
+              status: "False"
+            - type: "HeadPodReady"
+              status: "False"
+            - type: "ReplicaFailure"
+              status: "False"
+          running:
+          - byConditions:
+            - type: "RayClusterProvisioned"
+              status: "True"
+            - type: "HeadPodReady"
+              status: "True"
+            - type: "ReplicaFailure"
+              status: "False"
+          failed:
+          - byConditions:
+            - type: "ReplicaFailure"
+              status: "True"
+            - type: "RayClusterProvisioned"
+              status: "False"
+            - type: "HeadPodReady"
+              status: "False"
+
+    childComponents:
+    # Head node - Ray cluster coordinator and scheduler
+    - name: "head"
+      kind:
+        group: "apps"
+        version: "v1"
+        kind: "Deployment"
+      ownerName: "raycluster"
+      specDefinition:
+        podTemplateSpecPath: ".spec.headGroupSpec.template"
+      podSelector:
+        keyPath: '.metadata.labels["ray.io/node-type"]'
+        value: "head"
+
+    # Worker group - distributed computation nodes
+    - name: "worker"
+      kind:
+        group: "apps"
+        version: "v1"
+        kind: "Deployment"
+      ownerName: "raycluster"
+      specDefinition:
+        podTemplateSpecPath: ".spec.workerGroupSpecs[].template"
+      scaleDefinition:
+        replicasPath: ".spec.workerGroupSpecs[].replicas"
+        minReplicasPath: ".spec.workerGroupSpecs[].minReplicas"
+        maxReplicasPath: ".spec.workerGroupSpecs[].maxReplicas"
+      podSelector:
+        keyPath: '.metadata.labels["ray.io/node-type"]'
+        value: "worker"
+        
+
+  # Optimization instructions
+  optimizationInstructions:
+    # Gang scheduling for Ray cluster startup coordination
+    gangScheduling:
+      podGroups:
+      - name: "cluster"
+        members:
+        - componentName: "head"
+          groupByKeyPaths:
+          - '.metadata.labels["ray.io/cluster"]'
+        - componentName: "worker"
+          groupByKeyPaths:
+          - '.metadata.labels["ray.io/cluster"]'
+
+ 

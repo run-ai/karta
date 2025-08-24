@@ -1,0 +1,94 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+spec:
+  structureDefinition:
+    rootComponent:
+      name: "milvus"
+      # specPath omitted for root component (defaults to .spec)
+      kind:
+        group: "milvus.io"
+        version: "v1beta1"
+        kind: "Milvus"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          initializing:
+          - byConditions:
+            - type: "EtcdReady"
+              status: "False"
+            - type: "StorageReady"
+              status: "False"
+            - type: "MsgStreamReady"
+              status: "False"
+            - type: "MilvusReady"
+              status: "False"
+          running:
+          - byConditions:
+            - type: "EtcdReady"
+              status: "True"
+            - type: "StorageReady"
+              status: "True"
+            - type: "MsgStreamReady"
+              status: "True"
+            - type: "MilvusReady"
+              status: "True"
+          failed:
+          - byConditions:
+            - type: "MilvusReady"
+              status: "False"
+            - type: "EtcdReady"
+              status: "False"
+            - type: "StorageReady"
+              status: "False"
+            - type: "MsgStreamReady"
+              status: "False"
+
+    childComponents:
+    # QueryNode - handles vector search queries
+    - name: "querynode"
+      kind:
+        group: "apps"
+        version: "v1"
+        kind: "StatefulSet"
+      ownerName: "milvus"
+      specDefinition:
+        podTemplateSpecPath: ".spec.components.queryNode.template"
+      scaleDefinition:
+        replicasPath: ".spec.components.queryNode.replicas"
+      podSelector:
+        keyPath: '.metadata.labels["app.kubernetes.io/component"]'
+        value: "querynode"
+
+    # DataNode - processes and stores vector data
+    - name: "datanode"
+      kind:
+        group: "apps"
+        version: "v1"
+        kind: "StatefulSet"
+      ownerName: "milvus"
+      specDefinition:
+        podTemplateSpecPath: ".spec.components.dataNode.template"
+      scaleDefinition:
+        replicasPath: ".spec.components.dataNode.replicas"
+      podSelector:
+        keyPath: '.metadata.labels["app.kubernetes.io/component"]'
+        value: "datanode"
+
+  # Optimization instructions
+  optimizationInstructions:
+    # Gang scheduling for Milvus component coordination
+    gangScheduling:
+      podGroups:
+      - name: "cluster"
+        members:
+        - componentName: "querynode"
+          groupByKeyPaths:
+          - '.metadata.labels["app.kubernetes.io/instance"]'
+        - componentName: "datanode"
+          groupByKeyPaths:
+          - '.metadata.labels["app.kubernetes.io/instance"]'
+
+ 
