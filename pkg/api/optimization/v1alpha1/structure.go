@@ -15,12 +15,12 @@ type ComponentDefinition struct {
 
 type SpecDefinition struct {
 	// only one of the following should be provided
-	PodTemplateSpecPath     *string                  `json:"podTemplateSpecPath,omitempty"`     // JQ path to the component pod template spec
-	PodSpecPath             *string                  `json:"podSpecPath,omitempty"`             // JQ path to the component pod spec
-	FragmentedPodDefinition *FragmentedPodDefinition `json:"fragmentedPodDefinition,omitempty"` // for cases where the parent component is not holding a podSpec or podTemplateSpec objects
+	PodTemplateSpecPath         *string                      `json:"podTemplateSpecPath,omitempty"`         // JQ path to the component pod template spec
+	PodSpecPath                 *string                      `json:"podSpecPath,omitempty"`                 // JQ path to the component pod spec
+	FragmentedPodSpecDefinition *FragmentedPodSpecDefinition `json:"fragmentedPodSpecDefinition,omitempty"` // for cases where the parent component is not holding a podSpec or podTemplateSpec objects
 }
 
-type FragmentedPodDefinition struct {
+type FragmentedPodSpecDefinition struct {
 	SchedulerNamePath     *string `json:"schedulerNamePath,omitempty"`
 	LabelsPath            *string `json:"labelsPath,omitempty"`
 	AnnotationsPath       *string `json:"annotationsPath,omitempty"`

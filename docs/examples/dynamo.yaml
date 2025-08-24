@@ -28,7 +28,7 @@ spec:
         kind: "DynamoComponentDeployment"
       ownerName: "dynamographdeployment"
       specDefinition:
-        fragmentedPodDefinition:
+        fragmentedPodSpecDefinition:
           labelsPath: ".spec.services | .[] | .labels"
           annotationsPath: ".spec.services | .[] | .annotations"
           resourcesPath: ".spec.services | .[] | .resources"

@@ -13,5 +13,5 @@ type PodGroupDefinition struct {
 type GroupingSelector struct {
 	ComponentName   string   `json:"componentName"`             // References a component defined in the RID's structureDefinition
 	GroupByKeyPaths []string `json:"groupByKeyPaths,omitempty"` // JQ path of values to group by (e.g owner name, replica key, etc.). optional - if nil, can find owning component via owner ref traversal
-	Filters         []string `json:"filters,omitempty"`         // Optional, List of JQ filter expressions to select specific components (e.g., '.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0 > 0'). Expressions are ANDed
+	Filters         []string `json:"filters,omitempty"`         // Optional, List of JQ filter expressions to select specific components (e.g., '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'). Expressions are ANDed
 }

@@ -1,0 +1,75 @@
+package rid
+
+import (
+	"fmt"
+
+	"github.com/run-ai/runai/kai-bolt/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/runai/kai-bolt/pkg/utils/rid/query"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+// Extractor interface for extracting typed data from component definitions
+type Extractor interface {
+	ExtractPodTemplateSpec(definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error)
+	ExtractFragmentedPodSpec(definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error)
+}
+
+// ComponentProvider interface for retrieving RID components
+type ComponentProvider interface {
+	GetComponent(name string) (*Component, error)
+}
+
+// RidComponentProvider implements ComponentProvider using RID definitions
+type RidComponentProvider struct {
+	rid       *v1alpha1.ResourceInterpretationDefinition
+	extractor Extractor // Shared extractor instance
+
+	componentDefinitionsByName map[string]v1alpha1.ComponentDefinition // Fast component definition lookup
+	componentCaches            map[string]*ComponentCache              // Per-component caches
+}
+
+// NewRidComponentProvider creates a new RID-based component provider
+func NewRidComponentProvider(rid *v1alpha1.ResourceInterpretationDefinition, object client.Object) ComponentProvider {
+	// Create shared query evaluator (singleton)
+	queryEvaluator := query.NewJqEvaluator(object)
+
+	// Create shared extractor
+	extractor := NewRidExtractor(queryEvaluator)
+
+	// Initialize component maps
+	definitionsByName := make(map[string]v1alpha1.ComponentDefinition)
+	componentCaches := make(map[string]*ComponentCache)
+
+	// Create single slice with all components (root + children)
+	allDefinitions := append(rid.Spec.StructureDefinition.ChildComponents, rid.Spec.StructureDefinition.RootComponent)
+	for _, componentDefinition := range allDefinitions {
+		definitionsByName[componentDefinition.Name] = componentDefinition
+		componentCaches[componentDefinition.Name] = &ComponentCache{}
+	}
+
+	return &RidComponentProvider{
+		rid:                        rid,
+		extractor:                  extractor,
+		componentDefinitionsByName: definitionsByName,
+		componentCaches:            componentCaches,
+	}
+}
+
+// GetComponent retrieves a component by name
+func (p *RidComponentProvider) GetComponent(name string) (*Component, error) {
+	definition, exists := p.componentDefinitionsByName[name]
+	if !exists {
+		return nil, fmt.Errorf("component %s not found", name)
+	}
+
+	// Cache is guaranteed to exist - pre-initialized in constructor
+	cache := p.componentCaches[name]
+
+	return &Component{
+		name:       name,
+		definition: definition,
+		extractor:  p.extractor, // Shared extractor
+		cache:      cache,
+	}, nil
+}

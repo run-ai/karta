@@ -17,7 +17,7 @@ type QueryEvaluator interface {
 // Extractor interface for component data extraction
 type Extractor interface {
 	GetComponent(name string) (*Component, error)
-	ExtractPodTemplateSpecs(component v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error)
+	ExtractPodTemplateSpec(component v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error)
 }
 
 type ComponentExtractor struct {
@@ -84,7 +84,7 @@ func (c *Component) GetPodTemplateSpec() ([]corev1.PodTemplateSpec, error) {
 		return c.cache.podTemplateSpecs, nil
 	}
 
-	templates, err := c.extractor.ExtractPodTemplateSpecs(c.definition)
+	templates, err := c.extractor.ExtractPodTemplateSpec(c.definition)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (c *Component) GetPodTemplateSpec() ([]corev1.PodTemplateSpec, error) {
 	return templates, nil
 }
 
-func (e *ComponentExtractor) ExtractPodTemplateSpecs(definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error) {
+func (e *ComponentExtractor) ExtractPodTemplateSpec(definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error) {
 	if definition.SpecDefinition == nil {
 		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
 	}
