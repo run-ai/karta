@@ -1,4 +1,4 @@
-module github.com/run-ai/runai/kai-bolt
+module github.com/run-ai/kai-bolt
 
 go 1.24.3
 
