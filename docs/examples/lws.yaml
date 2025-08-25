@@ -44,7 +44,7 @@ spec:
 
     childComponents:
     - name: "group"
-      ownerName: "leaderworkerset"
+      ownerRef: "leaderworkerset"
       scaleDefinition:
         replicasPath: ".spec.leaderWorkerTemplate.size"
 
@@ -54,7 +54,7 @@ spec:
         group: "apps"
         version: "v1"
         kind: "StatefulSet"
-      ownerName: "group"
+      ownerRef: "group"
       specDefinition:
         podTemplateSpecPath: ".spec.leaderWorkerTemplate.leaderTemplate.spec.template"
       podSelector:
@@ -67,7 +67,7 @@ spec:
         group: "apps"
         version: "v1"
         kind: "StatefulSet"
-      ownerName: "group"
+      ownerRef: "group"
       specDefinition:
         podTemplateSpecPath: ".spec.leaderWorkerTemplate.workerTemplate.spec.template"
       podSelector:

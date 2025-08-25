@@ -26,7 +26,7 @@ spec:
         group: "nvidia.com"
         version: "v1alpha1"
         kind: "DynamoComponentDeployment"
-      ownerName: "dynamographdeployment"
+      ownerRef: "dynamographdeployment"
       specDefinition:
         fragmentedPodSpecDefinition:
           labelsPath: ".spec.services | .[] | .labels"

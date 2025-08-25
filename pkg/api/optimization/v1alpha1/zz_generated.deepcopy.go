@@ -17,8 +17,8 @@ func (in *ComponentDefinition) DeepCopyInto(out *ComponentDefinition) {
 		*out = new(GroupVersionKind)
 		**out = **in
 	}
-	if in.OwnerName != nil {
-		in, out := &in.OwnerName, &out.OwnerName
+	if in.OwnerRef != nil {
+		in, out := &in.OwnerRef, &out.OwnerRef
 		*out = new(string)
 		**out = **in
 	}

@@ -47,7 +47,7 @@ spec:
         group: "apps"
         version: "v1"
         kind: "Deployment"
-      ownerName: "raycluster"
+      ownerRef: "raycluster"
       specDefinition:
         podTemplateSpecPath: ".spec.headGroupSpec.template"
       podSelector:
@@ -60,7 +60,7 @@ spec:
         group: "apps"
         version: "v1"
         kind: "Deployment"
-      ownerName: "raycluster"
+      ownerRef: "raycluster"
       specDefinition:
         podTemplateSpecPath: ".spec.workerGroupSpecs[].template"
       scaleDefinition:

@@ -43,7 +43,7 @@ spec:
         group: "batch"
         version: "v1"
         kind: "Job"
-      ownerName: "jobset"
+      ownerRef: "jobset"
       specDefinition:
         podSpecPath: ".spec.replicatedJobs[].template.spec"
       scaleDefinition:

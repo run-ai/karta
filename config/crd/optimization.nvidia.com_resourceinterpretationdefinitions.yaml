@@ -142,7 +142,9 @@ spec:
                       - version
                       type: object
                     type: array
-                    x-kubernetes-list-type: set
+                    x-kubernetes-list-map-keys:
+                    - kind
+                    x-kubernetes-list-type: map
                   childComponents:
                     description: ChildComponents defines the child components in the
                       hierarchy
@@ -172,9 +174,9 @@ spec:
                           description: Name is the unique identifier for this component
                             within the RID
                           type: string
-                        ownerName:
-                          description: OwnerName references the parent component in
-                            the hierarchy (nil for root component)
+                        ownerRef:
+                          description: OwnerRef references the parent component in
+                            the hierarchy by name (nil for root component)
                           type: string
                         podSelector:
                           description: PodSelector defines how to identify pods belonging
@@ -500,9 +502,9 @@ spec:
                         description: Name is the unique identifier for this component
                           within the RID
                         type: string
-                      ownerName:
-                        description: OwnerName references the parent component in
-                          the hierarchy (nil for root component)
+                      ownerRef:
+                        description: OwnerRef references the parent component in the
+                          hierarchy by name (nil for root component)
                         type: string
                       podSelector:
                         description: PodSelector defines how to identify pods belonging

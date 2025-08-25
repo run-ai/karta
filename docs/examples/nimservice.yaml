@@ -17,7 +17,6 @@ spec:
           resourceClaimsPath: ".spec.draResources"
           schedulerNamePath: ".spec.schedulerName"
           podAffinityPath: ".spec.podAffinity"
-          priorityClassNamePath: ".spec.priorityClassName"
           imagePath: ".spec.image"
       scaleDefinition:
         replicasPath: ".spec.replicas"
