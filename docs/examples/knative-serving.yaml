@@ -44,7 +44,7 @@ spec:
     childComponents:
     - name: "revision"
       # specPath omitted for child component (defaults to .spec)
-      ownerName: "service"
+      ownerRef: "service"
       kind:
         group: "serving.knative.dev"
         version: "v1"

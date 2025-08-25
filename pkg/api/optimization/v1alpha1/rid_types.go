@@ -47,7 +47,8 @@ type StructureDefinition struct {
 	// but are not explicitly modeled as components (e.g., Deployments, Services).
 	// Required for RBAC purposes, etc.
 	// +kubebuilder:validation:Optional
-	// +listType=set
+	// +listType=map
+	// +listMapKey=kind
 	AdditionalChildKinds []GroupVersionKind `json:"additionalChildKinds,omitempty"`
 }
 

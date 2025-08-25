@@ -45,7 +45,7 @@ spec:
         group: ""
         version: "v1"
         kind: "Pod"
-      ownerName: "mpijob"
+      ownerRef: "mpijob"
       specDefinition:
         podTemplateSpecPath: ".spec.mpiReplicaSpecs.Launcher.template"
       scaleDefinition:
@@ -60,7 +60,7 @@ spec:
         group: ""
         version: "v1"
         kind: "Pod"
-      ownerName: "mpijob"
+      ownerRef: "mpijob"
       specDefinition:
         podTemplateSpecPath: ".spec.mpiReplicaSpecs.Worker.template"
       scaleDefinition:

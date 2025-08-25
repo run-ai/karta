@@ -44,7 +44,7 @@ spec:
         group: ""
         version: "v1"
         kind: "Pod"
-      ownerName: "pytorchjob"
+      ownerRef: "pytorchjob"
       specDefinition:
         podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Master.template"
       scaleDefinition:
@@ -58,7 +58,7 @@ spec:
         group: ""
         version: "v1"
         kind: "Pod"
-      ownerName: "pytorchjob"
+      ownerRef: "pytorchjob"
       specDefinition:
         podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Worker.template"
       scaleDefinition:

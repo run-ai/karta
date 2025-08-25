@@ -23,9 +23,9 @@ type ComponentDefinition struct {
 	// +kubebuilder:validation:Optional
 	Kind *GroupVersionKind `json:"kind,omitempty"`
 
-	// OwnerName references the parent component in the hierarchy (nil for root component)
+	// OwnerRef references the parent component in the hierarchy by name (nil for root component)
 	// +kubebuilder:validation:Optional
-	OwnerName *string `json:"ownerName,omitempty"`
+	OwnerRef *string `json:"ownerRef,omitempty"`
 
 	// SpecDefinition defines how to extract pod specifications from this component
 	// +kubebuilder:validation:Optional
@@ -46,7 +46,7 @@ type ComponentDefinition struct {
 }
 
 // SpecDefinition defines how to extract pod specifications from a component.
-// Only one of the three options should be provided.
+// Only one of the three options should be provided (PodTemplateSpec, FragmentedPodSpec, PodSpec + Metadata).
 type SpecDefinition struct {
 	// PodTemplateSpecPath is the JQ path to a complete PodTemplateSpec object
 	// +kubebuilder:validation:Optional
