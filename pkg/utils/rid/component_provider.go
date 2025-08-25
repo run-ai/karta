@@ -6,6 +6,7 @@ import (
 	"github.com/run-ai/runai/kai-bolt/pkg/api/optimization/v1alpha1"
 	"github.com/run-ai/runai/kai-bolt/pkg/utils/rid/query"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -13,6 +14,8 @@ import (
 type Extractor interface {
 	ExtractPodTemplateSpec(definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error)
 	ExtractFragmentedPodSpec(definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error)
+	ExtractPodSpec(definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error)
+	ExtractPodMetadata(definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error)
 }
 
 // ComponentProvider interface for retrieving RID components
@@ -72,4 +75,13 @@ func (p *RidComponentProvider) GetComponent(name string) (*Component, error) {
 		extractor:  p.extractor, // Shared extractor
 		cache:      cache,
 	}, nil
+}
+
+// GetRootComponent retrieves the root component
+func (p *RidComponentProvider) GetRootComponent() (*Component, error) {
+	if p.rid == nil {
+		return nil, fmt.Errorf("rid is nil")
+	}
+
+	return p.GetComponent(p.rid.Spec.StructureDefinition.RootComponent.Name)
 }

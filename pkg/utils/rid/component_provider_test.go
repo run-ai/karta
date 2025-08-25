@@ -234,7 +234,7 @@ var _ = Describe("ComponentProvider", func() {
 			Expect(err.Error()).To(ContainSubstring("component nonexistent not found"))
 		})
 
-		FIt("should extract pod template specs from Dynamo components", func() {
+		It("should extract pod template specs from Dynamo components", func() {
 			serviceComponent, err := dynamoProvider.GetComponent("service")
 			Expect(err).ToNot(HaveOccurred())
 

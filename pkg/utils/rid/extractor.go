@@ -6,6 +6,7 @@ import (
 
 	"github.com/run-ai/runai/kai-bolt/pkg/api/optimization/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // QueryEvaluator interface for query evaluation against data
@@ -29,18 +30,44 @@ func (e *RidExtractor) ExtractPodTemplateSpec(definition v1alpha1.ComponentDefin
 		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
 	}
 
-	if definition.SpecDefinition.PodTemplateSpecPath != nil {
-		results, err := e.queryEvaluator.Evaluate(*definition.SpecDefinition.PodTemplateSpecPath)
-		if err != nil {
-			return nil, err
-		}
-
-		return safeConvertSlice[corev1.PodTemplateSpec](results)
+	if definition.SpecDefinition.PodTemplateSpecPath == nil {
+		return nil, fmt.Errorf("component %s does not have pod template spec definition", definition.Name)
 	}
 
-	// try build from fragmented
+	var podTemplateSpec []corev1.PodTemplateSpec
+	err := extract(definition.SpecDefinition.PodTemplateSpecPath, e.queryEvaluator, &podTemplateSpec)
 
-	return nil, nil
+	return podTemplateSpec, err
+}
+
+func (e *RidExtractor) ExtractPodSpec(definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error) {
+	if definition.SpecDefinition == nil {
+		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
+	}
+
+	if definition.SpecDefinition.PodSpecPath == nil {
+		return nil, fmt.Errorf("component %s does not have pod spec definition", definition.Name)
+	}
+
+	var podSpec []corev1.PodSpec
+	err := extract(definition.SpecDefinition.PodSpecPath, e.queryEvaluator, &podSpec)
+
+	return podSpec, err
+}
+
+func (e *RidExtractor) ExtractPodMetadata(definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error) {
+	if definition.SpecDefinition == nil {
+		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
+	}
+
+	if definition.SpecDefinition.MetadataPath == nil {
+		return nil, fmt.Errorf("component %s does not have pod metadata definition", definition.Name)
+	}
+
+	var podMetadata []metav1.ObjectMeta
+	err := extract(definition.SpecDefinition.MetadataPath, e.queryEvaluator, &podMetadata)
+
+	return podMetadata, err
 }
 
 type FragmentedPodSpec struct {
@@ -56,7 +83,7 @@ type FragmentedPodSpec struct {
 	Image             string                      `json:"image,omitempty"`
 }
 
-func extractionTask[T any](path *string, evaluator QueryEvaluator, out *[]T) error {
+func extract[T any](path *string, evaluator QueryEvaluator, out *[]T) error {
 	if path == nil {
 		return nil
 	}
@@ -102,7 +129,7 @@ func (e *RidExtractor) ExtractFragmentedPodSpec(definition v1alpha1.ComponentDef
 	// Parallel execution - commented out due to gojq concurrency issues
 	// var g errgroup.Group
 	// g.Go(func() error {
-	// 	return extractionTask(fragmentedDefinition.SchedulerNamePath, e.queryEvaluator, &schedulerNameResults)
+	// 	return extract(fragmentedDefinition.SchedulerNamePath, e.queryEvaluator, &schedulerNameResults)
 	// })
 	// ... (other g.Go calls)
 	// if err := g.Wait(); err != nil {
@@ -110,43 +137,43 @@ func (e *RidExtractor) ExtractFragmentedPodSpec(definition v1alpha1.ComponentDef
 	// }
 
 	// Sequential execution for now
-	if err := extractionTask(fragmentedDefinition.SchedulerNamePath, e.queryEvaluator, &schedulerNameResults); err != nil {
+	if err := extract(fragmentedDefinition.SchedulerNamePath, e.queryEvaluator, &schedulerNameResults); err != nil {
 		return nil, err
 	}
 
-	if err := extractionTask(fragmentedDefinition.LabelsPath, e.queryEvaluator, &labelsResults); err != nil {
+	if err := extract(fragmentedDefinition.LabelsPath, e.queryEvaluator, &labelsResults); err != nil {
 		return nil, err
 	}
 
-	if err := extractionTask(fragmentedDefinition.AnnotationsPath, e.queryEvaluator, &annotationsResults); err != nil {
+	if err := extract(fragmentedDefinition.AnnotationsPath, e.queryEvaluator, &annotationsResults); err != nil {
 		return nil, err
 	}
 
-	if err := extractionTask(fragmentedDefinition.ResourcesPath, e.queryEvaluator, &resourcesResults); err != nil {
+	if err := extract(fragmentedDefinition.ResourcesPath, e.queryEvaluator, &resourcesResults); err != nil {
 		return nil, err
 	}
 
-	if err := extractionTask(fragmentedDefinition.ResourceClaimsPath, e.queryEvaluator, &resourceClaimsResults); err != nil {
+	if err := extract(fragmentedDefinition.ResourceClaimsPath, e.queryEvaluator, &resourceClaimsResults); err != nil {
 		return nil, err
 	}
 
-	if err := extractionTask(fragmentedDefinition.PodAffinityPath, e.queryEvaluator, &podAffinityResults); err != nil {
+	if err := extract(fragmentedDefinition.PodAffinityPath, e.queryEvaluator, &podAffinityResults); err != nil {
 		return nil, err
 	}
 
-	if err := extractionTask(fragmentedDefinition.NodeAffinityPath, e.queryEvaluator, &nodeAffinityResults); err != nil {
+	if err := extract(fragmentedDefinition.NodeAffinityPath, e.queryEvaluator, &nodeAffinityResults); err != nil {
 		return nil, err
 	}
 
-	if err := extractionTask(fragmentedDefinition.ContainersPath, e.queryEvaluator, &containersResults); err != nil {
+	if err := extract(fragmentedDefinition.ContainersPath, e.queryEvaluator, &containersResults); err != nil {
 		return nil, err
 	}
 
-	if err := extractionTask(fragmentedDefinition.PriorityClassNamePath, e.queryEvaluator, &priorityClassNameResults); err != nil {
+	if err := extract(fragmentedDefinition.PriorityClassNamePath, e.queryEvaluator, &priorityClassNameResults); err != nil {
 		return nil, err
 	}
 
-	if err := extractionTask(fragmentedDefinition.ImagePath, e.queryEvaluator, &imageResults); err != nil {
+	if err := extract(fragmentedDefinition.ImagePath, e.queryEvaluator, &imageResults); err != nil {
 		return nil, err
 	}
 
@@ -155,23 +182,39 @@ func (e *RidExtractor) ExtractFragmentedPodSpec(definition v1alpha1.ComponentDef
 
 	for i := 0; i < specCount; i++ {
 		fragmentedSpecs[i] = FragmentedPodSpec{
-			SchedulerName:     schedulerNameResults[i],
-			Labels:            labelsResults[i],
-			Annotations:       annotationsResults[i],
-			Resources:         resourcesResults[i],
-			ResourceClaims:    resourceClaimsResults[i],
-			PodAffinity:       podAffinityResults[i],
-			NodeAffinity:      nodeAffinityResults[i],
-			Containers:        containersResults[i],
-			PriorityClassName: priorityClassNameResults[i],
-			Image:             imageResults[i],
+			SchedulerName:     safeGetByIndex(schedulerNameResults, i),
+			Labels:            safeGetByIndex(labelsResults, i),
+			Annotations:       safeGetByIndex(annotationsResults, i),
+			Resources:         safeGetByIndex(resourcesResults, i),
+			ResourceClaims:    safeGetByIndex(resourceClaimsResults, i),
+			PodAffinity:       safeGetByIndex(podAffinityResults, i),
+			NodeAffinity:      safeGetByIndex(nodeAffinityResults, i),
+			Containers:        safeGetByIndex(containersResults, i),
+			PriorityClassName: safeGetByIndex(priorityClassNameResults, i),
+			Image:             safeGetByIndex(imageResults, i),
 		}
 	}
 
 	return fragmentedSpecs, nil
 }
 
-// Generic type conversion for slice objects
+// safeGetByIndex Generic function for safely retrieving a slice element.
+// Returns zero value if slice is nil or index is out of range
+func safeGetByIndex[T any](slice []T, index int) T {
+	var zero T
+
+	if slice == nil {
+		return zero
+	}
+
+	if index < 0 || index >= len(slice) {
+		return zero
+	}
+
+	return slice[index]
+}
+
+// safeConvertSlice Generic type conversion for slice objects
 func safeConvertSlice[T any](slice []interface{}) ([]T, error) {
 	if slice == nil {
 		return nil, nil
