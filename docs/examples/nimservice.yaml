@@ -1,0 +1,74 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+spec:
+  structureDefinition:
+    rootComponent:
+      name: "nimservice"
+      # specPath omitted for root component (defaults to .spec)
+      kind:
+        group: "apps.nvidia.com"
+        version: "v1alpha1"
+        kind: "NIMService"
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          labelsPath: ".spec.labels"
+          annotationsPath: ".spec.annotations"
+          resourcesPath: ".spec.resources"
+          resourceClaimsPath: ".spec.draResources"
+          schedulerNamePath: ".spec.schedulerName"
+          podAffinityPath: ".spec.podAffinity"
+          imagePath: ".spec.image"
+      scaleDefinition:
+        replicasPath: ".spec.replicas"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          initializing:
+          - byConditions:
+            - type: "NIM_SERVICE_READY"
+              status: "False"
+            - type: "NIM_SERVICE_FAILED"
+              status: "False"
+          running:
+          - byConditions:
+            - type: "NIM_SERVICE_READY"
+              status: "True"
+            - type: "NIM_SERVICE_FAILED"
+              status: "False"
+          failed:
+          - byConditions:
+            - type: "NIM_SERVICE_FAILED"
+              status: "True"
+            - type: "NIM_SERVICE_READY"
+              status: "False"
+    
+    # Child resources created but not represented as components
+    additionalChildKinds:
+    - group: apps
+      version: v1
+      kind: Deployment
+    - group: apps
+      version: v1
+      kind: StatefulSet
+    - group: leaderworkerset.x-k8s.io
+      version: v1
+      kind: LeaderWorkerSet
+    - group: serving.kserve.io
+      version: v1beta1
+      kind: InferenceService
+
+  # Optimization instructions using new structure
+  optimizationInstructions:
+    # Gang scheduling for inference pipeline coordination (preferred for serving)
+    gangScheduling:
+      podGroups:
+      - name: "service"
+        members:
+        - componentName: "nimservice"
+          groupByKeyPaths:
+          - '.metadata.labels["app.kubernetes.io/name"]'
+
+ 

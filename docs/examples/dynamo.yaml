@@ -1,0 +1,64 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+spec:
+  structureDefinition:
+    rootComponent:
+      name: "dynamographdeployment"
+      # specPath omitted for root component (defaults to .spec)
+      kind:
+        group: "nvidia.com"
+        version: "v1alpha1"
+        kind: "DynamoGraphDeployment"
+      statusDefinition:
+        phaseDefinition:
+          path: ".status.state"
+        statusMappings:
+          initializing:
+          - byPhase: "pending"
+          running:
+          - byPhase: "successful"
+          failed:
+          - byPhase: "failed"
+
+    childComponents:
+    - name: "service"
+      kind:
+        group: "nvidia.com"
+        version: "v1alpha1"
+        kind: "DynamoComponentDeployment"
+      ownerRef: "dynamographdeployment"
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          labelsPath: ".spec.services | .[] | .labels"
+          annotationsPath: ".spec.services | .[] | .annotations"
+          resourcesPath: ".spec.services | .[] | .resources"
+          containersPath: ".spec.services | .[] | .extraPodSpec.containers"
+          schedulerNamePath: ".spec.services | .[] | .extraPodSpec.schedulerName"
+          nodeAffinityPath: ".spec.services | .[] | .extraPodSpec.affinity.nodeAffinity"
+          podAffinityPath: ".spec.services | .[] | .extraPodSpec.affinity.podAffinity"
+          priorityClassNamePath: ".spec.services | .[] | .extraPodSpec.priorityClassName"
+          imagePath: ".spec.services | .[] | .extraPodSpec.mainContainer.image"
+      scaleDefinition:
+        replicasPath: ".spec.services | .[] | .replicas"
+        minReplicasPath: ".spec.services | .[] | .autoscaling.minReplicas"
+        maxReplicasPath: ".spec.services | .[] | .autoscaling.maxReplicas"
+    
+    # Child resources created but not represented as components
+    additionalChildKinds:
+    - group: apps
+      version: v1
+      kind: Deployment
+    - group: leaderworkerset.x-k8s.io
+      version: v1
+      kind: LeaderWorkerSet
+
+  # Optimization instructions
+  optimizationInstructions:
+    # Gang scheduling for graph service coordination
+    gangScheduling:
+      podGroups:
+      - name: "service"
+        members:
+        - componentName: "service"
+          groupByKeyPaths:
+          - '.metadata.labels["nvidia.com/dynamo-service"]'

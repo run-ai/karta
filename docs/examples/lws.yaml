@@ -1,0 +1,91 @@
+apiVersion: kai-bolt.runai.ai/v1alpha1
+kind: ResourceInterpretationDefinition
+spec:
+  structureDefinition:
+    rootComponent:
+      name: "leaderworkerset"
+      # specPath omitted for root component (defaults to .spec)
+      kind:
+        group: "leaderworkerset.x-k8s.io"
+        version: "v1"
+        kind: "LeaderWorkerSet"
+      scaleDefinition:
+        replicasPath: ".spec.replicas"
+      statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
+        statusMappings:
+          initializing:
+          - byConditions:
+            - type: "Available"
+              status: "False"
+            - type: "Progressing"
+              status: "False"
+            - type: "UpdateInProgress"
+              status: "False"
+          running:
+          - byConditions:
+            - type: "Available"
+              status: "True"
+            - type: "Progressing"
+              status: "False"
+            - type: "UpdateInProgress"
+              status: "False"
+          failed:
+          - byConditions:
+            - type: "Available"
+              status: "False"
+            - type: "Progressing"
+              status: "False"
+            - type: "UpdateInProgress"
+              status: "False"
+
+    childComponents:
+    - name: "group"
+      ownerRef: "leaderworkerset"
+      scaleDefinition:
+        replicasPath: ".spec.leaderWorkerTemplate.size"
+
+    # Leader - coordinates and manages worker nodes
+    - name: "leader"
+      kind:
+        group: "apps"
+        version: "v1"
+        kind: "StatefulSet"
+      ownerRef: "group"
+      specDefinition:
+        podTemplateSpecPath: ".spec.leaderWorkerTemplate.leaderTemplate.spec.template"
+      podSelector:
+        keyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/worker-index"]'
+        value: "0"
+
+    # Worker group - executes tasks under leader coordination
+    - name: "worker"
+      kind:
+        group: "apps"
+        version: "v1"
+        kind: "StatefulSet"
+      ownerRef: "group"
+      specDefinition:
+        podTemplateSpecPath: ".spec.leaderWorkerTemplate.workerTemplate.spec.template"
+      podSelector:
+        keyPath: '.metadata.annotations["leaderworkerset.sigs.k8s.io/leader-name"]'
+      
+
+  # Optimization instructions
+  optimizationInstructions:
+    # Gang scheduling for leader-worker coordination
+    # Multi-group pattern: podgroup-lws-{name}-group-{index}
+    # Uses default group-index "0" for single-replica LWS
+    gangScheduling:
+      podGroups:
+      - name: "group"
+        members:
+        - componentName: "group"
+          groupByKeyPaths:
+          - '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
+          - '.metadata.labels["leaderworkerset.sigs.k8s.io/group-index"] // "0"'
+
+ 
