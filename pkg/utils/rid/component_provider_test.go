@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/yaml"
 
-	"github.com/run-ai/runai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/runai/kai-bolt/pkg/utils/rid"
+	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/kai-bolt/pkg/utils/rid"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
