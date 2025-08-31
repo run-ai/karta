@@ -18,7 +18,7 @@ const (
 
 // JqEvaluator handles JQ evaluation against a source object with query compilation caching
 type JqEvaluator struct {
-	source interface{}
+	source any
 
 	maxResults   int
 	queryTimeout time.Duration
@@ -28,11 +28,11 @@ type JqEvaluator struct {
 
 	// Lazy JSON conversion
 	jsonOnce sync.Once
-	jsonData interface{}
+	jsonData any
 	jsonErr  error
 }
 
-func NewDefaultJqEvaluator(source interface{}) *JqEvaluator {
+func NewDefaultJqEvaluator(source any) *JqEvaluator {
 	return &JqEvaluator{
 		source:           source,
 		compilationCache: make(map[string]*gojq.Code),
@@ -41,7 +41,7 @@ func NewDefaultJqEvaluator(source interface{}) *JqEvaluator {
 	}
 }
 
-func NewJqEvaluator(source interface{}, queryMaxResults *int, queryTimeoutInMilliseconds *int) *JqEvaluator {
+func NewJqEvaluator(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) *JqEvaluator {
 	jq := NewDefaultJqEvaluator(source)
 
 	if queryMaxResults != nil {
@@ -55,7 +55,7 @@ func NewJqEvaluator(source interface{}, queryMaxResults *int, queryTimeoutInMill
 }
 
 // Evaluate executes a JQ expression with compilation caching
-func (jq *JqEvaluator) Evaluate(ctx context.Context, expression string) ([]interface{}, error) {
+func (jq *JqEvaluator) Evaluate(ctx context.Context, expression string) ([]any, error) {
 	// Get JSON data (lazy conversion)
 	jsonData, err := jq.getJsonData()
 	if err != nil {
@@ -72,13 +72,13 @@ func (jq *JqEvaluator) Evaluate(ctx context.Context, expression string) ([]inter
 	return jq.safeRun(ctx, query, jsonData, expression)
 }
 
-func (jq *JqEvaluator) safeRun(ctx context.Context, q *gojq.Code, input interface{}, expression string) ([]interface{}, error) {
+func (jq *JqEvaluator) safeRun(ctx context.Context, q *gojq.Code, input any, expression string) ([]any, error) {
 	innerCtx, cancel := context.WithTimeout(ctx, jq.queryTimeout)
 	defer cancel()
 
 	iter := q.RunWithContext(innerCtx, input)
 
-	var results []interface{}
+	var results []any
 	for {
 		v, ok := iter.Next()
 		if !ok {
@@ -97,7 +97,7 @@ func (jq *JqEvaluator) safeRun(ctx context.Context, q *gojq.Code, input interfac
 }
 
 // getJsonData performs lazy JSON conversion with sync.Once
-func (jq *JqEvaluator) getJsonData() (interface{}, error) {
+func (jq *JqEvaluator) getJsonData() (any, error) {
 	jq.jsonOnce.Do(func() {
 		jsonBytes, err := json.Marshal(jq.source)
 		if err != nil {

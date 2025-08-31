@@ -35,7 +35,7 @@ func NewComponentProvider(rid *v1alpha1.ResourceInterpretationDefinition, object
 	queryEvaluator := query.NewDefaultJqEvaluator(object)
 
 	// Create shared extractor
-	extractor := NewRidExtractor(queryEvaluator)
+	extractor := NewComponentExtractor(queryEvaluator)
 
 	// Initialize component maps
 	definitionsByName := make(map[string]v1alpha1.ComponentDefinition)

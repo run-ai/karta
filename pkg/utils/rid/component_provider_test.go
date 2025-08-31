@@ -292,34 +292,34 @@ func loadRIDFromFile(filePath string) (*v1alpha1.ResourceInterpretationDefinitio
 
 func createPyTorchJobObject() client.Object {
 	pytorchJob := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "kubeflow.org/v1",
 			"kind":       "PyTorchJob",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "pytorch-simple",
 				"namespace": "default",
 			},
-			"spec": map[string]interface{}{
-				"pytorchReplicaSpecs": map[string]interface{}{
-					"Master": map[string]interface{}{
+			"spec": map[string]any{
+				"pytorchReplicaSpecs": map[string]any{
+					"Master": map[string]any{
 						"replicas": 1,
-						"template": map[string]interface{}{
-							"metadata": map[string]interface{}{
-								"labels": map[string]interface{}{
+						"template": map[string]any{
+							"metadata": map[string]any{
+								"labels": map[string]any{
 									"app": "pytorch-master",
 								},
 							},
-							"spec": map[string]interface{}{
-								"containers": []interface{}{
-									map[string]interface{}{
+							"spec": map[string]any{
+								"containers": []any{
+									map[string]any{
 										"name":  "pytorch",
 										"image": "pytorch/pytorch:latest",
-										"command": []interface{}{
+										"command": []any{
 											"python",
 											"train.py",
 										},
-										"resources": map[string]interface{}{
-											"requests": map[string]interface{}{
+										"resources": map[string]any{
+											"requests": map[string]any{
 												"nvidia.com/gpu": 1,
 											},
 										},
@@ -329,25 +329,25 @@ func createPyTorchJobObject() client.Object {
 							},
 						},
 					},
-					"Worker": map[string]interface{}{
+					"Worker": map[string]any{
 						"replicas": 3,
-						"template": map[string]interface{}{
-							"metadata": map[string]interface{}{
-								"labels": map[string]interface{}{
+						"template": map[string]any{
+							"metadata": map[string]any{
+								"labels": map[string]any{
 									"app": "pytorch-worker",
 								},
 							},
-							"spec": map[string]interface{}{
-								"containers": []interface{}{
-									map[string]interface{}{
+							"spec": map[string]any{
+								"containers": []any{
+									map[string]any{
 										"name":  "pytorch",
 										"image": "pytorch/pytorch:latest",
-										"command": []interface{}{
+										"command": []any{
 											"python",
 											"train.py",
 										},
-										"resources": map[string]interface{}{
-											"requests": map[string]interface{}{
+										"resources": map[string]any{
+											"requests": map[string]any{
 												"nvidia.com/gpu": 1,
 											},
 										},
@@ -359,9 +359,9 @@ func createPyTorchJobObject() client.Object {
 					},
 				},
 			},
-			"status": map[string]interface{}{
-				"conditions": []interface{}{
-					map[string]interface{}{
+			"status": map[string]any{
+				"conditions": []any{
+					map[string]any{
 						"type":   "Running",
 						"status": "True",
 					},
@@ -375,39 +375,39 @@ func createPyTorchJobObject() client.Object {
 
 func createJobSetObject() client.Object {
 	jobSet := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "jobset.x-k8s.io/v1alpha2",
 			"kind":       "JobSet",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "simple-jobset",
 				"namespace": "default",
 			},
-			"spec": map[string]interface{}{
-				"replicatedJobs": []interface{}{
-					map[string]interface{}{
+			"spec": map[string]any{
+				"replicatedJobs": []any{
+					map[string]any{
 						"name":     "leader",
 						"replicas": 1,
-						"template": map[string]interface{}{
-							"spec": map[string]interface{}{
+						"template": map[string]any{
+							"spec": map[string]any{
 								"parallelism":   1,
 								"completions":   1,
 								"backoffLimit":  6,
 								"restartPolicy": "OnFailure",
-								"template": map[string]interface{}{
-									"spec": map[string]interface{}{
-										"containers": []interface{}{
-											map[string]interface{}{
+								"template": map[string]any{
+									"spec": map[string]any{
+										"containers": []any{
+											map[string]any{
 												"name":    "leader",
 												"image":   "busybox:latest",
-												"command": []interface{}{"sh", "-c", "echo 'Leader job' && sleep 30"},
-												"resources": map[string]interface{}{
-													"requests": map[string]interface{}{
+												"command": []any{"sh", "-c", "echo 'Leader job' && sleep 30"},
+												"resources": map[string]any{
+													"requests": map[string]any{
 														"cpu":    "100m",
 														"memory": "128Mi",
 													},
 												},
-												"env": []interface{}{
-													map[string]interface{}{
+												"env": []any{
+													map[string]any{
 														"name":  "JOB_ROLE",
 														"value": "leader",
 													},
@@ -420,30 +420,30 @@ func createJobSetObject() client.Object {
 							},
 						},
 					},
-					map[string]interface{}{
+					map[string]any{
 						"name":     "worker",
 						"replicas": 3,
-						"template": map[string]interface{}{
-							"spec": map[string]interface{}{
+						"template": map[string]any{
+							"spec": map[string]any{
 								"parallelism":   1,
 								"completions":   1,
 								"backoffLimit":  6,
 								"restartPolicy": "OnFailure",
-								"template": map[string]interface{}{
-									"spec": map[string]interface{}{
-										"containers": []interface{}{
-											map[string]interface{}{
+								"template": map[string]any{
+									"spec": map[string]any{
+										"containers": []any{
+											map[string]any{
 												"name":    "worker",
 												"image":   "busybox:latest",
-												"command": []interface{}{"sh", "-c", "echo 'Worker job' && sleep 60"},
-												"resources": map[string]interface{}{
-													"requests": map[string]interface{}{
+												"command": []any{"sh", "-c", "echo 'Worker job' && sleep 60"},
+												"resources": map[string]any{
+													"requests": map[string]any{
 														"cpu":    "200m",
 														"memory": "256Mi",
 													},
 												},
-												"env": []interface{}{
-													map[string]interface{}{
+												"env": []any{
+													map[string]any{
 														"name":  "JOB_ROLE",
 														"value": "worker",
 													},
@@ -458,9 +458,9 @@ func createJobSetObject() client.Object {
 					},
 				},
 			},
-			"status": map[string]interface{}{
-				"conditions": []interface{}{
-					map[string]interface{}{
+			"status": map[string]any{
+				"conditions": []any{
+					map[string]any{
 						"type":   "Completed",
 						"status": "True",
 					},
@@ -474,25 +474,25 @@ func createJobSetObject() client.Object {
 
 func createDynamoObject() client.Object {
 	dynamo := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "dynamo.nvidia.com/v1alpha1",
 			"kind":       "DynamoGraphDeployment",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      "example-dynamo",
 				"namespace": "default",
 			},
-			"spec": map[string]interface{}{
-				"services": map[string]interface{}{
-					"frontend": map[string]interface{}{
+			"spec": map[string]any{
+				"services": map[string]any{
+					"frontend": map[string]any{
 						"image": "nginx:latest",
-						"extraPodSpec": map[string]interface{}{
+						"extraPodSpec": map[string]any{
 							"schedulerName": "volcano",
-							"containers": []interface{}{
-								map[string]interface{}{
+							"containers": []any{
+								map[string]any{
 									"name":  "frontend",
 									"image": "nginx:latest",
-									"resources": map[string]interface{}{
-										"requests": map[string]interface{}{
+									"resources": map[string]any{
+										"requests": map[string]any{
 											"cpu":    "100m",
 											"memory": "128Mi",
 										},
@@ -500,34 +500,34 @@ func createDynamoObject() client.Object {
 								},
 							},
 						},
-						"resources": map[string]interface{}{
-							"requests": map[string]interface{}{
+						"resources": map[string]any{
+							"requests": map[string]any{
 								"cpu":    "100m",
 								"memory": "128Mi",
 							},
 						},
-						"autoscaling": map[string]interface{}{
+						"autoscaling": map[string]any{
 							"minReplicas": 1,
 							"maxReplicas": 5,
 						},
-						"labels": map[string]interface{}{
+						"labels": map[string]any{
 							"app":  "dynamo-frontend",
 							"tier": "frontend",
 						},
-						"annotations": map[string]interface{}{
+						"annotations": map[string]any{
 							"prometheus.io/scrape": "true",
 						},
 					},
-					"backend": map[string]interface{}{
+					"backend": map[string]any{
 						"image": "python:3.9",
-						"extraPodSpec": map[string]interface{}{
+						"extraPodSpec": map[string]any{
 							"schedulerName": "volcano",
-							"containers": []interface{}{
-								map[string]interface{}{
+							"containers": []any{
+								map[string]any{
 									"name":  "backend",
 									"image": "python:3.9",
-									"resources": map[string]interface{}{
-										"requests": map[string]interface{}{
+									"resources": map[string]any{
+										"requests": map[string]any{
 											"cpu":            "200m",
 											"memory":         "256Mi",
 											"nvidia.com/gpu": 1,
@@ -536,28 +536,28 @@ func createDynamoObject() client.Object {
 								},
 							},
 						},
-						"resources": map[string]interface{}{
-							"requests": map[string]interface{}{
+						"resources": map[string]any{
+							"requests": map[string]any{
 								"cpu":            "200m",
 								"memory":         "256Mi",
 								"nvidia.com/gpu": 1,
 							},
 						},
-						"autoscaling": map[string]interface{}{
+						"autoscaling": map[string]any{
 							"minReplicas": 2,
 							"maxReplicas": 10,
 						},
-						"labels": map[string]interface{}{
+						"labels": map[string]any{
 							"app":  "dynamo-backend",
 							"tier": "backend",
 						},
-						"annotations": map[string]interface{}{
+						"annotations": map[string]any{
 							"prometheus.io/scrape": "true",
 						},
 					},
 				},
 			},
-			"status": map[string]interface{}{
+			"status": map[string]any{
 				"phase": "Running",
 			},
 		},

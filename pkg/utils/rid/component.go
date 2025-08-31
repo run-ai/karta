@@ -105,7 +105,7 @@ func (c *Component) HasPodDefinition() bool {
 		spec.FragmentedPodSpecDefinition != nil
 }
 
-// GetPodSelector returns the pod selector for this components
+// GetPodSelector returns the pod selector for this component
 func (c *Component) GetPodSelector() *v1alpha1.PodSelector {
 	return c.definition.PodSelector
 }
