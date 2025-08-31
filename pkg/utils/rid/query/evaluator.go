@@ -1,17 +1,27 @@
 package query
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/itchyny/gojq"
+)
+
+const (
+	defaultMaxResults            = 1000
+	defaultTimeoutInMilliseconds = 2000
 )
 
 // JqEvaluator handles JQ evaluation against a source object with query compilation caching
 type JqEvaluator struct {
 	source interface{}
+
+	maxResults   int
+	queryTimeout time.Duration
 
 	// cache for compiled JQ queries
 	compilationCache map[string]*gojq.Code
@@ -22,15 +32,30 @@ type JqEvaluator struct {
 	jsonErr  error
 }
 
-func NewJqEvaluator(source interface{}) *JqEvaluator {
+func NewDefaultJqEvaluator(source interface{}) *JqEvaluator {
 	return &JqEvaluator{
 		source:           source,
 		compilationCache: make(map[string]*gojq.Code),
+		maxResults:       defaultMaxResults,
+		queryTimeout:     defaultTimeoutInMilliseconds * time.Millisecond,
 	}
 }
 
+func NewJqEvaluator(source interface{}, queryMaxResults *int, queryTimeoutInMilliseconds *int) *JqEvaluator {
+	jq := NewDefaultJqEvaluator(source)
+
+	if queryMaxResults != nil {
+		jq.maxResults = *queryMaxResults
+	}
+	if queryTimeoutInMilliseconds != nil {
+		jq.queryTimeout = time.Duration(*queryTimeoutInMilliseconds) * time.Millisecond
+	}
+
+	return jq
+}
+
 // Evaluate executes a JQ expression with compilation caching
-func (jq *JqEvaluator) Evaluate(expression string) ([]interface{}, error) {
+func (jq *JqEvaluator) Evaluate(ctx context.Context, expression string) ([]interface{}, error) {
 	// Get JSON data (lazy conversion)
 	jsonData, err := jq.getJsonData()
 	if err != nil {
@@ -44,8 +69,16 @@ func (jq *JqEvaluator) Evaluate(expression string) ([]interface{}, error) {
 	}
 
 	// Execute query
+	return jq.safeRun(ctx, query, jsonData, expression)
+}
+
+func (jq *JqEvaluator) safeRun(ctx context.Context, q *gojq.Code, input interface{}, expression string) ([]interface{}, error) {
+	innerCtx, cancel := context.WithTimeout(ctx, jq.queryTimeout)
+	defer cancel()
+
+	iter := q.RunWithContext(innerCtx, input)
+
 	var results []interface{}
-	iter := query.Run(jsonData)
 	for {
 		v, ok := iter.Next()
 		if !ok {
@@ -55,8 +88,11 @@ func (jq *JqEvaluator) Evaluate(expression string) ([]interface{}, error) {
 			return nil, &JQExecutionError{Expression: expression, Err: err}
 		}
 		results = append(results, v)
-	}
 
+		if len(results) >= jq.maxResults {
+			return nil, fmt.Errorf("query results exceed the allowed number %d", jq.maxResults)
+		}
+	}
 	return results, nil
 }
 

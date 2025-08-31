@@ -1,6 +1,7 @@
 package rid
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
@@ -12,19 +13,15 @@ import (
 
 // Extractor interface for extracting typed data from component definitions
 type Extractor interface {
-	ExtractPodTemplateSpec(definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error)
-	ExtractFragmentedPodSpec(definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error)
-	ExtractPodSpec(definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error)
-	ExtractPodMetadata(definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error)
+	ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error)
+	ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error)
+	ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error)
+	ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error)
+	ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error)
 }
 
-// ComponentProvider interface for retrieving RID components
-type ComponentProvider interface {
-	GetComponent(name string) (*Component, error)
-}
-
-// RidComponentProvider implements ComponentProvider using RID definitions
-type RidComponentProvider struct {
+// ComponentProvider implements ComponentProvider using RID definitions
+type ComponentProvider struct {
 	rid       *v1alpha1.ResourceInterpretationDefinition
 	extractor Extractor // Shared extractor instance
 
@@ -32,10 +29,10 @@ type RidComponentProvider struct {
 	componentCaches            map[string]*ComponentCache              // Per-component caches
 }
 
-// NewRidComponentProvider creates a new RID-based component provider
-func NewRidComponentProvider(rid *v1alpha1.ResourceInterpretationDefinition, object client.Object) ComponentProvider {
+// NewComponentProvider creates a new RID-based component provider
+func NewComponentProvider(rid *v1alpha1.ResourceInterpretationDefinition, object client.Object) *ComponentProvider {
 	// Create shared query evaluator (singleton)
-	queryEvaluator := query.NewJqEvaluator(object)
+	queryEvaluator := query.NewDefaultJqEvaluator(object)
 
 	// Create shared extractor
 	extractor := NewRidExtractor(queryEvaluator)
@@ -51,7 +48,7 @@ func NewRidComponentProvider(rid *v1alpha1.ResourceInterpretationDefinition, obj
 		componentCaches[componentDefinition.Name] = &ComponentCache{}
 	}
 
-	return &RidComponentProvider{
+	return &ComponentProvider{
 		rid:                        rid,
 		extractor:                  extractor,
 		componentDefinitionsByName: definitionsByName,
@@ -60,7 +57,7 @@ func NewRidComponentProvider(rid *v1alpha1.ResourceInterpretationDefinition, obj
 }
 
 // GetComponent retrieves a component by name
-func (p *RidComponentProvider) GetComponent(name string) (*Component, error) {
+func (p *ComponentProvider) GetComponent(name string) (*Component, error) {
 	definition, exists := p.componentDefinitionsByName[name]
 	if !exists {
 		return nil, fmt.Errorf("component %s not found", name)
@@ -78,7 +75,7 @@ func (p *RidComponentProvider) GetComponent(name string) (*Component, error) {
 }
 
 // GetRootComponent retrieves the root component
-func (p *RidComponentProvider) GetRootComponent() (*Component, error) {
+func (p *ComponentProvider) GetRootComponent() (*Component, error) {
 	if p.rid == nil {
 		return nil, fmt.Errorf("rid is nil")
 	}

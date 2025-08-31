@@ -1,6 +1,7 @@
 package rid_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -60,10 +61,10 @@ var _ = Describe("ComponentProvider", func() {
 	})
 
 	Context("PyTorch Job ComponentProvider", func() {
-		var pytorchProvider rid.ComponentProvider
+		var pytorchProvider *rid.ComponentProvider
 
 		BeforeEach(func() {
-			pytorchProvider = rid.NewRidComponentProvider(pytorchRID, pytorchJob)
+			pytorchProvider = rid.NewComponentProvider(pytorchRID, pytorchJob)
 			Expect(pytorchProvider).ToNot(BeNil())
 		})
 
@@ -100,7 +101,7 @@ var _ = Describe("ComponentProvider", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Test pod template spec extraction from master
-			podTemplateSpecs, err := masterComponent.GetPodTemplateSpec()
+			podTemplateSpecs, err := masterComponent.GetPodTemplateSpec(context.Background())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(podTemplateSpecs).ToNot(BeNil())
 			Expect(podTemplateSpecs).To(HaveLen(1), "Master should return exactly 1 pod template spec")
@@ -120,7 +121,7 @@ var _ = Describe("ComponentProvider", func() {
 			workerComponent, err := pytorchProvider.GetComponent("worker")
 			Expect(err).ToNot(HaveOccurred())
 
-			workerSpecs, err := workerComponent.GetPodTemplateSpec()
+			workerSpecs, err := workerComponent.GetPodTemplateSpec(context.Background())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(workerSpecs).ToNot(BeNil())
 			Expect(workerSpecs).To(HaveLen(1), "Worker should return exactly 1 pod template spec")
@@ -136,10 +137,10 @@ var _ = Describe("ComponentProvider", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// First call - should execute extraction
-			podTemplateSpecs1, err1 := masterComponent.GetPodTemplateSpec()
+			podTemplateSpecs1, err1 := masterComponent.GetPodTemplateSpec(context.Background())
 
 			// Second call - should return cached result
-			podTemplateSpecs2, err2 := masterComponent.GetPodTemplateSpec()
+			podTemplateSpecs2, err2 := masterComponent.GetPodTemplateSpec(context.Background())
 
 			// Both calls should succeed
 			Expect(err1).ToNot(HaveOccurred())
@@ -151,10 +152,10 @@ var _ = Describe("ComponentProvider", func() {
 	})
 
 	Context("JobSet ComponentProvider", func() {
-		var jobSetProvider rid.ComponentProvider
+		var jobSetProvider *rid.ComponentProvider
 
 		BeforeEach(func() {
-			jobSetProvider = rid.NewRidComponentProvider(jobSetRID, jobSet)
+			jobSetProvider = rid.NewComponentProvider(jobSetRID, jobSet)
 			Expect(jobSetProvider).ToNot(BeNil())
 		})
 
@@ -184,7 +185,7 @@ var _ = Describe("ComponentProvider", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Test pod template spec extraction from replicatedjob
-			podTemplateSpecs, err := replicatedJobComponent.GetPodTemplateSpec()
+			podTemplateSpecs, err := replicatedJobComponent.GetPodTemplateSpec(context.Background())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(podTemplateSpecs).ToNot(BeNil())
 			// JobSet replicatedJobs array should return multiple specs (leader + worker in our test data)
@@ -206,10 +207,10 @@ var _ = Describe("ComponentProvider", func() {
 	})
 
 	Context("Dynamo ComponentProvider", func() {
-		var dynamoProvider rid.ComponentProvider
+		var dynamoProvider *rid.ComponentProvider
 
 		BeforeEach(func() {
-			dynamoProvider = rid.NewRidComponentProvider(dynamoRID, dynamo)
+			dynamoProvider = rid.NewComponentProvider(dynamoRID, dynamo)
 			Expect(dynamoProvider).ToNot(BeNil())
 		})
 
@@ -239,7 +240,7 @@ var _ = Describe("ComponentProvider", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// Test pod template spec extraction from service
-			fragmentedSpecs, err := serviceComponent.GetFragmentedPodSpec()
+			fragmentedSpecs, err := serviceComponent.GetFragmentedPodSpec(context.Background())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(fragmentedSpecs).ToNot(BeNil())
 		})

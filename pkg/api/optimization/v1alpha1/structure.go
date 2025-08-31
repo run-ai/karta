@@ -3,7 +3,7 @@ package v1alpha1
 // GroupVersionKind represents a Kubernetes API object's group, version, and kind.
 type GroupVersionKind struct {
 	// Group is the API group of the resource
-	Group string `json:"group,omitempty"`
+	Group string `json:"group"`
 
 	// Version is the API version of the resource
 	Version string `json:"version"`

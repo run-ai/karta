@@ -1,6 +1,7 @@
 package rid
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -11,7 +12,7 @@ import (
 
 // QueryEvaluator interface for query evaluation against data
 type QueryEvaluator interface {
-	Evaluate(expression string) ([]interface{}, error)
+	Evaluate(ctx context.Context, expression string) ([]interface{}, error)
 }
 
 // RidExtractor implements extraction using QueryEvaluator
@@ -25,7 +26,7 @@ func NewRidExtractor(queryEvaluator QueryEvaluator) *RidExtractor {
 	}
 }
 
-func (e *RidExtractor) ExtractPodTemplateSpec(definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error) {
+func (e *RidExtractor) ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error) {
 	if definition.SpecDefinition == nil {
 		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
 	}
@@ -35,12 +36,12 @@ func (e *RidExtractor) ExtractPodTemplateSpec(definition v1alpha1.ComponentDefin
 	}
 
 	var podTemplateSpec []corev1.PodTemplateSpec
-	err := extract(definition.SpecDefinition.PodTemplateSpecPath, e.queryEvaluator, &podTemplateSpec)
+	err := extract(ctx, definition.SpecDefinition.PodTemplateSpecPath, e.queryEvaluator, &podTemplateSpec)
 
 	return podTemplateSpec, err
 }
 
-func (e *RidExtractor) ExtractPodSpec(definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error) {
+func (e *RidExtractor) ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error) {
 	if definition.SpecDefinition == nil {
 		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
 	}
@@ -50,12 +51,12 @@ func (e *RidExtractor) ExtractPodSpec(definition v1alpha1.ComponentDefinition) (
 	}
 
 	var podSpec []corev1.PodSpec
-	err := extract(definition.SpecDefinition.PodSpecPath, e.queryEvaluator, &podSpec)
+	err := extract(ctx, definition.SpecDefinition.PodSpecPath, e.queryEvaluator, &podSpec)
 
 	return podSpec, err
 }
 
-func (e *RidExtractor) ExtractPodMetadata(definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error) {
+func (e *RidExtractor) ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error) {
 	if definition.SpecDefinition == nil {
 		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
 	}
@@ -65,30 +66,57 @@ func (e *RidExtractor) ExtractPodMetadata(definition v1alpha1.ComponentDefinitio
 	}
 
 	var podMetadata []metav1.ObjectMeta
-	err := extract(definition.SpecDefinition.MetadataPath, e.queryEvaluator, &podMetadata)
+	err := extract(ctx, definition.SpecDefinition.MetadataPath, e.queryEvaluator, &podMetadata)
 
 	return podMetadata, err
 }
 
-type FragmentedPodSpec struct {
-	SchedulerName     string                      `json:"schedulerName,omitempty"`
-	Labels            map[string]string           `json:"labels,omitempty"`
-	Annotations       map[string]string           `json:"annotations,omitempty"`
-	Resources         corev1.ResourceRequirements `json:"resources,omitempty"`
-	ResourceClaims    []corev1.PodResourceClaim   `json:"resourceClaims,omitempty"`
-	PodAffinity       *corev1.PodAffinity         `json:"podAffinity,omitempty"`
-	NodeAffinity      *corev1.NodeAffinity        `json:"nodeAffinity,omitempty"`
-	Containers        []corev1.Container          `json:"containers,omitempty"`
-	PriorityClassName string                      `json:"priorityClassName,omitempty"`
-	Image             string                      `json:"image,omitempty"`
+func (e *RidExtractor) ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error) {
+	if definition.ScaleDefinition == nil {
+		return nil, fmt.Errorf("component %s does not have scale definition", definition.Name)
+	}
+
+	var (
+		replicas    []*int32
+		minReplicas []*int32
+		maxReplicas []*int32
+	)
+
+	scaleCount := 0
+
+	if err := extract(ctx, definition.ScaleDefinition.ReplicasPath, e.queryEvaluator, &replicas); err != nil {
+		return nil, err
+	}
+	scaleCount = max(scaleCount, len(replicas))
+
+	if err := extract(ctx, definition.ScaleDefinition.MinReplicasPath, e.queryEvaluator, &minReplicas); err != nil {
+		return nil, err
+	}
+	scaleCount = max(scaleCount, len(minReplicas))
+
+	if err := extract(ctx, definition.ScaleDefinition.MaxReplicasPath, e.queryEvaluator, &maxReplicas); err != nil {
+		return nil, err
+	}
+	scaleCount = max(scaleCount, len(maxReplicas))
+
+	scales := make([]Scale, scaleCount)
+	for i := 0; i < scaleCount; i++ {
+		scales[i] = Scale{
+			Replicas:    safeGetByIndex(replicas, i),
+			MaxReplicas: safeGetByIndex(maxReplicas, i),
+			MinReplicas: safeGetByIndex(minReplicas, i),
+		}
+	}
+
+	return scales, nil
 }
 
-func extract[T any](path *string, evaluator QueryEvaluator, out *[]T) error {
+func extract[T any](ctx context.Context, path *string, evaluator QueryEvaluator, out *[]T) error {
 	if path == nil {
 		return nil
 	}
 
-	results, err := evaluator.Evaluate(*path)
+	results, err := evaluator.Evaluate(ctx, *path)
 	if err != nil {
 		return err
 	}
@@ -102,7 +130,7 @@ func extract[T any](path *string, evaluator QueryEvaluator, out *[]T) error {
 	return nil
 }
 
-func (e *RidExtractor) ExtractFragmentedPodSpec(definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error) {
+func (e *RidExtractor) ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error) {
 	if definition.SpecDefinition == nil {
 		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
 	}
@@ -126,60 +154,59 @@ func (e *RidExtractor) ExtractFragmentedPodSpec(definition v1alpha1.ComponentDef
 		imageResults             []string
 	)
 
-	// Parallel execution - commented out due to gojq concurrency issues
-	// var g errgroup.Group
-	// g.Go(func() error {
-	// 	return extract(fragmentedDefinition.SchedulerNamePath, e.queryEvaluator, &schedulerNameResults)
-	// })
-	// ... (other g.Go calls)
-	// if err := g.Wait(); err != nil {
-	// 	return nil, err
-	// }
+	specCount := 0
 
-	// Sequential execution for now
-	if err := extract(fragmentedDefinition.SchedulerNamePath, e.queryEvaluator, &schedulerNameResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.SchedulerNamePath, e.queryEvaluator, &schedulerNameResults); err != nil {
 		return nil, err
 	}
+	specCount = max(specCount, len(schedulerNameResults))
 
-	if err := extract(fragmentedDefinition.LabelsPath, e.queryEvaluator, &labelsResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.LabelsPath, e.queryEvaluator, &labelsResults); err != nil {
 		return nil, err
 	}
+	specCount = max(specCount, len(labelsResults))
 
-	if err := extract(fragmentedDefinition.AnnotationsPath, e.queryEvaluator, &annotationsResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.AnnotationsPath, e.queryEvaluator, &annotationsResults); err != nil {
 		return nil, err
 	}
+	specCount = max(specCount, len(annotationsResults))
 
-	if err := extract(fragmentedDefinition.ResourcesPath, e.queryEvaluator, &resourcesResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ResourcesPath, e.queryEvaluator, &resourcesResults); err != nil {
 		return nil, err
 	}
+	specCount = max(specCount, len(resourcesResults))
 
-	if err := extract(fragmentedDefinition.ResourceClaimsPath, e.queryEvaluator, &resourceClaimsResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ResourceClaimsPath, e.queryEvaluator, &resourceClaimsResults); err != nil {
 		return nil, err
 	}
+	specCount = max(specCount, len(resourceClaimsResults))
 
-	if err := extract(fragmentedDefinition.PodAffinityPath, e.queryEvaluator, &podAffinityResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.PodAffinityPath, e.queryEvaluator, &podAffinityResults); err != nil {
 		return nil, err
 	}
+	specCount = max(specCount, len(podAffinityResults))
 
-	if err := extract(fragmentedDefinition.NodeAffinityPath, e.queryEvaluator, &nodeAffinityResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.NodeAffinityPath, e.queryEvaluator, &nodeAffinityResults); err != nil {
 		return nil, err
 	}
+	specCount = max(specCount, len(nodeAffinityResults))
 
-	if err := extract(fragmentedDefinition.ContainersPath, e.queryEvaluator, &containersResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ContainersPath, e.queryEvaluator, &containersResults); err != nil {
 		return nil, err
 	}
+	specCount = max(specCount, len(containersResults))
 
-	if err := extract(fragmentedDefinition.PriorityClassNamePath, e.queryEvaluator, &priorityClassNameResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.PriorityClassNamePath, e.queryEvaluator, &priorityClassNameResults); err != nil {
 		return nil, err
 	}
+	specCount = max(specCount, len(priorityClassNameResults))
 
-	if err := extract(fragmentedDefinition.ImagePath, e.queryEvaluator, &imageResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ImagePath, e.queryEvaluator, &imageResults); err != nil {
 		return nil, err
 	}
+	specCount = max(specCount, len(imageResults))
 
-	specCount := len(schedulerNameResults)
 	fragmentedSpecs := make([]FragmentedPodSpec, specCount)
-
 	for i := 0; i < specCount; i++ {
 		fragmentedSpecs[i] = FragmentedPodSpec{
 			SchedulerName:     safeGetByIndex(schedulerNameResults, i),
