@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("ComponentProvider", func() {
+var _ = Describe("ComponentFactory", func() {
 	var (
 		pytorchRID *v1alpha1.ResourceInterpretationDefinition
 		jobSetRID  *v1alpha1.ResourceInterpretationDefinition
@@ -60,44 +60,44 @@ var _ = Describe("ComponentProvider", func() {
 		dynamo = createDynamoObject()
 	})
 
-	Context("PyTorch Job ComponentProvider", func() {
-		var pytorchProvider *rid.ComponentProvider
+	Context("PyTorch Job ComponentFactory", func() {
+		var pytorchFactory *rid.ComponentFactory
 
 		BeforeEach(func() {
-			pytorchProvider = rid.NewComponentProvider(pytorchRID, pytorchJob)
-			Expect(pytorchProvider).ToNot(BeNil())
+			pytorchFactory = rid.NewComponentFactory(pytorchRID, pytorchJob)
+			Expect(pytorchFactory).ToNot(BeNil())
 		})
 
 		It("should retrieve PyTorch components", func() {
 			// Test root component
-			pytorchJobComponent, err := pytorchProvider.GetComponent("pytorchjob")
+			pytorchJobComponent, err := pytorchFactory.GetComponent("pytorchjob")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(pytorchJobComponent).ToNot(BeNil())
 			Expect(pytorchJobComponent.Name()).To(Equal("pytorchjob"))
 			Expect(pytorchJobComponent.Definition().Name).To(Equal("pytorchjob"))
 
 			// Test master component
-			masterComponent, err := pytorchProvider.GetComponent("master")
+			masterComponent, err := pytorchFactory.GetComponent("master")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(masterComponent).ToNot(BeNil())
 			Expect(masterComponent.Name()).To(Equal("master"))
 			Expect(masterComponent.Definition().Name).To(Equal("master"))
 
 			// Test worker component
-			workerComponent, err := pytorchProvider.GetComponent("worker")
+			workerComponent, err := pytorchFactory.GetComponent("worker")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(workerComponent).ToNot(BeNil())
 			Expect(workerComponent.Name()).To(Equal("worker"))
 			Expect(workerComponent.Definition().Name).To(Equal("worker"))
 
 			// Test non-existent component should fail
-			_, err = pytorchProvider.GetComponent("nonexistent")
+			_, err = pytorchFactory.GetComponent("nonexistent")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("component nonexistent not found"))
 		})
 
 		It("should extract pod template specs from PyTorch components", func() {
-			masterComponent, err := pytorchProvider.GetComponent("master")
+			masterComponent, err := pytorchFactory.GetComponent("master")
 			Expect(err).ToNot(HaveOccurred())
 
 			// Test pod template spec extraction from master
@@ -118,7 +118,7 @@ var _ = Describe("ComponentProvider", func() {
 			Expect(resources).To(HaveKey(corev1.ResourceName("nvidia.com/gpu")), "Should request GPU resources")
 
 			// Test worker component
-			workerComponent, err := pytorchProvider.GetComponent("worker")
+			workerComponent, err := pytorchFactory.GetComponent("worker")
 			Expect(err).ToNot(HaveOccurred())
 
 			workerSpecs, err := workerComponent.GetPodTemplateSpec(context.Background())
@@ -133,7 +133,7 @@ var _ = Describe("ComponentProvider", func() {
 		})
 
 		It("should cache component results", func() {
-			masterComponent, err := pytorchProvider.GetComponent("master")
+			masterComponent, err := pytorchFactory.GetComponent("master")
 			Expect(err).ToNot(HaveOccurred())
 
 			// First call - should execute extraction
@@ -151,37 +151,37 @@ var _ = Describe("ComponentProvider", func() {
 		})
 	})
 
-	Context("JobSet ComponentProvider", func() {
-		var jobSetProvider *rid.ComponentProvider
+	Context("JobSet ComponentFactory", func() {
+		var jobSetFactory *rid.ComponentFactory
 
 		BeforeEach(func() {
-			jobSetProvider = rid.NewComponentProvider(jobSetRID, jobSet)
-			Expect(jobSetProvider).ToNot(BeNil())
+			jobSetFactory = rid.NewComponentFactory(jobSetRID, jobSet)
+			Expect(jobSetFactory).ToNot(BeNil())
 		})
 
 		It("should retrieve JobSet components", func() {
 			// Test root component
-			jobSetComponent, err := jobSetProvider.GetComponent("jobset")
+			jobSetComponent, err := jobSetFactory.GetComponent("jobset")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(jobSetComponent).ToNot(BeNil())
 			Expect(jobSetComponent.Name()).To(Equal("jobset"))
 			Expect(jobSetComponent.Definition().Name).To(Equal("jobset"))
 
 			// Test replicatedjob component
-			replicatedJobComponent, err := jobSetProvider.GetComponent("replicatedjob")
+			replicatedJobComponent, err := jobSetFactory.GetComponent("replicatedjob")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(replicatedJobComponent).ToNot(BeNil())
 			Expect(replicatedJobComponent.Name()).To(Equal("replicatedjob"))
 			Expect(replicatedJobComponent.Definition().Name).To(Equal("replicatedjob"))
 
 			// Test non-existent component should fail
-			_, err = jobSetProvider.GetComponent("nonexistent")
+			_, err = jobSetFactory.GetComponent("nonexistent")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("component nonexistent not found"))
 		})
 
 		XIt("should extract pod template specs from JobSet components", func() {
-			replicatedJobComponent, err := jobSetProvider.GetComponent("replicatedjob")
+			replicatedJobComponent, err := jobSetFactory.GetComponent("replicatedjob")
 			Expect(err).ToNot(HaveOccurred())
 
 			// Test pod template spec extraction from replicatedjob
@@ -206,37 +206,37 @@ var _ = Describe("ComponentProvider", func() {
 		})
 	})
 
-	Context("Dynamo ComponentProvider", func() {
-		var dynamoProvider *rid.ComponentProvider
+	Context("Dynamo ComponentFactory", func() {
+		var dynamoFactory *rid.ComponentFactory
 
 		BeforeEach(func() {
-			dynamoProvider = rid.NewComponentProvider(dynamoRID, dynamo)
-			Expect(dynamoProvider).ToNot(BeNil())
+			dynamoFactory = rid.NewComponentFactory(dynamoRID, dynamo)
+			Expect(dynamoFactory).ToNot(BeNil())
 		})
 
 		It("should retrieve Dynamo components", func() {
 			// Test root component
-			dynamoComponent, err := dynamoProvider.GetComponent("dynamographdeployment")
+			dynamoComponent, err := dynamoFactory.GetComponent("dynamographdeployment")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dynamoComponent).ToNot(BeNil())
 			Expect(dynamoComponent.Name()).To(Equal("dynamographdeployment"))
 			Expect(dynamoComponent.Definition().Name).To(Equal("dynamographdeployment"))
 
 			// Test service component
-			serviceComponent, err := dynamoProvider.GetComponent("service")
+			serviceComponent, err := dynamoFactory.GetComponent("service")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(serviceComponent).ToNot(BeNil())
 			Expect(serviceComponent.Name()).To(Equal("service"))
 			Expect(serviceComponent.Definition().Name).To(Equal("service"))
 
 			// Test non-existent component should fail
-			_, err = dynamoProvider.GetComponent("nonexistent")
+			_, err = dynamoFactory.GetComponent("nonexistent")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("component nonexistent not found"))
 		})
 
 		It("should extract pod template specs from Dynamo components", func() {
-			serviceComponent, err := dynamoProvider.GetComponent("service")
+			serviceComponent, err := dynamoFactory.GetComponent("service")
 			Expect(err).ToNot(HaveOccurred())
 
 			// Test pod template spec extraction from service
