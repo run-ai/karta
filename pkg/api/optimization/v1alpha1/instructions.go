@@ -27,12 +27,15 @@ type GroupingSelector struct {
 
 	// GroupByKeyPaths are JQ paths to values used for grouping (e.g., owner name, replica key)
 	// If empty, grouping is done via owner reference traversal
+	// Every path must return a single, non-empty value - otherwise grouping will fail
+	// Paths are evaluated at the pod level, not at the root level
 	// +kubebuilder:validation:Optional
 	// +listType=set
 	GroupByKeyPaths []string `json:"groupByKeyPaths,omitempty"`
 
 	// Filters are JQ filter expressions to select specific components (expressions are ANDed)
 	// Example: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+	// Paths are evaluated at the pod level, not at the root level
 	// +kubebuilder:validation:Optional
 	// +listType=set
 	Filters []string `json:"filters,omitempty"`

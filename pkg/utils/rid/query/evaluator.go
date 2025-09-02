@@ -2,7 +2,6 @@ package query
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -16,15 +15,12 @@ const (
 	defaultTimeoutInMilliseconds = 2000
 )
 
-// JqEvaluator handles JQ evaluation against a source object with query compilation caching
+// JqEvaluator handles JQ evaluation against a source object
 type JqEvaluator struct {
 	source any
 
 	maxResults   int
 	queryTimeout time.Duration
-
-	// cache for compiled JQ queries
-	compilationCache map[string]*gojq.Code
 
 	// Lazy JSON conversion
 	jsonOnce sync.Once
@@ -34,46 +30,45 @@ type JqEvaluator struct {
 
 func NewDefaultJqEvaluator(source any) *JqEvaluator {
 	return &JqEvaluator{
-		source:           source,
-		compilationCache: make(map[string]*gojq.Code),
-		maxResults:       defaultMaxResults,
-		queryTimeout:     defaultTimeoutInMilliseconds * time.Millisecond,
+		source:       source,
+		maxResults:   defaultMaxResults,
+		queryTimeout: defaultTimeoutInMilliseconds * time.Millisecond,
 	}
 }
 
 func NewJqEvaluator(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) *JqEvaluator {
-	jq := NewDefaultJqEvaluator(source)
+	e := NewDefaultJqEvaluator(source)
 
 	if queryMaxResults != nil {
-		jq.maxResults = *queryMaxResults
+		e.maxResults = *queryMaxResults
 	}
 	if queryTimeoutInMilliseconds != nil {
-		jq.queryTimeout = time.Duration(*queryTimeoutInMilliseconds) * time.Millisecond
+		e.queryTimeout = time.Duration(*queryTimeoutInMilliseconds) * time.Millisecond
 	}
 
-	return jq
+	return e
 }
 
-// Evaluate executes a JQ expression with compilation caching
-func (jq *JqEvaluator) Evaluate(ctx context.Context, expression string) ([]any, error) {
+// Evaluate executes a JQ expression
+func (e *JqEvaluator) Evaluate(ctx context.Context, expression string) ([]any, error) {
 	// Get JSON data (lazy conversion)
-	jsonData, err := jq.getJsonData()
+	jsonData, err := e.getJsonData()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get JSON data: %w", err)
 	}
 
 	// Compile the expression to a runnable query
-	query, err := jq.compile(expression)
+	query, err := e.compile(expression)
 	if err != nil {
 		return nil, err
 	}
 
 	// Execute query
-	return jq.safeRun(ctx, query, jsonData, expression)
+	return e.safeRun(ctx, query, jsonData, expression)
 }
 
-func (jq *JqEvaluator) safeRun(ctx context.Context, q *gojq.Code, input any, expression string) ([]any, error) {
-	innerCtx, cancel := context.WithTimeout(ctx, jq.queryTimeout)
+func (e *JqEvaluator) safeRun(ctx context.Context, q *gojq.Code, input any, expression string) ([]any, error) {
+	innerCtx, cancel := context.WithTimeout(ctx, e.queryTimeout)
 	defer cancel()
 
 	iter := q.RunWithContext(innerCtx, input)
@@ -89,45 +84,36 @@ func (jq *JqEvaluator) safeRun(ctx context.Context, q *gojq.Code, input any, exp
 		}
 		results = append(results, v)
 
-		if len(results) >= jq.maxResults {
-			return nil, fmt.Errorf("query results exceed the allowed number %d", jq.maxResults)
+		if len(results) >= e.maxResults {
+			return nil, fmt.Errorf("query results exceed the allowed number %d", e.maxResults)
 		}
 	}
 	return results, nil
 }
 
 // getJsonData performs lazy JSON conversion with sync.Once
-func (jq *JqEvaluator) getJsonData() (any, error) {
-	jq.jsonOnce.Do(func() {
-		jsonBytes, err := json.Marshal(jq.source)
+func (e *JqEvaluator) getJsonData() (any, error) {
+	e.jsonOnce.Do(func() {
+		jsonBytes, err := json.Marshal(e.source)
 		if err != nil {
-			jq.jsonErr = fmt.Errorf("failed to marshal source object to JSON: %w", err)
+			e.jsonErr = fmt.Errorf("failed to marshal source object to JSON: %w", err)
 			return
 		}
 
-		if err := json.Unmarshal(jsonBytes, &jq.jsonData); err != nil {
-			jq.jsonErr = fmt.Errorf("failed to unmarshal JSON data: %w", err)
+		if err := json.Unmarshal(jsonBytes, &e.jsonData); err != nil {
+			e.jsonErr = fmt.Errorf("failed to unmarshal JSON data: %w", err)
 			return
 		}
 	})
 
-	if jq.jsonErr != nil {
-		return nil, jq.jsonErr
+	if e.jsonErr != nil {
+		return nil, e.jsonErr
 	}
 
-	return jq.jsonData, nil
+	return e.jsonData, nil
 }
 
-func (jq *JqEvaluator) compile(expression string) (*gojq.Code, error) {
-	// The expression could be long, create hash key for cache lookup
-	cacheKey := jq.getCacheKey(expression)
-
-	// Check compiled query cache using hash
-	compiled, exists := jq.compilationCache[cacheKey]
-	if exists {
-		return compiled, nil
-	}
-
+func (e *JqEvaluator) compile(expression string) (*gojq.Code, error) {
 	parsed, err := gojq.Parse(expression)
 	if err != nil {
 		return nil, &JQParseError{Expression: expression, Err: err}
@@ -138,12 +124,5 @@ func (jq *JqEvaluator) compile(expression string) (*gojq.Code, error) {
 		return nil, &JQCompileError{Expression: expression, Err: compileErr}
 	}
 
-	// Cache the compiled query
-	jq.compilationCache[cacheKey] = compiled
-
 	return compiled, nil
-}
-
-func (jq *JqEvaluator) getCacheKey(expression string) string {
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(expression)))
 }

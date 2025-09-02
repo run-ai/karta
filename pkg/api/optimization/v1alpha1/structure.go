@@ -129,6 +129,7 @@ type ScaleDefinition struct {
 // PodSelector defines how to identify pods belonging to a specific component.
 type PodSelector struct {
 	// KeyPath is the JQ path to the identifying key/label on the pod
+	// Paths are evaluated at the pod level, not at the root level
 	// +kubebuilder:validation:Required
 	KeyPath string `json:"keyPath"`
 
