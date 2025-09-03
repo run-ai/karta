@@ -4,24 +4,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ResourceInterpretationDefinition
+// ResourceInterface
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName={rid}
+// +kubebuilder:resource:scope=Cluster,shortName={ri}
 // +kubebuilder:printcolumn:name="Framework",type="string",JSONPath=".spec.structureDefinition.rootComponent.kind.kind",description="Target framework kind"
 // +kubebuilder:printcolumn:name="Root Component",type="string",JSONPath=".spec.structureDefinition.rootComponent.name",description="Root component name"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-type ResourceInterpretationDefinition struct {
+type ResourceInterface struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ResourceInterpretationDefinitionSpec   `json:"spec,omitempty"`
-	Status ResourceInterpretationDefinitionStatus `json:"status,omitempty"`
+	Spec   ResourceInterfaceSpec   `json:"spec,omitempty"`
+	Status ResourceInterfaceStatus `json:"status,omitempty"`
 }
 
-type ResourceInterpretationDefinitionSpec struct {
+type ResourceInterfaceSpec struct {
 	// StructureDefinition defines the compute hierarchy and component relationships
 	// +kubebuilder:validation:Required
 	StructureDefinition StructureDefinition `json:"structureDefinition"`
@@ -58,7 +58,7 @@ type OptimizationInstructions struct {
 	GangScheduling *GangSchedulingInstruction `json:"gangScheduling,omitempty"`
 }
 
-type ResourceInterpretationDefinitionStatus struct {
+type ResourceInterfaceStatus struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=type
@@ -67,15 +67,15 @@ type ResourceInterpretationDefinitionStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
-// ResourceInterpretationDefinitionList
+// ResourceInterfaceList
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
-type ResourceInterpretationDefinitionList struct {
+type ResourceInterfaceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ResourceInterpretationDefinition `json:"items"`
+	Items           []ResourceInterface `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ResourceInterpretationDefinition{}, &ResourceInterpretationDefinitionList{})
+	SchemeBuilder.Register(&ResourceInterface{}, &ResourceInterfaceList{})
 }

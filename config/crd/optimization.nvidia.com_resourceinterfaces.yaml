@@ -4,17 +4,17 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: resourceinterpretationdefinitions.optimization.nvidia.com
+  name: resourceinterfaces.optimization.nvidia.com
 spec:
   group: optimization.nvidia.com
   names:
-    kind: ResourceInterpretationDefinition
-    listKind: ResourceInterpretationDefinitionList
-    plural: resourceinterpretationdefinitions
+    kind: ResourceInterface
+    listKind: ResourceInterfaceList
+    plural: resourceinterfaces
     shortNames:
-    - rid
-    singular: resourceinterpretationdefinition
-  scope: Namespaced
+    - ri
+    singular: resourceinterface
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
     - description: Target framework kind
@@ -31,7 +31,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ResourceInterpretationDefinition
+        description: ResourceInterface
         properties:
           apiVersion:
             description: |-
@@ -80,6 +80,7 @@ spec:
                                     description: |-
                                       Filters are JQ filter expressions to select specific components (expressions are ANDed)
                                       Example: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
+                                      Paths are evaluated at the pod level, not at the root level
                                     items:
                                       type: string
                                     type: array
@@ -88,6 +89,8 @@ spec:
                                     description: |-
                                       GroupByKeyPaths are JQ paths to values used for grouping (e.g., owner name, replica key)
                                       If empty, grouping is done via owner reference traversal
+                                      Every path must return a single, non-empty value - otherwise grouping will fail
+                                      Paths are evaluated at the pod level, not at the root level
                                     items:
                                       type: string
                                     type: array
