@@ -4,16 +4,16 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: resourceinterpretationdefinitions.optimization.nvidia.com
+  name: resourceinterfaces.optimization.nvidia.com
 spec:
   group: optimization.nvidia.com
   names:
-    kind: ResourceInterpretationDefinition
-    listKind: ResourceInterpretationDefinitionList
-    plural: resourceinterpretationdefinitions
+    kind: ResourceInterface
+    listKind: ResourceInterfaceList
+    plural: resourceinterfaces
     shortNames:
-    - rid
-    singular: resourceinterpretationdefinition
+    - ri
+    singular: resourceinterface
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -31,7 +31,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ResourceInterpretationDefinition
+        description: ResourceInterface
         properties:
           apiVersion:
             description: |-
