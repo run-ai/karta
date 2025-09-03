@@ -12,9 +12,11 @@ $(LOCALBIN):
 
 # Tool Binaries
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+MOCKGEN ?= $(LOCALBIN)/mockgen
 
 # Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
+GOMOCK_VERSION ?= v1.6.0
 
 .PHONY: manifests
 manifests: controller-gen ## Generate CRD manifests
@@ -23,6 +25,14 @@ manifests: controller-gen ## Generate CRD manifests
 .PHONY: generate
 generate: controller-gen ## Generate DeepCopy methods
 	$(CONTROLLER_GEN) object paths="./..."
+
+.PHONY: generate-mocks
+generate-mocks: mockgen ## Generate mocks using go generate
+	go generate ./pkg/utils/rid/...
+
+.PHONY: test
+test: generate-mocks ## Run tests with mock generation
+	go test ./...
 
 .PHONY: install-crd
 install-crd: manifests ## Install CRDs into the cluster
@@ -39,4 +49,13 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 	set -e; \
 	echo "Downloading controller-gen@$(CONTROLLER_TOOLS_VERSION)" ;\
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION) ;\
+	}
+
+.PHONY: mockgen
+mockgen: $(MOCKGEN) ## Download mockgen locally if necessary.
+$(MOCKGEN): $(LOCALBIN)
+	@[ -f "$(MOCKGEN)" ] || { \
+	set -e; \
+	echo "Downloading mockgen@$(GOMOCK_VERSION)" ;\
+	GOBIN=$(LOCALBIN) go install github.com/golang/mock/mockgen@$(GOMOCK_VERSION) ;\
 	}

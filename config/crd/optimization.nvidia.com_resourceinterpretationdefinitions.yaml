@@ -14,7 +14,7 @@ spec:
     shortNames:
     - rid
     singular: resourceinterpretationdefinition
-  scope: Namespaced
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
     - description: Target framework kind

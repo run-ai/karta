@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+//go:generate mockgen -source=component_factory.go -destination=extractor_mock.go -package=rid Extractor
 type Extractor interface {
 	ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error)
 	ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error)
@@ -28,10 +29,7 @@ type ComponentFactory struct {
 }
 
 // NewComponentFactory creates a new RID-based component factory
-func NewComponentFactory(rid *v1alpha1.ResourceInterpretationDefinition, object client.Object) *ComponentFactory {
-	queryEvaluator := query.NewDefaultJqEvaluator(object)
-	extractor := NewRidExtractor(queryEvaluator)
-
+func NewComponentFactory(rid *v1alpha1.ResourceInterpretationDefinition, extractor Extractor) *ComponentFactory {
 	definitionsByName := make(map[string]v1alpha1.ComponentDefinition)
 	componentCaches := make(map[string]*ComponentCache)
 
@@ -48,6 +46,13 @@ func NewComponentFactory(rid *v1alpha1.ResourceInterpretationDefinition, object 
 		componentDefinitionsByName: definitionsByName,
 		componentCaches:            componentCaches,
 	}
+}
+
+// NewComponentFactoryFromObject creates a new RID-based component factory from a Kubernetes object
+func NewComponentFactoryFromObject(rid *v1alpha1.ResourceInterpretationDefinition, object client.Object) *ComponentFactory {
+	queryEvaluator := query.NewDefaultJqEvaluator(object)
+	extractor := NewRidExtractor(queryEvaluator)
+	return NewComponentFactory(rid, extractor)
 }
 
 // GetComponent retrieves a component by name

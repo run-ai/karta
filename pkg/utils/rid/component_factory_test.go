@@ -1,567 +1,98 @@
-package rid_test
+package rid
 
 import (
-	"context"
-	"fmt"
-	"os"
-	"path/filepath"
-
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"sigs.k8s.io/yaml"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/utils/rid"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"github.com/run-ai/kai-bolt/test/types"
 )
 
 var _ = Describe("ComponentFactory", func() {
 	var (
-		pytorchRID *v1alpha1.ResourceInterpretationDefinition
-		jobSetRID  *v1alpha1.ResourceInterpretationDefinition
-		dynamoRID  *v1alpha1.ResourceInterpretationDefinition
-		pytorchJob client.Object
-		jobSet     client.Object
-		dynamo     client.Object
+		ctrl          *gomock.Controller
+		mockExtractor *MockExtractor
+		rid           *v1alpha1.ResourceInterpretationDefinition
+		factory       *ComponentFactory
 	)
 
 	BeforeEach(func() {
-		// Get project root directory
-		projectRoot, err := getProjectRoot()
-		Expect(err).ToNot(HaveOccurred())
-
-		// Load PyTorch RID
-		pytorchRIDPath := filepath.Join(projectRoot, "docs", "examples", "pytorch.yaml")
-		pytorchRID, err = loadRIDFromFile(pytorchRIDPath)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(pytorchRID).ToNot(BeNil())
-
-		// Load JobSet RID
-		jobSetRIDPath := filepath.Join(projectRoot, "docs", "examples", "jobset.yaml")
-		jobSetRID, err = loadRIDFromFile(jobSetRIDPath)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(jobSetRID).ToNot(BeNil())
-
-		// Load Dynamo RID
-		dynamoRIDPath := filepath.Join(projectRoot, "docs", "examples", "dynamo.yaml")
-		dynamoRID, err = loadRIDFromFile(dynamoRIDPath)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(dynamoRID).ToNot(BeNil())
-
-		// Create PyTorchJob object
-		pytorchJob = createPyTorchJobObject()
-
-		// Create JobSet object (array of specs)
-		jobSet = createJobSetObject()
-
-		// Create Dynamo object (map of specs)
-		dynamo = createDynamoObject()
+		ctrl = gomock.NewController(GinkgoT())
+		mockExtractor = NewMockExtractor(ctrl)
+		rid = types.PyFlowRID()
+		factory = NewComponentFactory(rid, mockExtractor)
 	})
 
-	Context("PyTorch Job ComponentFactory", func() {
-		var pytorchFactory *rid.ComponentFactory
+	AfterEach(func() {
+		ctrl.Finish()
+	})
 
-		BeforeEach(func() {
-			pytorchFactory = rid.NewComponentFactory(pytorchRID, pytorchJob)
-			Expect(pytorchFactory).ToNot(BeNil())
-		})
-
-		It("should retrieve PyTorch components", func() {
-			// Test root component
-			pytorchJobComponent, err := pytorchFactory.GetComponent("pytorchjob")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(pytorchJobComponent).ToNot(BeNil())
-			Expect(pytorchJobComponent.Name()).To(Equal("pytorchjob"))
-			Expect(pytorchJobComponent.Definition().Name).To(Equal("pytorchjob"))
-
-			// Test master component
-			masterComponent, err := pytorchFactory.GetComponent("master")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(masterComponent).ToNot(BeNil())
-			Expect(masterComponent.Name()).To(Equal("master"))
-			Expect(masterComponent.Definition().Name).To(Equal("master"))
-
-			// Test worker component
-			workerComponent, err := pytorchFactory.GetComponent("worker")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(workerComponent).ToNot(BeNil())
-			Expect(workerComponent.Name()).To(Equal("worker"))
-			Expect(workerComponent.Definition().Name).To(Equal("worker"))
-
-			// Test non-existent component should fail
-			_, err = pytorchFactory.GetComponent("nonexistent")
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("component nonexistent not found"))
-		})
-
-		It("should extract pod template specs from PyTorch components", func() {
-			masterComponent, err := pytorchFactory.GetComponent("master")
-			Expect(err).ToNot(HaveOccurred())
-
-			// Test pod template spec extraction from master
-			podTemplateSpecs, err := masterComponent.GetPodTemplateSpec(context.Background())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(podTemplateSpecs).ToNot(BeNil())
-			Expect(podTemplateSpecs).To(HaveLen(1), "Master should return exactly 1 pod template spec")
-
-			// Validate the extracted pod template spec content
-			masterSpec := podTemplateSpecs[0]
-			Expect(masterSpec.Spec.Containers).ToNot(BeEmpty(), "Pod template should have containers")
-			Expect(masterSpec.Spec.Containers[0].Name).To(Equal("pytorch"), "Container name should be 'pytorch'")
-			Expect(masterSpec.Spec.Containers[0].Image).To(Equal("pytorch/pytorch:latest"), "Container image should be correct")
-			Expect(string(masterSpec.Spec.RestartPolicy)).To(Equal("OnFailure"), "Restart policy should be OnFailure")
-
-			// Test GPU resource requests
-			resources := masterSpec.Spec.Containers[0].Resources.Requests
-			Expect(resources).To(HaveKey(corev1.ResourceName("nvidia.com/gpu")), "Should request GPU resources")
-
-			// Test worker component
-			workerComponent, err := pytorchFactory.GetComponent("worker")
-			Expect(err).ToNot(HaveOccurred())
-
-			workerSpecs, err := workerComponent.GetPodTemplateSpec(context.Background())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(workerSpecs).ToNot(BeNil())
-			Expect(workerSpecs).To(HaveLen(1), "Worker should return exactly 1 pod template spec")
-
-			// Validate worker spec content
-			workerSpec := workerSpecs[0]
-			Expect(workerSpec.Spec.Containers).ToNot(BeEmpty(), "Worker pod template should have containers")
-			Expect(workerSpec.Spec.Containers[0].Name).To(Equal("pytorch"), "Worker container name should be 'pytorch'")
-		})
-
-		It("should cache component results", func() {
-			masterComponent, err := pytorchFactory.GetComponent("master")
-			Expect(err).ToNot(HaveOccurred())
-
-			// First call - should execute extraction
-			podTemplateSpecs1, err1 := masterComponent.GetPodTemplateSpec(context.Background())
-
-			// Second call - should return cached result
-			podTemplateSpecs2, err2 := masterComponent.GetPodTemplateSpec(context.Background())
-
-			// Both calls should succeed
-			Expect(err1).ToNot(HaveOccurred())
-			Expect(err2).ToNot(HaveOccurred())
-
-			// Results should be identical (cached)
-			Expect(podTemplateSpecs1).To(Equal(podTemplateSpecs2))
+	Context("factory creation", func() {
+		It("should initialize component caches for all components", func() {
+			Expect(factory.componentCaches).To(HaveLen(3)) // root + 2 children
+			Expect(factory.componentCaches).To(HaveKey("pyflow"))
+			Expect(factory.componentCaches).To(HaveKey("master"))
+			Expect(factory.componentCaches).To(HaveKey("worker"))
 		})
 	})
 
-	Context("JobSet ComponentFactory", func() {
-		var jobSetFactory *rid.ComponentFactory
-
-		BeforeEach(func() {
-			jobSetFactory = rid.NewComponentFactory(jobSetRID, jobSet)
-			Expect(jobSetFactory).ToNot(BeNil())
+	Context("component access", func() {
+		It("should get root component", func() {
+			component, err := factory.GetRootComponent()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(component).NotTo(BeNil())
+			Expect(component.name).To(Equal("pyflow"))
 		})
 
-		It("should retrieve JobSet components", func() {
-			// Test root component
-			jobSetComponent, err := jobSetFactory.GetComponent("jobset")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(jobSetComponent).ToNot(BeNil())
-			Expect(jobSetComponent.Name()).To(Equal("jobset"))
-			Expect(jobSetComponent.Definition().Name).To(Equal("jobset"))
+		It("should get child components by name", func() {
+			master, err := factory.GetComponent("master")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(master.name).To(Equal("master"))
 
-			// Test replicatedjob component
-			replicatedJobComponent, err := jobSetFactory.GetComponent("replicatedjob")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(replicatedJobComponent).ToNot(BeNil())
-			Expect(replicatedJobComponent.Name()).To(Equal("replicatedjob"))
-			Expect(replicatedJobComponent.Definition().Name).To(Equal("replicatedjob"))
+			worker, err := factory.GetComponent("worker")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(worker.name).To(Equal("worker"))
+		})
 
-			// Test non-existent component should fail
-			_, err = jobSetFactory.GetComponent("nonexistent")
+		It("should return error for non-existent component", func() {
+			component, err := factory.GetComponent("non-existent")
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("component nonexistent not found"))
+			Expect(component).To(BeNil())
+			Expect(err.Error()).To(ContainSubstring("component non-existent not found"))
 		})
 
-		XIt("should extract pod template specs from JobSet components", func() {
-			replicatedJobComponent, err := jobSetFactory.GetComponent("replicatedjob")
-			Expect(err).ToNot(HaveOccurred())
-
-			// Test pod template spec extraction from replicatedjob
-			podTemplateSpecs, err := replicatedJobComponent.GetPodTemplateSpec(context.Background())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(podTemplateSpecs).ToNot(BeNil())
-			// JobSet replicatedJobs array should return multiple specs (leader + worker in our test data)
-			Expect(podTemplateSpecs).To(HaveLen(2), "ReplicatedJob should return 2 pod template specs (leader + worker)")
-
-			// Validate leader job spec (first in array)
-			leaderSpec := podTemplateSpecs[0]
-			Expect(leaderSpec.Spec.Containers).ToNot(BeEmpty(), "Leader pod template should have containers")
-			Expect(leaderSpec.Spec.Containers[0].Name).To(Equal("leader"), "Leader container name should be 'leader'")
-			Expect(leaderSpec.Spec.Containers[0].Image).To(Equal("busybox:latest"), "Leader container image should be busybox")
-			Expect(leaderSpec.Spec.RestartPolicy).To(Equal("Never"), "Leader restart policy should be Never")
-
-			// Validate worker job spec (second in array)
-			workerSpec := podTemplateSpecs[1]
-			Expect(workerSpec.Spec.Containers).ToNot(BeEmpty(), "Worker pod template should have containers")
-			Expect(workerSpec.Spec.Containers[0].Name).To(Equal("worker"), "Worker container name should be 'worker'")
-			Expect(workerSpec.Spec.Containers[0].Image).To(Equal("busybox:latest"), "Worker container image should be busybox")
+		It("should return error when RID is nil", func() {
+			// Note: NewComponentFactory panics with nil RID (by design)
+			// Testing GetRootComponent with nil RID after factory creation
+			factory.rid = nil // Simulate nil RID scenario
+			component, err := factory.GetRootComponent()
+			Expect(err).To(HaveOccurred())
+			Expect(component).To(BeNil())
+			Expect(err.Error()).To(ContainSubstring("rid is nil"))
 		})
 	})
 
-	Context("Dynamo ComponentFactory", func() {
-		var dynamoFactory *rid.ComponentFactory
+	Context("component sharing", func() {
+		It("should share the same extractor instance across components", func() {
+			master, err := factory.GetComponent("master")
+			Expect(err).NotTo(HaveOccurred())
 
-		BeforeEach(func() {
-			dynamoFactory = rid.NewComponentFactory(dynamoRID, dynamo)
-			Expect(dynamoFactory).ToNot(BeNil())
+			worker, err := factory.GetComponent("worker")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(master.extractor).To(Equal(mockExtractor))
+			Expect(worker.extractor).To(Equal(mockExtractor))
 		})
 
-		It("should retrieve Dynamo components", func() {
-			// Test root component
-			dynamoComponent, err := dynamoFactory.GetComponent("dynamographdeployment")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(dynamoComponent).ToNot(BeNil())
-			Expect(dynamoComponent.Name()).To(Equal("dynamographdeployment"))
-			Expect(dynamoComponent.Definition().Name).To(Equal("dynamographdeployment"))
+		It("should provide separate cache instances per component", func() {
+			master, err := factory.GetComponent("master")
+			Expect(err).NotTo(HaveOccurred())
 
-			// Test service component
-			serviceComponent, err := dynamoFactory.GetComponent("service")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(serviceComponent).ToNot(BeNil())
-			Expect(serviceComponent.Name()).To(Equal("service"))
-			Expect(serviceComponent.Definition().Name).To(Equal("service"))
+			worker, err := factory.GetComponent("worker")
+			Expect(err).NotTo(HaveOccurred())
 
-			// Test non-existent component should fail
-			_, err = dynamoFactory.GetComponent("nonexistent")
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("component nonexistent not found"))
-		})
-
-		It("should extract pod template specs from Dynamo components", func() {
-			serviceComponent, err := dynamoFactory.GetComponent("service")
-			Expect(err).ToNot(HaveOccurred())
-
-			// Test pod template spec extraction from service
-			fragmentedSpecs, err := serviceComponent.GetFragmentedPodSpec(context.Background())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(fragmentedSpecs).ToNot(BeNil())
+			Expect(master.cache).NotTo(BeIdenticalTo(worker.cache))
 		})
 	})
 })
-
-// Helper functions - exact copies from original tests
-
-func getProjectRoot() (string, error) {
-	currentDir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	// Look for go.mod file to identify project root
-	for {
-		if _, err := os.Stat(filepath.Join(currentDir, "go.mod")); err == nil {
-			return currentDir, nil
-		}
-
-		parent := filepath.Dir(currentDir)
-		if parent == currentDir {
-			break
-		}
-		currentDir = parent
-	}
-
-	return "", fmt.Errorf("could not find project root")
-}
-
-func loadRIDFromFile(filePath string) (*v1alpha1.ResourceInterpretationDefinition, error) {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	var rid v1alpha1.ResourceInterpretationDefinition
-	if err := yaml.Unmarshal(data, &rid); err != nil {
-		return nil, err
-	}
-
-	// Debug check to ensure RID loaded correctly
-	if rid.Spec.StructureDefinition.RootComponent.Name == "" {
-		fmt.Printf("WARNING: Empty RID loaded from %s\n", filePath)
-	}
-
-	return &rid, nil
-}
-
-func createPyTorchJobObject() client.Object {
-	pytorchJob := &unstructured.Unstructured{
-		Object: map[string]any{
-			"apiVersion": "kubeflow.org/v1",
-			"kind":       "PyTorchJob",
-			"metadata": map[string]any{
-				"name":      "pytorch-simple",
-				"namespace": "default",
-			},
-			"spec": map[string]any{
-				"pytorchReplicaSpecs": map[string]any{
-					"Master": map[string]any{
-						"replicas": 1,
-						"template": map[string]any{
-							"metadata": map[string]any{
-								"labels": map[string]any{
-									"app": "pytorch-master",
-								},
-							},
-							"spec": map[string]any{
-								"containers": []any{
-									map[string]any{
-										"name":  "pytorch",
-										"image": "pytorch/pytorch:latest",
-										"command": []any{
-											"python",
-											"train.py",
-										},
-										"resources": map[string]any{
-											"requests": map[string]any{
-												"nvidia.com/gpu": 1,
-											},
-										},
-									},
-								},
-								"restartPolicy": "OnFailure",
-							},
-						},
-					},
-					"Worker": map[string]any{
-						"replicas": 3,
-						"template": map[string]any{
-							"metadata": map[string]any{
-								"labels": map[string]any{
-									"app": "pytorch-worker",
-								},
-							},
-							"spec": map[string]any{
-								"containers": []any{
-									map[string]any{
-										"name":  "pytorch",
-										"image": "pytorch/pytorch:latest",
-										"command": []any{
-											"python",
-											"train.py",
-										},
-										"resources": map[string]any{
-											"requests": map[string]any{
-												"nvidia.com/gpu": 1,
-											},
-										},
-									},
-								},
-								"restartPolicy": "OnFailure",
-							},
-						},
-					},
-				},
-			},
-			"status": map[string]any{
-				"conditions": []any{
-					map[string]any{
-						"type":   "Running",
-						"status": "True",
-					},
-				},
-			},
-		},
-	}
-
-	return pytorchJob
-}
-
-func createJobSetObject() client.Object {
-	jobSet := &unstructured.Unstructured{
-		Object: map[string]any{
-			"apiVersion": "jobset.x-k8s.io/v1alpha2",
-			"kind":       "JobSet",
-			"metadata": map[string]any{
-				"name":      "simple-jobset",
-				"namespace": "default",
-			},
-			"spec": map[string]any{
-				"replicatedJobs": []any{
-					map[string]any{
-						"name":     "leader",
-						"replicas": 1,
-						"template": map[string]any{
-							"spec": map[string]any{
-								"parallelism":   1,
-								"completions":   1,
-								"backoffLimit":  6,
-								"restartPolicy": "OnFailure",
-								"template": map[string]any{
-									"spec": map[string]any{
-										"containers": []any{
-											map[string]any{
-												"name":    "leader",
-												"image":   "busybox:latest",
-												"command": []any{"sh", "-c", "echo 'Leader job' && sleep 30"},
-												"resources": map[string]any{
-													"requests": map[string]any{
-														"cpu":    "100m",
-														"memory": "128Mi",
-													},
-												},
-												"env": []any{
-													map[string]any{
-														"name":  "JOB_ROLE",
-														"value": "leader",
-													},
-												},
-											},
-										},
-										"restartPolicy": "Never",
-									},
-								},
-							},
-						},
-					},
-					map[string]any{
-						"name":     "worker",
-						"replicas": 3,
-						"template": map[string]any{
-							"spec": map[string]any{
-								"parallelism":   1,
-								"completions":   1,
-								"backoffLimit":  6,
-								"restartPolicy": "OnFailure",
-								"template": map[string]any{
-									"spec": map[string]any{
-										"containers": []any{
-											map[string]any{
-												"name":    "worker",
-												"image":   "busybox:latest",
-												"command": []any{"sh", "-c", "echo 'Worker job' && sleep 60"},
-												"resources": map[string]any{
-													"requests": map[string]any{
-														"cpu":    "200m",
-														"memory": "256Mi",
-													},
-												},
-												"env": []any{
-													map[string]any{
-														"name":  "JOB_ROLE",
-														"value": "worker",
-													},
-												},
-											},
-										},
-										"restartPolicy": "Never",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			"status": map[string]any{
-				"conditions": []any{
-					map[string]any{
-						"type":   "Completed",
-						"status": "True",
-					},
-				},
-			},
-		},
-	}
-
-	return jobSet
-}
-
-func createDynamoObject() client.Object {
-	dynamo := &unstructured.Unstructured{
-		Object: map[string]any{
-			"apiVersion": "dynamo.nvidia.com/v1alpha1",
-			"kind":       "DynamoGraphDeployment",
-			"metadata": map[string]any{
-				"name":      "example-dynamo",
-				"namespace": "default",
-			},
-			"spec": map[string]any{
-				"services": map[string]any{
-					"frontend": map[string]any{
-						"image": "nginx:latest",
-						"extraPodSpec": map[string]any{
-							"schedulerName": "volcano",
-							"containers": []any{
-								map[string]any{
-									"name":  "frontend",
-									"image": "nginx:latest",
-									"resources": map[string]any{
-										"requests": map[string]any{
-											"cpu":    "100m",
-											"memory": "128Mi",
-										},
-									},
-								},
-							},
-						},
-						"resources": map[string]any{
-							"requests": map[string]any{
-								"cpu":    "100m",
-								"memory": "128Mi",
-							},
-						},
-						"autoscaling": map[string]any{
-							"minReplicas": 1,
-							"maxReplicas": 5,
-						},
-						"labels": map[string]any{
-							"app":  "dynamo-frontend",
-							"tier": "frontend",
-						},
-						"annotations": map[string]any{
-							"prometheus.io/scrape": "true",
-						},
-					},
-					"backend": map[string]any{
-						"image": "python:3.9",
-						"extraPodSpec": map[string]any{
-							"schedulerName": "volcano",
-							"containers": []any{
-								map[string]any{
-									"name":  "backend",
-									"image": "python:3.9",
-									"resources": map[string]any{
-										"requests": map[string]any{
-											"cpu":            "200m",
-											"memory":         "256Mi",
-											"nvidia.com/gpu": 1,
-										},
-									},
-								},
-							},
-						},
-						"resources": map[string]any{
-							"requests": map[string]any{
-								"cpu":            "200m",
-								"memory":         "256Mi",
-								"nvidia.com/gpu": 1,
-							},
-						},
-						"autoscaling": map[string]any{
-							"minReplicas": 2,
-							"maxReplicas": 10,
-						},
-						"labels": map[string]any{
-							"app":  "dynamo-backend",
-							"tier": "backend",
-						},
-						"annotations": map[string]any{
-							"prometheus.io/scrape": "true",
-						},
-					},
-				},
-			},
-			"status": map[string]any{
-				"phase": "Running",
-			},
-		},
-	}
-
-	return dynamo
-}

@@ -9,7 +9,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName={rid}
+// +kubebuilder:resource:scope=Cluster,shortName={rid}
 // +kubebuilder:printcolumn:name="Framework",type="string",JSONPath=".spec.structureDefinition.rootComponent.kind.kind",description="Target framework kind"
 // +kubebuilder:printcolumn:name="Root Component",type="string",JSONPath=".spec.structureDefinition.rootComponent.name",description="Root component name"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"

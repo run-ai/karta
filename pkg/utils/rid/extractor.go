@@ -136,7 +136,7 @@ func (e *RidExtractor) ExtractFragmentedPodSpec(ctx context.Context, definition 
 	}
 
 	if definition.SpecDefinition.FragmentedPodSpecDefinition == nil {
-		return nil, fmt.Errorf("component %s does not have fragmented spec definition", definition.Name)
+		return nil, fmt.Errorf("component %s does not have fragmented pod spec definition", definition.Name)
 	}
 
 	fragmentedDefinition := definition.SpecDefinition.FragmentedPodSpecDefinition
