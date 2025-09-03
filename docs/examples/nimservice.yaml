@@ -1,5 +1,5 @@
 apiVersion: kai-bolt.runai.ai/v1alpha1
-kind: ResourceInterpretationDefinition
+kind: ResourceInterface
 spec:
   structureDefinition:
     rootComponent:
