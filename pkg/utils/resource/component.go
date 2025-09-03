@@ -1,4 +1,4 @@
-package rid
+package resource
 
 import (
 	"context"
@@ -18,7 +18,7 @@ type ComponentCache struct {
 	scale              []Scale
 }
 
-// Component represents a RID component with extraction capabilities
+// Component represents a ResourceInterface component with extraction capabilities
 type Component struct {
 	name       string
 	definition v1alpha1.ComponentDefinition

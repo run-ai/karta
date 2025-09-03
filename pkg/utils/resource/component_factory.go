@@ -1,17 +1,17 @@
-package rid
+package resource
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/utils/rid/query"
+	"github.com/run-ai/kai-bolt/pkg/utils/resource/query"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//go:generate mockgen -source=component_factory.go -destination=extractor_mock.go -package=rid Extractor
+//go:generate mockgen -source=component_factory.go -destination=extractor_mock.go -package=resource Extractor
 type Extractor interface {
 	ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error)
 	ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error)
@@ -21,38 +21,38 @@ type Extractor interface {
 }
 
 type ComponentFactory struct {
-	rid       *v1alpha1.ResourceInterpretationDefinition
+	ri        *v1alpha1.ResourceInterface
 	extractor Extractor // Shared extractor instance
 
 	componentDefinitionsByName map[string]v1alpha1.ComponentDefinition // Fast component definition lookup
 	componentCaches            map[string]*ComponentCache              // Per-component caches
 }
 
-// NewComponentFactory creates a new RID-based component factory
-func NewComponentFactory(rid *v1alpha1.ResourceInterpretationDefinition, extractor Extractor) *ComponentFactory {
+// NewComponentFactory creates a new ResourceInterface-based component factory
+func NewComponentFactory(ri *v1alpha1.ResourceInterface, extractor Extractor) *ComponentFactory {
 	definitionsByName := make(map[string]v1alpha1.ComponentDefinition)
 	componentCaches := make(map[string]*ComponentCache)
 
 	// Create single slice with all components (root + children)
-	allDefinitions := append(rid.Spec.StructureDefinition.ChildComponents, rid.Spec.StructureDefinition.RootComponent)
+	allDefinitions := append(ri.Spec.StructureDefinition.ChildComponents, ri.Spec.StructureDefinition.RootComponent)
 	for _, componentDefinition := range allDefinitions {
 		definitionsByName[componentDefinition.Name] = componentDefinition
 		componentCaches[componentDefinition.Name] = &ComponentCache{}
 	}
 
 	return &ComponentFactory{
-		rid:                        rid,
+		ri:                         ri,
 		extractor:                  extractor,
 		componentDefinitionsByName: definitionsByName,
 		componentCaches:            componentCaches,
 	}
 }
 
-// NewComponentFactoryFromObject creates a new RID-based component factory from a Kubernetes object
-func NewComponentFactoryFromObject(rid *v1alpha1.ResourceInterpretationDefinition, object client.Object) *ComponentFactory {
+// NewComponentFactoryFromObject creates a new ResourceInterface-based component factory from a Kubernetes object
+func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object client.Object) *ComponentFactory {
 	queryEvaluator := query.NewDefaultJqEvaluator(object)
-	extractor := NewRidExtractor(queryEvaluator)
-	return NewComponentFactory(rid, extractor)
+	extractor := NewInterfaceExtractor(queryEvaluator)
+	return NewComponentFactory(ri, extractor)
 }
 
 // GetComponent retrieves a component by name
@@ -75,9 +75,9 @@ func (f *ComponentFactory) GetComponent(name string) (*Component, error) {
 
 // GetRootComponent retrieves the root component
 func (f *ComponentFactory) GetRootComponent() (*Component, error) {
-	if f.rid == nil {
-		return nil, fmt.Errorf("rid is nil")
+	if f.ri == nil {
+		return nil, fmt.Errorf("resource interface is nil")
 	}
 
-	return f.GetComponent(f.rid.Spec.StructureDefinition.RootComponent.Name)
+	return f.GetComponent(f.ri.Spec.StructureDefinition.RootComponent.Name)
 }

@@ -1,4 +1,4 @@
-package rid
+package resource
 
 import (
 	"context"

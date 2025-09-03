@@ -1,4 +1,4 @@
-package rid
+package resource
 
 import (
 	"context"
@@ -15,18 +15,18 @@ type QueryEvaluator interface {
 	Evaluate(ctx context.Context, expression string) ([]any, error)
 }
 
-// RidExtractor implements extraction using QueryEvaluator
-type RidExtractor struct {
+// InterfaceExtractor implements extraction using QueryEvaluator
+type InterfaceExtractor struct {
 	queryEvaluator QueryEvaluator
 }
 
-func NewRidExtractor(queryEvaluator QueryEvaluator) *RidExtractor {
-	return &RidExtractor{
+func NewInterfaceExtractor(queryEvaluator QueryEvaluator) *InterfaceExtractor {
+	return &InterfaceExtractor{
 		queryEvaluator: queryEvaluator,
 	}
 }
 
-func (e *RidExtractor) ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error) {
+func (e *InterfaceExtractor) ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error) {
 	if definition.SpecDefinition == nil {
 		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
 	}
@@ -41,7 +41,7 @@ func (e *RidExtractor) ExtractPodTemplateSpec(ctx context.Context, definition v1
 	return podTemplateSpec, err
 }
 
-func (e *RidExtractor) ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error) {
+func (e *InterfaceExtractor) ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error) {
 	if definition.SpecDefinition == nil {
 		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
 	}
@@ -56,7 +56,7 @@ func (e *RidExtractor) ExtractPodSpec(ctx context.Context, definition v1alpha1.C
 	return podSpec, err
 }
 
-func (e *RidExtractor) ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error) {
+func (e *InterfaceExtractor) ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error) {
 	if definition.SpecDefinition == nil {
 		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
 	}
@@ -71,7 +71,7 @@ func (e *RidExtractor) ExtractPodMetadata(ctx context.Context, definition v1alph
 	return podMetadata, err
 }
 
-func (e *RidExtractor) ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error) {
+func (e *InterfaceExtractor) ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error) {
 	if definition.ScaleDefinition == nil {
 		return nil, fmt.Errorf("component %s does not have scale definition", definition.Name)
 	}
@@ -130,7 +130,7 @@ func extract[T any](ctx context.Context, path *string, evaluator QueryEvaluator,
 	return nil
 }
 
-func (e *RidExtractor) ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error) {
+func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error) {
 	if definition.SpecDefinition == nil {
 		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
 	}

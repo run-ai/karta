@@ -48,14 +48,14 @@ type PyFlowStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// PyFlowRID returns a ResourceInterpretationDefinition for PyFlow
+// PyFlowRI returns a ResourceInterface for PyFlow
 // Models simple structure: hardcoded fields, multiple components (master + workers)
-func PyFlowRID() *v1alpha1.ResourceInterpretationDefinition {
-	return &v1alpha1.ResourceInterpretationDefinition{
+func PyFlowRI() *v1alpha1.ResourceInterface {
+	return &v1alpha1.ResourceInterface{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "pyflow",
 		},
-		Spec: v1alpha1.ResourceInterpretationDefinitionSpec{
+		Spec: v1alpha1.ResourceInterfaceSpec{
 			StructureDefinition: v1alpha1.StructureDefinition{
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "pyflow",

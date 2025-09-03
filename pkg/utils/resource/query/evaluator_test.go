@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/run-ai/kai-bolt/pkg/utils/rid/query"
+	"github.com/run-ai/kai-bolt/pkg/utils/resource/query"
 )
 
 var _ = Describe("JqEvaluator", func() {

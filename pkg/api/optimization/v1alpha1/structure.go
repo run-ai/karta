@@ -15,7 +15,7 @@ type GroupVersionKind struct {
 // ComponentDefinition defines a single component in the workload hierarchy.
 // Components represent logical units of computation that can be optimized independently.
 type ComponentDefinition struct {
-	// Name is the unique identifier for this component within the RID
+	// Name is the unique identifier for this component within the RI
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 

@@ -1,4 +1,4 @@
-package rid
+package resource
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/utils/rid/query"
+	"github.com/run-ai/kai-bolt/pkg/utils/resource/query"
 	corev1 "k8s.io/api/core/v1"
 )
 

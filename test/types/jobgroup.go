@@ -45,14 +45,14 @@ type JobGroupStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// JobGroupRID returns a ResourceInterpretationDefinition for JobGroup
+// JobGroupRI returns a ResourceInterface for JobGroup
 // Models JobSet-like structure: array components, separate pod spec + metadata extraction
-func JobGroupRID() *v1alpha1.ResourceInterpretationDefinition {
-	return &v1alpha1.ResourceInterpretationDefinition{
+func JobGroupRI() *v1alpha1.ResourceInterface {
+	return &v1alpha1.ResourceInterface{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "jobgroup",
 		},
-		Spec: v1alpha1.ResourceInterpretationDefinitionSpec{
+		Spec: v1alpha1.ResourceInterfaceSpec{
 			StructureDefinition: v1alpha1.StructureDefinition{
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "jobgroup",

@@ -53,14 +53,14 @@ type ReactorStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// ReactorRID returns a ResourceInterpretationDefinition for Reactor
+// ReactorRI returns a ResourceInterface for Reactor
 // Models DynamO-like structure: map components, fragmented pod spec extraction
-func ReactorRID() *v1alpha1.ResourceInterpretationDefinition {
-	return &v1alpha1.ResourceInterpretationDefinition{
+func ReactorRI() *v1alpha1.ResourceInterface {
+	return &v1alpha1.ResourceInterface{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "reactor",
 		},
-		Spec: v1alpha1.ResourceInterpretationDefinitionSpec{
+		Spec: v1alpha1.ResourceInterfaceSpec{
 			StructureDefinition: v1alpha1.StructureDefinition{
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "reactor",

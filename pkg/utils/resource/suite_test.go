@@ -1,4 +1,4 @@
-package rid_test
+package resource_test
 
 import (
 	"testing"
@@ -9,5 +9,5 @@ import (
 
 func TestRid(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "RID Suite")
+	RunSpecs(t, "ResourceInterface Suite")
 }

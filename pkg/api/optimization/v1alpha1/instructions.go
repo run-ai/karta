@@ -21,7 +21,7 @@ type PodGroupDefinition struct {
 
 // GroupingSelector defines how to select and filter components for grouping instructions.
 type GroupingSelector struct {
-	// ComponentName references a component defined in the RID's structureDefinition
+	// ComponentName references a component defined in the RI's structureDefinition
 	// +kubebuilder:validation:Required
 	ComponentName string `json:"componentName"`
 

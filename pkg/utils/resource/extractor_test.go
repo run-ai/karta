@@ -1,4 +1,4 @@
-package rid
+package resource
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/utils/rid/query"
+	"github.com/run-ai/kai-bolt/pkg/utils/resource/query"
 	"github.com/run-ai/kai-bolt/test/types"
 )
 
@@ -50,24 +50,24 @@ const (
 	noFragmentedSpecError  = "does not have fragmented pod spec definition"
 )
 
-var _ = Describe("RidExtractor", func() {
+var _ = Describe("InterfaceExtractor", func() {
 	var (
 		ctx context.Context
 
 		// PyFlow fixtures
-		pyflowRID       *v1alpha1.ResourceInterpretationDefinition
+		pyflowRI        *v1alpha1.ResourceInterface
 		pyflowObj       *types.PyFlow
 		pyflowExtractor Extractor
 		pyflowFactory   *ComponentFactory
 
 		// JobGroup fixtures
-		jobgroupRID       *v1alpha1.ResourceInterpretationDefinition
+		jobgroupRI        *v1alpha1.ResourceInterface
 		jobgroupObj       *types.JobGroup
 		jobgroupExtractor Extractor
 		jobgroupFactory   *ComponentFactory
 
 		// Reactor fixtures
-		reactorRID       *v1alpha1.ResourceInterpretationDefinition
+		reactorRI        *v1alpha1.ResourceInterface
 		reactorObj       *types.Reactor
 		reactorExtractor Extractor
 		reactorFactory   *ComponentFactory
@@ -76,20 +76,20 @@ var _ = Describe("RidExtractor", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 
-		pyflowRID = types.PyFlowRID()
+		pyflowRI = types.PyFlowRI()
 		pyflowObj = types.NewPyFlowObject()
-		pyflowExtractor = NewRidExtractor(query.NewDefaultJqEvaluator(pyflowObj))
-		pyflowFactory = NewComponentFactory(pyflowRID, pyflowExtractor)
+		pyflowExtractor = NewInterfaceExtractor(query.NewDefaultJqEvaluator(pyflowObj))
+		pyflowFactory = NewComponentFactory(pyflowRI, pyflowExtractor)
 
-		jobgroupRID = types.JobGroupRID()
+		jobgroupRI = types.JobGroupRI()
 		jobgroupObj = types.NewJobGroupObject()
-		jobgroupExtractor = NewRidExtractor(query.NewDefaultJqEvaluator(jobgroupObj))
-		jobgroupFactory = NewComponentFactory(jobgroupRID, jobgroupExtractor)
+		jobgroupExtractor = NewInterfaceExtractor(query.NewDefaultJqEvaluator(jobgroupObj))
+		jobgroupFactory = NewComponentFactory(jobgroupRI, jobgroupExtractor)
 
-		reactorRID = types.ReactorRID()
+		reactorRI = types.ReactorRI()
 		reactorObj = types.NewReactorObject()
-		reactorExtractor = NewRidExtractor(query.NewDefaultJqEvaluator(reactorObj))
-		reactorFactory = NewComponentFactory(reactorRID, reactorExtractor)
+		reactorExtractor = NewInterfaceExtractor(query.NewDefaultJqEvaluator(reactorObj))
+		reactorFactory = NewComponentFactory(reactorRI, reactorExtractor)
 	})
 
 	Describe("ExtractPodTemplateSpec", func() {

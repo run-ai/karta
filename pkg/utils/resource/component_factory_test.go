@@ -1,4 +1,4 @@
-package rid
+package resource
 
 import (
 	"github.com/golang/mock/gomock"
@@ -13,15 +13,15 @@ var _ = Describe("ComponentFactory", func() {
 	var (
 		ctrl          *gomock.Controller
 		mockExtractor *MockExtractor
-		rid           *v1alpha1.ResourceInterpretationDefinition
+		ri            *v1alpha1.ResourceInterface
 		factory       *ComponentFactory
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		mockExtractor = NewMockExtractor(ctrl)
-		rid = types.PyFlowRID()
-		factory = NewComponentFactory(rid, mockExtractor)
+		ri = types.PyFlowRI()
+		factory = NewComponentFactory(ri, mockExtractor)
 	})
 
 	AfterEach(func() {
@@ -62,14 +62,14 @@ var _ = Describe("ComponentFactory", func() {
 			Expect(err.Error()).To(ContainSubstring("component non-existent not found"))
 		})
 
-		It("should return error when RID is nil", func() {
-			// Note: NewComponentFactory panics with nil RID (by design)
-			// Testing GetRootComponent with nil RID after factory creation
-			factory.rid = nil // Simulate nil RID scenario
+		It("should return error when ResourceInterface is nil", func() {
+			// Note: NewComponentFactory panics with nil RI (by design)
+			// Testing GetRootComponent with nil RI after factory creation
+			factory.ri = nil // Simulate nil RI scenario
 			component, err := factory.GetRootComponent()
 			Expect(err).To(HaveOccurred())
 			Expect(component).To(BeNil())
-			Expect(err.Error()).To(ContainSubstring("rid is nil"))
+			Expect(err.Error()).To(ContainSubstring("resource interface is nil"))
 		})
 	})
 

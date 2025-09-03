@@ -74,7 +74,7 @@ spec:
                                 properties:
                                   componentName:
                                     description: ComponentName references a component
-                                      defined in the RID's structureDefinition
+                                      defined in the RI's structureDefinition
                                     type: string
                                   filters:
                                     description: |-
@@ -177,7 +177,7 @@ spec:
                           type: object
                         name:
                           description: Name is the unique identifier for this component
-                            within the RID
+                            within the RI
                           type: string
                         ownerRef:
                           description: OwnerRef references the parent component in
@@ -507,7 +507,7 @@ spec:
                         type: object
                       name:
                         description: Name is the unique identifier for this component
-                          within the RID
+                          within the RI
                         type: string
                       ownerRef:
                         description: OwnerRef references the parent component in the
