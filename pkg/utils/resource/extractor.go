@@ -6,21 +6,17 @@ import (
 	"fmt"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/kai-bolt/pkg/utils/resource/query"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// QueryEvaluator interface for query evaluation against data
-type QueryEvaluator interface {
-	Evaluate(ctx context.Context, expression string) ([]any, error)
-}
-
 // InterfaceExtractor implements extraction using QueryEvaluator
 type InterfaceExtractor struct {
-	queryEvaluator QueryEvaluator
+	queryEvaluator query.QueryEvaluator
 }
 
-func NewInterfaceExtractor(queryEvaluator QueryEvaluator) *InterfaceExtractor {
+func NewInterfaceExtractor(queryEvaluator query.QueryEvaluator) *InterfaceExtractor {
 	return &InterfaceExtractor{
 		queryEvaluator: queryEvaluator,
 	}
@@ -111,7 +107,7 @@ func (e *InterfaceExtractor) ExtractScale(ctx context.Context, definition v1alph
 	return scales, nil
 }
 
-func extract[T any](ctx context.Context, path *string, evaluator QueryEvaluator, out *[]T) error {
+func extract[T any](ctx context.Context, path *string, evaluator query.QueryEvaluator, out *[]T) error {
 	if path == nil {
 		return nil
 	}

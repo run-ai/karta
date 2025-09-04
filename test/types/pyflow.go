@@ -60,7 +60,7 @@ func PyFlowRI() *v1alpha1.ResourceInterface {
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "pyflow",
 					Kind: &v1alpha1.GroupVersionKind{
-						Group:   "training.example.com",
+						Group:   "jobs.example.com",
 						Version: "v1",
 						Kind:    "PyFlow",
 					},

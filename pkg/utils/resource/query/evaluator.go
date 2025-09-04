@@ -10,6 +10,13 @@ import (
 	"github.com/itchyny/gojq"
 )
 
+//go:generate mockgen -source=evaluator.go -destination=evaluator_mock.go -package=query QueryEvaluator
+
+// QueryEvaluator interface for query evaluation against data
+type QueryEvaluator interface {
+	Evaluate(ctx context.Context, expression string) ([]any, error)
+}
+
 const (
 	defaultMaxResults            = 1000
 	defaultTimeoutInMilliseconds = 2000

@@ -11,7 +11,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-// Reactor represents a DynamO-like job with map of service components
+// Reactor represents a Dynamo-like job with map of service components
 // Multiple components via map key discovery, fragmented pod spec extraction
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type Reactor struct {
@@ -65,7 +65,7 @@ func ReactorRI() *v1alpha1.ResourceInterface {
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "reactor",
 					Kind: &v1alpha1.GroupVersionKind{
-						Group:   "compute.example.com",
+						Group:   "jobs.example.com",
 						Version: "v1",
 						Kind:    "Reactor",
 					},
@@ -96,7 +96,6 @@ func ReactorRI() *v1alpha1.ResourceInterface {
 					{
 						Name: "service",
 						SpecDefinition: &v1alpha1.SpecDefinition{
-							// Fragmented pod spec definition - scattered fields
 							FragmentedPodSpecDefinition: &v1alpha1.FragmentedPodSpecDefinition{
 								LabelsPath:      ptr.To(".spec.services | .[] | .labels"),
 								AnnotationsPath: ptr.To(".spec.services | .[] | .annotations"),
@@ -124,7 +123,7 @@ func ReactorRI() *v1alpha1.ResourceInterface {
 func NewReactorObject() *Reactor {
 	return &Reactor{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "nvidia.com/v1alpha1",
+			APIVersion: "jobs.example.com/v1",
 			Kind:       "Reactor",
 		},
 		ObjectMeta: metav1.ObjectMeta{

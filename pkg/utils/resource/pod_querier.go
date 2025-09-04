@@ -12,7 +12,7 @@ import (
 
 // PodQuerier handles JQ-based querying operations against pods
 type PodQuerier struct {
-	queryEvaluator QueryEvaluator
+	queryEvaluator query.QueryEvaluator
 }
 
 func NewPodQuerier(pod corev1.Pod) *PodQuerier {

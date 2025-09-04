@@ -57,7 +57,7 @@ func JobGroupRI() *v1alpha1.ResourceInterface {
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "jobgroup",
 					Kind: &v1alpha1.GroupVersionKind{
-						Group:   "batch.example.com",
+						Group:   "jobs.example.com",
 						Version: "v1",
 						Kind:    "JobGroup",
 					},
@@ -85,9 +85,7 @@ func JobGroupRI() *v1alpha1.ResourceInterface {
 					{
 						Name: "job",
 						SpecDefinition: &v1alpha1.SpecDefinition{
-							// Separate pod spec path (no template wrapper)
-							PodSpecPath: ptr.To(".spec.replicatedJobs[].spec"),
-							// Separate pod metadata path (no template wrapper)
+							PodSpecPath:  ptr.To(".spec.replicatedJobs[].spec"),
 							MetadataPath: ptr.To(".spec.replicatedJobs[].metadata"),
 						},
 						ScaleDefinition: &v1alpha1.ScaleDefinition{
@@ -108,7 +106,7 @@ func JobGroupRI() *v1alpha1.ResourceInterface {
 func NewJobGroupObject() *JobGroup {
 	return &JobGroup{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "jobset.x-k8s.io/v1alpha2",
+			APIVersion: "jobs.example.com/v1",
 			Kind:       "JobGroup",
 		},
 		ObjectMeta: metav1.ObjectMeta{
