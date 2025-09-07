@@ -14,10 +14,10 @@ type StructureSummary struct {
 	ChildrenMap           map[string][]string                      // parent component name -> list of child component names
 	ComponentDefs         map[string]*v1alpha1.ComponentDefinition // component name -> component definition
 	LeafComponents        []string                                 // list of component names that have pod definitions
-	GangSchedulingSummary *GangSchedulingSummary                   // summary of gang scheduling instructions
+	GangSchedulingSummary *gangSchedulingSummary                   // summary of gang scheduling instructions
 }
 
-type GangSchedulingSummary struct {
+type gangSchedulingSummary struct {
 	EffectiveComponents map[string]string                       // component name -> effective gang scheduling component name
 	PodGroups           map[string]*v1alpha1.PodGroupDefinition // component name -> pod group definition
 }
@@ -79,7 +79,7 @@ func (s *StructureSummary) build() error {
 	}
 
 	if s.RI.Spec.Instructions.GangScheduling != nil {
-		s.GangSchedulingSummary = &GangSchedulingSummary{
+		s.GangSchedulingSummary = &gangSchedulingSummary{
 			PodGroups: make(map[string]*v1alpha1.PodGroupDefinition),
 		}
 

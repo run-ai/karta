@@ -49,7 +49,7 @@ var _ = Describe("PodQuerier", func() {
 			},
 		}
 
-		querier = resource.NewPodQuerier(testPod)
+		querier = resource.NewPodQuerier(&testPod)
 	})
 
 	Describe("ExtractGroupKeys", func() {
@@ -331,7 +331,7 @@ var _ = Describe("PodQuerier", func() {
 			It("should handle special characters in values", func() {
 				// Update the test pod to have a label with special characters
 				testPod.Labels["special"] = "value-with-special_chars.and:colons"
-				querier = resource.NewPodQuerier(testPod)
+				querier = resource.NewPodQuerier(&testPod)
 
 				value := "value-with-special_chars.and:colons"
 				selector := &v1alpha1.PodSelector{
@@ -347,7 +347,7 @@ var _ = Describe("PodQuerier", func() {
 			It("should handle values with quotes", func() {
 				// Update the test pod to have a label with quotes
 				testPod.Labels["quotes"] = `value-with-"quotes"`
-				querier = resource.NewPodQuerier(testPod)
+				querier = resource.NewPodQuerier(&testPod)
 
 				value := `value-with-"quotes"`
 				selector := &v1alpha1.PodSelector{

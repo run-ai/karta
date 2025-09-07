@@ -6,16 +6,12 @@ import (
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 	"github.com/run-ai/kai-bolt/pkg/utils/resource"
-	corev1 "k8s.io/api/core/v1"
 )
 
-func InferPodComponent(ctx context.Context, pod *corev1.Pod, summary *StructureSummary) (string, error) {
+func InferPodComponent(ctx context.Context, podQuerier *resource.PodQuerier, summary *StructureSummary) (string, error) {
 	if len(summary.LeafComponents) == 1 {
 		return summary.LeafComponents[0], nil
 	}
-
-	// PodQuerier is lazy, no problem to init first
-	podQuerier := resource.NewPodQuerier(*pod)
 
 	// Only check leaf components (have pod definitions)
 	for _, componentName := range summary.LeafComponents {
@@ -31,7 +27,7 @@ func InferPodComponent(ctx context.Context, pod *corev1.Pod, summary *StructureS
 		}
 	}
 
-	return "", fmt.Errorf("no component found for pod %s", pod.Name)
+	return "", fmt.Errorf("no component found for pod %s", podQuerier.GetPodName())
 }
 
 func GetEffectiveComponent(componentName string, summary *StructureSummary) (string, bool) {
