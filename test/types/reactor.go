@@ -94,7 +94,8 @@ func ReactorRI() *v1alpha1.ResourceInterface {
 				},
 				ChildComponents: []v1alpha1.ComponentDefinition{
 					{
-						Name: "service",
+						Name:     "service",
+						OwnerRef: ptr.To("reactor"),
 						SpecDefinition: &v1alpha1.SpecDefinition{
 							FragmentedPodSpecDefinition: &v1alpha1.FragmentedPodSpecDefinition{
 								LabelsPath:      ptr.To(".spec.services | .[] | .labels"),

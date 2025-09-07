@@ -83,7 +83,8 @@ func JobGroupRI() *v1alpha1.ResourceInterface {
 				},
 				ChildComponents: []v1alpha1.ComponentDefinition{
 					{
-						Name: "job",
+						Name:     "job",
+						OwnerRef: ptr.To("jobgroup"),
 						SpecDefinition: &v1alpha1.SpecDefinition{
 							PodSpecPath:  ptr.To(".spec.replicatedJobs[].spec"),
 							MetadataPath: ptr.To(".spec.replicatedJobs[].metadata"),

@@ -86,7 +86,8 @@ func PyFlowRI() *v1alpha1.ResourceInterface {
 				},
 				ChildComponents: []v1alpha1.ComponentDefinition{
 					{
-						Name: "master",
+						Name:     "master",
+						OwnerRef: ptr.To("pyflow"),
 						SpecDefinition: &v1alpha1.SpecDefinition{
 							PodTemplateSpecPath: ptr.To(".spec.master.template"),
 						},
@@ -99,7 +100,8 @@ func PyFlowRI() *v1alpha1.ResourceInterface {
 						},
 					},
 					{
-						Name: "worker",
+						Name:     "worker",
+						OwnerRef: ptr.To("pyflow"),
 						SpecDefinition: &v1alpha1.SpecDefinition{
 							PodTemplateSpecPath: ptr.To(".spec.worker.template"),
 						},
