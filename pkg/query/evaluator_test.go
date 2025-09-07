@@ -1,4 +1,4 @@
-package query_test
+package query
 
 import (
 	"context"
@@ -7,14 +7,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/run-ai/kai-bolt/pkg/utils/resource/query"
 )
 
 var _ = Describe("JqEvaluator", func() {
 	var (
 		ctx        context.Context
-		evaluator  *query.JqEvaluator
+		evaluator  *JqEvaluator
 		testObject map[string]any
 	)
 
@@ -46,7 +44,7 @@ var _ = Describe("JqEvaluator", func() {
 				},
 			},
 		}
-		evaluator = query.NewDefaultJqEvaluator(testObject)
+		evaluator = NewDefaultJqEvaluator(testObject)
 	})
 
 	Describe("Basic JQ evaluation", func() {
@@ -126,7 +124,7 @@ var _ = Describe("JqEvaluator", func() {
 		It("should return JQParseError for invalid syntax", func() {
 			_, err := evaluator.Evaluate(ctx, ".invalid[[[syntax")
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeAssignableToTypeOf(&query.JQParseError{}))
+			Expect(err).To(BeAssignableToTypeOf(&JQParseError{}))
 		})
 
 		It("should handle context cancellation", func() {
@@ -142,7 +140,7 @@ var _ = Describe("JqEvaluator", func() {
 	Describe("Result count limits", func() {
 		var (
 			largeObject map[string]any
-			limitedEval *query.JqEvaluator
+			limitedEval *JqEvaluator
 			maxResults  = 5
 		)
 
@@ -163,7 +161,7 @@ var _ = Describe("JqEvaluator", func() {
 			}
 			largeObject["items"] = items
 
-			limitedEval = query.NewJqEvaluator(largeObject, &maxResults, nil)
+			limitedEval = NewJqEvaluator(largeObject, &maxResults, nil)
 		})
 
 		It("should respect max results limit", func() {
@@ -183,7 +181,7 @@ var _ = Describe("JqEvaluator", func() {
 
 	Describe("Timeout limits", func() {
 		var (
-			fastTimeoutEval *query.JqEvaluator
+			fastTimeoutEval *JqEvaluator
 			maxResults      = 1000
 			timeoutMs       = 1 // Very short timeout
 		)
@@ -204,7 +202,7 @@ var _ = Describe("JqEvaluator", func() {
 			}
 			slowObject["data"] = data
 
-			fastTimeoutEval = query.NewJqEvaluator(slowObject, &maxResults, &timeoutMs)
+			fastTimeoutEval = NewJqEvaluator(slowObject, &maxResults, &timeoutMs)
 		})
 
 		It("should respect timeout limits for complex operations", func() {
@@ -215,7 +213,7 @@ var _ = Describe("JqEvaluator", func() {
 			Expect(err).To(HaveOccurred())
 
 			// Should be a JQExecutionError wrapping context.DeadlineExceeded
-			var jqExecError *query.JQExecutionError
+			var jqExecError *JQExecutionError
 			Expect(errors.As(err, &jqExecError)).To(BeTrue())
 
 			// The wrapped error should be context.DeadlineExceeded
@@ -224,7 +222,7 @@ var _ = Describe("JqEvaluator", func() {
 
 		It("should work with longer timeout for the same operation", func() {
 			longerTimeoutMs := 10000
-			longerTimeoutEval := query.NewJqEvaluator(testObject, &maxResults, &longerTimeoutMs)
+			longerTimeoutEval := NewJqEvaluator(testObject, &maxResults, &longerTimeoutMs)
 
 			results, err := longerTimeoutEval.Evaluate(ctx, ".spec.containers[].name")
 			Expect(err).ToNot(HaveOccurred())
@@ -235,26 +233,26 @@ var _ = Describe("JqEvaluator", func() {
 	Describe("JSON conversion", func() {
 		It("should handle different source object types", func() {
 			// Test with string
-			stringEval := query.NewDefaultJqEvaluator("test-string")
+			stringEval := NewDefaultJqEvaluator("test-string")
 			results, err := stringEval.Evaluate(ctx, ". | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 11))
 
 			// Test with number
-			numberEval := query.NewDefaultJqEvaluator(42)
+			numberEval := NewDefaultJqEvaluator(42)
 			results, err = numberEval.Evaluate(ctx, ". + 8")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 50))
 
 			// Test with array
-			arrayEval := query.NewDefaultJqEvaluator([]any{1, 2, 3})
+			arrayEval := NewDefaultJqEvaluator([]any{1, 2, 3})
 			results, err = arrayEval.Evaluate(ctx, ". | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 3))
 		})
 
 		It("should handle nil values", func() {
-			nilEval := query.NewDefaultJqEvaluator(nil)
+			nilEval := NewDefaultJqEvaluator(nil)
 			results, err := nilEval.Evaluate(ctx, ".")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
@@ -263,7 +261,7 @@ var _ = Describe("JqEvaluator", func() {
 	})
 
 	Describe("Default values", func() {
-		var eval *query.JqEvaluator
+		var eval *JqEvaluator
 
 		BeforeEach(func() {
 			testData := map[string]any{
@@ -284,7 +282,7 @@ var _ = Describe("JqEvaluator", func() {
 					},
 				},
 			}
-			eval = query.NewDefaultJqEvaluator(testData)
+			eval = NewDefaultJqEvaluator(testData)
 		})
 
 		Context("with // alternative operator", func() {

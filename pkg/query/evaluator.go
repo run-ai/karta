@@ -19,7 +19,7 @@ type QueryEvaluator interface {
 
 const (
 	defaultMaxResults            = 1000
-	defaultTimeoutInMilliseconds = 2000
+	defaultTimeoutInMilliseconds = 10000
 )
 
 // JqEvaluator handles JQ evaluation against a source object

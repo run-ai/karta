@@ -1,4 +1,4 @@
-package query_test
+package query
 
 import (
 	"testing"
