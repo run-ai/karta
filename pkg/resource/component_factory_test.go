@@ -28,15 +28,6 @@ var _ = Describe("ComponentFactory", func() {
 		ctrl.Finish()
 	})
 
-	Context("factory creation", func() {
-		It("should initialize component caches for all components", func() {
-			Expect(factory.componentCaches).To(HaveLen(3)) // root + 2 children
-			Expect(factory.componentCaches).To(HaveKey("pyflow"))
-			Expect(factory.componentCaches).To(HaveKey("master"))
-			Expect(factory.componentCaches).To(HaveKey("worker"))
-		})
-	})
-
 	Context("component access", func() {
 		It("should get root component", func() {
 			component, err := factory.GetRootComponent()
@@ -83,16 +74,6 @@ var _ = Describe("ComponentFactory", func() {
 
 			Expect(master.extractor).To(Equal(mockExtractor))
 			Expect(worker.extractor).To(Equal(mockExtractor))
-		})
-
-		It("should provide separate cache instances per component", func() {
-			master, err := factory.GetComponent("master")
-			Expect(err).NotTo(HaveOccurred())
-
-			worker, err := factory.GetComponent("worker")
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(master.cache).NotTo(BeIdenticalTo(worker.cache))
 		})
 	})
 })

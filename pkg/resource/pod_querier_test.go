@@ -1,4 +1,4 @@
-package resource_test
+package resource
 
 import (
 	"context"
@@ -7,8 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/utils/resource"
-	"github.com/run-ai/kai-bolt/pkg/utils/resource/query"
+	"github.com/run-ai/kai-bolt/pkg/query"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -17,7 +16,7 @@ var _ = Describe("PodQuerier", func() {
 	var (
 		ctx     context.Context
 		testPod corev1.Pod
-		querier *resource.PodQuerier
+		querier *PodQuerier
 	)
 
 	BeforeEach(func() {
@@ -49,7 +48,7 @@ var _ = Describe("PodQuerier", func() {
 			},
 		}
 
-		querier = resource.NewPodQuerier(testPod)
+		querier = NewPodQuerier(testPod)
 	})
 
 	Describe("ExtractGroupKeys", func() {
@@ -331,7 +330,7 @@ var _ = Describe("PodQuerier", func() {
 			It("should handle special characters in values", func() {
 				// Update the test pod to have a label with special characters
 				testPod.Labels["special"] = "value-with-special_chars.and:colons"
-				querier = resource.NewPodQuerier(testPod)
+				querier = NewPodQuerier(testPod)
 
 				value := "value-with-special_chars.and:colons"
 				selector := &v1alpha1.PodSelector{
@@ -347,7 +346,7 @@ var _ = Describe("PodQuerier", func() {
 			It("should handle values with quotes", func() {
 				// Update the test pod to have a label with quotes
 				testPod.Labels["quotes"] = `value-with-"quotes"`
-				querier = resource.NewPodQuerier(testPod)
+				querier = NewPodQuerier(testPod)
 
 				value := `value-with-"quotes"`
 				selector := &v1alpha1.PodSelector{

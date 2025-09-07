@@ -8,22 +8,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ComponentCache holds cached results for a component (no error caching)
-type ComponentCache struct {
-	// Cache results by method
-	podTemplateSpecs   []corev1.PodTemplateSpec
-	fragmentedPodSpecs []FragmentedPodSpec
-	podSpecs           []corev1.PodSpec
-	podMetadata        []metav1.ObjectMeta
-	scale              []Scale
-}
-
 // Component represents a ResourceInterface component with extraction capabilities
 type Component struct {
 	name       string
 	definition v1alpha1.ComponentDefinition
 	extractor  Extractor
-	cache      *ComponentCache
 }
 
 type FragmentedPodSpec struct {
@@ -68,29 +57,29 @@ func (c *Component) Definition() v1alpha1.ComponentDefinition {
 	return c.definition
 }
 
-// GetPodTemplateSpec extracts and caches pod template specs for this component
+// GetPodTemplateSpec extracts pod template specs for this component
 func (c *Component) GetPodTemplateSpec(ctx context.Context) ([]corev1.PodTemplateSpec, error) {
-	return getField(ctx, c, &c.cache.podTemplateSpecs, c.extractor.ExtractPodTemplateSpec)
+	return c.extractor.ExtractPodTemplateSpec(ctx, c.definition)
 }
 
-// GetFragmentedPodSpec extracts and caches fragmented pod specs for this component
+// GetFragmentedPodSpec extracts fragmented pod specs for this component
 func (c *Component) GetFragmentedPodSpec(ctx context.Context) ([]FragmentedPodSpec, error) {
-	return getField(ctx, c, &c.cache.fragmentedPodSpecs, c.extractor.ExtractFragmentedPodSpec)
+	return c.extractor.ExtractFragmentedPodSpec(ctx, c.definition)
 }
 
-// GetPodSpec extracts and caches pod spec for this component
+// GetPodSpec extracts pod spec for this component
 func (c *Component) GetPodSpec(ctx context.Context) ([]corev1.PodSpec, error) {
-	return getField(ctx, c, &c.cache.podSpecs, c.extractor.ExtractPodSpec)
+	return c.extractor.ExtractPodSpec(ctx, c.definition)
 }
 
-// GetPodMetadata extracts and caches pod metadata for this component
+// GetPodMetadata extracts pod metadata for this component
 func (c *Component) GetPodMetadata(ctx context.Context) ([]metav1.ObjectMeta, error) {
-	return getField(ctx, c, &c.cache.podMetadata, c.extractor.ExtractPodMetadata)
+	return c.extractor.ExtractPodMetadata(ctx, c.definition)
 }
 
-// GetScale extracts and caches scale data for this component
+// GetScale extracts scale data for this component
 func (c *Component) GetScale(ctx context.Context) ([]Scale, error) {
-	return getField(ctx, c, &c.cache.scale, c.extractor.ExtractScale)
+	return c.extractor.ExtractScale(ctx, c.definition)
 }
 
 // HasPodDefinition returns true if this component defines pods
@@ -108,20 +97,4 @@ func (c *Component) HasPodDefinition() bool {
 // GetPodSelector returns the pod selector for this component
 func (c *Component) GetPodSelector() *v1alpha1.PodSelector {
 	return c.definition.PodSelector
-}
-
-func getField[T any](ctx context.Context, component *Component, cacheEntry *[]T, extractionFn func(context.Context, v1alpha1.ComponentDefinition) ([]T, error)) ([]T, error) {
-	// Check component cache first
-	if *cacheEntry != nil {
-		return *cacheEntry, nil
-	}
-
-	extracted, err := extractionFn(ctx, component.definition)
-	if err != nil {
-		return nil, err
-	}
-
-	// Cache successful result
-	*cacheEntry = extracted
-	return extracted, nil
 }

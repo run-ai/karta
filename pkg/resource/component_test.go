@@ -41,7 +41,6 @@ var _ = Describe("Component", func() {
 			name:       "test-component",
 			definition: definition,
 			extractor:  mockExtractor,
-			cache:      &ComponentCache{},
 		}
 	})
 
@@ -162,7 +161,7 @@ var _ = Describe("Component", func() {
 	})
 
 	Context("GetPodTemplateSpec method", func() {
-		It("should delegate to extractor and cache results", func() {
+		It("should delegate to extractor", func() {
 			expectedTemplates := []corev1.PodTemplateSpec{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -176,15 +175,9 @@ var _ = Describe("Component", func() {
 				Return(expectedTemplates, nil).
 				Times(1)
 
-			// First call - hits the extractor
-			result1, err := component.GetPodTemplateSpec(ctx)
+			result, err := component.GetPodTemplateSpec(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result1).To(Equal(expectedTemplates))
-
-			// Second call - should use cache
-			result2, err := component.GetPodTemplateSpec(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result2).To(Equal(expectedTemplates))
+			Expect(result).To(Equal(expectedTemplates))
 		})
 
 		It("should propagate extractor errors", func() {
@@ -202,7 +195,7 @@ var _ = Describe("Component", func() {
 	})
 
 	Context("GetPodSpec method", func() {
-		It("should delegate to extractor and cache results", func() {
+		It("should delegate to extractor", func() {
 			expectedSpecs := []corev1.PodSpec{
 				{
 					Containers: []corev1.Container{
@@ -216,14 +209,9 @@ var _ = Describe("Component", func() {
 				Return(expectedSpecs, nil).
 				Times(1)
 
-			result1, err := component.GetPodSpec(ctx)
+			result, err := component.GetPodSpec(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result1).To(Equal(expectedSpecs))
-
-			// Second call should use cache
-			result2, err := component.GetPodSpec(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result2).To(Equal(expectedSpecs))
+			Expect(result).To(Equal(expectedSpecs))
 		})
 
 		It("should propagate extractor errors", func() {
@@ -241,7 +229,7 @@ var _ = Describe("Component", func() {
 	})
 
 	Context("GetPodMetadata method", func() {
-		It("should delegate to extractor and cache results", func() {
+		It("should delegate to extractor", func() {
 			expectedMetadata := []metav1.ObjectMeta{
 				{
 					Labels: map[string]string{"app": "test", "role": "worker"},
@@ -253,14 +241,9 @@ var _ = Describe("Component", func() {
 				Return(expectedMetadata, nil).
 				Times(1)
 
-			result1, err := component.GetPodMetadata(ctx)
+			result, err := component.GetPodMetadata(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result1).To(Equal(expectedMetadata))
-
-			// Second call should use cache
-			result2, err := component.GetPodMetadata(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result2).To(Equal(expectedMetadata))
+			Expect(result).To(Equal(expectedMetadata))
 		})
 
 		It("should propagate extractor errors", func() {
@@ -278,7 +261,7 @@ var _ = Describe("Component", func() {
 	})
 
 	Context("GetFragmentedPodSpec method", func() {
-		It("should delegate to extractor and cache results", func() {
+		It("should delegate to extractor", func() {
 			expectedFragmented := []FragmentedPodSpec{
 				{
 					Labels: map[string]string{"app": "test"},
@@ -293,14 +276,9 @@ var _ = Describe("Component", func() {
 				Return(expectedFragmented, nil).
 				Times(1)
 
-			result1, err := component.GetFragmentedPodSpec(ctx)
+			result, err := component.GetFragmentedPodSpec(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result1).To(Equal(expectedFragmented))
-
-			// Second call should use cache
-			result2, err := component.GetFragmentedPodSpec(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result2).To(Equal(expectedFragmented))
+			Expect(result).To(Equal(expectedFragmented))
 		})
 
 		It("should propagate extractor errors", func() {
@@ -318,7 +296,7 @@ var _ = Describe("Component", func() {
 	})
 
 	Context("GetScale method", func() {
-		It("should delegate to extractor and cache results", func() {
+		It("should delegate to extractor", func() {
 			expectedScales := []Scale{
 				{
 					Replicas:    func() *int32 { r := int32(3); return &r }(),
@@ -332,14 +310,9 @@ var _ = Describe("Component", func() {
 				Return(expectedScales, nil).
 				Times(1)
 
-			result1, err := component.GetScale(ctx)
+			result, err := component.GetScale(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result1).To(Equal(expectedScales))
-
-			// Second call should use cache
-			result2, err := component.GetScale(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result2).To(Equal(expectedScales))
+			Expect(result).To(Equal(expectedScales))
 		})
 
 		It("should propagate extractor errors", func() {
@@ -353,63 +326,6 @@ var _ = Describe("Component", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(BeNil())
 			Expect(err).To(Equal(expectedError))
-		})
-	})
-
-	Context("caching behavior across methods", func() {
-		It("should cache each extraction method independently", func() {
-			expectedTemplates := []corev1.PodTemplateSpec{{}}
-			expectedScales := []Scale{{Replicas: func() *int32 { r := int32(1); return &r }()}}
-
-			mockExtractor.EXPECT().
-				ExtractPodTemplateSpec(gomock.Eq(ctx), gomock.Any()).
-				Return(expectedTemplates, nil).
-				Times(1)
-
-			mockExtractor.EXPECT().
-				ExtractScale(gomock.Eq(ctx), gomock.Any()).
-				Return(expectedScales, nil).
-				Times(1)
-
-			// Each method should be cached separately
-			_, err := component.GetPodTemplateSpec(ctx)
-			Expect(err).NotTo(HaveOccurred())
-
-			_, err = component.GetScale(ctx)
-			Expect(err).NotTo(HaveOccurred())
-
-			// Second calls should use cache
-			_, err = component.GetPodTemplateSpec(ctx)
-			Expect(err).NotTo(HaveOccurred())
-
-			_, err = component.GetScale(ctx)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should not cache failed extractions", func() {
-			expectedError := errors.New("extraction failed")
-			successResult := []corev1.PodTemplateSpec{{}}
-
-			// First call fails
-			mockExtractor.EXPECT().
-				ExtractPodTemplateSpec(gomock.Eq(ctx), gomock.Any()).
-				Return(nil, expectedError).
-				Times(1)
-
-			// Second call succeeds
-			mockExtractor.EXPECT().
-				ExtractPodTemplateSpec(gomock.Eq(ctx), gomock.Any()).
-				Return(successResult, nil).
-				Times(1)
-
-			// First call - should fail
-			_, err := component.GetPodTemplateSpec(ctx)
-			Expect(err).To(HaveOccurred())
-
-			// Second call - should retry (not use cached error)
-			result, err := component.GetPodTemplateSpec(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(successResult))
 		})
 	})
 

@@ -28,7 +28,7 @@ generate: controller-gen ## Generate DeepCopy methods
 
 .PHONY: generate-mocks
 generate-mocks: mockgen ## Generate mocks using go generate
-	go generate ./pkg/utils/resource/...
+	go generate ./pkg/...
 
 .PHONY: test
 test: generate-mocks ## Run tests with mock generation

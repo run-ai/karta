@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/utils/resource/query"
+	"github.com/run-ai/kai-bolt/pkg/query"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,26 +25,22 @@ type ComponentFactory struct {
 	extractor Extractor // Shared extractor instance
 
 	componentDefinitionsByName map[string]v1alpha1.ComponentDefinition // Fast component definition lookup
-	componentCaches            map[string]*ComponentCache              // Per-component caches
 }
 
 // NewComponentFactory creates a new ResourceInterface-based component factory
 func NewComponentFactory(ri *v1alpha1.ResourceInterface, extractor Extractor) *ComponentFactory {
 	definitionsByName := make(map[string]v1alpha1.ComponentDefinition)
-	componentCaches := make(map[string]*ComponentCache)
 
 	// Create single slice with all components (root + children)
 	allDefinitions := append(ri.Spec.StructureDefinition.ChildComponents, ri.Spec.StructureDefinition.RootComponent)
 	for _, componentDefinition := range allDefinitions {
 		definitionsByName[componentDefinition.Name] = componentDefinition
-		componentCaches[componentDefinition.Name] = &ComponentCache{}
 	}
 
 	return &ComponentFactory{
 		ri:                         ri,
 		extractor:                  extractor,
 		componentDefinitionsByName: definitionsByName,
-		componentCaches:            componentCaches,
 	}
 }
 
@@ -62,14 +58,10 @@ func (f *ComponentFactory) GetComponent(name string) (*Component, error) {
 		return nil, fmt.Errorf("component %s not found", name)
 	}
 
-	// Cache is guaranteed to exist - pre-initialized in constructor
-	cache := f.componentCaches[name]
-
 	return &Component{
 		name:       name,
 		definition: definition,
 		extractor:  f.extractor,
-		cache:      cache,
 	}, nil
 }
 
