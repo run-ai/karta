@@ -9,12 +9,17 @@ import (
 // StructureSummary provides a pre-computed summary of ResourceInterface structure
 // for efficient navigation and lookup operations
 type StructureSummary struct {
-	RI                                *v1alpha1.ResourceInterface
-	ParentMap                         map[string]string                        // child component name -> parent component name
-	ChildrenMap                       map[string][]string                      // parent component name -> list of child component names
-	ComponentDefs                     map[string]*v1alpha1.ComponentDefinition // component name -> component definition
-	LeafComponents                    []string                                 // list of component names that have pod definitions
-	EffectiveGangSchedulingComponents map[string]string                        // component name -> effective gang scheduling component name
+	RI                    *v1alpha1.ResourceInterface
+	ParentMap             map[string]string                        // child component name -> parent component name
+	ChildrenMap           map[string][]string                      // parent component name -> list of child component names
+	ComponentDefs         map[string]*v1alpha1.ComponentDefinition // component name -> component definition
+	LeafComponents        []string                                 // list of component names that have pod definitions
+	GangSchedulingSummary *GangSchedulingSummary                   // summary of gang scheduling instructions
+}
+
+type GangSchedulingSummary struct {
+	EffectiveComponents map[string]string                       // component name -> effective gang scheduling component name
+	PodGroups           map[string]*v1alpha1.PodGroupDefinition // component name -> pod group definition
 }
 
 // NewStructureSummary creates a new StructureSummary by analyzing the ResourceInterface structure
@@ -24,12 +29,11 @@ func NewStructureSummary(ri *v1alpha1.ResourceInterface) (*StructureSummary, err
 	}
 
 	summary := &StructureSummary{
-		RI:                                ri,
-		ParentMap:                         make(map[string]string),
-		ChildrenMap:                       make(map[string][]string),
-		ComponentDefs:                     make(map[string]*v1alpha1.ComponentDefinition),
-		LeafComponents:                    make([]string, 0),
-		EffectiveGangSchedulingComponents: make(map[string]string),
+		RI:             ri,
+		ParentMap:      make(map[string]string),
+		ChildrenMap:    make(map[string][]string),
+		ComponentDefs:  make(map[string]*v1alpha1.ComponentDefinition),
+		LeafComponents: make([]string, 0),
 	}
 
 	if err := summary.build(); err != nil {
@@ -74,11 +78,24 @@ func (s *StructureSummary) build() error {
 		s.ChildrenMap[parentName] = append(s.ChildrenMap[parentName], childComponent.Name)
 	}
 
-	// Build a map of component name to effective component name for gang scheduling
-	var err error
-	s.EffectiveGangSchedulingComponents, err = buildGangSchedulingEffectiveComponents(s.RI, s.ParentMap)
-	if err != nil {
-		return fmt.Errorf("failed to build gang scheduling effective components: %w", err)
+	if s.RI.Spec.Instructions.GangScheduling != nil {
+		s.GangSchedulingSummary = &GangSchedulingSummary{
+			PodGroups: make(map[string]*v1alpha1.PodGroupDefinition),
+		}
+
+		// Build a map of component name to pod group name, of all components that are part of any pod group
+		for _, group := range s.RI.Spec.Instructions.GangScheduling.PodGroups {
+			for _, member := range group.Members {
+				s.GangSchedulingSummary.PodGroups[member.ComponentName] = &group
+			}
+		}
+
+		// Build a map of component name to effective component name for gang scheduling
+		var err error
+		s.GangSchedulingSummary.EffectiveComponents, err = buildGangSchedulingEffectiveComponents(s.RI, s.GangSchedulingSummary.PodGroups, s.ParentMap)
+		if err != nil {
+			return fmt.Errorf("failed to build gang scheduling effective components: %w", err)
+		}
 	}
 
 	return nil
@@ -95,19 +112,11 @@ func hasPodDefinition(component v1alpha1.ComponentDefinition) bool {
 		component.SpecDefinition.FragmentedPodSpecDefinition != nil
 }
 
-func buildGangSchedulingEffectiveComponents(ri *v1alpha1.ResourceInterface, parentMap map[string]string) (map[string]string, error) {
+func buildGangSchedulingEffectiveComponents(ri *v1alpha1.ResourceInterface, memberToGroupMap map[string]*v1alpha1.PodGroupDefinition, parentMap map[string]string) (map[string]string, error) {
 	effectiveComponents := make(map[string]string)
 
 	if ri.Spec.Instructions.GangScheduling == nil {
 		return effectiveComponents, nil
-	}
-
-	// Build a map of component name to pod group name, of all components that are part of any pod group
-	memberToGroupMap := make(map[string]string)
-	for _, group := range ri.Spec.Instructions.GangScheduling.PodGroups {
-		for _, member := range group.Members {
-			memberToGroupMap[member.ComponentName] = group.Name
-		}
 	}
 
 	// For every component, find its effective component (the component/parent component that is part of any pod group definition)
@@ -124,7 +133,7 @@ func buildGangSchedulingEffectiveComponents(ri *v1alpha1.ResourceInterface, pare
 	return effectiveComponents, nil
 }
 
-func findEffectiveComponent(startComponent string, parentMap map[string]string, memberToGroupMap map[string]string) (string, error) {
+func findEffectiveComponent(startComponent string, parentMap map[string]string, memberToGroupMap map[string]*v1alpha1.PodGroupDefinition) (string, error) {
 	current := startComponent
 
 	for current != "" {
