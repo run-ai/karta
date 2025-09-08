@@ -2,24 +2,33 @@ package instructions
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+	"github.com/samber/lo"
 )
 
 // StructureSummary provides a pre-computed summary of ResourceInterface structure
 // for efficient navigation and lookup operations
 type StructureSummary struct {
-	ri                    *v1alpha1.ResourceInterface
-	parentMap             map[string]string                        // child component name -> parent component name
-	childrenMap           map[string][]string                      // parent component name -> list of child component names
-	componentDefs         map[string]*v1alpha1.ComponentDefinition // component name -> component definition
-	leafComponents        []string                                 // list of component names that have pod definitions
-	gangSchedulingSummary *gangSchedulingSummary                   // summary of gang scheduling instructions
+	ri                         *v1alpha1.ResourceInterface
+	parentMap                  map[string]string                        // child component name -> parent component name
+	childrenMap                map[string][]string                      // parent component name -> list of child component names
+	componentDefinitionsByName map[string]*v1alpha1.ComponentDefinition // component name -> component definition
+	leafComponents             []string                                 // list of component names that have pod definitions
+	gangSchedulingSummary      *gangSchedulingSummary                   // summary of gang scheduling instructions
+}
+
+type effectiveComponentCandidate struct {
+	effectiveComponent string                             // the actual effective component name
+	podGroupName       string                             // the pod group name this belongs to
+	member             *v1alpha1.PodGroupMemberDefinition // the specific member definition with selector
 }
 
 type gangSchedulingSummary struct {
-	effectiveComponents map[string]string                       // component name -> effective gang scheduling component name
-	podGroups           map[string]*v1alpha1.PodGroupDefinition // component name -> pod group definition
+	// Map from component name to all possible effective components for that component
+	effectiveComponentCandidates map[string][]effectiveComponentCandidate
+	podGroupsByName              map[string]*v1alpha1.PodGroupDefinition // pod group name -> pod group definition
 }
 
 // NewStructureSummary creates a new StructureSummary by analyzing the ResourceInterface structure
@@ -29,11 +38,11 @@ func NewStructureSummary(ri *v1alpha1.ResourceInterface) (*StructureSummary, err
 	}
 
 	summary := &StructureSummary{
-		ri:             ri,
-		parentMap:      make(map[string]string),
-		childrenMap:    make(map[string][]string),
-		componentDefs:  make(map[string]*v1alpha1.ComponentDefinition),
-		leafComponents: make([]string, 0),
+		ri:                         ri,
+		parentMap:                  make(map[string]string),
+		childrenMap:                make(map[string][]string),
+		componentDefinitionsByName: make(map[string]*v1alpha1.ComponentDefinition),
+		leafComponents:             make([]string, 0),
 	}
 
 	if err := summary.build(); err != nil {
@@ -45,60 +54,126 @@ func NewStructureSummary(ri *v1alpha1.ResourceInterface) (*StructureSummary, err
 
 // buildMaps constructs all the lookup maps and metadata from the ResourceInterface
 func (s *StructureSummary) build() error {
-	// Process root component
-	rootComponent := s.ri.Spec.StructureDefinition.RootComponent
-	s.componentDefs[rootComponent.Name] = &rootComponent
-
-	// Check if root has pod definition
-	if hasPodDefinition(rootComponent) {
-		s.leafComponents = append(s.leafComponents, rootComponent.Name)
-	}
-
-	// Process child components
-	for _, childComponent := range s.ri.Spec.StructureDefinition.ChildComponents {
+	for _, component := range s.getAllComponents() {
 		// Add to component definitions map
-		s.componentDefs[childComponent.Name] = &childComponent
+		s.componentDefinitionsByName[component.Name] = &component
 
 		// Check if child has pod definition
-		if hasPodDefinition(childComponent) {
-			s.leafComponents = append(s.leafComponents, childComponent.Name)
+		if hasPodDefinition(component) {
+			s.leafComponents = append(s.leafComponents, component.Name)
 		}
 
 		// Build parent-child relationships (only for child components with OwnerRef)
-		if childComponent.OwnerRef == nil {
-			return fmt.Errorf("child component %s must have OwnerRef", childComponent.Name)
+		if component.OwnerRef != nil {
+			parentName := *component.OwnerRef
+
+			// Add to parent map
+			s.parentMap[component.Name] = parentName
+
+			// Add to children map
+			s.childrenMap[parentName] = append(s.childrenMap[parentName], component.Name)
 		}
-
-		parentName := *childComponent.OwnerRef
-
-		// Add to parent map
-		s.parentMap[childComponent.Name] = parentName
-
-		// Add to children map
-		s.childrenMap[parentName] = append(s.childrenMap[parentName], childComponent.Name)
 	}
 
 	if s.ri.Spec.Instructions.GangScheduling != nil {
 		s.gangSchedulingSummary = &gangSchedulingSummary{
-			podGroups: make(map[string]*v1alpha1.PodGroupDefinition),
+			effectiveComponentCandidates: make(map[string][]effectiveComponentCandidate),
 		}
 
-		// Build a map of component name to pod group name, of all components that are part of any pod group
-		for _, group := range s.ri.Spec.Instructions.GangScheduling.PodGroups {
-			for _, member := range group.Members {
-				s.gangSchedulingSummary.podGroups[member.ComponentName] = &group
-			}
-		}
+		s.gangSchedulingSummary.podGroupsByName = lo.SliceToMap(
+			s.ri.Spec.Instructions.GangScheduling.PodGroups,
+			func(group v1alpha1.PodGroupDefinition) (string, *v1alpha1.PodGroupDefinition) {
+				return group.Name, &group
+			},
+		)
 
-		// Build a map of component name to effective component name for gang scheduling
-		var err error
-		s.gangSchedulingSummary.effectiveComponents, err = buildGangSchedulingEffectiveComponents(s.ri, s.gangSchedulingSummary.podGroups, s.parentMap)
+		// Build effective component candidates for each component
+		err := s.buildEffectiveComponentCandidates()
 		if err != nil {
-			return fmt.Errorf("failed to build gang scheduling effective components: %w", err)
+			return fmt.Errorf("failed to build effective component candidates: %w", err)
 		}
 	}
 
 	return nil
+}
+
+// buildEffectiveComponentCandidates builds the map of all possible effective components for each component
+func (s *StructureSummary) buildEffectiveComponentCandidates() error {
+	// For each component, find all possible effective components
+	for _, component := range s.getAllComponents() {
+		candidates := s.findEffectiveComponentCandidates(component.Name)
+		if len(candidates) > 0 {
+			// Sort candidates by priority: direct mentions first, then others
+			sortedCandidates := s.sortEffectiveComponentCandidatesByPriority(candidates, component.Name)
+			s.gangSchedulingSummary.effectiveComponentCandidates[component.Name] = sortedCandidates
+		}
+	}
+
+	return nil
+}
+
+// findEffectiveComponentCandidates finds all possible effective components for a given component
+func (s *StructureSummary) findEffectiveComponentCandidates(componentName string) []effectiveComponentCandidate {
+	var candidates []effectiveComponentCandidate
+
+	// Check the component itself and all its parents
+	current := componentName
+	for current != "" {
+		// Look for this component in all pod groups
+		for _, group := range s.ri.Spec.Instructions.GangScheduling.PodGroups {
+			for _, member := range group.Members {
+				if member.ComponentName == current {
+					candidates = append(candidates, effectiveComponentCandidate{
+						effectiveComponent: current,
+						podGroupName:       group.Name,
+						member:             &member,
+					})
+				}
+			}
+		}
+
+		// Move to parent
+		current = s.parentMap[current]
+	}
+
+	return candidates
+}
+
+// sortEffectiveComponentCandidatesByPriority sorts candidates to prioritize direct component mentions
+// over parent/ancestor components. This ensures that when resolving effective components at runtime,
+// we try the most specific matches first (the component itself) before falling back to broader
+// matches (parent components). This provides predictable "first hit wins" behavior where users
+// can rely on more specific selectors taking precedence over general fallback rules.
+// With all this, users are encouraged to define mutually exclusive pod groups for different components.
+//
+// Example: For component "worker":
+//   - Direct mentions of "worker" in pod groups (with different selectors&filters) come first
+//   - Mentions of parent components like "pytorch-job" come after
+//
+// Within the same priority level (all direct, or all parents), the original definition order
+// is preserved via stable sort, giving users predictable behavior based on YAML ordering.
+func (s *StructureSummary) sortEffectiveComponentCandidatesByPriority(candidates []effectiveComponentCandidate, originalComponent string) []effectiveComponentCandidate {
+	sortedCandidates := make([]effectiveComponentCandidate, len(candidates))
+	copy(sortedCandidates, candidates)
+
+	sort.Slice(sortedCandidates, func(i, j int) bool {
+		// Priority: Direct component mentions first, everything else after
+		iIsDirect := sortedCandidates[i].effectiveComponent == originalComponent
+		jIsDirect := sortedCandidates[j].effectiveComponent == originalComponent
+
+		if iIsDirect != jIsDirect {
+			return iIsDirect // Direct mentions first
+		}
+
+		// For same priority level, preserve original order (stable sort)
+		return false
+	})
+
+	return sortedCandidates
+}
+
+func (s *StructureSummary) getAllComponents() []v1alpha1.ComponentDefinition {
+	return append([]v1alpha1.ComponentDefinition{s.ri.Spec.StructureDefinition.RootComponent}, s.ri.Spec.StructureDefinition.ChildComponents...)
 }
 
 // hasPodDefinition returns true if the component has any pod-related definition
@@ -110,41 +185,4 @@ func hasPodDefinition(component v1alpha1.ComponentDefinition) bool {
 	return component.SpecDefinition.PodTemplateSpecPath != nil ||
 		component.SpecDefinition.PodSpecPath != nil ||
 		component.SpecDefinition.FragmentedPodSpecDefinition != nil
-}
-
-func buildGangSchedulingEffectiveComponents(ri *v1alpha1.ResourceInterface, memberToGroupMap map[string]*v1alpha1.PodGroupDefinition, parentMap map[string]string) (map[string]string, error) {
-	effectiveComponents := make(map[string]string)
-
-	if ri.Spec.Instructions.GangScheduling == nil {
-		return effectiveComponents, nil
-	}
-
-	// For every component, find its effective component (the component/parent component that is part of any pod group definition)
-	for _, component := range ri.Spec.StructureDefinition.ChildComponents {
-		if _, ok := memberToGroupMap[component.Name]; ok {
-			effectiveComponent, err := findEffectiveComponent(component.Name, parentMap, memberToGroupMap)
-			if err != nil {
-				return effectiveComponents, err
-			}
-			effectiveComponents[component.Name] = effectiveComponent
-		}
-	}
-
-	return effectiveComponents, nil
-}
-
-func findEffectiveComponent(startComponent string, parentMap map[string]string, memberToGroupMap map[string]*v1alpha1.PodGroupDefinition) (string, error) {
-	current := startComponent
-
-	for current != "" {
-		// Check if current component is mentioned in any pod group definition
-		if _, ok := memberToGroupMap[current]; ok {
-			return current, nil
-		}
-
-		// Move to parent using direct map access
-		current = parentMap[current]
-	}
-
-	return "", fmt.Errorf("no effective component found for %s", startComponent)
 }
