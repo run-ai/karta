@@ -52,6 +52,11 @@ func NewStructureSummary(ri *v1alpha1.ResourceInterface) (*StructureSummary, err
 	return summary, nil
 }
 
+// GetRI returns the underlying Resource Interface
+func (s *StructureSummary) GetRI() *v1alpha1.ResourceInterface {
+	return s.ri
+}
+
 // buildMaps constructs all the lookup maps and metadata from the ResourceInterface
 func (s *StructureSummary) build() error {
 	for _, component := range s.getAllComponents() {
