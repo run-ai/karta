@@ -16,11 +16,11 @@ type PodGroupDefinition struct {
 	// Members defines which components belong to this pod group
 	// +listType=map
 	// +listMapKey=componentName
-	Members []GroupingSelector `json:"members"`
+	Members []PodGroupMemberDefinition `json:"members"`
 }
 
-// GroupingSelector defines how to select and filter components for grouping instructions.
-type GroupingSelector struct {
+// PodGroupMemberDefinition defines how to select and filter components for grouping instructions.
+type PodGroupMemberDefinition struct {
 	// ComponentName references a component defined in the RI's structureDefinition
 	// +kubebuilder:validation:Required
 	ComponentName string `json:"componentName"`

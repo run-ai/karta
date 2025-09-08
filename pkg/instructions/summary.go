@@ -9,17 +9,17 @@ import (
 // StructureSummary provides a pre-computed summary of ResourceInterface structure
 // for efficient navigation and lookup operations
 type StructureSummary struct {
-	RI                    *v1alpha1.ResourceInterface
-	ParentMap             map[string]string                        // child component name -> parent component name
-	ChildrenMap           map[string][]string                      // parent component name -> list of child component names
-	ComponentDefs         map[string]*v1alpha1.ComponentDefinition // component name -> component definition
-	LeafComponents        []string                                 // list of component names that have pod definitions
-	GangSchedulingSummary *gangSchedulingSummary                   // summary of gang scheduling instructions
+	ri                    *v1alpha1.ResourceInterface
+	parentMap             map[string]string                        // child component name -> parent component name
+	childrenMap           map[string][]string                      // parent component name -> list of child component names
+	componentDefs         map[string]*v1alpha1.ComponentDefinition // component name -> component definition
+	leafComponents        []string                                 // list of component names that have pod definitions
+	gangSchedulingSummary *gangSchedulingSummary                   // summary of gang scheduling instructions
 }
 
 type gangSchedulingSummary struct {
-	EffectiveComponents map[string]string                       // component name -> effective gang scheduling component name
-	PodGroups           map[string]*v1alpha1.PodGroupDefinition // component name -> pod group definition
+	effectiveComponents map[string]string                       // component name -> effective gang scheduling component name
+	podGroups           map[string]*v1alpha1.PodGroupDefinition // component name -> pod group definition
 }
 
 // NewStructureSummary creates a new StructureSummary by analyzing the ResourceInterface structure
@@ -29,11 +29,11 @@ func NewStructureSummary(ri *v1alpha1.ResourceInterface) (*StructureSummary, err
 	}
 
 	summary := &StructureSummary{
-		RI:             ri,
-		ParentMap:      make(map[string]string),
-		ChildrenMap:    make(map[string][]string),
-		ComponentDefs:  make(map[string]*v1alpha1.ComponentDefinition),
-		LeafComponents: make([]string, 0),
+		ri:             ri,
+		parentMap:      make(map[string]string),
+		childrenMap:    make(map[string][]string),
+		componentDefs:  make(map[string]*v1alpha1.ComponentDefinition),
+		leafComponents: make([]string, 0),
 	}
 
 	if err := summary.build(); err != nil {
@@ -46,22 +46,22 @@ func NewStructureSummary(ri *v1alpha1.ResourceInterface) (*StructureSummary, err
 // buildMaps constructs all the lookup maps and metadata from the ResourceInterface
 func (s *StructureSummary) build() error {
 	// Process root component
-	rootComponent := s.RI.Spec.StructureDefinition.RootComponent
-	s.ComponentDefs[rootComponent.Name] = &rootComponent
+	rootComponent := s.ri.Spec.StructureDefinition.RootComponent
+	s.componentDefs[rootComponent.Name] = &rootComponent
 
 	// Check if root has pod definition
 	if hasPodDefinition(rootComponent) {
-		s.LeafComponents = append(s.LeafComponents, rootComponent.Name)
+		s.leafComponents = append(s.leafComponents, rootComponent.Name)
 	}
 
 	// Process child components
-	for _, childComponent := range s.RI.Spec.StructureDefinition.ChildComponents {
+	for _, childComponent := range s.ri.Spec.StructureDefinition.ChildComponents {
 		// Add to component definitions map
-		s.ComponentDefs[childComponent.Name] = &childComponent
+		s.componentDefs[childComponent.Name] = &childComponent
 
 		// Check if child has pod definition
 		if hasPodDefinition(childComponent) {
-			s.LeafComponents = append(s.LeafComponents, childComponent.Name)
+			s.leafComponents = append(s.leafComponents, childComponent.Name)
 		}
 
 		// Build parent-child relationships (only for child components with OwnerRef)
@@ -72,27 +72,27 @@ func (s *StructureSummary) build() error {
 		parentName := *childComponent.OwnerRef
 
 		// Add to parent map
-		s.ParentMap[childComponent.Name] = parentName
+		s.parentMap[childComponent.Name] = parentName
 
 		// Add to children map
-		s.ChildrenMap[parentName] = append(s.ChildrenMap[parentName], childComponent.Name)
+		s.childrenMap[parentName] = append(s.childrenMap[parentName], childComponent.Name)
 	}
 
-	if s.RI.Spec.Instructions.GangScheduling != nil {
-		s.GangSchedulingSummary = &gangSchedulingSummary{
-			PodGroups: make(map[string]*v1alpha1.PodGroupDefinition),
+	if s.ri.Spec.Instructions.GangScheduling != nil {
+		s.gangSchedulingSummary = &gangSchedulingSummary{
+			podGroups: make(map[string]*v1alpha1.PodGroupDefinition),
 		}
 
 		// Build a map of component name to pod group name, of all components that are part of any pod group
-		for _, group := range s.RI.Spec.Instructions.GangScheduling.PodGroups {
+		for _, group := range s.ri.Spec.Instructions.GangScheduling.PodGroups {
 			for _, member := range group.Members {
-				s.GangSchedulingSummary.PodGroups[member.ComponentName] = &group
+				s.gangSchedulingSummary.podGroups[member.ComponentName] = &group
 			}
 		}
 
 		// Build a map of component name to effective component name for gang scheduling
 		var err error
-		s.GangSchedulingSummary.EffectiveComponents, err = buildGangSchedulingEffectiveComponents(s.RI, s.GangSchedulingSummary.PodGroups, s.ParentMap)
+		s.gangSchedulingSummary.effectiveComponents, err = buildGangSchedulingEffectiveComponents(s.ri, s.gangSchedulingSummary.podGroups, s.parentMap)
 		if err != nil {
 			return fmt.Errorf("failed to build gang scheduling effective components: %w", err)
 		}

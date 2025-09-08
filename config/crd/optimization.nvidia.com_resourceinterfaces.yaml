@@ -69,8 +69,8 @@ spec:
                               description: Members defines which components belong
                                 to this pod group
                               items:
-                                description: GroupingSelector defines how to select
-                                  and filter components for grouping instructions.
+                                description: PodGroupMemberDefinition defines how
+                                  to select and filter components for grouping instructions.
                                 properties:
                                   componentName:
                                     description: ComponentName references a component

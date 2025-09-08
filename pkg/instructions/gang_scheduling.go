@@ -5,17 +5,19 @@ import (
 	"fmt"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/utils/resource"
+	"github.com/run-ai/kai-bolt/pkg/resource"
+	"github.com/samber/lo"
 )
 
+// InferPodComponent infers the component name for the given pod
 func InferPodComponent(ctx context.Context, podQuerier *resource.PodQuerier, summary *StructureSummary) (string, error) {
-	if len(summary.LeafComponents) == 1 {
-		return summary.LeafComponents[0], nil
+	if len(summary.leafComponents) == 1 {
+		return summary.leafComponents[0], nil
 	}
 
 	// Only check leaf components (have pod definitions)
-	for _, componentName := range summary.LeafComponents {
-		leafDefinition := summary.ComponentDefs[componentName]
+	for _, componentName := range summary.leafComponents {
+		leafDefinition := summary.componentDefs[componentName]
 
 		// Check if pod matches this component's selector
 		matches, err := podQuerier.Matches(ctx, leafDefinition.PodSelector)
@@ -30,17 +32,19 @@ func InferPodComponent(ctx context.Context, podQuerier *resource.PodQuerier, sum
 	return "", fmt.Errorf("no component found for pod %s", podQuerier.GetPodName())
 }
 
+// GetEffectiveComponent returns the effective component name for the given component
 func GetEffectiveComponent(componentName string, summary *StructureSummary) (string, bool) {
-	if summary.GangSchedulingSummary == nil {
+	if summary.gangSchedulingSummary == nil {
 		return "", false
 	}
 
-	effective, exists := summary.GangSchedulingSummary.EffectiveComponents[componentName]
+	effective, exists := summary.gangSchedulingSummary.effectiveComponents[componentName]
 	return effective, exists
 }
 
-func GetPodGroupForComponent(componentName string, summary *StructureSummary) (*v1alpha1.PodGroupDefinition, bool) {
-	if summary.GangSchedulingSummary == nil {
+// GetEffectivePodGroupForComponent returns the pod group for the effective component
+func GetEffectivePodGroupForComponent(componentName string, summary *StructureSummary) (*v1alpha1.PodGroupDefinition, bool) {
+	if summary.gangSchedulingSummary == nil {
 		return nil, false
 	}
 
@@ -49,8 +53,26 @@ func GetPodGroupForComponent(componentName string, summary *StructureSummary) (*
 		return nil, false
 	}
 
-	group, exists := summary.GangSchedulingSummary.PodGroups[effective]
+	group, exists := summary.gangSchedulingSummary.podGroups[effective]
 	return group, exists
+}
+
+// GetEffectiveComponentMemberDefinition returns the pod group member definition for the effective component
+func GetEffectiveComponentMemberDefinition(componentName string, summary *StructureSummary) (*v1alpha1.PodGroupMemberDefinition, bool) {
+	group, exists := GetEffectivePodGroupForComponent(componentName, summary)
+	if !exists {
+		return nil, false
+	}
+
+	lo.Filter(group.Members, func(selector v1alpha1.PodGroupMemberDefinition, _ int) bool {
+		return selector.ComponentName == componentName
+	})
+
+	if len(group.Members) == 0 {
+		return nil, false
+	}
+
+	return &group.Members[0], true
 }
 
 // CalculateSubtreeScale calculates the aggregated scale for a component subtree
@@ -73,7 +95,7 @@ func CalculateSubtreeScale(ctx context.Context, componentName string, factory *r
 	}
 
 	// Get children
-	children := summary.ChildrenMap[componentName]
+	children := summary.childrenMap[componentName]
 	if len(children) == 0 {
 		// Leaf component - return its total scale
 		return currentComponentTotalScale, nil
