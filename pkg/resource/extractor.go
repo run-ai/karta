@@ -153,6 +153,7 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 		podAffinityResults       []*corev1.PodAffinity
 		nodeAffinityResults      []*corev1.NodeAffinity
 		containersResults        [][]corev1.Container
+		containerResults         []corev1.Container
 		priorityClassNameResults []string
 		imageResults             []string
 	)
@@ -199,6 +200,11 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 	}
 	specCount = max(specCount, len(containersResults))
 
+	if err := extract(ctx, fragmentedDefinition.ContainerPath, e.queryEvaluator, &containerResults); err != nil {
+		return nil, err
+	}
+	specCount = max(specCount, len(containerResults))
+
 	if err := extract(ctx, fragmentedDefinition.PriorityClassNamePath, e.queryEvaluator, &priorityClassNameResults); err != nil {
 		return nil, err
 	}
@@ -220,6 +226,7 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 			PodAffinity:       safeGetByIndex(podAffinityResults, i),
 			NodeAffinity:      safeGetByIndex(nodeAffinityResults, i),
 			Containers:        safeGetByIndex(containersResults, i),
+			Container:         safeGetByIndex(containerResults, i),
 			PriorityClassName: safeGetByIndex(priorityClassNameResults, i),
 			Image:             safeGetByIndex(imageResults, i),
 		}

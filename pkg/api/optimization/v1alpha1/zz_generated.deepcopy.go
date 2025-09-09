@@ -132,6 +132,11 @@ func (in *FragmentedPodSpecDefinition) DeepCopyInto(out *FragmentedPodSpecDefini
 		*out = new(string)
 		**out = **in
 	}
+	if in.ContainerPath != nil {
+		in, out := &in.ContainerPath, &out.ContainerPath
+		*out = new(string)
+		**out = **in
+	}
 	if in.PriorityClassNamePath != nil {
 		in, out := &in.PriorityClassNamePath, &out.PriorityClassNamePath
 		*out = new(string)

@@ -263,6 +263,8 @@ var _ = Describe("InterfaceExtractor", func() {
 				Expect(apiSpec.Containers[0].Ports).To(HaveLen(1))
 				Expect(apiSpec.Containers[0].Ports[0].ContainerPort).To(Equal(int32(8080)))
 				Expect(apiSpec.Containers[0].Env).To(ContainElement(corev1.EnvVar{Name: "PORT", Value: "8080"}))
+				Expect(apiSpec.Container.Name).To(Equal("api-server-main"))
+				Expect(apiSpec.Container.Image).To(Equal("api:latest"))
 				Expect(apiSpec.Resources.Requests).To(HaveKeyWithValue(corev1.ResourceCPU, resource.MustParse("500m")))
 				Expect(apiSpec.Resources.Requests).To(HaveKeyWithValue(corev1.ResourceMemory, resource.MustParse("1Gi")))
 				Expect(apiSpec.Resources.Limits).To(HaveKeyWithValue(corev1.ResourceCPU, resource.MustParse("1")))

@@ -290,6 +290,7 @@ func (in *ServiceSpec) DeepCopyInto(out *ServiceSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	in.MainContainer.DeepCopyInto(&out.MainContainer)
 	in.Resources.DeepCopyInto(&out.Resources)
 }
 
