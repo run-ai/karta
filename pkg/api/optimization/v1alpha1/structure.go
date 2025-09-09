@@ -3,7 +3,7 @@ package v1alpha1
 // GroupVersionKind represents a Kubernetes API object's group, version, and kind.
 type GroupVersionKind struct {
 	// Group is the API group of the resource
-	Group string `json:"group,omitempty"`
+	Group string `json:"group"`
 
 	// Version is the API version of the resource
 	Version string `json:"version"`
@@ -15,7 +15,7 @@ type GroupVersionKind struct {
 // ComponentDefinition defines a single component in the workload hierarchy.
 // Components represent logical units of computation that can be optimized independently.
 type ComponentDefinition struct {
-	// Name is the unique identifier for this component within the RID
+	// Name is the unique identifier for this component within the RI
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 
@@ -129,6 +129,7 @@ type ScaleDefinition struct {
 // PodSelector defines how to identify pods belonging to a specific component.
 type PodSelector struct {
 	// KeyPath is the JQ path to the identifying key/label on the pod
+	// Paths are evaluated at the pod level, not at the root level
 	// +kubebuilder:validation:Required
 	KeyPath string `json:"keyPath"`
 
