@@ -2,6 +2,7 @@ package instructions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
@@ -100,6 +101,16 @@ func getEffectiveComponentForPod(ctx context.Context, podQuerier *resource.PodQu
 
 // CalculateSubtreeScale calculates the aggregated scale for a component subtree
 func CalculateSubtreeScale(ctx context.Context, componentName string, factory *resource.ComponentFactory, summary *StructureSummary) (int32, error) {
+	if summary.hasScaleDefinition {
+		return calculateSubtreeScaleByDefinition(ctx, componentName, factory, summary)
+	}
+
+	// if no component in the RI had defined scale, return the count of leaf components in this subtree
+	return calculateSubtreeScaleByLeaves(componentName, summary), nil
+}
+
+// calculateSubtreeScaleByDefinition calculates the aggregated scale for a component subtree based on scale definitions
+func calculateSubtreeScaleByDefinition(ctx context.Context, componentName string, factory *resource.ComponentFactory, summary *StructureSummary) (int32, error) {
 	// Get this component's scale
 	component, err := factory.GetComponent(componentName)
 	if err != nil {
@@ -108,7 +119,13 @@ func CalculateSubtreeScale(ctx context.Context, componentName string, factory *r
 
 	scales, err := component.GetScale(ctx)
 	if err != nil {
-		return 0, err
+		var notFoundErr resource.DefinitionNotFoundError
+		if !errors.As(err, &notFoundErr) {
+			return 0, err
+		}
+
+		// it's allowed to not have scale definition
+		scales = nil
 	}
 
 	var currentComponentTotalScale int32
@@ -127,7 +144,7 @@ func CalculateSubtreeScale(ctx context.Context, componentName string, factory *r
 	// Parent component - calculate children sum, then multiply by parent scale
 	var childrenSum int32
 	for _, child := range children {
-		childScale, err := CalculateSubtreeScale(ctx, child, factory, summary)
+		childScale, err := calculateSubtreeScaleByDefinition(ctx, child, factory, summary)
 		if err != nil {
 			return 0, err
 		}
@@ -146,6 +163,27 @@ func CalculateSubtreeScale(ctx context.Context, componentName string, factory *r
 
 	// If both current component and children have scale definitions, multiply the current component scale by the children sum
 	return currentComponentTotalScale * childrenSum, nil
+}
+
+// calculateSubtreeScaleByLeaves is a fallback method for cases where the RI does not contain any scale definition.
+// It returns the number of leaf components (components with SpecDefinition) in the subtree rooted at the given component.
+func calculateSubtreeScaleByLeaves(componentName string, summary *StructureSummary) int32 {
+	var leafCount int32
+
+	// Check if this component is a leaf
+	if componentDef := summary.componentDefinitionsByName[componentName]; componentDef != nil {
+		if hasPodDefinition(*componentDef) {
+			leafCount = 1
+		}
+	}
+
+	// Recursively count leaves in all child subtrees
+	children := summary.childrenMap[componentName]
+	for _, child := range children {
+		leafCount += calculateSubtreeScaleByLeaves(child, summary)
+	}
+
+	return leafCount
 }
 
 // getEffectiveMinReplicas determines the minimum replicas for a component

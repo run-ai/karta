@@ -16,6 +16,7 @@ type StructureSummary struct {
 	childrenMap                map[string][]string                      // parent component name -> list of child component names
 	componentDefinitionsByName map[string]*v1alpha1.ComponentDefinition // component name -> component definition
 	leafComponents             []string                                 // list of component names that have pod definitions
+	hasScaleDefinition         bool                                     // true if any of the resource interface components has a scale definition
 	gangSchedulingSummary      *gangSchedulingSummary                   // summary of gang scheduling instructions
 }
 
@@ -43,6 +44,7 @@ func NewStructureSummary(ri *v1alpha1.ResourceInterface) (*StructureSummary, err
 		childrenMap:                make(map[string][]string),
 		componentDefinitionsByName: make(map[string]*v1alpha1.ComponentDefinition),
 		leafComponents:             make([]string, 0),
+		hasScaleDefinition:         false,
 	}
 
 	if err := summary.build(); err != nil {
@@ -66,6 +68,11 @@ func (s *StructureSummary) build() error {
 		// Check if child has pod definition
 		if hasPodDefinition(component) {
 			s.leafComponents = append(s.leafComponents, component.Name)
+		}
+
+		// Check if component has scale definition
+		if component.ScaleDefinition != nil {
+			s.hasScaleDefinition = true
 		}
 
 		// Build parent-child relationships (only for child components with OwnerRef)
