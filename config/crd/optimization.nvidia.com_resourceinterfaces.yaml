@@ -69,8 +69,8 @@ spec:
                               description: Members defines which components belong
                                 to this pod group
                               items:
-                                description: GroupingSelector defines how to select
-                                  and filter components for grouping instructions.
+                                description: PodGroupMemberDefinition defines how
+                                  to select and filter components for grouping instructions.
                                 properties:
                                   componentName:
                                     description: ComponentName references a component
@@ -229,8 +229,13 @@ spec:
                                   description: AnnotationsPath is the JQ path to pod
                                     annotations
                                   type: string
+                                containerPath:
+                                  description: |-
+                                    ContainesPath is the JQ path to a single container specifications
+                                    Used when the component has only one container
+                                  type: string
                                 containersPath:
-                                  description: ContainersPath is the JQ path to container
+                                  description: ContainersPath is the JQ path to containers
                                     specifications
                                   type: string
                                 imagePath:
@@ -559,8 +564,13 @@ spec:
                                 description: AnnotationsPath is the JQ path to pod
                                   annotations
                                 type: string
+                              containerPath:
+                                description: |-
+                                  ContainesPath is the JQ path to a single container specifications
+                                  Used when the component has only one container
+                                type: string
                               containersPath:
-                                description: ContainersPath is the JQ path to container
+                                description: ContainersPath is the JQ path to containers
                                   specifications
                                 type: string
                               imagePath:

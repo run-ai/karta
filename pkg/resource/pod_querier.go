@@ -12,13 +12,19 @@ import (
 
 // PodQuerier handles JQ-based querying operations against pods
 type PodQuerier struct {
+	pod            *corev1.Pod
 	queryEvaluator query.QueryEvaluator
 }
 
-func NewPodQuerier(pod corev1.Pod) *PodQuerier {
+func NewPodQuerier(pod *corev1.Pod) *PodQuerier {
 	return &PodQuerier{
+		pod:            pod,
 		queryEvaluator: query.NewDefaultJqEvaluator(pod),
 	}
+}
+
+func (pq *PodQuerier) GetPodName() string {
+	return pq.pod.Name
 }
 
 // Matches returns true if the pod matches the given selector

@@ -11,6 +11,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// DefinitionNotFoundError represents an error when a requested definition is not found
+type DefinitionNotFoundError string
+
+func (e DefinitionNotFoundError) Error() string {
+	return string(e)
+}
+
 // InterfaceExtractor implements extraction using QueryEvaluator
 type InterfaceExtractor struct {
 	queryEvaluator query.QueryEvaluator
@@ -24,11 +31,11 @@ func NewInterfaceExtractor(queryEvaluator query.QueryEvaluator) *InterfaceExtrac
 
 func (e *InterfaceExtractor) ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error) {
 	if definition.SpecDefinition == nil {
-		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
+		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
 	}
 
 	if definition.SpecDefinition.PodTemplateSpecPath == nil {
-		return nil, fmt.Errorf("component %s does not have pod template spec definition", definition.Name)
+		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have pod template spec definition", definition.Name))
 	}
 
 	var podTemplateSpec []corev1.PodTemplateSpec
@@ -39,11 +46,11 @@ func (e *InterfaceExtractor) ExtractPodTemplateSpec(ctx context.Context, definit
 
 func (e *InterfaceExtractor) ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error) {
 	if definition.SpecDefinition == nil {
-		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
+		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
 	}
 
 	if definition.SpecDefinition.PodSpecPath == nil {
-		return nil, fmt.Errorf("component %s does not have pod spec definition", definition.Name)
+		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have pod spec definition", definition.Name))
 	}
 
 	var podSpec []corev1.PodSpec
@@ -54,11 +61,11 @@ func (e *InterfaceExtractor) ExtractPodSpec(ctx context.Context, definition v1al
 
 func (e *InterfaceExtractor) ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error) {
 	if definition.SpecDefinition == nil {
-		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
+		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
 	}
 
 	if definition.SpecDefinition.MetadataPath == nil {
-		return nil, fmt.Errorf("component %s does not have pod metadata definition", definition.Name)
+		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have pod metadata definition", definition.Name))
 	}
 
 	var podMetadata []metav1.ObjectMeta
@@ -69,7 +76,7 @@ func (e *InterfaceExtractor) ExtractPodMetadata(ctx context.Context, definition 
 
 func (e *InterfaceExtractor) ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error) {
 	if definition.ScaleDefinition == nil {
-		return nil, fmt.Errorf("component %s does not have scale definition", definition.Name)
+		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have scale definition", definition.Name))
 	}
 
 	var (
@@ -128,11 +135,11 @@ func extract[T any](ctx context.Context, path *string, evaluator query.QueryEval
 
 func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error) {
 	if definition.SpecDefinition == nil {
-		return nil, fmt.Errorf("component %s does not have spec definition", definition.Name)
+		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
 	}
 
 	if definition.SpecDefinition.FragmentedPodSpecDefinition == nil {
-		return nil, fmt.Errorf("component %s does not have fragmented pod spec definition", definition.Name)
+		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have fragmented pod spec definition", definition.Name))
 	}
 
 	fragmentedDefinition := definition.SpecDefinition.FragmentedPodSpecDefinition
@@ -146,6 +153,7 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 		podAffinityResults       []*corev1.PodAffinity
 		nodeAffinityResults      []*corev1.NodeAffinity
 		containersResults        [][]corev1.Container
+		containerResults         []corev1.Container
 		priorityClassNameResults []string
 		imageResults             []string
 	)
@@ -192,6 +200,11 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 	}
 	specCount = max(specCount, len(containersResults))
 
+	if err := extract(ctx, fragmentedDefinition.ContainerPath, e.queryEvaluator, &containerResults); err != nil {
+		return nil, err
+	}
+	specCount = max(specCount, len(containerResults))
+
 	if err := extract(ctx, fragmentedDefinition.PriorityClassNamePath, e.queryEvaluator, &priorityClassNameResults); err != nil {
 		return nil, err
 	}
@@ -213,6 +226,7 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 			PodAffinity:       safeGetByIndex(podAffinityResults, i),
 			NodeAffinity:      safeGetByIndex(nodeAffinityResults, i),
 			Containers:        safeGetByIndex(containersResults, i),
+			Container:         safeGetByIndex(containerResults, i),
 			PriorityClassName: safeGetByIndex(priorityClassNameResults, i),
 			Image:             safeGetByIndex(imageResults, i),
 		}

@@ -36,6 +36,9 @@ type ServiceSpec struct {
 	// Containers for pods (fragmented field)
 	Containers []corev1.Container `json:"containers,omitempty"`
 
+	// mainContainer (fragmented field)
+	MainContainer corev1.Container `json:"mainContainer,omitempty"`
+
 	// Resources for pods (fragmented field)
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
@@ -94,12 +97,14 @@ func ReactorRI() *v1alpha1.ResourceInterface {
 				},
 				ChildComponents: []v1alpha1.ComponentDefinition{
 					{
-						Name: "service",
+						Name:     "service",
+						OwnerRef: ptr.To("reactor"),
 						SpecDefinition: &v1alpha1.SpecDefinition{
 							FragmentedPodSpecDefinition: &v1alpha1.FragmentedPodSpecDefinition{
 								LabelsPath:      ptr.To(".spec.services | .[] | .labels"),
 								AnnotationsPath: ptr.To(".spec.services | .[] | .annotations"),
 								ContainersPath:  ptr.To(".spec.services | .[] | .containers"),
+								ContainerPath:   ptr.To(".spec.services | .[] | .mainContainer"),
 								ResourcesPath:   ptr.To(".spec.services | .[] | .resources"),
 							},
 						},
@@ -162,6 +167,10 @@ func NewReactorObject() *Reactor {
 								},
 							},
 						},
+					},
+					MainContainer: corev1.Container{
+						Name:  "api-server-main",
+						Image: "api:latest",
 					},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{

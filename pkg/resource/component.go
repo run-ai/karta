@@ -24,6 +24,7 @@ type FragmentedPodSpec struct {
 	PodAffinity       *corev1.PodAffinity         `json:"podAffinity,omitempty"`
 	NodeAffinity      *corev1.NodeAffinity        `json:"nodeAffinity,omitempty"`
 	Containers        []corev1.Container          `json:"containers,omitempty"`
+	Container         corev1.Container            `json:"container,omitempty"`
 	PriorityClassName string                      `json:"priorityClassName,omitempty"`
 	Image             string                      `json:"image,omitempty"`
 }

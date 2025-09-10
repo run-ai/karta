@@ -98,9 +98,14 @@ type FragmentedPodSpecDefinition struct {
 	// +kubebuilder:validation:Optional
 	NodeAffinityPath *string `json:"nodeAffinityPath,omitempty"`
 
-	// ContainersPath is the JQ path to container specifications
+	// ContainersPath is the JQ path to containers specifications
 	// +kubebuilder:validation:Optional
 	ContainersPath *string `json:"containersPath,omitempty"`
+
+	// ContainesPath is the JQ path to a single container specifications
+	// Used when the component has only one container
+	// +kubebuilder:validation:Optional
+	ContainerPath *string `json:"containerPath,omitempty"`
 
 	// PriorityClassNamePath is the JQ path to the priority class name
 	// +kubebuilder:validation:Optional
