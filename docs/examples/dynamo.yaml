@@ -42,6 +42,10 @@ spec:
         replicasPath: ".spec.services | .[] | .replicas"
         minReplicasPath: ".spec.services | .[] | .autoscaling.minReplicas"
         maxReplicasPath: ".spec.services | .[] | .autoscaling.maxReplicas"
+      instanceIdPath: ".spec.services | to_entries[] | .key"
+      podSelector:
+        componentInstanceSelector:
+          idPath: '.metadata.labels["nvidia.com/dynamo-component"]'
     
     # Child resources created but not represented as components
     additionalChildKinds:
@@ -61,4 +65,4 @@ spec:
         members:
         - componentName: "service"
           groupByKeyPaths:
-          - '.metadata.labels["nvidia.com/dynamo-service"]'
+          - '.metadata.labels["nvidia.com/dynamo-component"]'

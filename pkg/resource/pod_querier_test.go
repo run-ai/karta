@@ -235,8 +235,10 @@ var _ = Describe("PodQuerier", func() {
 		Context("when checking key existence (Value is nil)", func() {
 			It("should return true for existing label keys", func() {
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".metadata.labels.component",
-					Value:   nil,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".metadata.labels.component",
+						Value:   nil,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -246,8 +248,10 @@ var _ = Describe("PodQuerier", func() {
 
 			It("should return false for non-existing label keys", func() {
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".metadata.labels.nonexistent",
-					Value:   nil,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".metadata.labels.nonexistent",
+						Value:   nil,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -257,8 +261,10 @@ var _ = Describe("PodQuerier", func() {
 
 			It("should return true for existing annotation keys", func() {
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".metadata.annotations.config",
-					Value:   nil,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".metadata.annotations.config",
+						Value:   nil,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -268,8 +274,10 @@ var _ = Describe("PodQuerier", func() {
 
 			It("should return true for existing nested paths", func() {
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".spec.containers[0].name",
-					Value:   nil,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".spec.containers[0].name",
+						Value:   nil,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -282,8 +290,10 @@ var _ = Describe("PodQuerier", func() {
 			It("should return true for matching label values", func() {
 				value := "worker"
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".metadata.labels.component",
-					Value:   &value,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".metadata.labels.component",
+						Value:   &value,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -294,8 +304,10 @@ var _ = Describe("PodQuerier", func() {
 			It("should return false for non-matching label values", func() {
 				value := "master"
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".metadata.labels.component",
-					Value:   &value,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".metadata.labels.component",
+						Value:   &value,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -306,8 +318,10 @@ var _ = Describe("PodQuerier", func() {
 			It("should return true for matching annotation values", func() {
 				value := "high-memory"
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".metadata.annotations.config",
-					Value:   &value,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".metadata.annotations.config",
+						Value:   &value,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -318,8 +332,10 @@ var _ = Describe("PodQuerier", func() {
 			It("should return false for non-matching annotation values", func() {
 				value := "low-memory"
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".metadata.annotations.config",
-					Value:   &value,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".metadata.annotations.config",
+						Value:   &value,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -334,8 +350,10 @@ var _ = Describe("PodQuerier", func() {
 
 				value := "value-with-special_chars.and:colons"
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".metadata.labels.special",
-					Value:   &value,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".metadata.labels.special",
+						Value:   &value,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -350,8 +368,10 @@ var _ = Describe("PodQuerier", func() {
 
 				value := `value-with-"quotes"`
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".metadata.labels.quotes",
-					Value:   &value,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".metadata.labels.quotes",
+						Value:   &value,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -362,8 +382,10 @@ var _ = Describe("PodQuerier", func() {
 			It("should return false for non-existing keys with values", func() {
 				value := "any-value"
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".metadata.labels.nonexistent",
-					Value:   &value,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".metadata.labels.nonexistent",
+						Value:   &value,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -376,8 +398,10 @@ var _ = Describe("PodQuerier", func() {
 			It("should work with array indexing", func() {
 				value := "main"
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".spec.containers[0].name",
-					Value:   &value,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".spec.containers[0].name",
+						Value:   &value,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -388,8 +412,10 @@ var _ = Describe("PodQuerier", func() {
 			It("should work with object navigation", func() {
 				value := "default"
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".metadata.namespace",
-					Value:   &value,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".metadata.namespace",
+						Value:   &value,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)
@@ -402,8 +428,10 @@ var _ = Describe("PodQuerier", func() {
 			It("should return an error for invalid paths", func() {
 				value := "any"
 				selector := &v1alpha1.PodSelector{
-					KeyPath: ".invalid[[[syntax",
-					Value:   &value,
+					ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+						KeyPath: ".invalid[[[syntax",
+						Value:   &value,
+					},
 				}
 
 				matches, err := querier.Matches(ctx, selector)

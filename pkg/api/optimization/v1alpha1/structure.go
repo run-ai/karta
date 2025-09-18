@@ -40,6 +40,10 @@ type ComponentDefinition struct {
 	// +kubebuilder:validation:Optional
 	StatusDefinition *StatusDefinition `json:"statusDefinition,omitempty"`
 
+	// InstanceIdPath is the JQ path to the instance ID, for components that hold multiple pod definitions (in array or map)
+	// +kubebuilder:validation:Optional
+	InstanceIdPath *string `json:"instanceIdPath,omitempty"`
+
 	// PodSelector defines how to identify pods belonging to this component
 	// +kubebuilder:validation:Optional
 	PodSelector *PodSelector `json:"podSelector,omitempty"`
@@ -133,14 +137,31 @@ type ScaleDefinition struct {
 
 // PodSelector defines how to identify pods belonging to a specific component.
 type PodSelector struct {
+	// ComponentTypeSelector identifies whether the pod matches a specific component type
+	// +kubebuilder:validation:Optional
+	ComponentTypeSelector *ComponentTypeSelector `json:"componentTypeSelector,omitempty"`
+
+	// ComponentInstanceSelector identifies the component instance the pod matches, in case the component has multiple instances
+	// +kubebuilder:validation:Optional
+	ComponentInstanceSelector *ComponentInstanceSelector `json:"componentInstanceSelector,omitempty"`
+}
+
+type ComponentTypeSelector struct {
 	// KeyPath is the JQ path to the identifying key/label on the pod
-	// Paths are evaluated at the pod level, not at the root level
+	// JQ paths are evaluated against individual pod objects, not the root resource spec
 	// +kubebuilder:validation:Required
 	KeyPath string `json:"keyPath"`
 
 	// Value is the expected value for the key (optional - if nil, only key existence is checked)
 	// +kubebuilder:validation:Optional
 	Value *string `json:"value,omitempty"`
+}
+
+type ComponentInstanceSelector struct {
+	// IdPath is the JQ path to the component instance identifier on the pod
+	// JQ paths are evaluated against individual pod objects, not the root resource spec
+	// +kubebuilder:validation:Required
+	IdPath string `json:"idPath"`
 }
 
 // ResourceStatus represents the high-level status of a component.

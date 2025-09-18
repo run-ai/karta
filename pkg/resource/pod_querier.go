@@ -33,12 +33,17 @@ func (pq *PodQuerier) Matches(ctx context.Context, selector *v1alpha1.PodSelecto
 		return false, nil
 	}
 
-	if selector.Value == nil {
+	// Use componentTypeSelector for matching
+	if selector.ComponentTypeSelector == nil {
+		return false, nil
+	}
+
+	if selector.ComponentTypeSelector.Value == nil {
 		// Existence check: key should exist and not be nil
-		return pq.checkKeyExists(ctx, selector.KeyPath)
+		return pq.checkKeyExists(ctx, selector.ComponentTypeSelector.KeyPath)
 	} else {
 		// Equality check: key should equal the specified value
-		return pq.checkKeyValue(ctx, selector.KeyPath, *selector.Value)
+		return pq.checkKeyValue(ctx, selector.ComponentTypeSelector.KeyPath, *selector.ComponentTypeSelector.Value)
 	}
 }
 

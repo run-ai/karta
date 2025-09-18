@@ -58,8 +58,9 @@ spec:
       specDefinition:
         podTemplateSpecPath: ".spec.leaderWorkerTemplate.leaderTemplate.spec.template"
       podSelector:
-        keyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/worker-index"]'
-        value: "0"
+        componentTypeSelector:
+          keyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/worker-index"]'
+          value: "0"
 
     # Worker group - executes tasks under leader coordination
     - name: "worker"
@@ -71,7 +72,8 @@ spec:
       specDefinition:
         podTemplateSpecPath: ".spec.leaderWorkerTemplate.workerTemplate.spec.template"
       podSelector:
-        keyPath: '.metadata.annotations["leaderworkerset.sigs.k8s.io/leader-name"]'
+        componentTypeSelector:
+          keyPath: '.metadata.annotations["leaderworkerset.sigs.k8s.io/leader-name"]'
       
 
   # Optimization instructions

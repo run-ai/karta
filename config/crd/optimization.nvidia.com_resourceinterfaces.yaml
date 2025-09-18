@@ -80,7 +80,7 @@ spec:
                                     description: |-
                                       Filters are JQ filter expressions to select specific components (expressions are ANDed)
                                       Example: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
-                                      Paths are evaluated at the pod level, not at the root level
+                                      JQ filters are evaluated against individual pod objects, not the root resource spec
                                     items:
                                       type: string
                                     type: array
@@ -90,7 +90,7 @@ spec:
                                       GroupByKeyPaths are JQ paths to values used for grouping (e.g., owner name, replica key)
                                       If empty, grouping is done via owner reference traversal
                                       Every path must return a single, non-empty value - otherwise grouping will fail
-                                      Paths are evaluated at the pod level, not at the root level
+                                      JQ paths are evaluated against individual pod objects, not the root resource spec
                                     items:
                                       type: string
                                     type: array
@@ -157,6 +157,11 @@ spec:
                         ComponentDefinition defines a single component in the workload hierarchy.
                         Components represent logical units of computation that can be optimized independently.
                       properties:
+                        instanceIdPath:
+                          description: InstanceIdPath is the JQ path to the instance
+                            ID, for components that hold multiple pod definitions
+                            (in array or map)
+                          type: string
                         kind:
                           description: Kind specifies the Kubernetes GroupVersionKind
                             for this component
@@ -187,17 +192,36 @@ spec:
                           description: PodSelector defines how to identify pods belonging
                             to this component
                           properties:
-                            keyPath:
-                              description: |-
-                                KeyPath is the JQ path to the identifying key/label on the pod
-                                Paths are evaluated at the pod level, not at the root level
-                              type: string
-                            value:
-                              description: Value is the expected value for the key
-                                (optional - if nil, only key existence is checked)
-                              type: string
-                          required:
-                          - keyPath
+                            componentInstanceSelector:
+                              description: ComponentInstanceSelector identifies the
+                                component instance the pod matches, in case the component
+                                has multiple instances
+                              properties:
+                                idPath:
+                                  description: |-
+                                    IdPath is the JQ path to the component instance identifier on the pod
+                                    JQ paths are evaluated against individual pod objects, not the root resource spec
+                                  type: string
+                              required:
+                              - idPath
+                              type: object
+                            componentTypeSelector:
+                              description: ComponentTypeSelector identifies whether
+                                the pod matches a specific component type
+                              properties:
+                                keyPath:
+                                  description: |-
+                                    KeyPath is the JQ path to the identifying key/label on the pod
+                                    JQ paths are evaluated against individual pod objects, not the root resource spec
+                                  type: string
+                                value:
+                                  description: Value is the expected value for the
+                                    key (optional - if nil, only key existence is
+                                    checked)
+                                  type: string
+                              required:
+                              - keyPath
+                              type: object
                           type: object
                         scaleDefinition:
                           description: ScaleDefinition defines how to extract scaling
@@ -492,6 +516,11 @@ spec:
                     description: RootComponent defines the top-level component of
                       the workload hierarchy
                     properties:
+                      instanceIdPath:
+                        description: InstanceIdPath is the JQ path to the instance
+                          ID, for components that hold multiple pod definitions (in
+                          array or map)
+                        type: string
                       kind:
                         description: Kind specifies the Kubernetes GroupVersionKind
                           for this component
@@ -522,17 +551,35 @@ spec:
                         description: PodSelector defines how to identify pods belonging
                           to this component
                         properties:
-                          keyPath:
-                            description: |-
-                              KeyPath is the JQ path to the identifying key/label on the pod
-                              Paths are evaluated at the pod level, not at the root level
-                            type: string
-                          value:
-                            description: Value is the expected value for the key (optional
-                              - if nil, only key existence is checked)
-                            type: string
-                        required:
-                        - keyPath
+                          componentInstanceSelector:
+                            description: ComponentInstanceSelector identifies the
+                              component instance the pod matches, in case the component
+                              has multiple instances
+                            properties:
+                              idPath:
+                                description: |-
+                                  IdPath is the JQ path to the component instance identifier on the pod
+                                  JQ paths are evaluated against individual pod objects, not the root resource spec
+                                type: string
+                            required:
+                            - idPath
+                            type: object
+                          componentTypeSelector:
+                            description: ComponentTypeSelector identifies whether
+                              the pod matches a specific component type
+                            properties:
+                              keyPath:
+                                description: |-
+                                  KeyPath is the JQ path to the identifying key/label on the pod
+                                  JQ paths are evaluated against individual pod objects, not the root resource spec
+                                type: string
+                              value:
+                                description: Value is the expected value for the key
+                                  (optional - if nil, only key existence is checked)
+                                type: string
+                            required:
+                            - keyPath
+                            type: object
                         type: object
                       scaleDefinition:
                         description: ScaleDefinition defines how to extract scaling

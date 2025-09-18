@@ -114,7 +114,9 @@ func ReactorRI() *v1alpha1.ResourceInterface {
 							MaxReplicasPath: ptr.To(".spec.services | .[] | .maxReplicas"),
 						},
 						PodSelector: &v1alpha1.PodSelector{
-							KeyPath: ".metadata.labels.service-name",
+							ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+								KeyPath: ".metadata.labels.service-name",
+							},
 						},
 					},
 				},

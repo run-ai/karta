@@ -87,8 +87,10 @@ var _ = Describe("Gang Scheduling", func() {
 										PodTemplateSpecPath: ptr.To(".spec.worker.template"),
 									},
 									PodSelector: &v1alpha1.PodSelector{
-										KeyPath: ".metadata.labels.component",
-										Value:   ptr.To("worker"),
+										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+											KeyPath: ".metadata.labels.component",
+											Value:   ptr.To("worker"),
+										},
 									},
 								},
 								{
@@ -98,8 +100,10 @@ var _ = Describe("Gang Scheduling", func() {
 										PodTemplateSpecPath: ptr.To(".spec.master.template"),
 									},
 									PodSelector: &v1alpha1.PodSelector{
-										KeyPath: ".metadata.labels.component",
-										Value:   ptr.To("master"),
+										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+											KeyPath: ".metadata.labels.component",
+											Value:   ptr.To("master"),
+										},
 									},
 								},
 							},
@@ -261,8 +265,10 @@ var _ = Describe("Gang Scheduling", func() {
 										PodTemplateSpecPath: ptr.To(".spec.template"),
 									},
 									PodSelector: &v1alpha1.PodSelector{
-										KeyPath: ".metadata.labels.component",
-										Value:   ptr.To("worker"),
+										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+											KeyPath: ".metadata.labels.component",
+											Value:   ptr.To("worker"),
+										},
 									},
 								},
 							},
@@ -386,8 +392,10 @@ var _ = Describe("Gang Scheduling", func() {
 										PodTemplateSpecPath: ptr.To(".spec.worker.template"),
 									},
 									PodSelector: &v1alpha1.PodSelector{
-										KeyPath: ".metadata.labels.component",
-										Value:   ptr.To("worker"),
+										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+											KeyPath: ".metadata.labels.component",
+											Value:   ptr.To("worker"),
+										},
 									},
 								},
 							},
@@ -432,8 +440,10 @@ var _ = Describe("Gang Scheduling", func() {
 										PodTemplateSpecPath: ptr.To(".spec.worker.template"),
 									},
 									PodSelector: &v1alpha1.PodSelector{
-										KeyPath: ".metadata.labels.component",
-										Value:   ptr.To("worker"),
+										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+											KeyPath: ".metadata.labels.component",
+											Value:   ptr.To("worker"),
+										},
 									},
 								},
 								{
@@ -443,8 +453,10 @@ var _ = Describe("Gang Scheduling", func() {
 										PodTemplateSpecPath: ptr.To(".spec.master.template"),
 									},
 									PodSelector: &v1alpha1.PodSelector{
-										KeyPath: ".metadata.labels.component",
-										Value:   ptr.To("master"),
+										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+											KeyPath: ".metadata.labels.component",
+											Value:   ptr.To("master"),
+										},
 									},
 								},
 							},

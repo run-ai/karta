@@ -45,17 +45,21 @@ spec:
         kind: "Job"
       ownerRef: "jobset"
       specDefinition:
-        podSpecPath: ".spec.replicatedJobs[].template.spec"
+        podTemplateSpecPath: ".spec.replicatedJobs[].template"
       scaleDefinition:
         replicasPath: ".spec.replicatedJobs[].replicas"
+      instanceIdPath: ".spec.replicatedJobs[].name"
+      podSelector:
+        componentInstanceSelector:
+          idPath: '.metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]'
 
   # Optimization instructions
   optimizationInstructions:
     # Gang scheduling for coordinated job execution
     gangScheduling:
       podGroups:
-      - name: "jobset"
+      - name: "job"
         members:
         - componentName: "replicatedjob"
           groupByKeyPaths:
-          - '.metadata.labels["jobset.sigs.k8s.io/jobset-name"]'
+          - '.metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]'

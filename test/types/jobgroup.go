@@ -93,7 +93,9 @@ func JobGroupRI() *v1alpha1.ResourceInterface {
 							ReplicasPath: ptr.To(".spec.replicatedJobs[].replicas"),
 						},
 						PodSelector: &v1alpha1.PodSelector{
-							KeyPath: ".metadata.labels.job-name",
+							ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+								KeyPath: ".metadata.labels.job-name",
+							},
 						},
 					},
 				},

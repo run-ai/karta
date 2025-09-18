@@ -32,8 +32,10 @@ var _ = Describe("Component", func() {
 				PodTemplateSpecPath: func() *string { s := ".spec.template"; return &s }(),
 			},
 			PodSelector: &v1alpha1.PodSelector{
-				KeyPath: ".metadata.labels.role",
-				Value:   func() *string { s := "worker"; return &s }(),
+				ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+					KeyPath: ".metadata.labels.role",
+					Value:   func() *string { s := "worker"; return &s }(),
+				},
 			},
 		}
 
@@ -60,8 +62,9 @@ var _ = Describe("Component", func() {
 		It("should return pod selector", func() {
 			selector := component.GetPodSelector()
 			Expect(selector).NotTo(BeNil())
-			Expect(selector.KeyPath).To(Equal(".metadata.labels.role"))
-			Expect(*selector.Value).To(Equal("worker"))
+			Expect(selector.ComponentTypeSelector).NotTo(BeNil())
+			Expect(selector.ComponentTypeSelector.KeyPath).To(Equal(".metadata.labels.role"))
+			Expect(*selector.ComponentTypeSelector.Value).To(Equal("worker"))
 		})
 
 		It("should return nil pod selector when not defined", func() {
