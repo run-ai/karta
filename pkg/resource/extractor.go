@@ -235,6 +235,20 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 	return fragmentedSpecs, nil
 }
 
+func (e *InterfaceExtractor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) {
+	if definition.InstanceIdPath == nil {
+		return nil, DefinitionNotFoundError("no instance id path defined")
+	}
+
+	var instanceIds []string
+	err := extract(ctx, definition.InstanceIdPath, e.queryEvaluator, &instanceIds)
+	if err != nil {
+		return nil, err
+	}
+
+	return instanceIds, nil
+}
+
 // safeGetByIndex Generic function for safely retrieving a slice element.
 // Returns zero value if slice is nil or index is out of range
 func safeGetByIndex[T any](slice []T, index int) T {

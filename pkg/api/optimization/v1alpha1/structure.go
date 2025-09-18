@@ -40,7 +40,7 @@ type ComponentDefinition struct {
 	// +kubebuilder:validation:Optional
 	StatusDefinition *StatusDefinition `json:"statusDefinition,omitempty"`
 
-	// InstanceIdPath is the JQ path to the instance ID, for components that hold multiple pod definitions (in array or map)
+	// InstanceIdPath is the JQ path to the instance id, for components that hold multiple pod definitions (in array or map)
 	// +kubebuilder:validation:Optional
 	InstanceIdPath *string `json:"instanceIdPath,omitempty"`
 
