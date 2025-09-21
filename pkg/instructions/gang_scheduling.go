@@ -29,8 +29,9 @@ func GetPodGroupingEffectiveComponent(ctx context.Context, podQuerier *resource.
 	return candidate, nil
 }
 
-// InferPodComponent infers the component name for the given pod
+// InferPodComponent infers the component name for the given pod based on component type selectors
 func InferPodComponent(ctx context.Context, podQuerier *resource.PodQuerier, summary *StructureSummary) (string, error) {
+	// If there is only one leaf component, the pod must match it
 	if len(summary.leafComponents) == 1 {
 		return summary.leafComponents[0], nil
 	}
@@ -39,7 +40,7 @@ func InferPodComponent(ctx context.Context, podQuerier *resource.PodQuerier, sum
 	for _, componentName := range summary.leafComponents {
 		leafDefinition := summary.componentDefinitionsByName[componentName]
 
-		// Check if pod matches this component's selector
+		// Check if pod matches this component type's selector
 		if leafDefinition.PodSelector != nil {
 			matches, err := podQuerier.MatchesComponentType(ctx, leafDefinition.PodSelector.ComponentTypeSelector)
 			if err != nil {
@@ -140,19 +141,19 @@ func calculateSubtreeScaleByDefinition(ctx context.Context, currentComponentName
 		scales = nil
 	}
 
-	var currentComponent int32
+	var currentComponentScale int32
 
 	// If the component has multiple instances and the instance id is specified for the subtree root, count the scale of the specific instance
 	if len(scales) > 1 && subtreeRoot.ComponentName == currentComponentName && subtreeRoot.InstanceId != nil {
 		if instanceScale, ok := scales[*subtreeRoot.InstanceId]; ok {
-			currentComponent = getEffectiveMinReplicas(&instanceScale)
+			currentComponentScale = getEffectiveMinReplicas(&instanceScale)
 		} else {
 			return 0, fmt.Errorf("instance id %s not found", *subtreeRoot.InstanceId)
 		}
 	} else {
 		// Sum all scales for this component (array/map cases)
 		for _, scale := range scales {
-			currentComponent += getEffectiveMinReplicas(&scale)
+			currentComponentScale += getEffectiveMinReplicas(&scale)
 		}
 	}
 
@@ -160,7 +161,7 @@ func calculateSubtreeScaleByDefinition(ctx context.Context, currentComponentName
 	children := summary.childrenMap[currentComponentName]
 	if len(children) == 0 {
 		// Leaf component - return its total scale
-		return currentComponent, nil
+		return currentComponentScale, nil
 	}
 
 	// Parent component - calculate children sum, then multiply by parent scale
@@ -175,16 +176,16 @@ func calculateSubtreeScaleByDefinition(ctx context.Context, currentComponentName
 
 	// If child components have no scale definitions, assume the scale is defined in a higher level
 	if childrenSum == 0 {
-		return currentComponent, nil
+		return currentComponentScale, nil
 	}
 
 	// If current component has no scale definitions, carry over the children sum
-	if currentComponent == 0 {
+	if currentComponentScale == 0 {
 		return childrenSum, nil
 	}
 
 	// If both current component and children have scale definitions, multiply the current component scale by the children sum
-	return currentComponent * childrenSum, nil
+	return currentComponentScale * childrenSum, nil
 }
 
 // calculateSubtreeScaleByLeaves is a fallback method for cases where the RI does not contain any scale definition.

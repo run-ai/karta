@@ -148,7 +148,7 @@ type PodSelector struct {
 
 type ComponentTypeSelector struct {
 	// KeyPath is the JQ path to the identifying key/label on the pod
-	// JQ paths are evaluated against individual pod objects, not the root resource spec
+	// JQ path is evaluated against individual pod objects, not the root resource spec
 	// +kubebuilder:validation:Required
 	KeyPath string `json:"keyPath"`
 
@@ -159,7 +159,7 @@ type ComponentTypeSelector struct {
 
 type ComponentInstanceSelector struct {
 	// IdPath is the JQ path to the component instance identifier on the pod
-	// JQ paths are evaluated against individual pod objects, not the root resource spec
+	// JQ path is evaluated against individual pod objects, not the root resource spec
 	// +kubebuilder:validation:Required
 	IdPath string `json:"idPath"`
 }

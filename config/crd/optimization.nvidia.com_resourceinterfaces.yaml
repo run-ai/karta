@@ -159,7 +159,7 @@ spec:
                       properties:
                         instanceIdPath:
                           description: InstanceIdPath is the JQ path to the instance
-                            ID, for components that hold multiple pod definitions
+                            id, for components that hold multiple pod definitions
                             (in array or map)
                           type: string
                         kind:
@@ -200,7 +200,7 @@ spec:
                                 idPath:
                                   description: |-
                                     IdPath is the JQ path to the component instance identifier on the pod
-                                    JQ paths are evaluated against individual pod objects, not the root resource spec
+                                    JQ path is evaluated against individual pod objects, not the root resource spec
                                   type: string
                               required:
                               - idPath
@@ -212,7 +212,7 @@ spec:
                                 keyPath:
                                   description: |-
                                     KeyPath is the JQ path to the identifying key/label on the pod
-                                    JQ paths are evaluated against individual pod objects, not the root resource spec
+                                    JQ path is evaluated against individual pod objects, not the root resource spec
                                   type: string
                                 value:
                                   description: Value is the expected value for the
@@ -518,7 +518,7 @@ spec:
                     properties:
                       instanceIdPath:
                         description: InstanceIdPath is the JQ path to the instance
-                          ID, for components that hold multiple pod definitions (in
+                          id, for components that hold multiple pod definitions (in
                           array or map)
                         type: string
                       kind:
@@ -559,7 +559,7 @@ spec:
                               idPath:
                                 description: |-
                                   IdPath is the JQ path to the component instance identifier on the pod
-                                  JQ paths are evaluated against individual pod objects, not the root resource spec
+                                  JQ path is evaluated against individual pod objects, not the root resource spec
                                 type: string
                             required:
                             - idPath
@@ -571,7 +571,7 @@ spec:
                               keyPath:
                                 description: |-
                                   KeyPath is the JQ path to the identifying key/label on the pod
-                                  JQ paths are evaluated against individual pod objects, not the root resource spec
+                                  JQ path is evaluated against individual pod objects, not the root resource spec
                                 type: string
                               value:
                                 description: Value is the expected value for the key
