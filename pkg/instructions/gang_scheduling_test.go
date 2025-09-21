@@ -22,7 +22,7 @@ var _ = Describe("Gang Scheduling", func() {
 
 	Describe("GetPodGroupingEffectiveComponent", func() {
 		Context("with single leaf component", func() {
-			It("should infer component and return gang scheduling info", func() {
+			It("should return correct gang scheduling info", func() {
 				ri := &v1alpha1.ResourceInterface{
 					Spec: v1alpha1.ResourceInterfaceSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
@@ -61,7 +61,7 @@ var _ = Describe("Gang Scheduling", func() {
 				}
 				podQuerier := resource.NewPodQuerier(pod)
 
-				result, err := GetPodGroupingEffectiveComponent(ctx, podQuerier, summary)
+				result, err := GetPodGroupingEffectiveComponent(ctx, podQuerier, "simple-job", summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
 				Expect(result.EffectiveComponent).To(Equal("simple-job"))
@@ -139,7 +139,7 @@ var _ = Describe("Gang Scheduling", func() {
 				}
 				workerQuerier := resource.NewPodQuerier(workerPod)
 
-				result, err := GetPodGroupingEffectiveComponent(ctx, workerQuerier, summary)
+				result, err := GetPodGroupingEffectiveComponent(ctx, workerQuerier, "worker", summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
 				Expect(result.EffectiveComponent).To(Equal("worker"))
@@ -157,7 +157,7 @@ var _ = Describe("Gang Scheduling", func() {
 				}
 				masterQuerier := resource.NewPodQuerier(masterPod)
 
-				result, err = GetPodGroupingEffectiveComponent(ctx, masterQuerier, summary)
+				result, err = GetPodGroupingEffectiveComponent(ctx, masterQuerier, "master", summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
 				Expect(result.EffectiveComponent).To(Equal("master"))
@@ -223,7 +223,7 @@ var _ = Describe("Gang Scheduling", func() {
 				}
 				gpuQuerier := resource.NewPodQuerier(gpuPod)
 
-				result, err := GetPodGroupingEffectiveComponent(ctx, gpuQuerier, summary)
+				result, err := GetPodGroupingEffectiveComponent(ctx, gpuQuerier, "worker-set", summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
 				Expect(result.EffectiveComponent).To(Equal("worker-set"))
@@ -241,7 +241,7 @@ var _ = Describe("Gang Scheduling", func() {
 				}
 				cpuQuerier := resource.NewPodQuerier(cpuPod)
 
-				result, err = GetPodGroupingEffectiveComponent(ctx, cpuQuerier, summary)
+				result, err = GetPodGroupingEffectiveComponent(ctx, cpuQuerier, "worker-set", summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
 				Expect(result.EffectiveComponent).To(Equal("worker-set"))
@@ -317,7 +317,7 @@ var _ = Describe("Gang Scheduling", func() {
 				}
 				podQuerier := resource.NewPodQuerier(pod)
 
-				result, err := GetPodGroupingEffectiveComponent(ctx, podQuerier, summary)
+				result, err := GetPodGroupingEffectiveComponent(ctx, podQuerier, "worker", summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
 				Expect(result.EffectiveComponent).To(Equal("pytorch-job")) // Fallback to parent
@@ -352,139 +352,12 @@ var _ = Describe("Gang Scheduling", func() {
 				}
 				podQuerier := resource.NewPodQuerier(pod)
 
-				result, err := GetPodGroupingEffectiveComponent(ctx, podQuerier, summary)
+				result, err := GetPodGroupingEffectiveComponent(ctx, podQuerier, "simple-job", summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeNil())
 			})
 		})
 
-		Context("with pod that doesn't match any component", func() {
-			var (
-				podQuerier *resource.PodQuerier
-			)
-			BeforeEach(func() {
-				// Pod that doesn't match the worker selector
-				pod := &corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "unrelated-pod",
-						Namespace: "default",
-						Labels: map[string]string{
-							"component": "database", // Doesn't match worker
-						},
-					},
-				}
-
-				podQuerier = resource.NewPodQuerier(pod)
-			})
-
-			It("should not return error when has only one leaf component", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
-						StructureDefinition: v1alpha1.StructureDefinition{
-							RootComponent: v1alpha1.ComponentDefinition{
-								Name: "pytorch-job",
-							},
-							ChildComponents: []v1alpha1.ComponentDefinition{
-								{
-									Name:     "worker",
-									OwnerRef: ptr.To("pytorch-job"),
-									SpecDefinition: &v1alpha1.SpecDefinition{
-										PodTemplateSpecPath: ptr.To(".spec.worker.template"),
-									},
-									PodSelector: &v1alpha1.PodSelector{
-										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
-											KeyPath: ".metadata.labels.component",
-											Value:   ptr.To("worker"),
-										},
-									},
-								},
-							},
-						},
-						Instructions: v1alpha1.OptimizationInstructions{
-							GangScheduling: &v1alpha1.GangSchedulingInstruction{
-								PodGroups: []v1alpha1.PodGroupDefinition{
-									{
-										Name: "worker-group",
-										Members: []v1alpha1.PodGroupMemberDefinition{
-											{ComponentName: "worker"},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-
-				summary, err := NewStructureSummary(ri)
-				Expect(err).NotTo(HaveOccurred())
-
-				result, err := GetPodGroupingEffectiveComponent(ctx, podQuerier, summary)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).NotTo(BeNil())
-				Expect(result.EffectiveComponent).To(Equal("worker"))
-				Expect(result.PodGroupName).To(Equal("worker-group"))
-			})
-
-			It("should return error when has multiple leaf components", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
-						StructureDefinition: v1alpha1.StructureDefinition{
-							RootComponent: v1alpha1.ComponentDefinition{
-								Name: "pytorch-job",
-							},
-							ChildComponents: []v1alpha1.ComponentDefinition{
-								{
-									Name:     "worker",
-									OwnerRef: ptr.To("pytorch-job"),
-									SpecDefinition: &v1alpha1.SpecDefinition{
-										PodTemplateSpecPath: ptr.To(".spec.worker.template"),
-									},
-									PodSelector: &v1alpha1.PodSelector{
-										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
-											KeyPath: ".metadata.labels.component",
-											Value:   ptr.To("worker"),
-										},
-									},
-								},
-								{
-									Name:     "master",
-									OwnerRef: ptr.To("pytorch-job"),
-									SpecDefinition: &v1alpha1.SpecDefinition{
-										PodTemplateSpecPath: ptr.To(".spec.master.template"),
-									},
-									PodSelector: &v1alpha1.PodSelector{
-										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
-											KeyPath: ".metadata.labels.component",
-											Value:   ptr.To("master"),
-										},
-									},
-								},
-							},
-						},
-						Instructions: v1alpha1.OptimizationInstructions{
-							GangScheduling: &v1alpha1.GangSchedulingInstruction{
-								PodGroups: []v1alpha1.PodGroupDefinition{
-									{
-										Name: "worker-group",
-										Members: []v1alpha1.PodGroupMemberDefinition{
-											{ComponentName: "worker"},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-
-				summary, err := NewStructureSummary(ri)
-				Expect(err).NotTo(HaveOccurred())
-
-				result, err := GetPodGroupingEffectiveComponent(ctx, podQuerier, summary)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("no component found for pod"))
-				Expect(result).To(BeNil())
-			})
-		})
 	})
 
 	Describe("CalculateSubtreeScale", func() {
@@ -519,7 +392,7 @@ var _ = Describe("Gang Scheduling", func() {
 				summary, err := NewStructureSummary(ri)
 				Expect(err).NotTo(HaveOccurred())
 
-				scale, err := CalculateSubtreeScale(ctx, "worker", factory, summary)
+				scale, err := CalculateSubtreeScale(ctx, "worker", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(3))) // Should prefer minReplicas
 			})
@@ -584,16 +457,16 @@ var _ = Describe("Gang Scheduling", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				// Calculate root scale: parent(2) * (worker(4) + master(1)) = 2 * 5 = 10
-				scale, err := CalculateSubtreeScale(ctx, "pytorch-job", factory, summary)
+				scale, err := CalculateSubtreeScale(ctx, "pytorch-job", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(10)))
 
 				// Individual components should return their own scale
-				workerScale, err := CalculateSubtreeScale(ctx, "worker", factory, summary)
+				workerScale, err := CalculateSubtreeScale(ctx, "worker", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(workerScale).To(Equal(int32(4)))
 
-				masterScale, err := CalculateSubtreeScale(ctx, "master", factory, summary)
+				masterScale, err := CalculateSubtreeScale(ctx, "master", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(masterScale).To(Equal(int32(1)))
 			})
@@ -615,16 +488,16 @@ var _ = Describe("Gang Scheduling", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				// Calculate root scale: worker(4) + master(1) = 5
-				scale, err := CalculateSubtreeScale(ctx, "pytorch-job", factory, summary)
+				scale, err := CalculateSubtreeScale(ctx, "pytorch-job", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(5)))
 
 				// Individual components should return their own scale
-				workerScale, err := CalculateSubtreeScale(ctx, "worker", factory, summary)
+				workerScale, err := CalculateSubtreeScale(ctx, "worker", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(workerScale).To(Equal(int32(4)))
 
-				masterScale, err := CalculateSubtreeScale(ctx, "master", factory, summary)
+				masterScale, err := CalculateSubtreeScale(ctx, "master", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(masterScale).To(Equal(int32(1)))
 			})
@@ -644,8 +517,9 @@ var _ = Describe("Gang Scheduling", func() {
 							},
 							ChildComponents: []v1alpha1.ComponentDefinition{
 								{
-									Name:     "worker-array",
-									OwnerRef: ptr.To("pytorch-job"),
+									Name:           "worker-array",
+									OwnerRef:       ptr.To("pytorch-job"),
+									InstanceIdPath: ptr.To(".spec.workers[].name"),
 									SpecDefinition: &v1alpha1.SpecDefinition{
 										PodTemplateSpecPath: ptr.To(".spec.workers[].template"),
 									},
@@ -663,9 +537,11 @@ var _ = Describe("Gang Scheduling", func() {
 						"replicas": int32(2), // Parent scale
 						"workers": []any{
 							map[string]any{
+								"name":     "worker-1",
 								"replicas": int32(3),
 							},
 							map[string]any{
+								"name":     "worker-2",
 								"replicas": int32(2),
 							},
 						},
@@ -677,12 +553,12 @@ var _ = Describe("Gang Scheduling", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should sum all workers scale: 3 + 2 = 5
-				scale, err := CalculateSubtreeScale(ctx, "worker-array", factory, summary)
+				scale, err := CalculateSubtreeScale(ctx, "worker-array", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(5)))
 
 				// Calculate root scale: parent(2) * (worker(5)) = 2 * 5 = 10
-				scale, err = CalculateSubtreeScale(ctx, "pytorch-job", factory, summary)
+				scale, err = CalculateSubtreeScale(ctx, "pytorch-job", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(10)))
 			})
@@ -734,7 +610,7 @@ var _ = Describe("Gang Scheduling", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should carry children sum (4) since parent has no scale
-				scale, err := CalculateSubtreeScale(ctx, "cluster", factory, summary)
+				scale, err := CalculateSubtreeScale(ctx, "cluster", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(4)))
 			})
@@ -785,7 +661,7 @@ var _ = Describe("Gang Scheduling", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should use parent scale (3) since children have no scale
-				scale, err := CalculateSubtreeScale(ctx, "job-group", factory, summary)
+				scale, err := CalculateSubtreeScale(ctx, "job-group", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(3)))
 			})
@@ -821,7 +697,7 @@ var _ = Describe("Gang Scheduling", func() {
 				summary, err := NewStructureSummary(ri)
 				Expect(err).NotTo(HaveOccurred())
 
-				scale, err := CalculateSubtreeScale(ctx, "worker", factory, summary)
+				scale, err := CalculateSubtreeScale(ctx, "worker", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(2))) // Should use minReplicas, not replicas
 			})
@@ -865,7 +741,7 @@ var _ = Describe("Gang Scheduling", func() {
 				summary, err := NewStructureSummary(ri)
 				Expect(err).NotTo(HaveOccurred())
 
-				scale, err := CalculateSubtreeScale(ctx, "worker", factory, summary)
+				scale, err := CalculateSubtreeScale(ctx, "worker", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(5))) // Should fallback to replicas
 			})
@@ -908,7 +784,7 @@ var _ = Describe("Gang Scheduling", func() {
 				summary, err := NewStructureSummary(ri)
 				Expect(err).NotTo(HaveOccurred())
 
-				scale, err := CalculateSubtreeScale(ctx, "worker", factory, summary)
+				scale, err := CalculateSubtreeScale(ctx, "worker", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(0))) // Should return 0 when no scale found
 			})
@@ -951,16 +827,16 @@ var _ = Describe("Gang Scheduling", func() {
 				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
 
 				// Root component should return total leaf count in its subtree (2)
-				scale, err := CalculateSubtreeScale(ctx, "pytorch-job", factory, summary)
+				scale, err := CalculateSubtreeScale(ctx, "pytorch-job", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(2))) // 2 leaf components: worker, master
 
 				// Leaf components should return 1 (themselves)
-				scale, err = CalculateSubtreeScale(ctx, "worker", factory, summary)
+				scale, err = CalculateSubtreeScale(ctx, "worker", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(1))) // worker is a leaf
 
-				scale, err = CalculateSubtreeScale(ctx, "master", factory, summary)
+				scale, err = CalculateSubtreeScale(ctx, "master", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(1))) // master is a leaf
 			})
@@ -1013,23 +889,503 @@ var _ = Describe("Gang Scheduling", func() {
 				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
 
 				// Should return 3 (worker, master, storage are leaf components in cluster subtree)
-				scale, err := CalculateSubtreeScale(ctx, "cluster", factory, summary)
+				scale, err := CalculateSubtreeScale(ctx, "cluster", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(3)))
 
 				// job-group subtree should have 2 leaves (worker, master)
-				scale, err = CalculateSubtreeScale(ctx, "job-group", factory, summary)
+				scale, err = CalculateSubtreeScale(ctx, "job-group", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(2)))
 
 				// Individual leaf components should return 1
-				scale, err = CalculateSubtreeScale(ctx, "worker", factory, summary)
+				scale, err = CalculateSubtreeScale(ctx, "worker", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(1)))
 
-				scale, err = CalculateSubtreeScale(ctx, "storage", factory, summary)
+				scale, err = CalculateSubtreeScale(ctx, "storage", nil, factory, summary)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(scale).To(Equal(int32(1)))
+			})
+		})
+
+		Context("with instance IDs", func() {
+			It("should calculate scale for specific instance using byScale method - array", func() {
+				ri := &v1alpha1.ResourceInterface{
+					Spec: v1alpha1.ResourceInterfaceSpec{
+						StructureDefinition: v1alpha1.StructureDefinition{
+							RootComponent: v1alpha1.ComponentDefinition{
+								Name: "job-group",
+							},
+							ChildComponents: []v1alpha1.ComponentDefinition{
+								{
+									Name:           "job",
+									InstanceIdPath: ptr.To(".spec.replicatedJobs[].name"),
+									SpecDefinition: &v1alpha1.SpecDefinition{
+										PodSpecPath: ptr.To(".spec.replicatedJobs[].spec"),
+									},
+									ScaleDefinition: &v1alpha1.ScaleDefinition{
+										ReplicasPath:    ptr.To(".spec.replicatedJobs[].replicas"),
+										MinReplicasPath: ptr.To(".spec.replicatedJobs[].minReplicas"),
+									},
+								},
+							},
+						},
+					},
+				}
+
+				summary, err := NewStructureSummary(ri)
+				Expect(err).NotTo(HaveOccurred())
+
+				jobgroupObject := &unstructured.Unstructured{
+					Object: map[string]any{
+						"spec": map[string]any{
+							"replicatedJobs": []any{
+								map[string]any{
+									"name":     "indexer",
+									"replicas": 3,
+									"spec": map[string]any{
+										"containers": []any{
+											map[string]any{"name": "indexer"},
+										},
+									},
+								},
+								map[string]any{
+									"name":        "processor",
+									"replicas":    3,
+									"minReplicas": 2,
+									"spec": map[string]any{
+										"containers": []any{
+											map[string]any{"name": "processor"},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				factory := resource.NewComponentFactoryFromObject(ri, jobgroupObject)
+
+				// Test scale for all instances (nil instanceId)
+				allScale, err := CalculateSubtreeScale(ctx, "job", nil, factory, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(allScale).To(Equal(int32(5)))
+
+				// Test scale for specific instance "indexer"
+				indexerScale, err := CalculateSubtreeScale(ctx, "job", ptr.To("indexer"), factory, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(indexerScale).To(Equal(int32(3)))
+
+				// Test scale for specific instance "processor"
+				processorScale, err := CalculateSubtreeScale(ctx, "job", ptr.To("processor"), factory, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(processorScale).To(Equal(int32(2)))
+			})
+
+			It("should calculate scale for specific instance using byScale method - map", func() {
+				ri := &v1alpha1.ResourceInterface{
+					Spec: v1alpha1.ResourceInterfaceSpec{
+						StructureDefinition: v1alpha1.StructureDefinition{
+							RootComponent: v1alpha1.ComponentDefinition{
+								Name: "job-group",
+							},
+							ChildComponents: []v1alpha1.ComponentDefinition{
+								{
+									Name:           "job",
+									InstanceIdPath: ptr.To(".spec.replicatedJobs | to_entries[] | .key"),
+									SpecDefinition: &v1alpha1.SpecDefinition{
+										PodSpecPath: ptr.To(".spec.replicatedJobs | .[] | .spec"),
+									},
+									ScaleDefinition: &v1alpha1.ScaleDefinition{
+										ReplicasPath:    ptr.To(".spec.replicatedJobs | .[] | .replicas"),
+										MinReplicasPath: ptr.To(".spec.replicatedJobs | .[] | .minReplicas"),
+									},
+								},
+							},
+						},
+					},
+				}
+
+				summary, err := NewStructureSummary(ri)
+				Expect(err).NotTo(HaveOccurred())
+
+				jobgroupObject := &unstructured.Unstructured{
+					Object: map[string]any{
+						"spec": map[string]any{
+							"replicatedJobs": map[string]any{
+								"indexer": map[string]any{
+									"replicas": 3,
+									"spec": map[string]any{
+										"containers": []any{
+											map[string]any{"name": "indexer"},
+										},
+									},
+								},
+								"processor": map[string]any{
+									"replicas":    3,
+									"minReplicas": 2,
+									"spec": map[string]any{
+										"containers": []any{
+											map[string]any{"name": "processor"},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				factory := resource.NewComponentFactoryFromObject(ri, jobgroupObject)
+
+				// Test scale for all instances (nil instanceId)
+				allScale, err := CalculateSubtreeScale(ctx, "job", nil, factory, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(allScale).To(Equal(int32(5)))
+
+				// Test scale for specific instance "indexer"
+				indexerScale, err := CalculateSubtreeScale(ctx, "job", ptr.To("indexer"), factory, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(indexerScale).To(Equal(int32(3)))
+
+				// Test scale for specific instance "processor"
+				processorScale, err := CalculateSubtreeScale(ctx, "job", ptr.To("processor"), factory, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(processorScale).To(Equal(int32(2)))
+			})
+
+			It("should calculate scale for specific instance using byLeaves method", func() {
+				ri := &v1alpha1.ResourceInterface{
+					Spec: v1alpha1.ResourceInterfaceSpec{
+						StructureDefinition: v1alpha1.StructureDefinition{
+							RootComponent: v1alpha1.ComponentDefinition{
+								Name: "job-group",
+							},
+							ChildComponents: []v1alpha1.ComponentDefinition{
+								{
+									Name:           "job",
+									InstanceIdPath: ptr.To(".spec.replicatedJobs[].name"),
+									SpecDefinition: &v1alpha1.SpecDefinition{
+										PodSpecPath: ptr.To(".spec.replicatedJobs[].spec"),
+									},
+									// No ScaleDefinition - will use byLeaves method
+								},
+							},
+						},
+					},
+				}
+
+				summary, err := NewStructureSummary(ri)
+				Expect(err).NotTo(HaveOccurred())
+
+				jobgroupObject := &unstructured.Unstructured{
+					Object: map[string]any{
+						"spec": map[string]any{
+							"replicatedJobs": []any{
+								map[string]any{
+									"name": "indexer",
+									"spec": map[string]any{
+										"containers": []any{
+											map[string]any{"name": "indexer"},
+										},
+									},
+								},
+								map[string]any{
+									"name": "processor",
+									"spec": map[string]any{
+										"containers": []any{
+											map[string]any{"name": "processor"},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				factory := resource.NewComponentFactoryFromObject(ri, jobgroupObject)
+
+				// Test scale for all instances (nil instanceId) - should count all instances
+				allScale, err := CalculateSubtreeScale(ctx, "job", nil, factory, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(allScale).To(Equal(int32(2))) // 2 instances
+
+				// Test scale for specific instance "indexer"
+				indexerScale, err := CalculateSubtreeScale(ctx, "job", ptr.To("indexer"), factory, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(indexerScale).To(Equal(int32(1))) // Single instance
+
+				// Test scale for specific instance "processor"
+				processorScale, err := CalculateSubtreeScale(ctx, "job", ptr.To("processor"), factory, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(processorScale).To(Equal(int32(1))) // Single instance
+			})
+
+			It("should return error for non-existent instance ID", func() {
+				ri := &v1alpha1.ResourceInterface{
+					Spec: v1alpha1.ResourceInterfaceSpec{
+						StructureDefinition: v1alpha1.StructureDefinition{
+							RootComponent: v1alpha1.ComponentDefinition{
+								Name: "job-group",
+							},
+							ChildComponents: []v1alpha1.ComponentDefinition{
+								{
+									Name:           "job",
+									InstanceIdPath: ptr.To(".spec.replicatedJobs[].name"),
+									SpecDefinition: &v1alpha1.SpecDefinition{
+										PodSpecPath: ptr.To(".spec.replicatedJobs[].spec"),
+									},
+								},
+							},
+						},
+					},
+				}
+
+				summary, err := NewStructureSummary(ri)
+				Expect(err).NotTo(HaveOccurred())
+
+				jobgroupObject := &unstructured.Unstructured{
+					Object: map[string]any{
+						"spec": map[string]any{
+							"replicatedJobs": []any{
+								map[string]any{
+									"name": "indexer",
+									"spec": map[string]any{
+										"containers": []any{
+											map[string]any{"name": "indexer"},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				factory := resource.NewComponentFactoryFromObject(ri, jobgroupObject)
+
+				// Test scale for non-existent instance
+				nonExistentId := "non-existent"
+				scale, err := CalculateSubtreeScale(ctx, "job", &nonExistentId, factory, summary)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("instance id non-existent not found"))
+				Expect(scale).To(Equal(int32(0)))
+			})
+
+			It("should return error for empty instance ID", func() {
+				ri := &v1alpha1.ResourceInterface{
+					Spec: v1alpha1.ResourceInterfaceSpec{
+						StructureDefinition: v1alpha1.StructureDefinition{
+							RootComponent: v1alpha1.ComponentDefinition{Name: "job-group"},
+						},
+					},
+				}
+
+				summary, err := NewStructureSummary(ri)
+				Expect(err).NotTo(HaveOccurred())
+
+				scale, err := CalculateSubtreeScale(ctx, "job", ptr.To(""), nil, summary)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("instance id is empty"))
+				Expect(scale).To(Equal(int32(0)))
+			})
+		})
+	})
+
+	Describe("InferPodComponent", func() {
+		Context("with single leaf component", func() {
+			It("should infer the only leaf component", func() {
+				ri := &v1alpha1.ResourceInterface{
+					Spec: v1alpha1.ResourceInterfaceSpec{
+						StructureDefinition: v1alpha1.StructureDefinition{
+							RootComponent: v1alpha1.ComponentDefinition{
+								Name: "simple-job",
+								SpecDefinition: &v1alpha1.SpecDefinition{
+									PodTemplateSpecPath: ptr.To(".spec.template"),
+								},
+							},
+						},
+					},
+				}
+
+				summary, err := NewStructureSummary(ri)
+				Expect(err).NotTo(HaveOccurred())
+
+				pod := &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-pod",
+						Namespace: "default",
+					},
+				}
+				podQuerier := resource.NewPodQuerier(pod)
+
+				componentName, err := InferPodComponent(ctx, podQuerier, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(componentName).To(Equal("simple-job"))
+			})
+
+			It("should ignore non-matching selector", func() {
+				ri := &v1alpha1.ResourceInterface{
+					Spec: v1alpha1.ResourceInterfaceSpec{
+						StructureDefinition: v1alpha1.StructureDefinition{
+							RootComponent: v1alpha1.ComponentDefinition{
+								Name: "simple-job",
+								SpecDefinition: &v1alpha1.SpecDefinition{
+									PodTemplateSpecPath: ptr.To(".spec.template"),
+								},
+								PodSelector: &v1alpha1.PodSelector{
+									ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+										KeyPath: ".non-existing",
+									},
+								},
+							},
+						},
+					},
+				}
+
+				summary, err := NewStructureSummary(ri)
+				Expect(err).NotTo(HaveOccurred())
+
+				pod := &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-pod",
+						Namespace: "default",
+					},
+				}
+				podQuerier := resource.NewPodQuerier(pod)
+
+				componentName, err := InferPodComponent(ctx, podQuerier, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(componentName).To(Equal("simple-job"))
+			})
+		})
+
+		Context("with multiple leaf components", func() {
+			It("should infer component based on pod selector match", func() {
+				ri := &v1alpha1.ResourceInterface{
+					Spec: v1alpha1.ResourceInterfaceSpec{
+						StructureDefinition: v1alpha1.StructureDefinition{
+							RootComponent: v1alpha1.ComponentDefinition{
+								Name: "pytorch-job",
+							},
+							ChildComponents: []v1alpha1.ComponentDefinition{
+								{
+									Name: "worker",
+									SpecDefinition: &v1alpha1.SpecDefinition{
+										PodTemplateSpecPath: ptr.To(".spec.replicaSpecs.Worker.template"),
+									},
+									PodSelector: &v1alpha1.PodSelector{
+										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+											KeyPath: ".metadata.labels.component",
+											Value:   ptr.To("worker"),
+										},
+									},
+								},
+								{
+									Name: "master",
+									SpecDefinition: &v1alpha1.SpecDefinition{
+										PodTemplateSpecPath: ptr.To(".spec.replicaSpecs.Master.template"),
+									},
+									PodSelector: &v1alpha1.PodSelector{
+										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+											KeyPath: ".metadata.labels.component",
+											Value:   ptr.To("master"),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				summary, err := NewStructureSummary(ri)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Test worker pod
+				workerPod := &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "worker-pod",
+						Namespace: "default",
+						Labels: map[string]string{
+							"component": "worker",
+						},
+					},
+				}
+				workerQuerier := resource.NewPodQuerier(workerPod)
+
+				componentName, err := InferPodComponent(ctx, workerQuerier, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(componentName).To(Equal("worker"))
+
+				// Test master pod
+				masterPod := &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "master-pod",
+						Namespace: "default",
+						Labels: map[string]string{
+							"component": "master",
+						},
+					},
+				}
+				masterQuerier := resource.NewPodQuerier(masterPod)
+
+				componentName, err = InferPodComponent(ctx, masterQuerier, summary)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(componentName).To(Equal("master"))
+			})
+
+			It("should return error when pod doesn't match any component", func() {
+				ri := &v1alpha1.ResourceInterface{
+					Spec: v1alpha1.ResourceInterfaceSpec{
+						StructureDefinition: v1alpha1.StructureDefinition{
+							RootComponent: v1alpha1.ComponentDefinition{
+								Name: "pytorch-job",
+							},
+							ChildComponents: []v1alpha1.ComponentDefinition{
+								{
+									Name: "worker",
+									SpecDefinition: &v1alpha1.SpecDefinition{
+										PodTemplateSpecPath: ptr.To(".spec.replicaSpecs.Worker.template"),
+									},
+									PodSelector: &v1alpha1.PodSelector{
+										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+											KeyPath: ".metadata.labels.component",
+											Value:   ptr.To("worker"),
+										},
+									},
+								},
+								{
+									Name: "master",
+									SpecDefinition: &v1alpha1.SpecDefinition{
+										PodTemplateSpecPath: ptr.To(".spec.replicaSpecs.Master.template"),
+									},
+									PodSelector: &v1alpha1.PodSelector{
+										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+											KeyPath: ".metadata.labels.component",
+											Value:   ptr.To("master"),
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				summary, err := NewStructureSummary(ri)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Pod with no labels - won't match any component
+				pod := &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "unmatched-pod",
+						Namespace: "default",
+					},
+				}
+				podQuerier := resource.NewPodQuerier(pod)
+
+				componentName, err := InferPodComponent(ctx, podQuerier, summary)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("no component found for pod"))
+				Expect(componentName).To(Equal(""))
 			})
 		})
 	})

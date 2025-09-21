@@ -530,5 +530,25 @@ var _ = Describe("InterfaceExtractor", func() {
 				Expect(string(defNotFoundErr)).To(ContainSubstring("no instance id path defined"))
 			})
 		})
+
+		Context("validation errors", func() {
+			It("should return error when instance ids contains empty strings", func() {
+				jobgroupObject := types.NewJobGroupObject()
+				jobgroupObject.Spec.ReplicatedJobs[0].Name = ""
+
+				factory := NewComponentFactoryFromObject(jobgroupRI, jobgroupObject)
+
+				extractor := NewInterfaceExtractor(query.NewDefaultJqEvaluator(jobgroupObject))
+
+				comp, err := factory.GetComponent("job")
+				Expect(err).NotTo(HaveOccurred())
+
+				result, err := extractor.ExtractInstanceIds(ctx, comp.definition)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeNil())
+				Expect(err.Error()).To(ContainSubstring("instance id path contained empty string values"))
+				Expect(err.Error()).To(ContainSubstring("[,processor]"))
+			})
+		})
 	})
 })
