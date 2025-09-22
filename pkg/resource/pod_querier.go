@@ -165,7 +165,7 @@ func (pq *PodQuerier) GetMatchingInstanceId(ctx context.Context, instanceSelecto
 		}
 	}
 
-	return "", InstanceNotFoundError(fmt.Sprintf("extracted instance id %q not found in valid instance ids %v", podInstanceId, instanceIds))
+	return "", InstanceNotFoundError(fmt.Sprintf("could not match instance id %q. existing instance ids %v", podInstanceId, instanceIds))
 }
 
 func validateSingleQueryResult(results []any) error {

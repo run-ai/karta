@@ -549,7 +549,7 @@ var _ = Describe("PodQuerier", func() {
 
 				var instanceNotFoundErr InstanceNotFoundError
 				Expect(errors.As(err, &instanceNotFoundErr)).To(BeTrue())
-				Expect(string(instanceNotFoundErr)).To(ContainSubstring("not found in valid instance ids"))
+				Expect(string(instanceNotFoundErr)).To(ContainSubstring("could not match instance id"))
 			})
 
 			It("should handle numeric values by converting to string", func() {
