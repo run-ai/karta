@@ -48,6 +48,7 @@ func InferPodComponentInstance(ctx context.Context, podQuerier *resource.PodQuer
 	}
 
 	var podComponentInstance *string
+	// If there are instance ids (non-empty) and the component has a pod selector, try to match the instance id
 	if len(instanceIds) > 0 && len(instanceIds[0]) > 0 && component.GetPodSelector() != nil {
 		podComponentInstanceName, err := podQuerier.GetMatchingInstanceId(ctx, component.GetPodSelector().ComponentInstanceSelector, instanceIds)
 		if err != nil {

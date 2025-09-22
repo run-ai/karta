@@ -36,7 +36,7 @@ test: generate-mocks ## Run tests with mock generation
 
 .PHONY: install-crd
 install-crd: manifests ## Install CRDs into the cluster
-	kubectl apply -f config/crd/
+	kubectl apply --server-side -f config/crd/
 
 .PHONY: uninstall-crd
 uninstall-crd: ## Uninstall CRDs from the cluster
