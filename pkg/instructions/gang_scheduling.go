@@ -117,7 +117,7 @@ func calculateSubtreeScaleByDefinition(ctx context.Context, currentComponentName
 	var currentComponentScale int32
 
 	// If the component has multiple instances and the instance id is specified for the subtree root, count the scale of the specific instance
-	if len(scales) > 1 && subtreeRoot.ComponentName == currentComponentName && subtreeRoot.InstanceId != nil {
+	if subtreeRoot.ComponentName == currentComponentName && subtreeRoot.InstanceId != nil {
 		if instanceScale, ok := scales[*subtreeRoot.InstanceId]; ok {
 			currentComponentScale = getEffectiveMinReplicas(&instanceScale)
 		} else {
@@ -171,7 +171,7 @@ func calculateSubtreeScaleByLeaves(ctx context.Context, currentComponentName str
 	}
 
 	// Calculate only if this component is a leaf
-	if component.HasPodDefinition() {
+	if lo.Contains(summary.leafComponents, component.Name()) {
 		// If the current component does not have instance id definition, we can return 1 without further instance considerations
 		if !component.HasInstanceIdDefinition() {
 			return 1, nil
