@@ -7,6 +7,7 @@ import (
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 	"github.com/run-ai/kai-bolt/pkg/resource"
+	"github.com/samber/lo"
 )
 
 // PodGroupingEffectiveComponent contains the effective component information for pod grouping
@@ -16,45 +17,16 @@ type PodGroupingEffectiveComponent struct {
 	MemberDefinition   *v1alpha1.PodGroupMemberDefinition // the specific member definition with filters
 }
 
-// GetPodGroupingEffectiveComponent - Main entry point for pod grouping plugin
-func GetPodGroupingEffectiveComponent(ctx context.Context, podQuerier *resource.PodQuerier, summary *StructureSummary) (*PodGroupingEffectiveComponent, error) {
-	// Infer which component this pod belongs to
-	componentName, err := inferPodComponent(ctx, podQuerier, summary)
-	if err != nil {
-		return nil, err
-	}
-
+// GetPodGroupingEffectiveComponent returns all the information about the effective component for the given pod's component
+func GetPodGroupingEffectiveComponent(ctx context.Context, podQuerier *resource.PodQuerier, podComponentName string, summary *StructureSummary) (*PodGroupingEffectiveComponent, error) {
 	// Get effective component candidate for gang scheduling (if any)
-	candidate, err := getEffectiveComponentForPod(ctx, podQuerier, componentName, summary)
+	candidate, err := getEffectiveComponentForPod(ctx, podQuerier, podComponentName, summary)
 	if err != nil {
 		return nil, err
 	}
 
 	// candidate can be nil if none was found
 	return candidate, nil
-}
-
-// inferPodComponent infers the component name for the given pod
-func inferPodComponent(ctx context.Context, podQuerier *resource.PodQuerier, summary *StructureSummary) (string, error) {
-	if len(summary.leafComponents) == 1 {
-		return summary.leafComponents[0], nil
-	}
-
-	// Only check leaf components (have pod definitions)
-	for _, componentName := range summary.leafComponents {
-		leafDefinition := summary.componentDefinitionsByName[componentName]
-
-		// Check if pod matches this component's selector
-		matches, err := podQuerier.Matches(ctx, leafDefinition.PodSelector)
-		if err != nil {
-			return "", fmt.Errorf("failed to check if pod matches component %s: %w", componentName, err)
-		}
-		if matches {
-			return componentName, nil
-		}
-	}
-
-	return "", fmt.Errorf("no component found for pod %s", podQuerier.GetPodName())
 }
 
 // getEffectiveComponentForPod dynamically determines the effective component for a specific pod
@@ -99,20 +71,34 @@ func getEffectiveComponentForPod(ctx context.Context, podQuerier *resource.PodQu
 	return nil, nil
 }
 
+type SubtreeRoot struct {
+	ComponentName string
+	InstanceId    *string
+}
+
 // CalculateSubtreeScale calculates the aggregated scale for a component subtree
-func CalculateSubtreeScale(ctx context.Context, componentName string, factory *resource.ComponentFactory, summary *StructureSummary) (int32, error) {
+func CalculateSubtreeScale(ctx context.Context, componentName string, instanceId *string, factory *resource.ComponentFactory, summary *StructureSummary) (int32, error) {
+	if instanceId != nil && *instanceId == "" {
+		return 0, fmt.Errorf("instance id is empty")
+	}
+
+	subtreeRoot := SubtreeRoot{
+		ComponentName: componentName,
+		InstanceId:    instanceId,
+	}
+
 	if summary.hasScaleDefinition {
-		return calculateSubtreeScaleByDefinition(ctx, componentName, factory, summary)
+		return calculateSubtreeScaleByDefinition(ctx, componentName, subtreeRoot, factory, summary)
 	}
 
 	// if no component in the RI had defined scale, return the count of leaf components in this subtree
-	return calculateSubtreeScaleByLeaves(componentName, summary), nil
+	return calculateSubtreeScaleByLeaves(ctx, componentName, subtreeRoot, factory, summary)
 }
 
 // calculateSubtreeScaleByDefinition calculates the aggregated scale for a component subtree based on scale definitions
-func calculateSubtreeScaleByDefinition(ctx context.Context, componentName string, factory *resource.ComponentFactory, summary *StructureSummary) (int32, error) {
+func calculateSubtreeScaleByDefinition(ctx context.Context, currentComponentName string, subtreeRoot SubtreeRoot, factory *resource.ComponentFactory, summary *StructureSummary) (int32, error) {
 	// Get this component's scale
-	component, err := factory.GetComponent(componentName)
+	component, err := factory.GetComponent(currentComponentName)
 	if err != nil {
 		return 0, err
 	}
@@ -128,23 +114,33 @@ func calculateSubtreeScaleByDefinition(ctx context.Context, componentName string
 		scales = nil
 	}
 
-	var currentComponentTotalScale int32
-	// Sum all scales for this component (array/map cases)
-	for _, scale := range scales {
-		currentComponentTotalScale += getEffectiveMinReplicas(&scale)
+	var currentComponentScale int32
+
+	// If the component has multiple instances and the instance id is specified for the subtree root, count the scale of the specific instance
+	if subtreeRoot.ComponentName == currentComponentName && subtreeRoot.InstanceId != nil {
+		if instanceScale, ok := scales[*subtreeRoot.InstanceId]; ok {
+			currentComponentScale = getEffectiveMinReplicas(&instanceScale)
+		} else {
+			return 0, fmt.Errorf("instance id %s not found", *subtreeRoot.InstanceId)
+		}
+	} else {
+		// Sum all scales for this component (array/map cases)
+		for _, scale := range scales {
+			currentComponentScale += getEffectiveMinReplicas(&scale)
+		}
 	}
 
 	// Get children
-	children := summary.childrenMap[componentName]
+	children := summary.childrenMap[currentComponentName]
 	if len(children) == 0 {
 		// Leaf component - return its total scale
-		return currentComponentTotalScale, nil
+		return currentComponentScale, nil
 	}
 
 	// Parent component - calculate children sum, then multiply by parent scale
 	var childrenSum int32
 	for _, child := range children {
-		childScale, err := calculateSubtreeScaleByDefinition(ctx, child, factory, summary)
+		childScale, err := calculateSubtreeScaleByDefinition(ctx, child, subtreeRoot, factory, summary)
 		if err != nil {
 			return 0, err
 		}
@@ -153,37 +149,63 @@ func calculateSubtreeScaleByDefinition(ctx context.Context, componentName string
 
 	// If child components have no scale definitions, assume the scale is defined in a higher level
 	if childrenSum == 0 {
-		return currentComponentTotalScale, nil
+		return currentComponentScale, nil
 	}
 
 	// If current component has no scale definitions, carry over the children sum
-	if currentComponentTotalScale == 0 {
+	if currentComponentScale == 0 {
 		return childrenSum, nil
 	}
 
 	// If both current component and children have scale definitions, multiply the current component scale by the children sum
-	return currentComponentTotalScale * childrenSum, nil
+	return currentComponentScale * childrenSum, nil
 }
 
 // calculateSubtreeScaleByLeaves is a fallback method for cases where the RI does not contain any scale definition.
 // It returns the number of leaf components (components with SpecDefinition) in the subtree rooted at the given component.
-func calculateSubtreeScaleByLeaves(componentName string, summary *StructureSummary) int32 {
-	var leafCount int32
+func calculateSubtreeScaleByLeaves(ctx context.Context, currentComponentName string, subtreeRoot SubtreeRoot, factory *resource.ComponentFactory, summary *StructureSummary) (int32, error) {
+	// Get this component's scale
+	component, err := factory.GetComponent(currentComponentName)
+	if err != nil {
+		return 0, err
+	}
 
-	// Check if this component is a leaf
-	if componentDef := summary.componentDefinitionsByName[componentName]; componentDef != nil {
-		if hasPodDefinition(*componentDef) {
-			leafCount = 1
+	// Calculate only if this component is a leaf
+	if lo.Contains(summary.leafComponents, component.Name()) {
+		// If the current component does not have instance id definition, we can return 1 without further instance considerations
+		if !component.HasInstanceIdDefinition() {
+			return 1, nil
+		}
+
+		instanceIds, err := component.GetInstanceIds(ctx)
+		if err != nil {
+			return 0, err
+		}
+
+		// If the current component is the subtree root and the instance id is specified, count the scale of the specific instance
+		if currentComponentName == subtreeRoot.ComponentName && subtreeRoot.InstanceId != nil {
+			if lo.Contains(instanceIds, *subtreeRoot.InstanceId) {
+				return 1, nil
+			} else {
+				return 0, fmt.Errorf("instance id %s not found", *subtreeRoot.InstanceId)
+			}
+		} else {
+			return int32(len(instanceIds)), nil
 		}
 	}
 
 	// Recursively count leaves in all child subtrees
-	children := summary.childrenMap[componentName]
+	var leafCount int32
+	children := summary.childrenMap[currentComponentName]
 	for _, child := range children {
-		leafCount += calculateSubtreeScaleByLeaves(child, summary)
+		childLeafCount, err := calculateSubtreeScaleByLeaves(ctx, child, subtreeRoot, factory, summary)
+		if err != nil {
+			return 0, err
+		}
+		leafCount += childLeafCount
 	}
 
-	return leafCount
+	return leafCount, nil
 }
 
 // getEffectiveMinReplicas determines the minimum replicas for a component

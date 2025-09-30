@@ -95,8 +95,10 @@ func PyFlowRI() *v1alpha1.ResourceInterface {
 							ReplicasPath: ptr.To(".spec.master.replicas"),
 						},
 						PodSelector: &v1alpha1.PodSelector{
-							KeyPath: ".metadata.labels.role",
-							Value:   ptr.To("master"),
+							ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+								KeyPath: ".metadata.labels.role",
+								Value:   ptr.To("master"),
+							},
 						},
 					},
 					{
@@ -110,8 +112,10 @@ func PyFlowRI() *v1alpha1.ResourceInterface {
 							MaxReplicasPath: ptr.To(".spec.worker.maxReplicas"),
 						},
 						PodSelector: &v1alpha1.PodSelector{
-							KeyPath: ".metadata.labels.role",
-							Value:   ptr.To("worker"),
+							ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+								KeyPath: ".metadata.labels.role",
+								Value:   ptr.To("worker"),
+							},
 						},
 					},
 				},

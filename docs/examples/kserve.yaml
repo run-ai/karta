@@ -56,8 +56,9 @@ spec:
         minReplicasPath: ".spec.predictor.minReplicas"
         maxReplicasPath: ".spec.predictor.maxReplicas"
       podSelector:
-        keyPath: '.metadata.labels["component"]'
-        value: "predictor"
+        componentTypeSelector:
+          keyPath: '.metadata.labels["component"]'
+          value: "predictor"
 
     # Transformer - pre/post-processing pipeline
     - name: "transformer"
@@ -72,8 +73,9 @@ spec:
         minReplicasPath: ".spec.transformer.minReplicas"
         maxReplicasPath: ".spec.transformer.maxReplicas"
       podSelector:
-        keyPath: '.metadata.labels["component"]'
-        value: "transformer"
+        componentTypeSelector:
+          keyPath: '.metadata.labels["component"]'
+          value: "transformer"
 
   # Optimization instructions
   optimizationInstructions:

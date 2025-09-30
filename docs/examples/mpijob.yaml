@@ -51,8 +51,9 @@ spec:
       scaleDefinition:
         replicasPath: ".spec.mpiReplicaSpecs.Launcher.replicas"
       podSelector:
-        keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
-        value: "launcher"
+        componentTypeSelector:
+          keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
+          value: "launcher"
 
     # Worker nodes - execute MPI tasks under launcher coordination
     - name: "worker"
@@ -66,8 +67,9 @@ spec:
       scaleDefinition:
         replicasPath: ".spec.mpiReplicaSpecs.Worker.replicas"
       podSelector:
-        keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
-        value: "worker"
+        componentTypeSelector:
+          keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
+          value: "worker"
 
   # Optimization instructions
   optimizationInstructions:

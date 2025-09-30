@@ -18,6 +18,7 @@ type Extractor interface {
 	ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error)
 	ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error)
 	ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error)
+	ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error)
 }
 
 type ComponentFactory struct {

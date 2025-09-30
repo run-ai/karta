@@ -10,6 +10,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// InstanceNotFoundError is returned when a pod's extracted instance ID doesn't match any valid instance IDs
+type InstanceNotFoundError string
+
+func (e InstanceNotFoundError) Error() string {
+	return string(e)
+}
+
 // PodQuerier handles JQ-based querying operations against pods
 type PodQuerier struct {
 	pod            *corev1.Pod
@@ -27,8 +34,8 @@ func (pq *PodQuerier) GetPodName() string {
 	return pq.pod.Name
 }
 
-// Matches returns true if the pod matches the given selector
-func (pq *PodQuerier) Matches(ctx context.Context, selector *v1alpha1.PodSelector) (bool, error) {
+// MatchesComponentType returns true if the pod matches the given component type selector
+func (pq *PodQuerier) MatchesComponentType(ctx context.Context, selector *v1alpha1.ComponentTypeSelector) (bool, error) {
 	if selector == nil {
 		return false, nil
 	}
@@ -127,6 +134,38 @@ func (pq *PodQuerier) PassesFilters(ctx context.Context, filters []string) (bool
 	}
 
 	return true, nil
+}
+
+// GetMatchingInstanceId checks if the pod matches any of the provided instance ids using the instance selector.
+// Returns the matching instance id if found, empty string if no match.
+func (pq *PodQuerier) GetMatchingInstanceId(ctx context.Context, instanceSelector *v1alpha1.ComponentInstanceSelector, instanceIds []string) (string, error) {
+	if instanceSelector == nil {
+		// No instance selector - check if single instance with empty id is expected
+		if len(instanceIds) == 1 && instanceIds[0] == "" {
+			return "", nil // Match for single instance with empty id
+		}
+		return "", fmt.Errorf("no instance selector provided but instance ids are not empty")
+	}
+
+	results, err := pq.queryEvaluator.Evaluate(ctx, instanceSelector.IdPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to evaluate instance id path %s: %w", instanceSelector.IdPath, err)
+	}
+
+	if err := validateSingleQueryResult(results); err != nil {
+		return "", fmt.Errorf("instance id path %q returned an invalid value %v: %w", instanceSelector.IdPath, results, err)
+	}
+
+	podInstanceId := fmt.Sprintf("%v", results[0])
+
+	// Check if pod's instance id matches any of the existing instance ids
+	for _, id := range instanceIds {
+		if podInstanceId == id {
+			return id, nil
+		}
+	}
+
+	return "", InstanceNotFoundError(fmt.Sprintf("could not match instance id %q. existing instance ids %v", podInstanceId, instanceIds))
 }
 
 func validateSingleQueryResult(results []any) error {

@@ -97,8 +97,9 @@ func ReactorRI() *v1alpha1.ResourceInterface {
 				},
 				ChildComponents: []v1alpha1.ComponentDefinition{
 					{
-						Name:     "service",
-						OwnerRef: ptr.To("reactor"),
+						Name:           "service",
+						OwnerRef:       ptr.To("reactor"),
+						InstanceIdPath: ptr.To(".spec.services | to_entries[] | .key"),
 						SpecDefinition: &v1alpha1.SpecDefinition{
 							FragmentedPodSpecDefinition: &v1alpha1.FragmentedPodSpecDefinition{
 								LabelsPath:      ptr.To(".spec.services | .[] | .labels"),
@@ -114,7 +115,9 @@ func ReactorRI() *v1alpha1.ResourceInterface {
 							MaxReplicasPath: ptr.To(".spec.services | .[] | .maxReplicas"),
 						},
 						PodSelector: &v1alpha1.PodSelector{
-							KeyPath: ".metadata.labels.service-name",
+							ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+								KeyPath: ".metadata.labels.service-name",
+							},
 						},
 					},
 				},

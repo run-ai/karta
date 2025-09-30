@@ -50,8 +50,9 @@ spec:
       scaleDefinition:
         replicasPath: ".spec.pytorchReplicaSpecs.Master.replicas"
       podSelector:
-        keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
-        value: "master"
+        componentTypeSelector:
+          keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
+          value: "master"
 
     - name: "worker"
       kind:
@@ -66,8 +67,9 @@ spec:
         minReplicasPath: ".spec.elasticPolicy.minReplicas"
         maxReplicasPath: ".spec.elasticPolicy.maxReplicas"
       podSelector:
-        keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
-        value: "worker"
+        componentTypeSelector:
+          keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
+          value: "worker"
 
   # Optimization instructions
   optimizationInstructions:

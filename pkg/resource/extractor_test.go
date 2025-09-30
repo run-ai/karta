@@ -2,6 +2,7 @@ package resource
 
 import (
 	"context"
+	"errors"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -486,6 +487,67 @@ var _ = Describe("InterfaceExtractor", func() {
 				_, err := extractor.ExtractFragmentedPodSpec(ctx, definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to convert object"))
+			})
+		})
+	})
+
+	Describe("ExtractInstanceIds", func() {
+		Context("JobGroup", func() {
+			It("should extract job instance IDs from array", func() {
+				jobComp, err := jobgroupFactory.GetComponent(jobComponentName)
+				Expect(err).NotTo(HaveOccurred())
+
+				result, err := jobgroupExtractor.ExtractInstanceIds(ctx, jobComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal([]string{"indexer", "processor"}))
+			})
+		})
+
+		Context("Reactor", func() {
+			It("should extract service instance IDs from map keys", func() {
+				serviceComp, err := reactorFactory.GetComponent(serviceComponentName)
+				Expect(err).NotTo(HaveOccurred())
+
+				result, err := reactorExtractor.ExtractInstanceIds(ctx, serviceComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(ConsistOf("api", "worker", "cache"))
+			})
+		})
+
+		Context("PyFlow", func() {
+			It("should return DefinitionNotFoundError for components without instance ID path", func() {
+				masterComp, err := pyflowFactory.GetComponent(masterComponentName)
+				Expect(err).NotTo(HaveOccurred())
+
+				result, err := pyflowExtractor.ExtractInstanceIds(ctx, masterComp.definition)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeNil())
+
+				var defNotFoundErr DefinitionNotFoundError
+				Expect(errors.As(err, &defNotFoundErr)).To(BeTrue())
+				Expect(string(defNotFoundErr)).To(ContainSubstring("no instance id path defined"))
+			})
+		})
+
+		Context("validation errors", func() {
+			It("should return error when instance ids contains empty strings", func() {
+				jobgroupObject := types.NewJobGroupObject()
+				jobgroupObject.Spec.ReplicatedJobs[0].Name = ""
+
+				factory := NewComponentFactoryFromObject(jobgroupRI, jobgroupObject)
+
+				extractor := NewInterfaceExtractor(query.NewDefaultJqEvaluator(jobgroupObject))
+
+				comp, err := factory.GetComponent("job")
+				Expect(err).NotTo(HaveOccurred())
+
+				result, err := extractor.ExtractInstanceIds(ctx, comp.definition)
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(BeNil())
+				Expect(err.Error()).To(ContainSubstring("instance id path contained empty string values"))
+				Expect(err.Error()).To(ContainSubstring("[,processor]"))
 			})
 		})
 	})

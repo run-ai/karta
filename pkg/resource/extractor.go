@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 	"github.com/run-ai/kai-bolt/pkg/query"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -233,6 +235,25 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 	}
 
 	return fragmentedSpecs, nil
+}
+
+func (e *InterfaceExtractor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) {
+	if definition.InstanceIdPath == nil {
+		return nil, DefinitionNotFoundError("no instance id path defined")
+	}
+
+	var instanceIds []string
+	err := extract(ctx, definition.InstanceIdPath, e.queryEvaluator, &instanceIds)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate all instance ids are not empty
+	if lo.Contains(instanceIds, "") {
+		return nil, fmt.Errorf("instance id path contained empty string values [%s]", strings.Join(instanceIds, ","))
+	}
+
+	return instanceIds, nil
 }
 
 // safeGetByIndex Generic function for safely retrieving a slice element.

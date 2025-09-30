@@ -2,6 +2,7 @@ package resource
 
 import (
 	"context"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -223,10 +224,10 @@ var _ = Describe("PodQuerier", func() {
 		})
 	})
 
-	Describe("Matches", func() {
+	Describe("MatchesComponentType", func() {
 		Context("when selector is nil", func() {
 			It("should return false", func() {
-				matches, err := querier.Matches(ctx, nil)
+				matches, err := querier.MatchesComponentType(ctx, nil)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeFalse())
 			})
@@ -234,45 +235,45 @@ var _ = Describe("PodQuerier", func() {
 
 		Context("when checking key existence (Value is nil)", func() {
 			It("should return true for existing label keys", func() {
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".metadata.labels.component",
 					Value:   nil,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeTrue())
 			})
 
 			It("should return false for non-existing label keys", func() {
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".metadata.labels.nonexistent",
 					Value:   nil,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeFalse())
 			})
 
 			It("should return true for existing annotation keys", func() {
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".metadata.annotations.config",
 					Value:   nil,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeTrue())
 			})
 
 			It("should return true for existing nested paths", func() {
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".spec.containers[0].name",
 					Value:   nil,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeTrue())
 			})
@@ -281,48 +282,48 @@ var _ = Describe("PodQuerier", func() {
 		Context("when checking key-value pairs (Value is specified)", func() {
 			It("should return true for matching label values", func() {
 				value := "worker"
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".metadata.labels.component",
 					Value:   &value,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeTrue())
 			})
 
 			It("should return false for non-matching label values", func() {
 				value := "master"
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".metadata.labels.component",
 					Value:   &value,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeFalse())
 			})
 
 			It("should return true for matching annotation values", func() {
 				value := "high-memory"
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".metadata.annotations.config",
 					Value:   &value,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeTrue())
 			})
 
 			It("should return false for non-matching annotation values", func() {
 				value := "low-memory"
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".metadata.annotations.config",
 					Value:   &value,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeFalse())
 			})
@@ -333,12 +334,12 @@ var _ = Describe("PodQuerier", func() {
 				querier = NewPodQuerier(&testPod)
 
 				value := "value-with-special_chars.and:colons"
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".metadata.labels.special",
 					Value:   &value,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeTrue())
 			})
@@ -349,24 +350,24 @@ var _ = Describe("PodQuerier", func() {
 				querier = NewPodQuerier(&testPod)
 
 				value := `value-with-"quotes"`
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".metadata.labels.quotes",
 					Value:   &value,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeTrue())
 			})
 
 			It("should return false for non-existing keys with values", func() {
 				value := "any-value"
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".metadata.labels.nonexistent",
 					Value:   &value,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeFalse())
 			})
@@ -375,24 +376,24 @@ var _ = Describe("PodQuerier", func() {
 		Context("when using complex JQ paths", func() {
 			It("should work with array indexing", func() {
 				value := "main"
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".spec.containers[0].name",
 					Value:   &value,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeTrue())
 			})
 
 			It("should work with object navigation", func() {
 				value := "default"
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".metadata.namespace",
 					Value:   &value,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(matches).To(BeTrue())
 			})
@@ -401,15 +402,203 @@ var _ = Describe("PodQuerier", func() {
 		Context("when JQ expression is invalid", func() {
 			It("should return an error for invalid paths", func() {
 				value := "any"
-				selector := &v1alpha1.PodSelector{
+				selector := &v1alpha1.ComponentTypeSelector{
 					KeyPath: ".invalid[[[syntax",
 					Value:   &value,
 				}
 
-				matches, err := querier.Matches(ctx, selector)
+				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(BeAssignableToTypeOf(&query.JQParseError{}))
 				Expect(matches).To(BeFalse())
+			})
+		})
+	})
+
+	Describe("GetMatchingInstanceId", func() {
+		var pod *corev1.Pod
+
+		BeforeEach(func() {
+			pod = &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "default",
+					Labels: map[string]string{
+						"job-name":     "indexer",
+						"service-name": "api",
+						"component":    "worker",
+					},
+					Annotations: map[string]string{
+						"nvidia.com/dynamo-component": "worker-group-1",
+					},
+				},
+			}
+		})
+
+		Context("with valid instance selector", func() {
+			It("should extract instance ID from pod label", func() {
+				querier := NewPodQuerier(pod)
+				instanceSelector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".metadata.labels[\"job-name\"]",
+				}
+				instanceIds := []string{"indexer", "processor"}
+
+				result, err := querier.GetMatchingInstanceId(ctx, instanceSelector, instanceIds)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal("indexer"))
+			})
+
+			It("should extract instance ID from pod annotation", func() {
+				querier := NewPodQuerier(pod)
+				instanceSelector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".metadata.annotations.\"nvidia.com/dynamo-component\"",
+				}
+				instanceIds := []string{"worker-group-1", "worker-group-2"}
+
+				result, err := querier.GetMatchingInstanceId(ctx, instanceSelector, instanceIds)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal("worker-group-1"))
+			})
+
+			It("should extract instance ID from nested pod spec field", func() {
+				pod.Spec = corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: "worker",
+							Env: []corev1.EnvVar{
+								{Name: "GROUP_NAME", Value: "cache"},
+							},
+						},
+					},
+				}
+
+				querier := NewPodQuerier(pod)
+				instanceSelector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".spec.containers[0].env[] | select(.name == \"GROUP_NAME\") | .value",
+				}
+				instanceIds := []string{"api", "worker", "cache"}
+
+				result, err := querier.GetMatchingInstanceId(ctx, instanceSelector, instanceIds)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal("cache"))
+			})
+		})
+
+		Context("with invalid instance selector", func() {
+			It("should return error when JQ path is invalid", func() {
+				querier := NewPodQuerier(pod)
+				instanceSelector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".invalid..path",
+				}
+				instanceIds := []string{"indexer", "processor"}
+
+				result, err := querier.GetMatchingInstanceId(ctx, instanceSelector, instanceIds)
+
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(Equal(""))
+				Expect(err.Error()).To(ContainSubstring("failed to parse JQ expression"))
+			})
+
+			It("should return error when JQ returns multiple results", func() {
+				pod.ObjectMeta.Labels["duplicate-key"] = "value1"
+				pod.ObjectMeta.Annotations["duplicate-key"] = "value2"
+
+				querier := NewPodQuerier(pod)
+				instanceSelector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".metadata | (.labels, .annotations) | .\"duplicate-key\"",
+				}
+				instanceIds := []string{"value1", "value2"}
+
+				result, err := querier.GetMatchingInstanceId(ctx, instanceSelector, instanceIds)
+
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(Equal(""))
+				Expect(err.Error()).To(ContainSubstring("expected single query result"))
+			})
+
+			It("should return error when JQ returns no results", func() {
+				querier := NewPodQuerier(pod)
+				instanceSelector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".metadata.labels.nonexistent",
+				}
+				instanceIds := []string{"indexer", "processor"}
+
+				result, err := querier.GetMatchingInstanceId(ctx, instanceSelector, instanceIds)
+
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(Equal(""))
+				Expect(err.Error()).To(ContainSubstring("query result is empty"))
+			})
+		})
+
+		Context("instance ID validation", func() {
+			It("should return InstanceNotFoundError when extracted value not in instance IDs list", func() {
+				querier := NewPodQuerier(pod)
+				instanceSelector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".metadata.labels[\"job-name\"]",
+				}
+				instanceIds := []string{"processor", "validator"} // "indexer" not in list
+
+				result, err := querier.GetMatchingInstanceId(ctx, instanceSelector, instanceIds)
+
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(Equal(""))
+
+				var instanceNotFoundErr InstanceNotFoundError
+				Expect(errors.As(err, &instanceNotFoundErr)).To(BeTrue())
+				Expect(string(instanceNotFoundErr)).To(ContainSubstring("could not match instance id"))
+			})
+
+			It("should handle numeric values by converting to string", func() {
+				pod.ObjectMeta.Labels["replica-id"] = "3"
+
+				querier := NewPodQuerier(pod)
+				instanceSelector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".metadata.labels[\"replica-id\"] | tonumber",
+				}
+				instanceIds := []string{"1", "2", "3", "4"}
+
+				result, err := querier.GetMatchingInstanceId(ctx, instanceSelector, instanceIds)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal("3"))
+			})
+		})
+
+		Context("without instance selector", func() {
+			It("should match single instance with empty ID when no selector provided", func() {
+				querier := NewPodQuerier(pod)
+				instanceIds := []string{""} // Single instance with empty ID
+
+				result, err := querier.GetMatchingInstanceId(ctx, nil, instanceIds)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(""))
+			})
+
+			It("should return error when no selector provided but multiple instance IDs exist", func() {
+				querier := NewPodQuerier(pod)
+				instanceIds := []string{"worker-1", "worker-2"} // Multiple instances
+
+				result, err := querier.GetMatchingInstanceId(ctx, nil, instanceIds)
+
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(Equal(""))
+				Expect(err.Error()).To(ContainSubstring("no instance selector provided but instance ids are not empty"))
+			})
+
+			It("should return error when no selector provided with single non-empty instance ID", func() {
+				querier := NewPodQuerier(pod)
+				instanceIds := []string{"worker-1"} // Single non-empty instance
+
+				result, err := querier.GetMatchingInstanceId(ctx, nil, instanceIds)
+
+				Expect(err).To(HaveOccurred())
+				Expect(result).To(Equal(""))
+				Expect(err.Error()).To(ContainSubstring("no instance selector provided but instance ids are not empty"))
 			})
 		})
 	})

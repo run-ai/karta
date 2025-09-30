@@ -59,8 +59,9 @@ spec:
       scaleDefinition:
         replicasPath: ".spec.components.queryNode.replicas"
       podSelector:
-        keyPath: '.metadata.labels["app.kubernetes.io/component"]'
-        value: "querynode"
+        componentTypeSelector:
+          keyPath: '.metadata.labels["app.kubernetes.io/component"]'
+          value: "querynode"
 
     # DataNode - processes and stores vector data
     - name: "datanode"
@@ -74,8 +75,9 @@ spec:
       scaleDefinition:
         replicasPath: ".spec.components.dataNode.replicas"
       podSelector:
-        keyPath: '.metadata.labels["app.kubernetes.io/component"]'
-        value: "datanode"
+        componentTypeSelector:
+          keyPath: '.metadata.labels["app.kubernetes.io/component"]'
+          value: "datanode"
 
   # Optimization instructions
   optimizationInstructions:

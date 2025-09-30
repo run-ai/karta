@@ -52,6 +52,21 @@ func (mr *MockExtractorMockRecorder) ExtractFragmentedPodSpec(ctx, definition in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractFragmentedPodSpec", reflect.TypeOf((*MockExtractor)(nil).ExtractFragmentedPodSpec), ctx, definition)
 }
 
+// ExtractInstanceIds mocks base method.
+func (m *MockExtractor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExtractInstanceIds", ctx, definition)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExtractInstanceIds indicates an expected call of ExtractInstanceIds.
+func (mr *MockExtractorMockRecorder) ExtractInstanceIds(ctx, definition interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractInstanceIds", reflect.TypeOf((*MockExtractor)(nil).ExtractInstanceIds), ctx, definition)
+}
+
 // ExtractPodMetadata mocks base method.
 func (m *MockExtractor) ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]v10.ObjectMeta, error) {
 	m.ctrl.T.Helper()
