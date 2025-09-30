@@ -91,77 +91,88 @@ var _ = Describe("Pod Utils", func() {
 		})
 
 		Context("with multiple leaf components", func() {
-			It("should infer component based on pod selector match", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
-						StructureDefinition: v1alpha1.StructureDefinition{
-							RootComponent: v1alpha1.ComponentDefinition{
-								Name: "pytorch-job",
-							},
-							ChildComponents: []v1alpha1.ComponentDefinition{
-								{
-									Name: "worker",
-									SpecDefinition: &v1alpha1.SpecDefinition{
-										PodTemplateSpecPath: ptr.To(".spec.replicaSpecs.Worker.template"),
+			Context("should infer component based on pod selector match", func() {
+				var (
+					summary *StructureSummary
+				)
+
+				BeforeEach(func() {
+					ri := &v1alpha1.ResourceInterface{
+						Spec: v1alpha1.ResourceInterfaceSpec{
+							StructureDefinition: v1alpha1.StructureDefinition{
+								RootComponent: v1alpha1.ComponentDefinition{
+									Name: "pytorch-job",
+								},
+								ChildComponents: []v1alpha1.ComponentDefinition{
+									{
+										Name: "worker",
+										SpecDefinition: &v1alpha1.SpecDefinition{
+											PodTemplateSpecPath: ptr.To(".spec.replicaSpecs.Worker.template"),
+										},
+										PodSelector: &v1alpha1.PodSelector{
+											ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+												KeyPath: ".metadata.labels.component",
+												Value:   ptr.To("worker"),
+											},
+										},
 									},
-									PodSelector: &v1alpha1.PodSelector{
-										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
-											KeyPath: ".metadata.labels.component",
-											Value:   ptr.To("worker"),
+									{
+										Name: "master",
+										SpecDefinition: &v1alpha1.SpecDefinition{
+											PodTemplateSpecPath: ptr.To(".spec.replicaSpecs.Master.template"),
+										},
+										PodSelector: &v1alpha1.PodSelector{
+											ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+												KeyPath: ".metadata.labels.component",
+												Value:   ptr.To("master"),
+											},
 										},
 									},
 								},
-								{
-									Name: "master",
-									SpecDefinition: &v1alpha1.SpecDefinition{
-										PodTemplateSpecPath: ptr.To(".spec.replicaSpecs.Master.template"),
-									},
-									PodSelector: &v1alpha1.PodSelector{
-										ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
-											KeyPath: ".metadata.labels.component",
-											Value:   ptr.To("master"),
-										},
-									},
-								},
 							},
 						},
-					},
-				}
+					}
 
-				summary, err := NewStructureSummary(ri)
-				Expect(err).NotTo(HaveOccurred())
+					var err error
+					summary, err = NewStructureSummary(ri)
+					Expect(err).NotTo(HaveOccurred())
+				})
 
-				// Test worker pod
-				workerPod := &corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "worker-pod",
-						Namespace: "default",
-						Labels: map[string]string{
-							"component": "worker",
+				It("worker pod", func() {
+					// Test worker pod
+					workerPod := &corev1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "worker-pod",
+							Namespace: "default",
+							Labels: map[string]string{
+								"component": "worker",
+							},
 						},
-					},
-				}
-				workerQuerier := resource.NewPodQuerier(workerPod)
+					}
+					workerQuerier := resource.NewPodQuerier(workerPod)
 
-				componentName, err := InferPodComponent(ctx, workerQuerier, summary)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(componentName).To(Equal("worker"))
+					componentName, err := InferPodComponent(ctx, workerQuerier, summary)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(componentName).To(Equal("worker"))
+				})
 
-				// Test master pod
-				masterPod := &corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "master-pod",
-						Namespace: "default",
-						Labels: map[string]string{
-							"component": "master",
+				It("master pod", func() {
+					// Test master pod
+					masterPod := &corev1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "master-pod",
+							Namespace: "default",
+							Labels: map[string]string{
+								"component": "master",
+							},
 						},
-					},
-				}
-				masterQuerier := resource.NewPodQuerier(masterPod)
+					}
+					masterQuerier := resource.NewPodQuerier(masterPod)
 
-				componentName, err = InferPodComponent(ctx, masterQuerier, summary)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(componentName).To(Equal("master"))
+					componentName, err := InferPodComponent(ctx, masterQuerier, summary)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(componentName).To(Equal("master"))
+				})
 			})
 
 			It("should return error when pod doesn't match any component", func() {
@@ -299,9 +310,13 @@ var _ = Describe("Pod Utils", func() {
 		})
 
 		Context("when component has instance IDs", func() {
-			It("should return matching instance ID", func() {
-				// Create RI with component that has instance IDs
-				ri := &v1alpha1.ResourceInterface{
+			var (
+				ri *v1alpha1.ResourceInterface
+			)
+
+			BeforeEach(func() {
+				// RI with component that has instance IDs
+				ri = &v1alpha1.ResourceInterface{
 					Spec: v1alpha1.ResourceInterfaceSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
@@ -320,6 +335,9 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
+			})
+
+			It("should return matching instance ID", func() {
 				factory = resource.NewComponentFactory(ri, mockExtractor)
 
 				// Mock GetInstanceIds to return multiple instance IDs
@@ -346,26 +364,6 @@ var _ = Describe("Pod Utils", func() {
 			})
 
 			It("should return nil when matching returns empty string", func() {
-				// Create RI with component that has instance IDs
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
-						StructureDefinition: v1alpha1.StructureDefinition{
-							RootComponent: v1alpha1.ComponentDefinition{
-								Name:           "worker",
-								InstanceIdPath: ptr.To(".spec.groups[].name"),
-								PodSelector: &v1alpha1.PodSelector{
-									ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
-										KeyPath: ".metadata.labels.component",
-										Value:   ptr.To("worker"),
-									},
-									ComponentInstanceSelector: &v1alpha1.ComponentInstanceSelector{
-										IdPath: ".metadata.labels.group",
-									},
-								},
-							},
-						},
-					},
-				}
 				factory = resource.NewComponentFactory(ri, mockExtractor)
 
 				// Mock GetInstanceIds to return single empty instance ID (single instance case)
