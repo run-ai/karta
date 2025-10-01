@@ -3,19 +3,22 @@ package v1alpha1
 import (
 	"errors"
 	"fmt"
-	"reflect"
 
-	"github.com/itchyny/gojq"
+	"github.com/run-ai/kai-bolt/pkg/query"
 )
 
 type RIValidator struct {
-	RI            *ResourceInterface
+	ri            *ResourceInterface
 	rootComponent ComponentDefinition
 	allComponents map[string]ComponentDefinition
 }
 
+func NewRIValidator(ri *ResourceInterface) *RIValidator {
+	return &RIValidator{ri: ri}
+}
+
 func (v *RIValidator) Validate() error {
-	if v.RI == nil {
+	if v.ri == nil {
 		return errors.New("resource interface is nil")
 	}
 
@@ -33,7 +36,7 @@ func (v *RIValidator) Validate() error {
 		errs = append(errs, instructionErrs...)
 	}
 
-	if jqErrs := v.validateJQ(); jqErrs != nil {
+	if jqErrs := query.ValidateJQExpressions(v.ri); jqErrs != nil {
 		errs = append(errs, jqErrs...)
 	}
 
@@ -43,9 +46,10 @@ func (v *RIValidator) Validate() error {
 func (v *RIValidator) initialize() []error {
 	var errs []error
 
-	v.rootComponent = v.RI.Spec.StructureDefinition.RootComponent
+	v.rootComponent = v.ri.Spec.StructureDefinition.RootComponent
+
 	v.allComponents = make(map[string]ComponentDefinition)
-	for _, component := range append(v.RI.Spec.StructureDefinition.ChildComponents, v.RI.Spec.StructureDefinition.RootComponent) {
+	for _, component := range append(v.ri.Spec.StructureDefinition.ChildComponents, v.ri.Spec.StructureDefinition.RootComponent) {
 		if _, ok := v.allComponents[component.Name]; ok {
 			errs = append(errs, fmt.Errorf("component name %s is not unique", component.Name))
 		}
@@ -62,19 +66,24 @@ func (v *RIValidator) validateStructureDefinition() []error {
 	errs = append(errs, v.validateRootComponent()...)
 
 	// Child components validation
-	for _, component := range v.RI.Spec.StructureDefinition.ChildComponents {
+	for _, component := range v.ri.Spec.StructureDefinition.ChildComponents {
 		// Must have non-empty owner ref
 		if component.OwnerRef == nil || *component.OwnerRef == "" {
-			errs = append(errs, fmt.Errorf("child component \"%s\" has no owner ref", component.Name))
-		}
-
-		// Owner ref must point to an existing component
-		if _, ok := v.allComponents[*component.OwnerRef]; !ok {
-			errs = append(errs, fmt.Errorf("child component \"%s\" has owner ref to non-existing component \"%s\"", component.Name, *component.OwnerRef))
+			errs = append(errs, fmt.Errorf("child component '%s' has no owner ref", component.Name))
+		} else {
+			// Owner ref must point to an existing component
+			if _, ok := v.allComponents[*component.OwnerRef]; !ok {
+				errs = append(errs, fmt.Errorf("child component '%s' has owner ref to non-existing component '%s'", component.Name, *component.OwnerRef))
+			}
 		}
 
 		// Component validation
 		errs = append(errs, v.validateComponent(component)...)
+	}
+
+	// No ownership cycles
+	if ownershipCycleErr := v.validateNoOwnershipCycles(); ownershipCycleErr != nil {
+		errs = append(errs, ownershipCycleErr)
 	}
 
 	return errs
@@ -86,7 +95,7 @@ func (v *RIValidator) validateRootComponent() []error {
 	// Has full gvk
 	if v.rootComponent.Kind == nil ||
 		v.rootComponent.Kind.Group == "" || v.rootComponent.Kind.Version == "" || v.rootComponent.Kind.Kind == "" {
-		errs = append(errs, fmt.Errorf("root component must have full gvk"))
+		errs = append(errs, fmt.Errorf("root component must have full kind (group, version, kind)"))
 	}
 
 	// No owner ref
@@ -128,17 +137,71 @@ func (v *RIValidator) validateComponent(component ComponentDefinition) []error {
 		}
 
 		if counter > 1 {
-			errs = append(errs, fmt.Errorf("component \"%s\" has multiple pod spec definitions", component.Name))
+			errs = append(errs, fmt.Errorf("component '%s' has multiple pod spec definitions", component.Name))
 		}
 	}
 
-	// Component's PodSelector has instance selector if has the component has instance id path defined
-	if component.InstanceIdPath != nil &&
-		(component.PodSelector == nil || component.PodSelector.ComponentInstanceSelector == nil) {
-		errs = append(errs, fmt.Errorf("component \"%s\" has instance id path but no pod component instance selector", component.Name))
+	// Component's PodSelector has instance selector if has the component has instance id path defined or the opposite
+	if err := validateMultiInstanceComponent(component); err != nil {
+		errs = append(errs, err)
 	}
 
 	return errs
+}
+
+func validateMultiInstanceComponent(component ComponentDefinition) error {
+	if component.InstanceIdPath != nil &&
+		(component.PodSelector == nil || component.PodSelector.ComponentInstanceSelector == nil) {
+		return fmt.Errorf("component '%s' has instance id path but no pod component instance selector", component.Name)
+	}
+
+	if (component.PodSelector != nil && component.PodSelector.ComponentInstanceSelector != nil) &&
+		component.InstanceIdPath == nil {
+		return fmt.Errorf("component '%s' has pod component instance selector but no instance id path", component.Name)
+	}
+
+	return nil
+}
+
+// validateNoOwnershipCycles detects circular dependencies by following owner ref chains
+func (v *RIValidator) validateNoOwnershipCycles() error {
+	validated := make(map[string]bool)
+
+	// For each child component, follow its parent chain to ensure it reaches root
+	for _, child := range v.ri.Spec.StructureDefinition.ChildComponents {
+		if err := v.checkPathToRoot(child, &validated); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkPathToRoot follows owner ref chain from a component to ensure it reaches root without cycles
+// assumes that owner refs were already validated to be existing components
+func (v *RIValidator) checkPathToRoot(component ComponentDefinition, validatedComponents *map[string]bool) error {
+	visited := make(map[string]bool)
+	current := component.Name
+	alreadyValidated := false
+
+	for current != "" && !alreadyValidated {
+		if visited[current] {
+			return fmt.Errorf("ownership cycle detected involving component %s", current)
+		}
+		visited[current] = true
+
+		currentComponent := v.allComponents[current]
+		// If we reached root, we're done
+		if currentComponent.OwnerRef == nil {
+			return nil
+		}
+
+		// Move to parent
+		current = *currentComponent.OwnerRef
+		_, alreadyValidated = (*validatedComponents)[current]
+	}
+
+	(*validatedComponents)[component.Name] = true
+	return nil
 }
 
 func (v *RIValidator) validateInstructions() []error {
@@ -146,182 +209,18 @@ func (v *RIValidator) validateInstructions() []error {
 }
 
 func (v *RIValidator) validateGangScheduling() []error {
-	if v.RI.Spec.Instructions.GangScheduling == nil {
+	if v.ri.Spec.Instructions.GangScheduling == nil {
 		return nil
 	}
 
 	// All member components are defined
 	var errs []error
-	for _, group := range v.RI.Spec.Instructions.GangScheduling.PodGroups {
+	for _, group := range v.ri.Spec.Instructions.GangScheduling.PodGroups {
 		for _, member := range group.Members {
 			if _, ok := v.allComponents[member.ComponentName]; !ok {
-				errs = append(errs, fmt.Errorf("pod-group member component \"%s\" is not defined", member.ComponentName))
+				errs = append(errs, fmt.Errorf("pod-group member component '%s' is not defined", member.ComponentName))
 			}
 		}
 	}
 	return errs
-}
-
-// ValidateJQPaths recursively validates all fields tagged with 'jq:"validate"'
-func (v *RIValidator) validateJQ() []error {
-	var errs []error
-	validateJQRecursive(reflect.ValueOf(v.RI), "", &errs)
-
-	return errs
-}
-
-func validateJQRecursive(val reflect.Value, fieldPath string, errs *[]error) {
-	// Handle nil pointers
-	if !val.IsValid() {
-		return
-	}
-
-	// Dereference pointers
-	if val.Kind() == reflect.Ptr {
-		if val.IsNil() {
-			return
-		}
-		val = val.Elem()
-	}
-
-	switch val.Kind() {
-	case reflect.Struct:
-		validateJQForStruct(val, fieldPath, errs)
-	case reflect.Slice, reflect.Array:
-		validateJQForSlice(val, fieldPath, errs)
-	case reflect.Map:
-		validateJQForMap(val, fieldPath, errs)
-	}
-}
-
-func validateJQForStruct(val reflect.Value, basePath string, errs *[]error) {
-	typ := val.Type()
-
-	for i := 0; i < val.NumField(); i++ {
-		field := val.Field(i)
-		fieldType := typ.Field(i)
-
-		// Skip unexported fields
-		if !field.CanInterface() {
-			continue
-		}
-
-		// Build field path for error reporting
-		currentPath := buildFieldPath(basePath, fieldType.Name)
-
-		// Check if field has jq:"validate" tag
-		if jqTag, ok := fieldType.Tag.Lookup("jq"); ok && jqTag == "validate" {
-			if err := validateJQField(field, currentPath); err != nil {
-				*errs = append(*errs, err)
-			}
-		}
-
-		// Recursively validate nested structures
-		validateJQRecursive(field, currentPath, errs)
-	}
-}
-
-func validateJQForSlice(val reflect.Value, basePath string, errs *[]error) {
-	for i := 0; i < val.Len(); i++ {
-		indexPath := fmt.Sprintf("%s[%d]", basePath, i)
-		validateJQRecursive(val.Index(i), indexPath, errs)
-	}
-}
-
-func validateJQForMap(val reflect.Value, basePath string, errs *[]error) {
-	for _, key := range val.MapKeys() {
-		keyPath := fmt.Sprintf("%s[%v]", basePath, key.Interface())
-		validateJQRecursive(val.MapIndex(key), keyPath, errs)
-	}
-}
-
-func validateJQField(field reflect.Value, fieldPath string) error {
-	// Handle pointer to string (*string)
-	if field.Kind() == reflect.Ptr {
-		if field.IsNil() {
-			return nil // Optional field, skip validation
-		}
-		field = field.Elem()
-	}
-
-	// Ensure field is a string
-	if field.Kind() != reflect.String {
-		return fmt.Errorf("%s: jq:\"validate\" tag can only be used on string or *string fields", fieldPath)
-	}
-
-	jqExpression := field.String()
-	if jqExpression == "" {
-		return nil // Empty jqExpression, skip validation
-	}
-
-	parsed, err := gojq.Parse(jqExpression)
-	if err != nil {
-		return fmt.Errorf("failed to parse JQ expression \"%s\" at \"%s\": %w", jqExpression, fieldPath, err)
-	}
-
-	err = validatedParsedJQ(parsed)
-	if err != nil {
-		return fmt.Errorf("JQ expression \"%s\" at \"%s\" failed validation: %w", jqExpression, fieldPath, err)
-	}
-
-	return nil
-}
-
-func buildFieldPath(basePath, fieldName string) string {
-	if basePath == "" {
-		return fieldName
-	}
-	return fmt.Sprintf("%s.%s", basePath, fieldName)
-}
-
-// validateUserQuery checks if a gojq query is read-only and safe
-func validatedParsedJQ(q *gojq.Query) error {
-	if q == nil {
-		return nil
-	}
-
-	if q.Term != nil {
-		if q.Term.Func != nil {
-			// Reject mutating and recursion-related functions
-			switch q.Term.Func.Name {
-			case "del":
-				return errors.New("del function is not allowed")
-			case "recurse", "walk", "repeat":
-				return fmt.Errorf("function %q is not allowed", q.Func)
-			case "range", "paths", "leaf_paths":
-				return fmt.Errorf("function %q may produce excessive output and is not allowed", q.Func)
-			}
-
-			for _, arg := range q.Term.Func.Args {
-				err := validatedParsedJQ(arg)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		if q.Term.Type == gojq.TermTypeRecurse {
-			return errors.New("recursive descent operator '..' is not allowed")
-		}
-	}
-
-	if q.Op > 0 {
-		switch q.Op {
-		case gojq.OpAssign, gojq.OpModify, gojq.OpUpdateAdd, gojq.OpUpdateSub, gojq.OpUpdateMul, gojq.OpUpdateDiv, gojq.OpUpdateMod, gojq.OpUpdateAlt:
-			return fmt.Errorf("modifying jq operator \"%s\" is not allowed", q.Op)
-		}
-
-		err := validatedParsedJQ(q.Left)
-		if err != nil {
-			return err
-		}
-
-		err = validatedParsedJQ(q.Right)
-		if err != nil {
-			return err
-		}
-
-	}
-
-	return nil
 }
