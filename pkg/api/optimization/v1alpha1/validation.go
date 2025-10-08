@@ -26,6 +26,7 @@ func (v *RIValidator) Validate() error {
 
 	if initErrs := v.initialize(); initErrs != nil {
 		errs = append(errs, initErrs...)
+		return errors.Join(errs...)
 	}
 
 	if specErrs := v.validateStructureDefinition(); specErrs != nil {
@@ -79,6 +80,11 @@ func (v *RIValidator) validateStructureDefinition() []error {
 
 		// Component validation
 		errs = append(errs, v.validateComponent(component)...)
+	}
+
+	// Stop here if there are any errors - futher validations are relying on the structure definition to be valid.
+	if len(errs) > 0 {
+		return errs
 	}
 
 	// No ownership cycles
@@ -218,7 +224,7 @@ func (v *RIValidator) validateGangScheduling() []error {
 	for _, group := range v.ri.Spec.Instructions.GangScheduling.PodGroups {
 		for _, member := range group.Members {
 			if _, ok := v.allComponents[member.ComponentName]; !ok {
-				errs = append(errs, fmt.Errorf("pod-group member component '%s' is not defined", member.ComponentName))
+				errs = append(errs, fmt.Errorf("pod-group member component '%s' is not defined (should be a root or child component)", member.ComponentName))
 			}
 		}
 	}

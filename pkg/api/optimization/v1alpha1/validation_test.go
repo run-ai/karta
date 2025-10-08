@@ -400,4 +400,35 @@ var _ = Describe("RIValidator", func() {
 			Expect(err.Error()).To(ContainSubstring("del function is not allowed"))
 		})
 	})
+
+	Describe("short circuit on errors", func() {
+		It("should stop validation if has init errors", func() {
+			baseRI.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
+				{Name: "A", OwnerRef: ptr.To("B")},
+				{Name: "B", OwnerRef: ptr.To("A")},
+				{Name: "C", OwnerRef: ptr.To("D")}, // Invalid owner ref
+				{Name: "C", OwnerRef: ptr.To("A")}, // Duplicate name
+			}
+
+			//Should stop after init errors
+			err := validator.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("component name C is not unique"))
+			Expect(err.Error()).NotTo(ContainSubstring("owner ref to non-existing component 'D'"))
+		})
+
+		It("should stop structure validation if definition is invalid", func() {
+			baseRI.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
+				{Name: "A", OwnerRef: ptr.To("B")},
+				{Name: "B", OwnerRef: ptr.To("A")},
+				{Name: "C", OwnerRef: ptr.To("D")}, // Invalid owner ref
+			}
+			validator.initialize()
+
+			// Should only have one error - stop after found invalid structure, no need to check ownership cycles
+			errs := validator.validateStructureDefinition()
+			Expect(errs).To(HaveLen(1))
+			Expect(errs).To(ContainElement(MatchError(ContainSubstring("owner ref to non-existing component 'D'"))))
+		})
+	})
 })
