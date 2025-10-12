@@ -31,12 +31,12 @@ type PodGroupMemberDefinition struct {
 	// JQ paths are evaluated against individual pod objects, not the root resource spec
 	// +kubebuilder:validation:Optional
 	// +listType=set
-	GroupByKeyPaths []string `json:"groupByKeyPaths,omitempty"`
+	GroupByKeyPaths []string `json:"groupByKeyPaths,omitempty" jq:"validate"`
 
 	// Filters are JQ filter expressions to select specific components (expressions are ANDed)
 	// Example: '(.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0'
 	// JQ filters are evaluated against individual pod objects, not the root resource spec
 	// +kubebuilder:validation:Optional
 	// +listType=set
-	Filters []string `json:"filters,omitempty"`
+	Filters []string `json:"filters,omitempty" jq:"validate"`
 }

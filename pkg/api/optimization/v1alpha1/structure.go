@@ -42,7 +42,7 @@ type ComponentDefinition struct {
 
 	// InstanceIdPath is the JQ path to the instance id, for components that hold multiple pod definitions (in array or map)
 	// +kubebuilder:validation:Optional
-	InstanceIdPath *string `json:"instanceIdPath,omitempty"`
+	InstanceIdPath *string `json:"instanceIdPath,omitempty" jq:"validate"`
 
 	// PodSelector defines how to identify pods belonging to this component
 	// +kubebuilder:validation:Optional
@@ -54,16 +54,16 @@ type ComponentDefinition struct {
 type SpecDefinition struct {
 	// PodTemplateSpecPath is the JQ path to a complete PodTemplateSpec object
 	// +kubebuilder:validation:Optional
-	PodTemplateSpecPath *string `json:"podTemplateSpecPath,omitempty"`
+	PodTemplateSpecPath *string `json:"podTemplateSpecPath,omitempty" jq:"validate"`
 
 	// PodSpecPath is the JQ path to a complete PodSpec object
 	// +kubebuilder:validation:Optional
-	PodSpecPath *string `json:"podSpecPath,omitempty"`
+	PodSpecPath *string `json:"podSpecPath,omitempty" jq:"validate"`
 
 	// MetadataPath is the JQ path to the component metadata
 	// May be used only with PodSpecPath, in cases where pod spec and metadata are separated
 	// +kubebuilder:validation:Optional
-	MetadataPath *string `json:"metadataPath,omitempty"`
+	MetadataPath *string `json:"metadataPath,omitempty" jq:"validate"`
 
 	// FragmentedPodSpecDefinition defines how to extract individual pod spec fields
 	// when they are scattered across different paths in the component
@@ -76,63 +76,63 @@ type SpecDefinition struct {
 type FragmentedPodSpecDefinition struct {
 	// SchedulerNamePath is the JQ path to the scheduler name
 	// +kubebuilder:validation:Optional
-	SchedulerNamePath *string `json:"schedulerNamePath,omitempty"`
+	SchedulerNamePath *string `json:"schedulerNamePath,omitempty" jq:"validate"`
 
 	// LabelsPath is the JQ path to pod labels
 	// +kubebuilder:validation:Optional
-	LabelsPath *string `json:"labelsPath,omitempty"`
+	LabelsPath *string `json:"labelsPath,omitempty" jq:"validate"`
 
 	// AnnotationsPath is the JQ path to pod annotations
 	// +kubebuilder:validation:Optional
-	AnnotationsPath *string `json:"annotationsPath,omitempty"`
+	AnnotationsPath *string `json:"annotationsPath,omitempty" jq:"validate"`
 
 	// ResourcesPath is the JQ path to resource requirements
 	// +kubebuilder:validation:Optional
-	ResourcesPath *string `json:"resourcesPath,omitempty"`
+	ResourcesPath *string `json:"resourcesPath,omitempty" jq:"validate"`
 
 	// ResourceClaimsPath is the JQ path to DRA resource claims
 	// +kubebuilder:validation:Optional
-	ResourceClaimsPath *string `json:"resourceClaimsPath,omitempty"`
+	ResourceClaimsPath *string `json:"resourceClaimsPath,omitempty" jq:"validate"`
 
 	// PodAffinityPath is the JQ path to pod affinity rules
 	// +kubebuilder:validation:Optional
-	PodAffinityPath *string `json:"podAffinityPath,omitempty"`
+	PodAffinityPath *string `json:"podAffinityPath,omitempty" jq:"validate"`
 
 	// NodeAffinityPath is the JQ path to node affinity rules
 	// +kubebuilder:validation:Optional
-	NodeAffinityPath *string `json:"nodeAffinityPath,omitempty"`
+	NodeAffinityPath *string `json:"nodeAffinityPath,omitempty" jq:"validate"`
 
 	// ContainersPath is the JQ path to containers specifications
 	// +kubebuilder:validation:Optional
-	ContainersPath *string `json:"containersPath,omitempty"`
+	ContainersPath *string `json:"containersPath,omitempty" jq:"validate"`
 
 	// ContainesPath is the JQ path to a single container specifications
 	// Used when the component has only one container
 	// +kubebuilder:validation:Optional
-	ContainerPath *string `json:"containerPath,omitempty"`
+	ContainerPath *string `json:"containerPath,omitempty" jq:"validate"`
 
 	// PriorityClassNamePath is the JQ path to the priority class name
 	// +kubebuilder:validation:Optional
-	PriorityClassNamePath *string `json:"priorityClassNamePath,omitempty"`
+	PriorityClassNamePath *string `json:"priorityClassNamePath,omitempty" jq:"validate"`
 
 	// ImagePath is the JQ path to the container image
 	// +kubebuilder:validation:Optional
-	ImagePath *string `json:"imagePath,omitempty"`
+	ImagePath *string `json:"imagePath,omitempty" jq:"validate"`
 }
 
 // ScaleDefinition defines how to extract scaling information from a component.
 type ScaleDefinition struct {
 	// ReplicasPath is the JQ path to the current replica count
 	// +kubebuilder:validation:Optional
-	ReplicasPath *string `json:"replicasPath,omitempty"`
+	ReplicasPath *string `json:"replicasPath,omitempty" jq:"validate"`
 
 	// MinReplicasPath is the JQ path to the minimum replica count
 	// +kubebuilder:validation:Optional
-	MinReplicasPath *string `json:"minReplicasPath,omitempty"`
+	MinReplicasPath *string `json:"minReplicasPath,omitempty" jq:"validate"`
 
 	// MaxReplicasPath is the JQ path to the maximum replica count
 	// +kubebuilder:validation:Optional
-	MaxReplicasPath *string `json:"maxReplicasPath,omitempty"`
+	MaxReplicasPath *string `json:"maxReplicasPath,omitempty" jq:"validate"`
 }
 
 // PodSelector defines how to identify pods belonging to a specific component.
@@ -150,7 +150,7 @@ type ComponentTypeSelector struct {
 	// KeyPath is the JQ path to the identifying key/label on the pod
 	// JQ path is evaluated against individual pod objects, not the root resource spec
 	// +kubebuilder:validation:Required
-	KeyPath string `json:"keyPath"`
+	KeyPath string `json:"keyPath" jq:"validate"`
 
 	// Value is the expected value for the key (optional - if nil, only key existence is checked)
 	// +kubebuilder:validation:Optional
@@ -161,7 +161,7 @@ type ComponentInstanceSelector struct {
 	// IdPath is the JQ path to the component instance identifier on the pod
 	// JQ path is evaluated against individual pod objects, not the root resource spec
 	// +kubebuilder:validation:Required
-	IdPath string `json:"idPath"`
+	IdPath string `json:"idPath" jq:"validate"`
 }
 
 // ResourceStatus represents the high-level status of a component.
@@ -204,14 +204,14 @@ type StatusDefinition struct {
 type PhaseDefinition struct {
 	// Path is the JQ path to the phase/state field
 	// +kubebuilder:validation:Required
-	Path string `json:"path"`
+	Path string `json:"path" jq:"validate"`
 }
 
 // ConditionsDefinition defines how to extract Kubernetes-style conditions from the component.
 type ConditionsDefinition struct {
 	// Path is the JQ path to the conditions array
 	// +kubebuilder:validation:Required
-	Path string `json:"path"`
+	Path string `json:"path" jq:"validate"`
 
 	// TypeFieldName is the field name for the condition type
 	// +kubebuilder:validation:Required
