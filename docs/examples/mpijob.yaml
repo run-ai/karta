@@ -1,4 +1,4 @@
-apiVersion: kai-bolt.runai.ai/v1alpha1
+apiVersion: optimization.nvidia.com/v1alpha1
 kind: ResourceInterface
 spec:
   structureDefinition:
