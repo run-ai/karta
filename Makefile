@@ -34,6 +34,26 @@ generate-mocks: mockgen ## Generate mocks using go generate
 test: generate-mocks ## Run tests with mock generation
 	go test ./...
 
+lint-go:
+	echo "Running golangci linter"
+	golangci-lint run -v -c .golangci.yml
+.PHONY: lint-go
+
+fmt-go:
+	go fmt ./...
+.PHONY: fmt-go
+
+vet-go:
+	go vet ./...
+.PHONY: vet-go
+
+lint: fmt-go vet-go lint-go
+.PHONY: lint
+
+.PHONY: validate
+validate: generate manifests generate-mocks lint 
+	@git diff --exit-code 
+
 .PHONY: install-crd
 install-crd: manifests ## Install CRDs into the cluster
 	kubectl apply --server-side -f config/crd/
