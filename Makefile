@@ -20,7 +20,7 @@ GOMOCK_VERSION ?= v1.6.0
 
 .PHONY: manifests
 manifests: controller-gen ## Generate CRD manifests
-	$(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=config/crd
+	$(CONTROLLER_GEN) crd paths="./pkg/..." output:crd:artifacts:config=charts/ri/crds
 
 .PHONY: generate
 generate: controller-gen ## Generate DeepCopy methods
