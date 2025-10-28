@@ -16,7 +16,7 @@ MOCKGEN ?= $(LOCALBIN)/mockgen
 
 # Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
-GOMOCK_VERSION ?= v1.6.0
+GOMOCK_VERSION ?= v0.6.0
 
 PATH := $(abspath $(LOCALBIN)):$(PATH)
 
@@ -79,5 +79,5 @@ $(MOCKGEN): $(LOCALBIN)
 	@[ -f "$(MOCKGEN)" ] || { \
 	set -e; \
 	echo "Downloading mockgen@$(GOMOCK_VERSION)" ;\
-	GOBIN=$(LOCALBIN) go install github.com/golang/mock/mockgen@$(GOMOCK_VERSION) ;\
+	GOBIN=$(LOCALBIN) go install go.uber.org/mock/mockgen@$(GOMOCK_VERSION) ;\
 	}
