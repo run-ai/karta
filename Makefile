@@ -18,6 +18,8 @@ MOCKGEN ?= $(LOCALBIN)/mockgen
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
 GOMOCK_VERSION ?= v1.6.0
 
+PATH := $(abspath $(LOCALBIN)):$(PATH)
+
 .PHONY: manifests
 manifests: controller-gen ## Generate CRD manifests
 	$(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=config/crd
