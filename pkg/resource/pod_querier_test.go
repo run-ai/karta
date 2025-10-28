@@ -504,8 +504,8 @@ var _ = Describe("PodQuerier", func() {
 			})
 
 			It("should return error when JQ returns multiple results", func() {
-				pod.ObjectMeta.Labels["duplicate-key"] = "value1"
-				pod.ObjectMeta.Annotations["duplicate-key"] = "value2"
+				pod.Labels["duplicate-key"] = "value1"
+				pod.Annotations["duplicate-key"] = "value2"
 
 				querier := NewPodQuerier(pod)
 				instanceSelector := &v1alpha1.ComponentInstanceSelector{
@@ -554,7 +554,7 @@ var _ = Describe("PodQuerier", func() {
 			})
 
 			It("should handle numeric values by converting to string", func() {
-				pod.ObjectMeta.Labels["replica-id"] = "3"
+				pod.Labels["replica-id"] = "3"
 
 				querier := NewPodQuerier(pod)
 				instanceSelector := &v1alpha1.ComponentInstanceSelector{
