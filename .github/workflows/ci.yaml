@@ -62,6 +62,4 @@ jobs:
         run: make validate
       - name: Run lint
         uses: golangci/golangci-lint-action@v8
-        with:
-          version: v2.1
 
