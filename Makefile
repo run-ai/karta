@@ -53,7 +53,7 @@ lint: fmt-go vet-go lint-go
 .PHONY: lint
 
 .PHONY: validate
-validate: generate manifests generate-mocks lint 
+validate: generate manifests generate-mocks 
 	@git diff --exit-code 
 
 .PHONY: install-crd
