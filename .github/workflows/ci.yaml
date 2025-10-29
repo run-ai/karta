@@ -1,14 +1,14 @@
-name: CI
+name: Pull Request
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ main ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ main ]
 
 jobs:
-  test:
-    name: Test
+  ci:
+    name: CI
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -26,42 +26,19 @@ jobs:
           path: bin
           key: ${{ runner.os }}-bin-${{ hashFiles('Makefile') }}
           restore-keys: |
-            ${{ runner.os }}-test-bin-
+            ${{ runner.os }}-bin-
 
       - name: Download dependencies
         run: go mod download
-
-      - name: Run tests
-        run: make test
-
-  validate:
-    name: Run validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24.6'
-          cache: true
-
-      - name: Cache bin tools
-        uses: actions/cache@v4
-        with:
-          path: bin
-          key: ${{ runner.os }}-bin-${{ hashFiles('Makefile') }}
-          restore-keys: |
-            ${{ runner.os }}-validate-bin-
-
-      - name: Download dependencies
-        run: go mod download
-
+      
       - name: Run validation
         run: make validate
+
       - name: Run lint
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.5.0
+
+      - name: Run tests
+        run: make test
 
