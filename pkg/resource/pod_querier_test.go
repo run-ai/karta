@@ -7,10 +7,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/query"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/kai-bolt/pkg/query"
 )
 
 var _ = Describe("PodQuerier", func() {
@@ -503,8 +504,8 @@ var _ = Describe("PodQuerier", func() {
 			})
 
 			It("should return error when JQ returns multiple results", func() {
-				pod.ObjectMeta.Labels["duplicate-key"] = "value1"
-				pod.ObjectMeta.Annotations["duplicate-key"] = "value2"
+				pod.Labels["duplicate-key"] = "value1"
+				pod.Annotations["duplicate-key"] = "value2"
 
 				querier := NewPodQuerier(pod)
 				instanceSelector := &v1alpha1.ComponentInstanceSelector{
@@ -553,7 +554,7 @@ var _ = Describe("PodQuerier", func() {
 			})
 
 			It("should handle numeric values by converting to string", func() {
-				pod.ObjectMeta.Labels["replica-id"] = "3"
+				pod.Labels["replica-id"] = "3"
 
 				querier := NewPodQuerier(pod)
 				instanceSelector := &v1alpha1.ComponentInstanceSelector{

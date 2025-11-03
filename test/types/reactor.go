@@ -3,10 +3,11 @@
 package types
 
 import (
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 
 	"k8s.io/utils/ptr"
 )
