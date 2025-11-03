@@ -28,17 +28,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bin-
 
-      - name: Download dependencies
-        run: go mod download
-      
-      - name: Run validation
-        run: make validate
-
-      - name: Run lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: v2.5.0
-
-      - name: Run tests
-        run: make test
+      - name: Run checks
+        run: make check
 

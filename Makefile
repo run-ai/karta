@@ -90,4 +90,10 @@ $(GOLANGCI_LINT): $(LOCALBIN)
 	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)" ;\
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
 	}
-	
+
+.PHONY: download-dependencies
+download-dependencies:
+	go mod download
+
+.PHONY: check
+ci: download-dependencies validate test lint
