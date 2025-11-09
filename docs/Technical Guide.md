@@ -2,7 +2,7 @@
 ## Root Component
 Every RI must define a root component:
 - Must use full Kubernetes GVK (Group, Version, Kind)
-- Must include a statusDefinition
+- Must include a `statusDefinition`
 
 ```YAML
 rootComponent:
@@ -21,8 +21,8 @@ rootComponent:
 
 ## Child Components
 For resources owned by the root component:
-- Must include ownerRef (points to parent component)
-- Usually include a specDefinition
+- Must include `ownerRef` (points to parent component)
+- Usually include a `specDefinition`
 - All paths must be absolute from the CRD root
 
 ```YAML
@@ -38,7 +38,7 @@ childComponents:
 ```
 
 ## Paths
-All paths provided in a RI are written in jq syntax. The jq query language provides both path navigation and various query capabilities, and is widely used in the k8s ecosystem. 
+All paths provided in a RI are written in [jq](https://jqlang.org/) syntax. The jq query language provides both path navigation and various query capabilities, and is widely used in the k8s ecosystem. 
 Make sure to provide a matching jq query type for every property (path/query), and to provide default values where necessary.
 
 
@@ -440,9 +440,12 @@ rootComponent:
 
   specDefinition:
     podTemplateSpecPath: ".spec.template"
+```
 
-Template: Deployment
+### Template: Deployment
 A controlling resource with generated ReplicaSets.
+
+```YAML
 rootComponent:
   name: "deployment"
   kind:
