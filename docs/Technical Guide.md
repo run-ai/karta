@@ -63,7 +63,7 @@ specDefinition:
 
 ## Component Instances
 
-Component’s spec definition might point to multiple specs (in map/array format). In those cases it’s crucial to be able to distinguish between each instance of that component.
+Component’s spec definition might point to multiple instances specs (in map/array format). In those cases it’s crucial to be able to distinguish between each instance of that component.
 In order to do so, users must define an instanceIdPath - the location in the spec where we can find the name of each instance.
 For example:
 
@@ -81,11 +81,11 @@ instanceIdPath: ".spec.jobs | to_entries[] | .key"
 
 
 ## Pod Selectors
-Used when multiple components have pod definitions, OR, when a component has multiple instances.
+PodSelector defines how to identify pods belonging to a component / an instance of a component.
 A component can define both type and instance selectors.
 All selectors of each kind (component, instance) must be mutually exclusive within themselves.
 
-**Paths in pod selectors are referring to paths on the pod’s yaml/json**
+**Paths in pod selectors are referring to paths on the pod’s manifest**
 
 1. Component type selector - key (and value) selector that associates pod to the current component.
 ```YAML
@@ -94,7 +94,7 @@ podSelector:
     keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
     value: "master"
 ```
-| If value is not provided, only key existence is checked.
+If value is not provided, only key existence is checked.
 
 2. Component instance selector - a path on the pod that holds its matching instance id.
 
@@ -339,7 +339,7 @@ Example 1: Kserve inference service
             "maxReplicasPath": ".spec.predictor.maxReplicas"
           },
           "podSelector": {
-		 "componentTypeSelector": {
+            "componentTypeSelector": {
               "keyPath": ".metadata.labels[\"component\"]",
               "value": "predictor"
             }
@@ -362,7 +362,7 @@ Example 1: Kserve inference service
             "maxReplicasPath": ".spec.transformer.maxReplicas"
           },
           "podSelector": {
-		 "componentTypeSelector": {
+            "componentTypeSelector": {
               "keyPath": ".metadata.labels[\"component\"]",
               "value": "transformer"
             }
