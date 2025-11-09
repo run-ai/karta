@@ -83,7 +83,7 @@ var _ = Describe("ComponentFactory", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(components).NotTo(BeNil())
 			Expect(components).To(HaveLen(2))
-			
+
 			// Verify component names
 			names := []string{components[0].name, components[1].name}
 			Expect(names).To(ConsistOf("master", "worker"))

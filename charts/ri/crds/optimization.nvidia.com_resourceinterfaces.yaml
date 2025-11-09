@@ -354,8 +354,9 @@ spec:
                                 status to ResourceStatus values
                               properties:
                                 completed:
-                                  description: Completed defines matchers for the
-                                    Completed status
+                                  description: |-
+                                    Completed defines matchers for the Completed status.
+                                    Multiple matchers are OR'd together.
                                   items:
                                     description: |-
                                       StatusMatcher defines criteria for matching a specific status.
@@ -391,8 +392,9 @@ spec:
                                   type: array
                                   x-kubernetes-list-type: atomic
                                 failed:
-                                  description: Failed defines matchers for the Failed
-                                    status
+                                  description: |-
+                                    Failed defines matchers for the Failed status.
+                                    Multiple matchers are OR'd together.
                                   items:
                                     description: |-
                                       StatusMatcher defines criteria for matching a specific status.
@@ -428,8 +430,9 @@ spec:
                                   type: array
                                   x-kubernetes-list-type: atomic
                                 initializing:
-                                  description: Initializing defines matchers for the
-                                    Initializing status
+                                  description: |-
+                                    Initializing defines matchers for the Initializing status.
+                                    Multiple matchers are OR'd together.
                                   items:
                                     description: |-
                                       StatusMatcher defines criteria for matching a specific status.
@@ -465,8 +468,9 @@ spec:
                                   type: array
                                   x-kubernetes-list-type: atomic
                                 running:
-                                  description: Running defines matchers for the Running
-                                    status
+                                  description: |-
+                                    Running defines matchers for the Running status.
+                                    Multiple matchers are OR'd together.
                                   items:
                                     description: |-
                                       StatusMatcher defines criteria for matching a specific status.
@@ -712,8 +716,9 @@ spec:
                               status to ResourceStatus values
                             properties:
                               completed:
-                                description: Completed defines matchers for the Completed
-                                  status
+                                description: |-
+                                  Completed defines matchers for the Completed status.
+                                  Multiple matchers are OR'd together.
                                 items:
                                   description: |-
                                     StatusMatcher defines criteria for matching a specific status.
@@ -748,8 +753,9 @@ spec:
                                 type: array
                                 x-kubernetes-list-type: atomic
                               failed:
-                                description: Failed defines matchers for the Failed
-                                  status
+                                description: |-
+                                  Failed defines matchers for the Failed status.
+                                  Multiple matchers are OR'd together.
                                 items:
                                   description: |-
                                     StatusMatcher defines criteria for matching a specific status.
@@ -784,8 +790,9 @@ spec:
                                 type: array
                                 x-kubernetes-list-type: atomic
                               initializing:
-                                description: Initializing defines matchers for the
-                                  Initializing status
+                                description: |-
+                                  Initializing defines matchers for the Initializing status.
+                                  Multiple matchers are OR'd together.
                                 items:
                                   description: |-
                                     StatusMatcher defines criteria for matching a specific status.
@@ -820,8 +827,9 @@ spec:
                                 type: array
                                 x-kubernetes-list-type: atomic
                               running:
-                                description: Running defines matchers for the Running
-                                  status
+                                description: |-
+                                  Running defines matchers for the Running status.
+                                  Multiple matchers are OR'd together.
                                 items:
                                   description: |-
                                     StatusMatcher defines criteria for matching a specific status.
