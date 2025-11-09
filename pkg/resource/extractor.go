@@ -273,10 +273,9 @@ func (e *InterfaceExtractor) ExtractStatus(ctx context.Context, definition v1alp
 }
 
 func (e *InterfaceExtractor) extractConditions(ctx context.Context, condDef *v1alpha1.ConditionsDefinition) ([]Condition, error) {
-	var conditions []Condition
 
 	if condDef == nil {
-		return conditions, nil
+		return []Condition{}, nil
 	}
 
 	var extractedRawConditions [][]map[string]any
@@ -284,10 +283,11 @@ func (e *InterfaceExtractor) extractConditions(ctx context.Context, condDef *v1a
 		return nil, fmt.Errorf("failed to extract conditions: %w", err)
 	}
 
-	// extract returns a slice of slices, so we need to flatten it
+	// As Condition path is a path to a list of conditions, extract returns a slice of slice in size one/zero,
+	// so we need to flatten it
 	rawConditions := lo.Flatten(extractedRawConditions)
 
-	conditions = make([]Condition, 0, len(rawConditions))
+	conditions := make([]Condition, 0, len(rawConditions))
 	for _, condMap := range rawConditions {
 		cond := Condition{}
 

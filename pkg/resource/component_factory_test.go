@@ -84,9 +84,7 @@ var _ = Describe("ComponentFactory", func() {
 			Expect(components).NotTo(BeNil())
 			Expect(components).To(HaveLen(2))
 
-			// Verify component names
-			names := []string{components[0].name, components[1].name}
-			Expect(names).To(ConsistOf("master", "worker"))
+			Expect([]string{components[0].name, components[1].name}).To(ConsistOf("master", "worker"))
 		})
 
 		It("should return error when ResourceInterface is nil", func() {

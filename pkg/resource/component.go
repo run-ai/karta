@@ -40,14 +40,12 @@ type Scale struct {
 	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
 }
 
-// Condition represents a single condition extracted from the component status
 type Condition struct {
 	Type    string `json:"type"`
 	Status  string `json:"status"`
 	Message string `json:"message,omitempty"`
 }
 
-// Status represents the extracted status information from a component
 type Status struct {
 	// Phase is the raw phase/state string extracted from the component
 	Phase *string `json:"phase,omitempty"`
@@ -61,15 +59,12 @@ type Status struct {
 
 // InstanceSummary represents all extracted data for a single instance
 type InstanceSummary struct {
-	// Pod spec (only one of these will be set)
 	PodTemplateSpec   *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
 	PodSpec           *corev1.PodSpec         `json:"podSpec,omitempty"`
 	FragmentedPodSpec *FragmentedPodSpec      `json:"fragmentedPodSpec,omitempty"`
 
-	// Metadata (optional, used with PodSpec)
 	Metadata *metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Scale information
 	Scale *Scale `json:"scale,omitempty"`
 }
 
@@ -200,8 +195,8 @@ func (c *Component) GetStatus(ctx context.Context) (*Status, error) {
 	return status, nil
 }
 
-// GetSummary aggregates all extraction results into a map of instance summaries
-func (c *Component) GetSummary(ctx context.Context) (map[string]InstanceSummary, error) {
+// GetInstanceSummaries aggregates all extraction results into a map of instance summaries
+func (c *Component) GetInstanceSummaries(ctx context.Context) (map[string]InstanceSummary, error) {
 	instanceIds, err := c.GetInstanceIds(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", errGetInstanceIds, err)
