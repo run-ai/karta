@@ -9,7 +9,9 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 	"github.com/run-ai/kai-bolt/pkg/query"
@@ -56,6 +58,18 @@ const (
 	noSpecDefinitionError  = "does not have spec definition"
 	noScaleError           = "does not have scale definition"
 )
+
+func extractorForObject(
+	ri *v1alpha1.ResourceInterface,
+	object client.Object,
+	componentName string,
+) (*InterfaceExtractor, *Component) {
+	extractor := NewInterfaceExtractor(query.NewDefaultJqEvaluator(object))
+	factory := NewComponentFactoryFromObject(ri, object)
+	comp, err := factory.GetComponent(componentName)
+	Expect(err).NotTo(HaveOccurred())
+	return extractor, comp
+}
 
 var _ = Describe("InterfaceExtractor", func() {
 	var (
@@ -549,6 +563,413 @@ var _ = Describe("InterfaceExtractor", func() {
 				Expect(result).To(BeNil())
 				Expect(err.Error()).To(ContainSubstring("instance id path contained empty string values"))
 				Expect(err.Error()).To(ContainSubstring("[,processor]"))
+			})
+		})
+	})
+
+	Describe("ExtractStatus", func() {
+		Context("Conditions extraction", func() {
+			It("should extract status with conditions", func() {
+				pyflowObject := types.NewPyFlowObject()
+				pyflowObject.Status.Conditions[0] = metav1.Condition{
+					Type:   "Running",
+					Status: metav1.ConditionTrue,
+				}
+				extractor, pyflowComp := extractorForObject(pyflowRI, pyflowObject, "pyflow")
+
+				result, err := extractor.ExtractStatus(ctx, pyflowComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.Phase).To(BeNil())
+				Expect(result.Conditions).To(HaveLen(1))
+				Expect(result.Conditions[0].Type).To(Equal("Running"))
+				Expect(result.Conditions[0].Status).To(Equal("True"))
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.RunningStatus))
+			})
+
+			It("should return UndefinedStatus when conditions do not match", func() {
+				pyflowObject := types.NewPyFlowObject()
+				pyflowObject.Status.Conditions[0] = metav1.Condition{
+					Type:   "NotMatching",
+					Status: metav1.ConditionTrue,
+				}
+				extractor, pyflowComp := extractorForObject(pyflowRI, pyflowObject, "pyflow")
+
+				result, err := extractor.ExtractStatus(ctx, pyflowComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.UndefinedStatus))
+			})
+
+			It("should handle empty conditions array", func() {
+				pyflowObject := types.NewPyFlowObject()
+				pyflowObject.Status.Conditions = []metav1.Condition{}
+
+				extractor, pyflowComp := extractorForObject(pyflowRI, pyflowObject, "pyflow")
+
+				result, err := extractor.ExtractStatus(ctx, pyflowComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.Conditions).To(BeEmpty())
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.UndefinedStatus))
+			})
+
+			It("should extract conditions with message field", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{
+						Type:    "Failed",
+						Status:  metav1.ConditionTrue,
+						Message: "Pod failed due to OOMKilled",
+					},
+				}
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.Conditions).To(HaveLen(1))
+				Expect(result.Conditions[0].Type).To(Equal("Failed"))
+				Expect(result.Conditions[0].Status).To(Equal("True"))
+				Expect(result.Conditions[0].Message).To(Equal("Pod failed due to OOMKilled"))
+			})
+		})
+
+		Context("Phase extraction", func() {
+			It("should extract phase from status", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.Phase).NotTo(BeNil())
+				Expect(*result.Phase).To(Equal("running"))
+			})
+
+			It("should handle conditions without message field", func() {
+				pyflowComp, err := pyflowFactory.GetComponent("pyflow")
+				Expect(err).NotTo(HaveOccurred())
+
+				result, err := pyflowExtractor.ExtractStatus(ctx, pyflowComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.Conditions).To(HaveLen(1))
+				Expect(result.Conditions[0].Message).To(BeEmpty())
+			})
+
+			It("should handle phase missing", func() {
+				pyflowComp, err := pyflowFactory.GetComponent("pyflow")
+				Expect(err).NotTo(HaveOccurred())
+
+				result, err := pyflowExtractor.ExtractStatus(ctx, pyflowComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.Phase).To(BeNil())
+			})
+
+			It("should match when ANY matcher succeeds with OR logic", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "active"
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{ByPhase: "running"},
+						{ByPhase: "active"},
+						{ByConditions: []v1alpha1.ExpectedCondition{
+							{Type: "Ready", Status: "True"},
+						}},
+					},
+				}
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.RunningStatus))
+			})
+		})
+		Context("Phase matching", func() {
+			It("should extract status with phase and match Running", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.Phase).NotTo(BeNil())
+				Expect(*result.Phase).To(Equal("running"))
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.RunningStatus))
+			})
+
+			It("should match Initializing status", func() {
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Initializing: []v1alpha1.StatusMatcher{
+						{
+							ByConditions: []v1alpha1.ExpectedCondition{
+								{Type: "Initialized", Status: "True"},
+							},
+						},
+					},
+				}
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Initialized", Status: metav1.ConditionTrue},
+				}
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.InitializingStatus))
+			})
+
+			It("should match Running status", func() {
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "running",
+						},
+					},
+				}
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.RunningStatus))
+			})
+
+			It("should match Failed status", func() {
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Failed: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "failed",
+						},
+					},
+				}
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "failed"
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.FailedStatus))
+			})
+
+			It("should match Completed status", func() {
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Completed: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "completed",
+						},
+					},
+				}
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "completed"
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.CompletedStatus))
+			})
+
+			It("should return UndefinedStatus when phase does not match", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "unknown"
+
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.UndefinedStatus))
+			})
+
+			It("should match status with both byPhase and byConditions", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Ready", Status: metav1.ConditionTrue},
+					{Type: "Available", Status: metav1.ConditionFalse},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "running",
+							ByConditions: []v1alpha1.ExpectedCondition{
+								{Type: "Ready", Status: "True"},
+								{Type: "Available", Status: "False"},
+							},
+						},
+					},
+				}
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.RunningStatus))
+			})
+
+			It("should fail to match when phase matches but conditions do not", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Ready", Status: metav1.ConditionFalse},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "running",
+							ByConditions: []v1alpha1.ExpectedCondition{
+								{Type: "Ready", Status: "True"},
+							},
+						},
+					},
+				}
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.UndefinedStatus))
+			})
+		})
+
+		Context("Completed status", func() {
+			It("should match Completed status", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Completed", Status: metav1.ConditionTrue},
+				}
+
+				customRI := reactorRI
+				customRI.Spec.StructureDefinition.RootComponent.StatusDefinition = &v1alpha1.StatusDefinition{
+					ConditionsDefinition: &v1alpha1.ConditionsDefinition{
+						Path:            ".status.conditions",
+						TypeFieldName:   "type",
+						StatusFieldName: "status",
+					},
+					StatusMappings: v1alpha1.StatusMappings{
+						Completed: []v1alpha1.StatusMatcher{
+							{
+								ByConditions: []v1alpha1.ExpectedCondition{
+									{Type: "Completed", Status: "True"},
+								},
+							},
+						},
+					},
+				}
+
+				extractor, reactorComp := extractorForObject(customRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatus).To(Equal(v1alpha1.CompletedStatus))
+			})
+		})
+
+		Context("error handling", func() {
+			It("should return DefinitionNotFoundError when StatusDefinition is nil", func() {
+				definition := v1alpha1.ComponentDefinition{
+					Name:             "test-component",
+					StatusDefinition: nil,
+				}
+
+				_, err := pyflowExtractor.ExtractStatus(ctx, definition)
+
+				Expect(err).To(HaveOccurred())
+				var defNotFoundErr DefinitionNotFoundError
+				Expect(errors.As(err, &defNotFoundErr)).To(BeTrue())
+				Expect(string(defNotFoundErr)).To(ContainSubstring("does not have status definition"))
+			})
+
+			It("should handle invalid phase path", func() {
+				mockEvaluator := query.NewMockQueryEvaluator(gomock.NewController(GinkgoT()))
+				extractor := NewInterfaceExtractor(mockEvaluator)
+
+				mockEvaluator.EXPECT().
+					Evaluate(gomock.Any(), ".status.invalidPath").
+					Return(nil, errors.New("query evaluation failed"))
+
+				definition := v1alpha1.ComponentDefinition{
+					Name: "test-component",
+					StatusDefinition: &v1alpha1.StatusDefinition{
+						PhaseDefinition: &v1alpha1.PhaseDefinition{
+							Path: ".status.invalidPath",
+						},
+						StatusMappings: v1alpha1.StatusMappings{},
+					},
+				}
+
+				_, err := extractor.ExtractStatus(ctx, definition)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("failed to extract phase"))
+			})
+
+			It("should handle invalid conditions path", func() {
+				definition := v1alpha1.ComponentDefinition{
+					Name: "test-component",
+					StatusDefinition: &v1alpha1.StatusDefinition{
+						ConditionsDefinition: &v1alpha1.ConditionsDefinition{
+							Path:            ".status.\\.badConditions",
+							TypeFieldName:   "type",
+							StatusFieldName: "status",
+						},
+						StatusMappings: v1alpha1.StatusMappings{},
+					},
+				}
+
+				_, err := pyflowExtractor.ExtractStatus(ctx, definition)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("failed to extract conditions"))
+			})
+
+			It("should handle missing condition fields gracefully", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Ready"},
+				}
+
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.Conditions).To(HaveLen(1))
+				Expect(result.Conditions[0].Type).To(Equal("Ready"))
+				Expect(result.Conditions[0].Status).To(BeEmpty())
 			})
 		})
 	})

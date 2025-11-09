@@ -132,3 +132,18 @@ func (mr *MockExtractorMockRecorder) ExtractScale(ctx, definition any) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractScale", reflect.TypeOf((*MockExtractor)(nil).ExtractScale), ctx, definition)
 }
+
+// ExtractStatus mocks base method.
+func (m *MockExtractor) ExtractStatus(ctx context.Context, definition v1alpha1.ComponentDefinition) (*Status, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExtractStatus", ctx, definition)
+	ret0, _ := ret[0].(*Status)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExtractStatus indicates an expected call of ExtractStatus.
+func (mr *MockExtractorMockRecorder) ExtractStatus(ctx, definition any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractStatus", reflect.TypeOf((*MockExtractor)(nil).ExtractStatus), ctx, definition)
+}

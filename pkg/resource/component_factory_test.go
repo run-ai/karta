@@ -76,4 +76,25 @@ var _ = Describe("ComponentFactory", func() {
 			Expect(worker.extractor).To(Equal(mockExtractor))
 		})
 	})
+
+	Context("GetChildComponents", func() {
+		It("should get all child components", func() {
+			components, err := factory.GetChildComponents()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(components).NotTo(BeNil())
+			Expect(components).To(HaveLen(2))
+			
+			// Verify component names
+			names := []string{components[0].name, components[1].name}
+			Expect(names).To(ConsistOf("master", "worker"))
+		})
+
+		It("should return error when ResourceInterface is nil", func() {
+			factory.ri = nil
+			components, err := factory.GetChildComponents()
+			Expect(err).To(HaveOccurred())
+			Expect(components).To(BeNil())
+			Expect(err.Error()).To(ContainSubstring("resource interface is nil"))
+		})
+	})
 })

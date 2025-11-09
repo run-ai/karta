@@ -77,6 +77,12 @@ func ReactorRI() *v1alpha1.ResourceInterface {
 						PhaseDefinition: &v1alpha1.PhaseDefinition{
 							Path: ".status.phase",
 						},
+						ConditionsDefinition: &v1alpha1.ConditionsDefinition{
+							Path:             ".status.conditions",
+							TypeFieldName:    "type",
+							StatusFieldName:  "status",
+							MessageFieldName: ptr.To("message"),
+						},
 						StatusMappings: v1alpha1.StatusMappings{
 							Initializing: []v1alpha1.StatusMatcher{
 								{
