@@ -53,8 +53,8 @@ type Status struct {
 	// Conditions are the extracted Kubernetes-style conditions
 	Conditions []Condition `json:"conditions,omitempty"`
 
-	// MatchedStatus is the ResourceStatus that was matched based on StatusMappings
-	MatchedStatus v1alpha1.ResourceStatus `json:"matchedStatus"`
+	// MatchedStatuses are all the ResourceStatuses that were matched based on StatusMappings
+	MatchedStatuses []v1alpha1.ResourceStatus `json:"matchedStatuses"`
 }
 
 // InstanceSummary represents all extracted data for a single instance

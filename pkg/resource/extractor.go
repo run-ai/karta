@@ -238,6 +238,8 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 	return fragmentedSpecs, nil
 }
 
+// ExtractStatus evaluates the status of the component based on the status definition.
+// For ExpectedCondition that their Type is not present in the CR, it is treated it as Status=Fals.
 func (e *InterfaceExtractor) ExtractStatus(ctx context.Context, definition v1alpha1.ComponentDefinition) (*Status, error) {
 	if definition.StatusDefinition == nil {
 		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have status definition", definition.Name))
@@ -261,12 +263,12 @@ func (e *InterfaceExtractor) ExtractStatus(ctx context.Context, definition v1alp
 		return nil, err
 	}
 
-	matchedStatus := matchStatus(phase, conditions, statusDef.StatusMappings)
+	matchedStatuses := matchStatus(phase, conditions, statusDef.StatusMappings)
 
 	status := Status{
-		Phase:         phase,
-		Conditions:    conditions,
-		MatchedStatus: matchedStatus,
+		Phase:           phase,
+		Conditions:      conditions,
+		MatchedStatuses: matchedStatuses,
 	}
 
 	return &status, nil
@@ -390,41 +392,46 @@ func convertViaJSON(src any, dst any) error {
 	return nil
 }
 
-func matchStatus(phase *string, conditions []Condition, mappings v1alpha1.StatusMappings) v1alpha1.ResourceStatus {
+func matchStatus(phase *string, conditions []Condition, mappings v1alpha1.StatusMappings) []v1alpha1.ResourceStatus {
 	conditionsMap := make(map[string]Condition, len(conditions))
 	for _, cond := range conditions {
 		conditionsMap[cond.Type] = cond
 	}
 
-	if matchesAnyMatcher(phase, conditionsMap, mappings.Running) {
-		return v1alpha1.RunningStatus
+	matchedStatuses := make([]v1alpha1.ResourceStatus, 0)
+	if evaluteMatchers(phase, conditionsMap, mappings.Running) {
+		matchedStatuses = append(matchedStatuses, v1alpha1.RunningStatus)
 	}
 
-	if matchesAnyMatcher(phase, conditionsMap, mappings.Failed) {
-		return v1alpha1.FailedStatus
+	if evaluteMatchers(phase, conditionsMap, mappings.Failed) {
+		matchedStatuses = append(matchedStatuses, v1alpha1.FailedStatus)
 	}
 
-	if matchesAnyMatcher(phase, conditionsMap, mappings.Completed) {
-		return v1alpha1.CompletedStatus
+	if evaluteMatchers(phase, conditionsMap, mappings.Completed) {
+		matchedStatuses = append(matchedStatuses, v1alpha1.CompletedStatus)
 	}
 
-	if matchesAnyMatcher(phase, conditionsMap, mappings.Initializing) {
-		return v1alpha1.InitializingStatus
+	if evaluteMatchers(phase, conditionsMap, mappings.Initializing) {
+		matchedStatuses = append(matchedStatuses, v1alpha1.InitializingStatus)
 	}
 
-	return v1alpha1.UndefinedStatus
+	if len(matchedStatuses) == 0 {
+		return []v1alpha1.ResourceStatus{v1alpha1.UndefinedStatus}
+	}
+
+	return matchedStatuses
 }
 
-func matchesAnyMatcher(phase *string, conditionsMap map[string]Condition, matchers []v1alpha1.StatusMatcher) bool {
+func evaluteMatchers(phase *string, conditionsMap map[string]Condition, matchers []v1alpha1.StatusMatcher) bool {
 	for _, matcher := range matchers {
-		if matchesMatcher(phase, conditionsMap, matcher) {
+		if match(phase, conditionsMap, matcher) {
 			return true
 		}
 	}
 	return false
 }
 
-func matchesMatcher(phase *string, conditionsMap map[string]Condition, matcher v1alpha1.StatusMatcher) bool {
+func match(phase *string, conditionsMap map[string]Condition, matcher v1alpha1.StatusMatcher) bool {
 	if matcher.ByPhase != "" {
 		if phase == nil || *phase != matcher.ByPhase {
 			return false
@@ -438,7 +445,8 @@ func matchesMatcher(phase *string, conditionsMap map[string]Condition, matcher v
 	for _, expectedCond := range matcher.ByConditions {
 		actualCond, found := conditionsMap[expectedCond.Type]
 		if !found {
-			return false
+			// Treat missing condition as Status=False.
+			return expectedCond.Status != "False"
 		}
 
 		if expectedCond.Status != "" && actualCond.Status != expectedCond.Status {
