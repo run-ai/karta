@@ -98,5 +98,5 @@ $(GOLANGCI_LINT): $(LOCALBIN)
 download-dependencies:
 	go mod download
 
-.PHONY: check
+.PHONY: ci
 ci: download-dependencies validate test lint

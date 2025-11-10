@@ -363,8 +363,9 @@ spec:
                                       If both ByPhase and ByConditions are provided, ALL must match (AND logic).
                                     properties:
                                       byConditions:
-                                        description: ByConditions matches against
-                                          specific condition combinations (ANDed together)
+                                        description: |-
+                                          ByConditions matches against specific condition combinations (ANDed together)
+                                          Treat missing condition as Status=False.
                                         items:
                                           description: ExpectedCondition defines a
                                             condition type and status that must be
@@ -401,8 +402,9 @@ spec:
                                       If both ByPhase and ByConditions are provided, ALL must match (AND logic).
                                     properties:
                                       byConditions:
-                                        description: ByConditions matches against
-                                          specific condition combinations (ANDed together)
+                                        description: |-
+                                          ByConditions matches against specific condition combinations (ANDed together)
+                                          Treat missing condition as Status=False.
                                         items:
                                           description: ExpectedCondition defines a
                                             condition type and status that must be
@@ -439,8 +441,9 @@ spec:
                                       If both ByPhase and ByConditions are provided, ALL must match (AND logic).
                                     properties:
                                       byConditions:
-                                        description: ByConditions matches against
-                                          specific condition combinations (ANDed together)
+                                        description: |-
+                                          ByConditions matches against specific condition combinations (ANDed together)
+                                          Treat missing condition as Status=False.
                                         items:
                                           description: ExpectedCondition defines a
                                             condition type and status that must be
@@ -477,8 +480,9 @@ spec:
                                       If both ByPhase and ByConditions are provided, ALL must match (AND logic).
                                     properties:
                                       byConditions:
-                                        description: ByConditions matches against
-                                          specific condition combinations (ANDed together)
+                                        description: |-
+                                          ByConditions matches against specific condition combinations (ANDed together)
+                                          Treat missing condition as Status=False.
                                         items:
                                           description: ExpectedCondition defines a
                                             condition type and status that must be
@@ -725,8 +729,9 @@ spec:
                                     If both ByPhase and ByConditions are provided, ALL must match (AND logic).
                                   properties:
                                     byConditions:
-                                      description: ByConditions matches against specific
-                                        condition combinations (ANDed together)
+                                      description: |-
+                                        ByConditions matches against specific condition combinations (ANDed together)
+                                        Treat missing condition as Status=False.
                                       items:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
@@ -762,8 +767,9 @@ spec:
                                     If both ByPhase and ByConditions are provided, ALL must match (AND logic).
                                   properties:
                                     byConditions:
-                                      description: ByConditions matches against specific
-                                        condition combinations (ANDed together)
+                                      description: |-
+                                        ByConditions matches against specific condition combinations (ANDed together)
+                                        Treat missing condition as Status=False.
                                       items:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
@@ -799,8 +805,9 @@ spec:
                                     If both ByPhase and ByConditions are provided, ALL must match (AND logic).
                                   properties:
                                     byConditions:
-                                      description: ByConditions matches against specific
-                                        condition combinations (ANDed together)
+                                      description: |-
+                                        ByConditions matches against specific condition combinations (ANDed together)
+                                        Treat missing condition as Status=False.
                                       items:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
@@ -836,8 +843,9 @@ spec:
                                     If both ByPhase and ByConditions are provided, ALL must match (AND logic).
                                   properties:
                                     byConditions:
-                                      description: ByConditions matches against specific
-                                        condition combinations (ANDed together)
+                                      description: |-
+                                        ByConditions matches against specific condition combinations (ANDed together)
+                                        Treat missing condition as Status=False.
                                       items:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
