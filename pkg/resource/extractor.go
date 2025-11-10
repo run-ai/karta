@@ -446,7 +446,7 @@ func match(phase *string, conditionsMap map[string]Condition, matcher v1alpha1.S
 		actualCond, found := conditionsMap[expectedCond.Type]
 		if !found {
 			// Treat missing condition as Status=False.
-			return expectedCond.Status != "False"
+			return expectedCond.Status == "False"
 		}
 
 		if expectedCond.Status != "" && actualCond.Status != expectedCond.Status {

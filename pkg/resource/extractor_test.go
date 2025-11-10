@@ -585,7 +585,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				Expect(result.Conditions).To(HaveLen(1))
 				Expect(result.Conditions[0].Type).To(Equal("Running"))
 				Expect(result.Conditions[0].Status).To(Equal("True"))
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.RunningStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
 			})
 
 			It("should return UndefinedStatus when conditions do not match", func() {
@@ -600,7 +600,7 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.UndefinedStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
 			})
 
 			It("should handle empty conditions array", func() {
@@ -614,7 +614,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
 				Expect(result.Conditions).To(BeEmpty())
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.UndefinedStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
 			})
 
 			It("should extract conditions with message field", func() {
@@ -695,7 +695,7 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.RunningStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
 			})
 		})
 		Context("Phase matching", func() {
@@ -710,7 +710,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				Expect(result).NotTo(BeNil())
 				Expect(result.Phase).NotTo(BeNil())
 				Expect(*result.Phase).To(Equal("running"))
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.RunningStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
 			})
 
 			It("should match Initializing status", func() {
@@ -734,7 +734,7 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.InitializingStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.InitializingStatus))
 			})
 
 			It("should match Running status", func() {
@@ -754,7 +754,7 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.RunningStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
 			})
 
 			It("should match Failed status", func() {
@@ -774,7 +774,7 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.FailedStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.FailedStatus))
 			})
 
 			It("should match Completed status", func() {
@@ -794,7 +794,7 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.CompletedStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.CompletedStatus))
 			})
 
 			It("should return UndefinedStatus when phase does not match", func() {
@@ -807,7 +807,7 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.UndefinedStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
 			})
 
 			It("should match status with both byPhase and byConditions", func() {
@@ -835,7 +835,7 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.RunningStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
 			})
 
 			It("should fail to match when phase matches but conditions do not", func() {
@@ -861,7 +861,64 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.UndefinedStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
+			})
+
+			It("should match multiple statuses when overlapping matchers succeed", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Ready", Status: metav1.ConditionTrue},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "running",
+						},
+					},
+					Initializing: []v1alpha1.StatusMatcher{
+						{
+							ByConditions: []v1alpha1.ExpectedCondition{
+								{Type: "Ready", Status: "True"},
+							},
+						},
+					},
+				}
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus, v1alpha1.InitializingStatus))
+			})
+
+			It("should match when condition is missing and matcher expects False", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Ready", Status: metav1.ConditionTrue},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "running",
+							ByConditions: []v1alpha1.ExpectedCondition{
+								{Type: "Ready", Status: "True"},
+								{Type: "Failed", Status: "False"},
+							},
+						},
+					},
+				}
+				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
 			})
 		})
 
@@ -896,7 +953,7 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.CompletedStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.CompletedStatus))
 			})
 		})
 

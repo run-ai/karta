@@ -441,7 +441,7 @@ var _ = Describe("Component", func() {
 					Conditions: []Condition{
 						{Type: "Ready", Status: "True", Message: "All pods are ready"},
 					},
-					MatchedStatus: v1alpha1.RunningStatus,
+					MatchedStatuses: []v1alpha1.ResourceStatus{v1alpha1.RunningStatus},
 				}
 
 				mockExtractor.EXPECT().
@@ -456,7 +456,7 @@ var _ = Describe("Component", func() {
 				Expect(result.Conditions[0].Type).To(Equal(expectedStatus.Conditions[0].Type))
 				Expect(result.Conditions[0].Status).To(Equal(expectedStatus.Conditions[0].Status))
 				Expect(result.Conditions[0].Message).To(Equal(expectedStatus.Conditions[0].Message))
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.RunningStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
 			})
 
 			It("should return nil when StatusDefinition not found", func() {
@@ -488,13 +488,13 @@ var _ = Describe("Component", func() {
 				mockExtractor.EXPECT().
 					ExtractStatus(ctx, component.definition).
 					Return(&Status{
-						MatchedStatus: v1alpha1.UndefinedStatus,
+						MatchedStatuses: []v1alpha1.ResourceStatus{v1alpha1.UndefinedStatus},
 					}, nil)
 
 				result, err := component.GetStatus(ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatus).To(Equal(v1alpha1.UndefinedStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
 			})
 		})
 
