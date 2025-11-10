@@ -399,19 +399,19 @@ func matchStatus(phase *string, conditions []Condition, mappings v1alpha1.Status
 	}
 
 	matchedStatuses := make([]v1alpha1.ResourceStatus, 0)
-	if evaluteMatchers(phase, conditionsMap, mappings.Running) {
+	if evaluateMatchers(phase, conditionsMap, mappings.Running) {
 		matchedStatuses = append(matchedStatuses, v1alpha1.RunningStatus)
 	}
 
-	if evaluteMatchers(phase, conditionsMap, mappings.Failed) {
+	if evaluateMatchers(phase, conditionsMap, mappings.Failed) {
 		matchedStatuses = append(matchedStatuses, v1alpha1.FailedStatus)
 	}
 
-	if evaluteMatchers(phase, conditionsMap, mappings.Completed) {
+	if evaluateMatchers(phase, conditionsMap, mappings.Completed) {
 		matchedStatuses = append(matchedStatuses, v1alpha1.CompletedStatus)
 	}
 
-	if evaluteMatchers(phase, conditionsMap, mappings.Initializing) {
+	if evaluateMatchers(phase, conditionsMap, mappings.Initializing) {
 		matchedStatuses = append(matchedStatuses, v1alpha1.InitializingStatus)
 	}
 
@@ -422,7 +422,7 @@ func matchStatus(phase *string, conditions []Condition, mappings v1alpha1.Status
 	return matchedStatuses
 }
 
-func evaluteMatchers(phase *string, conditionsMap map[string]Condition, matchers []v1alpha1.StatusMatcher) bool {
+func evaluateMatchers(phase *string, conditionsMap map[string]Condition, matchers []v1alpha1.StatusMatcher) bool {
 	for _, matcher := range matchers {
 		if match(phase, conditionsMap, matcher) {
 			return true
