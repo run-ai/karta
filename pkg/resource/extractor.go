@@ -239,7 +239,6 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 }
 
 // ExtractStatus evaluates the status of the component based on the status definition.
-// For ExpectedCondition that their Type is not present in the CR, it is treated it as Status=Fals.
 func (e *InterfaceExtractor) ExtractStatus(ctx context.Context, definition v1alpha1.ComponentDefinition) (*Status, error) {
 	if definition.StatusDefinition == nil {
 		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have status definition", definition.Name))
@@ -445,8 +444,7 @@ func match(phase *string, conditionsMap map[string]Condition, matcher v1alpha1.S
 	for _, expectedCond := range matcher.ByConditions {
 		actualCond, found := conditionsMap[expectedCond.Type]
 		if !found {
-			// Treat missing condition as Status=False.
-			return expectedCond.Status == "False"
+			return false
 		}
 
 		if expectedCond.Status != "" && actualCond.Status != expectedCond.Status {

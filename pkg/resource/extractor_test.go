@@ -894,7 +894,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus, v1alpha1.InitializingStatus))
 			})
 
-			It("should match when condition is missing and matcher expects False", func() {
+			It("should not match when condition is missing", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "running"
 				reactorObject.Status.Conditions = []metav1.Condition{
@@ -918,7 +918,7 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
 			})
 		})
 
