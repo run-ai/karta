@@ -11,7 +11,7 @@ It tells the user how to:
 - Model child components (replicas, workers, statefulsets)
 - Locate pod specs inside the resource definition
 - Interpret status (running, completed, failed)
-- Apply op§imization instructions (gang scheduling)
+- Apply optimization instructions (gang scheduling)
 - Think of it as the blueprint of the workload.
 
 ## Usage
@@ -95,7 +95,7 @@ factory := resource.NewComponentFactoryFromObject(resourceInterface, jobSetObjec
 
 // Get the child component (replicatedjob) which has the instances
 component, _ := factory.GetComponent("replicatedjob")
-summaries, _ := component.GetInstanceSummaries(ctx)
+summaries, _ := component.GetInstanceSummaries()
 
 // Access pod template specs, metadata, and scale info for each instance
 for instanceID, summary := range summaries {

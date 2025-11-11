@@ -1,0 +1,1333 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>resource: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/run-ai/kai-bolt/pkg/resource/component.go (95.6%)</option>
+				
+				<option value="file1">github.com/run-ai/kai-bolt/pkg/resource/component_factory.go (95.8%)</option>
+				
+				<option value="file2">github.com/run-ai/kai-bolt/pkg/resource/extractor.go (89.7%)</option>
+				
+				<option value="file3">github.com/run-ai/kai-bolt/pkg/resource/extractor_mock.go (100.0%)</option>
+				
+				<option value="file4">github.com/run-ai/kai-bolt/pkg/resource/pod_querier.go (91.5%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package resource
+
+import (
+        "context"
+        "errors"
+        "fmt"
+
+        corev1 "k8s.io/api/core/v1"
+        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+        "github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+)
+
+const errGetInstanceIds = "failed to get instance ids"
+
+// Component represents a ResourceInterface component with extraction capabilities
+type Component struct {
+        name       string
+        definition v1alpha1.ComponentDefinition
+        extractor  Extractor
+}
+
+type FragmentedPodSpec struct {
+        SchedulerName     string                       `json:"schedulerName,omitempty"`
+        Labels            map[string]string            `json:"labels,omitempty"`
+        Annotations       map[string]string            `json:"annotations,omitempty"`
+        Resources         *corev1.ResourceRequirements `json:"resources,omitempty"`
+        ResourceClaims    []corev1.PodResourceClaim    `json:"resourceClaims,omitempty"`
+        PodAffinity       *corev1.PodAffinity          `json:"podAffinity,omitempty"`
+        NodeAffinity      *corev1.NodeAffinity         `json:"nodeAffinity,omitempty"`
+        Containers        []corev1.Container           `json:"containers,omitempty"`
+        Container         *corev1.Container            `json:"container,omitempty"`
+        PriorityClassName string                       `json:"priorityClassName,omitempty"`
+        Image             string                       `json:"image,omitempty"`
+}
+
+type Scale struct {
+        Replicas    *int32 `json:"replicas,omitempty"`
+        MinReplicas *int32 `json:"minReplicas,omitempty"`
+        MaxReplicas *int32 `json:"maxReplicas,omitempty"`
+}
+
+type Condition struct {
+        Type    string `json:"type"`
+        Status  string `json:"status"`
+        Message string `json:"message,omitempty"`
+}
+
+type Status struct {
+        // Phase is the raw phase/state string extracted from the component
+        Phase *string `json:"phase,omitempty"`
+
+        // Conditions are the extracted Kubernetes-style conditions
+        Conditions []Condition `json:"conditions,omitempty"`
+
+        // MatchedStatuses are all the ResourceStatuses that were matched based on StatusMappings
+        MatchedStatuses []v1alpha1.ResourceStatus `json:"matchedStatuses"`
+}
+
+// InstanceSummary represents all extracted data for a single instance
+type InstanceSummary struct {
+        PodTemplateSpec   *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
+        PodSpec           *corev1.PodSpec         `json:"podSpec,omitempty"`
+        FragmentedPodSpec *FragmentedPodSpec      `json:"fragmentedPodSpec,omitempty"`
+
+        Metadata *metav1.ObjectMeta `json:"metadata,omitempty"`
+
+        Scale *Scale `json:"scale,omitempty"`
+}
+
+// Name returns the component name
+func (c *Component) Name() string <span class="cov8" title="1">{
+        return c.name
+}</span>
+
+// Kind returns the component gvk
+func (c *Component) Kind() *metav1.GroupVersionKind <span class="cov8" title="1">{
+        if c.definition.Kind == nil </span><span class="cov8" title="1">{
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">return &amp;metav1.GroupVersionKind{
+                Group:   c.definition.Kind.Group,
+                Version: c.definition.Kind.Version,
+                Kind:    c.definition.Kind.Kind,
+        }</span>
+}
+
+// Definition returns the component definition
+func (c *Component) Definition() v1alpha1.ComponentDefinition <span class="cov8" title="1">{
+        return c.definition
+}</span>
+
+// GetPodTemplateSpec extracts pod template specs mapped by instance id
+func (c *Component) GetPodTemplateSpec(ctx context.Context) (map[string]corev1.PodTemplateSpec, error) <span class="cov8" title="1">{
+        podTemplateSpecs, err := c.extractor.ExtractPodTemplateSpec(ctx, c.definition)
+        if err != nil </span><span class="cov8" title="1">{
+                if isDefinitionNotFoundError(err) </span><span class="cov8" title="1">{
+                        return nil, nil
+                }</span>
+                <span class="cov8" title="1">return nil, fmt.Errorf("failed to extract pod template specs: %w", err)</span>
+        }
+
+        <span class="cov8" title="1">instanceIds, err := c.GetInstanceIds(ctx)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("%s: %w", errGetInstanceIds, err)
+        }</span>
+
+        <span class="cov8" title="1">return zipWithInstanceIds(instanceIds, podTemplateSpecs)</span>
+}
+
+// GetFragmentedPodSpec extracts fragmented pod specs mapped by instance id
+func (c *Component) GetFragmentedPodSpec(ctx context.Context) (map[string]FragmentedPodSpec, error) <span class="cov8" title="1">{
+        fragmentedPodSpecs, err := c.extractor.ExtractFragmentedPodSpec(ctx, c.definition)
+        if err != nil </span><span class="cov8" title="1">{
+                if isDefinitionNotFoundError(err) </span><span class="cov8" title="1">{
+                        return nil, nil
+                }</span>
+                <span class="cov8" title="1">return nil, fmt.Errorf("failed to extract fragmented pod specs: %w", err)</span>
+        }
+
+        <span class="cov8" title="1">instanceIds, err := c.GetInstanceIds(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("%s: %w", errGetInstanceIds, err)
+        }</span>
+
+        <span class="cov8" title="1">return zipWithInstanceIds(instanceIds, fragmentedPodSpecs)</span>
+}
+
+// GetPodSpec extracts pod specs mapped by instance id
+func (c *Component) GetPodSpec(ctx context.Context) (map[string]corev1.PodSpec, error) <span class="cov8" title="1">{
+        podSpecs, err := c.extractor.ExtractPodSpec(ctx, c.definition)
+        if err != nil </span><span class="cov8" title="1">{
+                if isDefinitionNotFoundError(err) </span><span class="cov8" title="1">{
+                        return nil, nil
+                }</span>
+                <span class="cov8" title="1">return nil, fmt.Errorf("failed to extract pod specs: %w", err)</span>
+        }
+
+        <span class="cov8" title="1">instanceIds, err := c.GetInstanceIds(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("%s: %w", errGetInstanceIds, err)
+        }</span>
+
+        <span class="cov8" title="1">return zipWithInstanceIds(instanceIds, podSpecs)</span>
+}
+
+// GetPodMetadata extracts pod metadata mapped by instance id
+func (c *Component) GetPodMetadata(ctx context.Context) (map[string]metav1.ObjectMeta, error) <span class="cov8" title="1">{
+        podMetadata, err := c.extractor.ExtractPodMetadata(ctx, c.definition)
+        if err != nil </span><span class="cov8" title="1">{
+                if isDefinitionNotFoundError(err) </span><span class="cov8" title="1">{
+                        return nil, nil
+                }</span>
+                <span class="cov8" title="1">return nil, fmt.Errorf("failed to extract pod metadata: %w", err)</span>
+        }
+
+        <span class="cov8" title="1">instanceIds, err := c.GetInstanceIds(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("%s: %w", errGetInstanceIds, err)
+        }</span>
+
+        <span class="cov8" title="1">return zipWithInstanceIds(instanceIds, podMetadata)</span>
+}
+
+// GetScale extracts scale data mapped by instance id
+func (c *Component) GetScale(ctx context.Context) (map[string]Scale, error) <span class="cov8" title="1">{
+        scales, err := c.extractor.ExtractScale(ctx, c.definition)
+        if err != nil </span><span class="cov8" title="1">{
+                if isDefinitionNotFoundError(err) </span><span class="cov0" title="0">{
+                        return nil, nil
+                }</span>
+                <span class="cov8" title="1">return nil, fmt.Errorf("failed to extract scales: %w", err)</span>
+        }
+
+        <span class="cov8" title="1">instanceIds, err := c.GetInstanceIds(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("%s: %w", errGetInstanceIds, err)
+        }</span>
+
+        <span class="cov8" title="1">return zipWithInstanceIds(instanceIds, scales)</span>
+}
+
+// GetStatus extracts status information from the component
+// Note: Status is typically defined only on the root component, not on instances
+func (c *Component) GetStatus(ctx context.Context) (*Status, error) <span class="cov8" title="1">{
+        status, err := c.extractor.ExtractStatus(ctx, c.definition)
+        if err != nil </span><span class="cov8" title="1">{
+                if isDefinitionNotFoundError(err) </span><span class="cov8" title="1">{
+                        return nil, nil
+                }</span>
+                <span class="cov8" title="1">return nil, fmt.Errorf("failed to extract status: %w", err)</span>
+        }
+
+        <span class="cov8" title="1">return status, nil</span>
+}
+
+// GetInstanceSummaries aggregates all extraction results into a map of instance summaries
+func (c *Component) GetInstanceSummaries(ctx context.Context) (map[string]InstanceSummary, error) <span class="cov8" title="1">{
+        instanceIds, err := c.GetInstanceIds(ctx)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("%s: %w", errGetInstanceIds, err)
+        }</span>
+
+        <span class="cov8" title="1">podTemplateSpecs, err := c.GetPodTemplateSpec(ctx)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to get pod template specs: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">podSpecs, err := c.GetPodSpec(ctx)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to get pod specs: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">fragmentedPodSpecs, err := c.GetFragmentedPodSpec(ctx)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to get fragmented pod specs: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">metadata, err := c.GetPodMetadata(ctx)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to get pod metadata: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">scales, err := c.GetScale(ctx)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to get scales: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">summaries := make(map[string]InstanceSummary, len(instanceIds))
+        for _, instanceID := range instanceIds </span><span class="cov8" title="1">{
+                summary := InstanceSummary{}
+
+                if podTemplateSpecs != nil </span><span class="cov8" title="1">{
+                        if pts, ok := podTemplateSpecs[instanceID]; ok </span><span class="cov8" title="1">{
+                                summary.PodTemplateSpec = &amp;pts
+                        }</span>
+                }
+
+                <span class="cov8" title="1">if podSpecs != nil </span><span class="cov8" title="1">{
+                        if ps, ok := podSpecs[instanceID]; ok </span><span class="cov8" title="1">{
+                                summary.PodSpec = &amp;ps
+                        }</span>
+                }
+
+                <span class="cov8" title="1">if fragmentedPodSpecs != nil </span><span class="cov8" title="1">{
+                        if fps, ok := fragmentedPodSpecs[instanceID]; ok </span><span class="cov8" title="1">{
+                                summary.FragmentedPodSpec = &amp;fps
+                        }</span>
+                }
+
+                <span class="cov8" title="1">if metadata != nil </span><span class="cov8" title="1">{
+                        if md, ok := metadata[instanceID]; ok </span><span class="cov8" title="1">{
+                                summary.Metadata = &amp;md
+                        }</span>
+                }
+
+                <span class="cov8" title="1">if scales != nil </span><span class="cov8" title="1">{
+                        if scale, ok := scales[instanceID]; ok </span><span class="cov8" title="1">{
+                                summary.Scale = &amp;scale
+                        }</span>
+                }
+
+                <span class="cov8" title="1">summaries[instanceID] = summary</span>
+        }
+
+        <span class="cov8" title="1">return summaries, nil</span>
+}
+
+// HasPodDefinition returns true if this component defines pods
+func (c *Component) HasPodDefinition() bool <span class="cov8" title="1">{
+        spec := c.definition.SpecDefinition
+        if spec == nil </span><span class="cov8" title="1">{
+                return false
+        }</span>
+
+        <span class="cov8" title="1">return spec.PodTemplateSpecPath != nil ||
+                spec.PodSpecPath != nil ||
+                spec.FragmentedPodSpecDefinition != nil</span>
+}
+
+// GetPodSelector returns the pod selector for this component
+func (c *Component) GetPodSelector() *v1alpha1.PodSelector <span class="cov8" title="1">{
+        return c.definition.PodSelector
+}</span>
+
+// HasInstanceIdDefinition returns true if this component possibily has multiple instances
+func (c *Component) HasInstanceIdDefinition() bool <span class="cov8" title="1">{
+        return c.definition.InstanceIdPath != nil
+}</span>
+
+// GetInstanceIds extracts instance identifiers for this component
+func (c *Component) GetInstanceIds(ctx context.Context) ([]string, error) <span class="cov8" title="1">{
+        instanceIds, err := c.extractor.ExtractInstanceIds(ctx, c.definition)
+        if err != nil </span><span class="cov8" title="1">{
+                if isDefinitionNotFoundError(err) </span><span class="cov8" title="1">{
+                        // If no definition was given, assume there is a single instance with empty id
+                        return []string{""}, nil
+                }</span>
+                <span class="cov8" title="1">return nil, fmt.Errorf("failed to extract instance ids for component %s: %w", c.name, err)</span>
+        }
+
+        <span class="cov8" title="1">return instanceIds, nil</span>
+}
+
+// zipWithInstanceIds is a generic method to zip instance IDs with extraction results
+func zipWithInstanceIds[T any](instanceIds []string, results []T) (map[string]T, error) <span class="cov8" title="1">{
+        if len(instanceIds) != len(results) </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("instance ids count (%d) does not match results count (%d)", len(instanceIds), len(results))
+        }</span>
+
+        <span class="cov8" title="1">zipped := make(map[string]T, len(instanceIds))
+        for i, instanceId := range instanceIds </span><span class="cov8" title="1">{
+                zipped[instanceId] = results[i]
+        }</span>
+
+        <span class="cov8" title="1">return zipped, nil</span>
+}
+
+func isDefinitionNotFoundError(err error) bool <span class="cov8" title="1">{
+        var defNotFoundErr DefinitionNotFoundError
+        return errors.As(err, &amp;defNotFoundErr)
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package resource
+
+import (
+        "context"
+        "fmt"
+
+        corev1 "k8s.io/api/core/v1"
+        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+        "sigs.k8s.io/controller-runtime/pkg/client"
+
+        "github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+        "github.com/run-ai/kai-bolt/pkg/query"
+)
+
+//go:generate mockgen -source=component_factory.go -destination=extractor_mock.go -package=resource Extractor
+type Extractor interface {
+        ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error)
+        ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error)
+        ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error)
+        ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error)
+        ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error)
+        ExtractStatus(ctx context.Context, definition v1alpha1.ComponentDefinition) (*Status, error)
+        ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error)
+}
+
+type ComponentFactory struct {
+        ri        *v1alpha1.ResourceInterface
+        extractor Extractor // Shared extractor instance
+
+        componentDefinitionsByName map[string]v1alpha1.ComponentDefinition // Fast component definition lookup
+}
+
+// NewComponentFactory creates a new ResourceInterface-based component factory
+func NewComponentFactory(ri *v1alpha1.ResourceInterface, extractor Extractor) *ComponentFactory <span class="cov8" title="1">{
+        definitionsByName := make(map[string]v1alpha1.ComponentDefinition)
+
+        // Create single slice with all components (root + children)
+        allDefinitions := append(ri.Spec.StructureDefinition.ChildComponents, ri.Spec.StructureDefinition.RootComponent)
+        for _, componentDefinition := range allDefinitions </span><span class="cov8" title="1">{
+                definitionsByName[componentDefinition.Name] = componentDefinition
+        }</span>
+
+        <span class="cov8" title="1">return &amp;ComponentFactory{
+                ri:                         ri,
+                extractor:                  extractor,
+                componentDefinitionsByName: definitionsByName,
+        }</span>
+}
+
+// NewComponentFactoryFromObject creates a new ResourceInterface-based component factory from a Kubernetes object
+func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object client.Object) *ComponentFactory <span class="cov8" title="1">{
+        queryEvaluator := query.NewDefaultJqEvaluator(object)
+        extractor := NewInterfaceExtractor(queryEvaluator)
+        return NewComponentFactory(ri, extractor)
+}</span>
+
+// GetComponent retrieves a component by name
+func (f *ComponentFactory) GetComponent(name string) (*Component, error) <span class="cov8" title="1">{
+        definition, exists := f.componentDefinitionsByName[name]
+        if !exists </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("component %s not found", name)
+        }</span>
+
+        <span class="cov8" title="1">return &amp;Component{
+                name:       name,
+                definition: definition,
+                extractor:  f.extractor,
+        }, nil</span>
+}
+
+// GetRootComponent retrieves the root component
+func (f *ComponentFactory) GetRootComponent() (*Component, error) <span class="cov8" title="1">{
+        if f.ri == nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("resource interface is nil")
+        }</span>
+
+        <span class="cov8" title="1">return f.GetComponent(f.ri.Spec.StructureDefinition.RootComponent.Name)</span>
+}
+
+// GetChildComponents retrieves all child components
+func (f *ComponentFactory) GetChildComponents() ([]*Component, error) <span class="cov8" title="1">{
+        if f.ri == nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("resource interface is nil")
+        }</span>
+
+        <span class="cov8" title="1">childComponents := make([]*Component, 0, len(f.ri.Spec.StructureDefinition.ChildComponents))
+        for _, childDefinition := range f.ri.Spec.StructureDefinition.ChildComponents </span><span class="cov8" title="1">{
+                component, err := f.GetComponent(childDefinition.Name)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to get child component %s: %w", childDefinition.Name, err)
+                }</span>
+                <span class="cov8" title="1">childComponents = append(childComponents, component)</span>
+        }
+
+        <span class="cov8" title="1">return childComponents, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package resource
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "strings"
+
+        "github.com/samber/lo"
+        corev1 "k8s.io/api/core/v1"
+        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+        "github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+        "github.com/run-ai/kai-bolt/pkg/query"
+)
+
+// DefinitionNotFoundError represents an error when a requested definition is not found
+type DefinitionNotFoundError string
+
+func (e DefinitionNotFoundError) Error() string <span class="cov8" title="1">{
+        return string(e)
+}</span>
+
+// InterfaceExtractor implements extraction using QueryEvaluator
+type InterfaceExtractor struct {
+        queryEvaluator query.QueryEvaluator
+}
+
+func NewInterfaceExtractor(queryEvaluator query.QueryEvaluator) *InterfaceExtractor <span class="cov8" title="1">{
+        return &amp;InterfaceExtractor{
+                queryEvaluator: queryEvaluator,
+        }
+}</span>
+
+func (e *InterfaceExtractor) ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error) <span class="cov8" title="1">{
+        if definition.SpecDefinition == nil </span><span class="cov0" title="0">{
+                return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
+        }</span>
+
+        <span class="cov8" title="1">if definition.SpecDefinition.PodTemplateSpecPath == nil </span><span class="cov8" title="1">{
+                return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have pod template spec definition", definition.Name))
+        }</span>
+
+        <span class="cov8" title="1">var podTemplateSpec []corev1.PodTemplateSpec
+        err := extract(ctx, definition.SpecDefinition.PodTemplateSpecPath, e.queryEvaluator, &amp;podTemplateSpec)
+
+        return podTemplateSpec, err</span>
+}
+
+func (e *InterfaceExtractor) ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error) <span class="cov8" title="1">{
+        if definition.SpecDefinition == nil </span><span class="cov0" title="0">{
+                return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
+        }</span>
+
+        <span class="cov8" title="1">if definition.SpecDefinition.PodSpecPath == nil </span><span class="cov8" title="1">{
+                return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have pod spec definition", definition.Name))
+        }</span>
+
+        <span class="cov8" title="1">var podSpec []corev1.PodSpec
+        err := extract(ctx, definition.SpecDefinition.PodSpecPath, e.queryEvaluator, &amp;podSpec)
+
+        return podSpec, err</span>
+}
+
+func (e *InterfaceExtractor) ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error) <span class="cov8" title="1">{
+        if definition.SpecDefinition == nil </span><span class="cov0" title="0">{
+                return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
+        }</span>
+
+        <span class="cov8" title="1">if definition.SpecDefinition.MetadataPath == nil </span><span class="cov8" title="1">{
+                return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have pod metadata definition", definition.Name))
+        }</span>
+
+        <span class="cov8" title="1">var podMetadata []metav1.ObjectMeta
+        err := extract(ctx, definition.SpecDefinition.MetadataPath, e.queryEvaluator, &amp;podMetadata)
+
+        return podMetadata, err</span>
+}
+
+func (e *InterfaceExtractor) ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error) <span class="cov8" title="1">{
+        if definition.ScaleDefinition == nil </span><span class="cov8" title="1">{
+                return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have scale definition", definition.Name))
+        }</span>
+
+        <span class="cov8" title="1">var (
+                replicas    []*int32
+                minReplicas []*int32
+                maxReplicas []*int32
+        )
+
+        scaleCount := 0
+
+        if err := extract(ctx, definition.ScaleDefinition.ReplicasPath, e.queryEvaluator, &amp;replicas); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">scaleCount = max(scaleCount, len(replicas))
+
+        if err := extract(ctx, definition.ScaleDefinition.MinReplicasPath, e.queryEvaluator, &amp;minReplicas); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">scaleCount = max(scaleCount, len(minReplicas))
+
+        if err := extract(ctx, definition.ScaleDefinition.MaxReplicasPath, e.queryEvaluator, &amp;maxReplicas); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">scaleCount = max(scaleCount, len(maxReplicas))
+
+        scales := make([]Scale, scaleCount)
+        for i := 0; i &lt; scaleCount; i++ </span><span class="cov8" title="1">{
+                scales[i] = Scale{
+                        Replicas:    safeGetByIndex(replicas, i),
+                        MaxReplicas: safeGetByIndex(maxReplicas, i),
+                        MinReplicas: safeGetByIndex(minReplicas, i),
+                }
+        }</span>
+
+        <span class="cov8" title="1">return scales, nil</span>
+}
+
+func extract[T any](ctx context.Context, path *string, evaluator query.QueryEvaluator, out *[]T) error <span class="cov8" title="1">{
+        if path == nil </span><span class="cov8" title="1">{
+                return nil
+        }</span>
+
+        <span class="cov8" title="1">results, err := evaluator.Evaluate(ctx, *path)
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">converted, err := safeConvertSlice[T](results)
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">*out = converted
+        return nil</span>
+}
+
+func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error) <span class="cov8" title="1">{
+        if definition.SpecDefinition == nil </span><span class="cov8" title="1">{
+                return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
+        }</span>
+
+        <span class="cov8" title="1">if definition.SpecDefinition.FragmentedPodSpecDefinition == nil </span><span class="cov8" title="1">{
+                return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have fragmented pod spec definition", definition.Name))
+        }</span>
+
+        <span class="cov8" title="1">fragmentedDefinition := definition.SpecDefinition.FragmentedPodSpecDefinition
+
+        var (
+                schedulerNameResults     []string
+                labelsResults            []map[string]string
+                annotationsResults       []map[string]string
+                resourcesResults         []*corev1.ResourceRequirements
+                resourceClaimsResults    [][]corev1.PodResourceClaim
+                podAffinityResults       []*corev1.PodAffinity
+                nodeAffinityResults      []*corev1.NodeAffinity
+                containersResults        [][]corev1.Container
+                containerResults         []*corev1.Container
+                priorityClassNameResults []string
+                imageResults             []string
+        )
+
+        specCount := 0
+
+        if err := extract(ctx, fragmentedDefinition.SchedulerNamePath, e.queryEvaluator, &amp;schedulerNameResults); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">specCount = max(specCount, len(schedulerNameResults))
+
+        if err := extract(ctx, fragmentedDefinition.LabelsPath, e.queryEvaluator, &amp;labelsResults); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">specCount = max(specCount, len(labelsResults))
+
+        if err := extract(ctx, fragmentedDefinition.AnnotationsPath, e.queryEvaluator, &amp;annotationsResults); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">specCount = max(specCount, len(annotationsResults))
+
+        if err := extract(ctx, fragmentedDefinition.ResourcesPath, e.queryEvaluator, &amp;resourcesResults); err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">specCount = max(specCount, len(resourcesResults))
+
+        if err := extract(ctx, fragmentedDefinition.ResourceClaimsPath, e.queryEvaluator, &amp;resourceClaimsResults); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">specCount = max(specCount, len(resourceClaimsResults))
+
+        if err := extract(ctx, fragmentedDefinition.PodAffinityPath, e.queryEvaluator, &amp;podAffinityResults); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">specCount = max(specCount, len(podAffinityResults))
+
+        if err := extract(ctx, fragmentedDefinition.NodeAffinityPath, e.queryEvaluator, &amp;nodeAffinityResults); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">specCount = max(specCount, len(nodeAffinityResults))
+
+        if err := extract(ctx, fragmentedDefinition.ContainersPath, e.queryEvaluator, &amp;containersResults); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">specCount = max(specCount, len(containersResults))
+
+        if err := extract(ctx, fragmentedDefinition.ContainerPath, e.queryEvaluator, &amp;containerResults); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">specCount = max(specCount, len(containerResults))
+
+        if err := extract(ctx, fragmentedDefinition.PriorityClassNamePath, e.queryEvaluator, &amp;priorityClassNameResults); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">specCount = max(specCount, len(priorityClassNameResults))
+
+        if err := extract(ctx, fragmentedDefinition.ImagePath, e.queryEvaluator, &amp;imageResults); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">specCount = max(specCount, len(imageResults))
+
+        fragmentedSpecs := make([]FragmentedPodSpec, specCount)
+        for i := 0; i &lt; specCount; i++ </span><span class="cov8" title="1">{
+                fragmentedSpecs[i] = FragmentedPodSpec{
+                        SchedulerName:     safeGetByIndex(schedulerNameResults, i),
+                        Labels:            safeGetByIndex(labelsResults, i),
+                        Annotations:       safeGetByIndex(annotationsResults, i),
+                        Resources:         safeGetByIndex(resourcesResults, i),
+                        ResourceClaims:    safeGetByIndex(resourceClaimsResults, i),
+                        PodAffinity:       safeGetByIndex(podAffinityResults, i),
+                        NodeAffinity:      safeGetByIndex(nodeAffinityResults, i),
+                        Containers:        safeGetByIndex(containersResults, i),
+                        Container:         safeGetByIndex(containerResults, i),
+                        PriorityClassName: safeGetByIndex(priorityClassNameResults, i),
+                        Image:             safeGetByIndex(imageResults, i),
+                }
+        }</span>
+
+        <span class="cov8" title="1">return fragmentedSpecs, nil</span>
+}
+
+// ExtractStatus evaluates the status of the component based on the status definition.
+func (e *InterfaceExtractor) ExtractStatus(ctx context.Context, definition v1alpha1.ComponentDefinition) (*Status, error) <span class="cov8" title="1">{
+        if definition.StatusDefinition == nil </span><span class="cov8" title="1">{
+                return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have status definition", definition.Name))
+        }</span>
+
+        <span class="cov8" title="1">statusDef := definition.StatusDefinition
+
+        var phase *string
+        if statusDef.PhaseDefinition != nil </span><span class="cov8" title="1">{
+                var phases []string
+                if err := extract(ctx, &amp;statusDef.PhaseDefinition.Path, e.queryEvaluator, &amp;phases); err != nil </span><span class="cov8" title="1">{
+                        return nil, fmt.Errorf("failed to extract phase: %w", err)
+                }</span>
+                <span class="cov8" title="1">if len(phases) &gt; 0 </span><span class="cov8" title="1">{
+                        phase = &amp;phases[0]
+                }</span>
+        }
+
+        <span class="cov8" title="1">conditions, err := e.extractConditions(ctx, statusDef.ConditionsDefinition)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">matchedStatuses := matchStatus(phase, conditions, statusDef.StatusMappings)
+
+        status := Status{
+                Phase:           phase,
+                Conditions:      conditions,
+                MatchedStatuses: matchedStatuses,
+        }
+
+        return &amp;status, nil</span>
+}
+
+func (e *InterfaceExtractor) extractConditions(ctx context.Context, condDef *v1alpha1.ConditionsDefinition) ([]Condition, error) <span class="cov8" title="1">{
+
+        if condDef == nil </span><span class="cov0" title="0">{
+                return []Condition{}, nil
+        }</span>
+
+        <span class="cov8" title="1">var extractedRawConditions [][]map[string]any
+        if err := extract(ctx, &amp;condDef.Path, e.queryEvaluator, &amp;extractedRawConditions); err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to extract conditions: %w", err)
+        }</span>
+
+        // As Condition path is a path to a list of conditions, extract returns a slice of slice in size one/zero,
+        // so we need to flatten it
+        <span class="cov8" title="1">rawConditions := lo.Flatten(extractedRawConditions)
+
+        conditions := make([]Condition, 0, len(rawConditions))
+        for _, condMap := range rawConditions </span><span class="cov8" title="1">{
+                cond := Condition{}
+
+                if typeVal, ok := condMap[condDef.TypeFieldName]; ok </span><span class="cov8" title="1">{
+                        if typeStr, ok := typeVal.(string); ok </span><span class="cov8" title="1">{
+                                cond.Type = typeStr
+                        }</span>
+                }
+
+                <span class="cov8" title="1">if statusVal, ok := condMap[condDef.StatusFieldName]; ok </span><span class="cov8" title="1">{
+                        if statusStr, ok := statusVal.(string); ok </span><span class="cov8" title="1">{
+                                cond.Status = statusStr
+                        }</span>
+                }
+
+                <span class="cov8" title="1">if condDef.MessageFieldName != nil </span><span class="cov8" title="1">{
+                        if msgVal, ok := condMap[*condDef.MessageFieldName]; ok </span><span class="cov8" title="1">{
+                                if msgStr, ok := msgVal.(string); ok </span><span class="cov8" title="1">{
+                                        cond.Message = msgStr
+                                }</span>
+                        }
+                }
+
+                <span class="cov8" title="1">conditions = append(conditions, cond)</span>
+        }
+        <span class="cov8" title="1">return conditions, nil</span>
+}
+
+func (e *InterfaceExtractor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) <span class="cov8" title="1">{
+        if definition.InstanceIdPath == nil </span><span class="cov8" title="1">{
+                return nil, DefinitionNotFoundError("no instance id path defined")
+        }</span>
+
+        <span class="cov8" title="1">var instanceIds []string
+        err := extract(ctx, definition.InstanceIdPath, e.queryEvaluator, &amp;instanceIds)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // Validate all instance ids are not empty
+        <span class="cov8" title="1">if lo.Contains(instanceIds, "") </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("instance id path contained empty string values [%s]", strings.Join(instanceIds, ","))
+        }</span>
+
+        <span class="cov8" title="1">return instanceIds, nil</span>
+}
+
+// safeGetByIndex Generic function for safely retrieving a slice element.
+// Returns zero value if slice is nil or index is out of range
+func safeGetByIndex[T any](slice []T, index int) T <span class="cov8" title="1">{
+        var zero T
+
+        if slice == nil </span><span class="cov8" title="1">{
+                return zero
+        }</span>
+
+        <span class="cov8" title="1">if index &lt; 0 || index &gt;= len(slice) </span><span class="cov0" title="0">{
+                return zero
+        }</span>
+
+        <span class="cov8" title="1">return slice[index]</span>
+}
+
+// safeConvertSlice Generic type conversion for slice objects
+func safeConvertSlice[T any](slice []any) ([]T, error) <span class="cov8" title="1">{
+        if slice == nil </span><span class="cov0" title="0">{
+                return nil, nil
+        }</span>
+
+        <span class="cov8" title="1">convertedResults := make([]T, len(slice))
+        for i, object := range slice </span><span class="cov8" title="1">{
+                // First try direct type assertion (for simple types)
+                if converted, ok := object.(T); ok </span><span class="cov8" title="1">{
+                        convertedResults[i] = converted
+                        continue</span>
+                }
+
+                // For complex types (structs), use JSON marshaling/unmarshaling
+                <span class="cov8" title="1">var converted T
+                if err := convertViaJSON(object, &amp;converted); err != nil </span><span class="cov8" title="1">{
+                        return nil, fmt.Errorf("failed to convert object at index %d to type %T: %w", i, converted, err)
+                }</span>
+                <span class="cov8" title="1">convertedResults[i] = converted</span>
+        }
+
+        <span class="cov8" title="1">return convertedResults, nil</span>
+}
+
+// convertViaJSON converts between types using JSON marshaling
+func convertViaJSON(src any, dst any) error <span class="cov8" title="1">{
+        jsonBytes, err := json.Marshal(src)
+        if err != nil </span><span class="cov8" title="1">{
+                return fmt.Errorf("failed to marshal source: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">if err := json.Unmarshal(jsonBytes, dst); err != nil </span><span class="cov8" title="1">{
+                return fmt.Errorf("failed to unmarshal to destination: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+func matchStatus(phase *string, conditions []Condition, mappings v1alpha1.StatusMappings) []v1alpha1.ResourceStatus <span class="cov8" title="1">{
+        conditionsMap := make(map[string]Condition, len(conditions))
+        for _, cond := range conditions </span><span class="cov8" title="1">{
+                conditionsMap[cond.Type] = cond
+        }</span>
+
+        <span class="cov8" title="1">matchedStatuses := make([]v1alpha1.ResourceStatus, 0)
+        if evaluateMatchers(phase, conditionsMap, mappings.Running) </span><span class="cov8" title="1">{
+                matchedStatuses = append(matchedStatuses, v1alpha1.RunningStatus)
+        }</span>
+
+        <span class="cov8" title="1">if evaluateMatchers(phase, conditionsMap, mappings.Failed) </span><span class="cov8" title="1">{
+                matchedStatuses = append(matchedStatuses, v1alpha1.FailedStatus)
+        }</span>
+
+        <span class="cov8" title="1">if evaluateMatchers(phase, conditionsMap, mappings.Completed) </span><span class="cov8" title="1">{
+                matchedStatuses = append(matchedStatuses, v1alpha1.CompletedStatus)
+        }</span>
+
+        <span class="cov8" title="1">if evaluateMatchers(phase, conditionsMap, mappings.Initializing) </span><span class="cov8" title="1">{
+                matchedStatuses = append(matchedStatuses, v1alpha1.InitializingStatus)
+        }</span>
+
+        <span class="cov8" title="1">if len(matchedStatuses) == 0 </span><span class="cov8" title="1">{
+                return []v1alpha1.ResourceStatus{v1alpha1.UndefinedStatus}
+        }</span>
+
+        <span class="cov8" title="1">return matchedStatuses</span>
+}
+
+func evaluateMatchers(phase *string, conditionsMap map[string]Condition, matchers []v1alpha1.StatusMatcher) bool <span class="cov8" title="1">{
+        for _, matcher := range matchers </span><span class="cov8" title="1">{
+                if match(phase, conditionsMap, matcher) </span><span class="cov8" title="1">{
+                        return true
+                }</span>
+        }
+        <span class="cov8" title="1">return false</span>
+}
+
+func match(phase *string, conditionsMap map[string]Condition, matcher v1alpha1.StatusMatcher) bool <span class="cov8" title="1">{
+        if matcher.ByPhase != "" </span><span class="cov8" title="1">{
+                if phase == nil || *phase != matcher.ByPhase </span><span class="cov8" title="1">{
+                        return false
+                }</span>
+        }
+
+        <span class="cov8" title="1">if len(matcher.ByConditions) == 0 </span><span class="cov8" title="1">{
+                return true
+        }</span>
+
+        <span class="cov8" title="1">for _, expectedCond := range matcher.ByConditions </span><span class="cov8" title="1">{
+                actualCond, found := conditionsMap[expectedCond.Type]
+                if !found </span><span class="cov8" title="1">{
+                        return false
+                }</span>
+
+                <span class="cov8" title="1">if expectedCond.Status != "" &amp;&amp; actualCond.Status != expectedCond.Status </span><span class="cov8" title="1">{
+                        return false
+                }</span>
+        }
+
+        <span class="cov8" title="1">return true</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">// Code generated by MockGen. DO NOT EDIT.
+// Source: component_factory.go
+//
+// Generated by this command:
+//
+//        mockgen -source=component_factory.go -destination=extractor_mock.go -package=resource Extractor
+//
+
+// Package resource is a generated GoMock package.
+package resource
+
+import (
+        context "context"
+        reflect "reflect"
+
+        v1alpha1 "github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+        gomock "go.uber.org/mock/gomock"
+        v1 "k8s.io/api/core/v1"
+        v10 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// MockExtractor is a mock of Extractor interface.
+type MockExtractor struct {
+        ctrl     *gomock.Controller
+        recorder *MockExtractorMockRecorder
+        isgomock struct{}
+}
+
+// MockExtractorMockRecorder is the mock recorder for MockExtractor.
+type MockExtractorMockRecorder struct {
+        mock *MockExtractor
+}
+
+// NewMockExtractor creates a new mock instance.
+func NewMockExtractor(ctrl *gomock.Controller) *MockExtractor <span class="cov8" title="1">{
+        mock := &amp;MockExtractor{ctrl: ctrl}
+        mock.recorder = &amp;MockExtractorMockRecorder{mock}
+        return mock
+}</span>
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockExtractor) EXPECT() *MockExtractorMockRecorder <span class="cov8" title="1">{
+        return m.recorder
+}</span>
+
+// ExtractFragmentedPodSpec mocks base method.
+func (m *MockExtractor) ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error) <span class="cov8" title="1">{
+        m.ctrl.T.Helper()
+        ret := m.ctrl.Call(m, "ExtractFragmentedPodSpec", ctx, definition)
+        ret0, _ := ret[0].([]FragmentedPodSpec)
+        ret1, _ := ret[1].(error)
+        return ret0, ret1
+}</span>
+
+// ExtractFragmentedPodSpec indicates an expected call of ExtractFragmentedPodSpec.
+func (mr *MockExtractorMockRecorder) ExtractFragmentedPodSpec(ctx, definition any) *gomock.Call <span class="cov8" title="1">{
+        mr.mock.ctrl.T.Helper()
+        return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractFragmentedPodSpec", reflect.TypeOf((*MockExtractor)(nil).ExtractFragmentedPodSpec), ctx, definition)
+}</span>
+
+// ExtractInstanceIds mocks base method.
+func (m *MockExtractor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) <span class="cov8" title="1">{
+        m.ctrl.T.Helper()
+        ret := m.ctrl.Call(m, "ExtractInstanceIds", ctx, definition)
+        ret0, _ := ret[0].([]string)
+        ret1, _ := ret[1].(error)
+        return ret0, ret1
+}</span>
+
+// ExtractInstanceIds indicates an expected call of ExtractInstanceIds.
+func (mr *MockExtractorMockRecorder) ExtractInstanceIds(ctx, definition any) *gomock.Call <span class="cov8" title="1">{
+        mr.mock.ctrl.T.Helper()
+        return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractInstanceIds", reflect.TypeOf((*MockExtractor)(nil).ExtractInstanceIds), ctx, definition)
+}</span>
+
+// ExtractPodMetadata mocks base method.
+func (m *MockExtractor) ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]v10.ObjectMeta, error) <span class="cov8" title="1">{
+        m.ctrl.T.Helper()
+        ret := m.ctrl.Call(m, "ExtractPodMetadata", ctx, definition)
+        ret0, _ := ret[0].([]v10.ObjectMeta)
+        ret1, _ := ret[1].(error)
+        return ret0, ret1
+}</span>
+
+// ExtractPodMetadata indicates an expected call of ExtractPodMetadata.
+func (mr *MockExtractorMockRecorder) ExtractPodMetadata(ctx, definition any) *gomock.Call <span class="cov8" title="1">{
+        mr.mock.ctrl.T.Helper()
+        return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractPodMetadata", reflect.TypeOf((*MockExtractor)(nil).ExtractPodMetadata), ctx, definition)
+}</span>
+
+// ExtractPodSpec mocks base method.
+func (m *MockExtractor) ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]v1.PodSpec, error) <span class="cov8" title="1">{
+        m.ctrl.T.Helper()
+        ret := m.ctrl.Call(m, "ExtractPodSpec", ctx, definition)
+        ret0, _ := ret[0].([]v1.PodSpec)
+        ret1, _ := ret[1].(error)
+        return ret0, ret1
+}</span>
+
+// ExtractPodSpec indicates an expected call of ExtractPodSpec.
+func (mr *MockExtractorMockRecorder) ExtractPodSpec(ctx, definition any) *gomock.Call <span class="cov8" title="1">{
+        mr.mock.ctrl.T.Helper()
+        return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractPodSpec", reflect.TypeOf((*MockExtractor)(nil).ExtractPodSpec), ctx, definition)
+}</span>
+
+// ExtractPodTemplateSpec mocks base method.
+func (m *MockExtractor) ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]v1.PodTemplateSpec, error) <span class="cov8" title="1">{
+        m.ctrl.T.Helper()
+        ret := m.ctrl.Call(m, "ExtractPodTemplateSpec", ctx, definition)
+        ret0, _ := ret[0].([]v1.PodTemplateSpec)
+        ret1, _ := ret[1].(error)
+        return ret0, ret1
+}</span>
+
+// ExtractPodTemplateSpec indicates an expected call of ExtractPodTemplateSpec.
+func (mr *MockExtractorMockRecorder) ExtractPodTemplateSpec(ctx, definition any) *gomock.Call <span class="cov8" title="1">{
+        mr.mock.ctrl.T.Helper()
+        return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractPodTemplateSpec", reflect.TypeOf((*MockExtractor)(nil).ExtractPodTemplateSpec), ctx, definition)
+}</span>
+
+// ExtractScale mocks base method.
+func (m *MockExtractor) ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error) <span class="cov8" title="1">{
+        m.ctrl.T.Helper()
+        ret := m.ctrl.Call(m, "ExtractScale", ctx, definition)
+        ret0, _ := ret[0].([]Scale)
+        ret1, _ := ret[1].(error)
+        return ret0, ret1
+}</span>
+
+// ExtractScale indicates an expected call of ExtractScale.
+func (mr *MockExtractorMockRecorder) ExtractScale(ctx, definition any) *gomock.Call <span class="cov8" title="1">{
+        mr.mock.ctrl.T.Helper()
+        return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractScale", reflect.TypeOf((*MockExtractor)(nil).ExtractScale), ctx, definition)
+}</span>
+
+// ExtractStatus mocks base method.
+func (m *MockExtractor) ExtractStatus(ctx context.Context, definition v1alpha1.ComponentDefinition) (*Status, error) <span class="cov8" title="1">{
+        m.ctrl.T.Helper()
+        ret := m.ctrl.Call(m, "ExtractStatus", ctx, definition)
+        ret0, _ := ret[0].(*Status)
+        ret1, _ := ret[1].(error)
+        return ret0, ret1
+}</span>
+
+// ExtractStatus indicates an expected call of ExtractStatus.
+func (mr *MockExtractorMockRecorder) ExtractStatus(ctx, definition any) *gomock.Call <span class="cov8" title="1">{
+        mr.mock.ctrl.T.Helper()
+        return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractStatus", reflect.TypeOf((*MockExtractor)(nil).ExtractStatus), ctx, definition)
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package resource
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+
+        corev1 "k8s.io/api/core/v1"
+
+        "github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+        "github.com/run-ai/kai-bolt/pkg/query"
+)
+
+// InstanceNotFoundError is returned when a pod's extracted instance ID doesn't match any valid instance IDs
+type InstanceNotFoundError string
+
+func (e InstanceNotFoundError) Error() string <span class="cov0" title="0">{
+        return string(e)
+}</span>
+
+// PodQuerier handles JQ-based querying operations against pods
+type PodQuerier struct {
+        pod            *corev1.Pod
+        queryEvaluator query.QueryEvaluator
+}
+
+func NewPodQuerier(pod *corev1.Pod) *PodQuerier <span class="cov8" title="1">{
+        return &amp;PodQuerier{
+                pod:            pod,
+                queryEvaluator: query.NewDefaultJqEvaluator(pod),
+        }
+}</span>
+
+func (pq *PodQuerier) GetPodName() string <span class="cov0" title="0">{
+        return pq.pod.Name
+}</span>
+
+// MatchesComponentType returns true if the pod matches the given component type selector
+func (pq *PodQuerier) MatchesComponentType(ctx context.Context, selector *v1alpha1.ComponentTypeSelector) (bool, error) <span class="cov8" title="1">{
+        if selector == nil </span><span class="cov8" title="1">{
+                return false, nil
+        }</span>
+
+        <span class="cov8" title="1">if selector.Value == nil </span><span class="cov8" title="1">{
+                // Existence check: key should exist and not be nil
+                return pq.checkKeyExists(ctx, selector.KeyPath)
+        }</span> else<span class="cov8" title="1"> {
+                // Equality check: key should equal the specified value
+                return pq.checkKeyValue(ctx, selector.KeyPath, *selector.Value)
+        }</span>
+}
+
+// checkKeyExists returns true if the key exists
+func (pq *PodQuerier) checkKeyExists(ctx context.Context, keyPath string) (bool, error) <span class="cov8" title="1">{
+        results, err := pq.queryEvaluator.Evaluate(ctx, keyPath)
+        if err != nil </span><span class="cov0" title="0">{
+                return false, err
+        }</span>
+
+        // Key exists if we get any non-nil result
+        <span class="cov8" title="1">for _, result := range results </span><span class="cov8" title="1">{
+                if result != nil </span><span class="cov8" title="1">{
+                        return true, nil
+                }</span>
+        }
+        <span class="cov8" title="1">return false, nil</span>
+}
+
+// checkKeyValue returns true if the key equals the expected value
+func (pq *PodQuerier) checkKeyValue(ctx context.Context, keyPath, expectedValue string) (bool, error) <span class="cov8" title="1">{
+        serializedValue, err := serialize(expectedValue)
+        if err != nil </span><span class="cov0" title="0">{
+                return false, fmt.Errorf("failed to serialize selector value: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">query := fmt.Sprintf("%s == %s", keyPath, serializedValue)
+        results, err := pq.queryEvaluator.Evaluate(ctx, query)
+        if err != nil </span><span class="cov8" title="1">{
+                return false, err
+        }</span>
+
+        // Equality check: look for explicit true
+        <span class="cov8" title="1">for _, result := range results </span><span class="cov8" title="1">{
+                if result == true </span><span class="cov8" title="1">{
+                        return true, nil
+                }</span>
+        }
+        <span class="cov8" title="1">return false, nil</span>
+}
+
+// ExtractGroupKeys extracts grouping key values from the pod using the provided JQ paths
+func (pq *PodQuerier) ExtractGroupKeys(ctx context.Context, keyPaths []string) ([]string, error) <span class="cov8" title="1">{
+        if len(keyPaths) == 0 </span><span class="cov8" title="1">{
+                return []string{}, nil
+        }</span>
+
+        <span class="cov8" title="1">groupKeys := make([]string, 0, len(keyPaths))
+
+        for _, keyPath := range keyPaths </span><span class="cov8" title="1">{
+                results, err := pq.queryEvaluator.Evaluate(ctx, keyPath)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to evaluate group key path %q: %w", keyPath, err)
+                }</span>
+
+                <span class="cov8" title="1">if err := validateSingleQueryResult(results); err != nil </span><span class="cov8" title="1">{
+                        return nil, fmt.Errorf("group key path %q returned an invalid value %v: %w", keyPath, results, err)
+                }</span>
+
+                <span class="cov8" title="1">groupKeys = append(groupKeys, fmt.Sprintf("%v", results[0]))</span>
+        }
+
+        <span class="cov8" title="1">return groupKeys, nil</span>
+}
+
+// PassesFilters returns true if the pod passes all the provided JQ filter expressions
+// All filters must pass (AND logic) for the method to return true
+func (pq *PodQuerier) PassesFilters(ctx context.Context, filters []string) (bool, error) <span class="cov8" title="1">{
+        if len(filters) == 0 </span><span class="cov8" title="1">{
+                return true, nil
+        }</span>
+
+        <span class="cov8" title="1">for _, filter := range filters </span><span class="cov8" title="1">{
+                results, err := pq.queryEvaluator.Evaluate(ctx, filter)
+                if err != nil </span><span class="cov8" title="1">{
+                        return false, fmt.Errorf("failed to evaluate filter %q: %w", filter, err)
+                }</span>
+
+                <span class="cov8" title="1">if err := validateSingleQueryResult(results); err != nil </span><span class="cov8" title="1">{
+                        return false, fmt.Errorf("filter %q returned an invalid value %v: %w", filter, results, err)
+                }</span>
+
+                <span class="cov8" title="1">if results[0] != true </span><span class="cov8" title="1">{
+                        return false, nil
+                }</span>
+        }
+
+        <span class="cov8" title="1">return true, nil</span>
+}
+
+// GetMatchingInstanceId checks if the pod matches any of the provided instance ids using the instance selector.
+// Returns the matching instance id if found, empty string if no match.
+func (pq *PodQuerier) GetMatchingInstanceId(ctx context.Context, instanceSelector *v1alpha1.ComponentInstanceSelector, instanceIds []string) (string, error) <span class="cov8" title="1">{
+        if instanceSelector == nil </span><span class="cov8" title="1">{
+                // No instance selector - check if single instance with empty id is expected
+                if len(instanceIds) == 1 &amp;&amp; instanceIds[0] == "" </span><span class="cov8" title="1">{
+                        return "", nil // Match for single instance with empty id
+                }</span>
+                <span class="cov8" title="1">return "", fmt.Errorf("no instance selector provided but instance ids are not empty")</span>
+        }
+
+        <span class="cov8" title="1">results, err := pq.queryEvaluator.Evaluate(ctx, instanceSelector.IdPath)
+        if err != nil </span><span class="cov8" title="1">{
+                return "", fmt.Errorf("failed to evaluate instance id path %s: %w", instanceSelector.IdPath, err)
+        }</span>
+
+        <span class="cov8" title="1">if err := validateSingleQueryResult(results); err != nil </span><span class="cov8" title="1">{
+                return "", fmt.Errorf("instance id path %q returned an invalid value %v: %w", instanceSelector.IdPath, results, err)
+        }</span>
+
+        <span class="cov8" title="1">podInstanceId := fmt.Sprintf("%v", results[0])
+
+        // Check if pod's instance id matches any of the existing instance ids
+        for _, id := range instanceIds </span><span class="cov8" title="1">{
+                if podInstanceId == id </span><span class="cov8" title="1">{
+                        return id, nil
+                }</span>
+        }
+
+        <span class="cov8" title="1">return "", InstanceNotFoundError(fmt.Sprintf("could not match instance id %q. existing instance ids %v", podInstanceId, instanceIds))</span>
+}
+
+func validateSingleQueryResult(results []any) error <span class="cov8" title="1">{
+        if len(results) != 1 </span><span class="cov8" title="1">{
+                return fmt.Errorf("expected single query result, got %d", len(results))
+        }</span>
+        <span class="cov8" title="1">if results[0] == nil || results[0] == "" </span><span class="cov8" title="1">{
+                return fmt.Errorf("query result is empty %v", results[0])
+        }</span>
+        <span class="cov8" title="1">return nil</span>
+}
+
+// serialize serializes a value for use in JQ expressions
+func serialize(value string) (string, error) <span class="cov8" title="1">{
+        // Use JSON marshaling to properly escape the string for JQ
+        jsonBytes, err := json.Marshal(value)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+        <span class="cov8" title="1">return string(jsonBytes), nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
