@@ -318,6 +318,7 @@ spec:
                                 Kubernetes-style conditions
                               properties:
                                 messageFieldName:
+                                  default: message
                                   description: MessageFieldName is the field name
                                     for the condition text message
                                   type: string
@@ -326,14 +327,17 @@ spec:
                                     array
                                   type: string
                                 statusFieldName:
+                                  default: status
                                   description: StatusFieldName is the field name for
                                     the condition status
                                   type: string
                                 typeFieldName:
+                                  default: type
                                   description: TypeFieldName is the field name for
                                     the condition type
                                   type: string
                               required:
+                              - messageFieldName
                               - path
                               - statusFieldName
                               - typeFieldName
@@ -680,6 +684,7 @@ spec:
                               Kubernetes-style conditions
                             properties:
                               messageFieldName:
+                                default: message
                                 description: MessageFieldName is the field name for
                                   the condition text message
                                 type: string
@@ -688,14 +693,17 @@ spec:
                                   array
                                 type: string
                               statusFieldName:
+                                default: status
                                 description: StatusFieldName is the field name for
                                   the condition status
                                 type: string
                               typeFieldName:
+                                default: type
                                 description: TypeFieldName is the field name for the
                                   condition type
                                 type: string
                             required:
+                            - messageFieldName
                             - path
                             - statusFieldName
                             - typeFieldName
