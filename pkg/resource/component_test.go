@@ -498,7 +498,7 @@ var _ = Describe("Component", func() {
 			})
 		})
 
-		Context("GetInstanceSummaries", func() {
+		Context("GetExtractedInstances", func() {
 			It("should aggregate all fields for multi-instance component", func() {
 				instanceIds := []string{"job-1", "job-2"}
 				podTemplateSpecs := []corev1.PodTemplateSpec{
@@ -529,7 +529,7 @@ var _ = Describe("Component", func() {
 				mockExtractor.EXPECT().ExtractPodMetadata(ctx, component.definition).Return(metadata, nil)
 				mockExtractor.EXPECT().ExtractScale(ctx, component.definition).Return(scales, nil)
 
-				result, err := component.GetInstanceSummaries(ctx)
+				result, err := component.GetExtractedInstances(ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(HaveLen(2))
 
@@ -566,7 +566,7 @@ var _ = Describe("Component", func() {
 				mockExtractor.EXPECT().ExtractPodMetadata(ctx, component.definition).Return(nil, DefinitionNotFoundError("not found"))
 				mockExtractor.EXPECT().ExtractScale(ctx, component.definition).Return(scales, nil)
 
-				result, err := component.GetInstanceSummaries(ctx)
+				result, err := component.GetExtractedInstances(ctx)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(HaveLen(1))
 
@@ -586,7 +586,7 @@ var _ = Describe("Component", func() {
 					ExtractInstanceIds(ctx, component.definition).
 					Return(nil, expectedError)
 
-				result, err := component.GetInstanceSummaries(ctx)
+				result, err := component.GetExtractedInstances(ctx)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to get instance ids"))
 				Expect(err.Error()).To(ContainSubstring(expectedError.Error()))
@@ -600,7 +600,7 @@ var _ = Describe("Component", func() {
 				mockExtractor.EXPECT().ExtractInstanceIds(ctx, component.definition).Return(instanceIds, nil).AnyTimes()
 				mockExtractor.EXPECT().ExtractPodTemplateSpec(ctx, component.definition).Return(nil, expectedError)
 
-				result, err := component.GetInstanceSummaries(ctx)
+				result, err := component.GetExtractedInstances(ctx)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to get pod template specs"))
 				Expect(err.Error()).To(ContainSubstring(expectedError.Error()))
@@ -616,7 +616,7 @@ var _ = Describe("Component", func() {
 				mockExtractor.EXPECT().ExtractPodTemplateSpec(ctx, component.definition).Return(podTemplateSpecs, nil)
 				mockExtractor.EXPECT().ExtractPodSpec(ctx, component.definition).Return(nil, expectedError)
 
-				result, err := component.GetInstanceSummaries(ctx)
+				result, err := component.GetExtractedInstances(ctx)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to get pod specs"))
 				Expect(err.Error()).To(ContainSubstring(expectedError.Error()))
@@ -633,7 +633,7 @@ var _ = Describe("Component", func() {
 				mockExtractor.EXPECT().ExtractPodSpec(ctx, component.definition).Return(nil, DefinitionNotFoundError("not found"))
 				mockExtractor.EXPECT().ExtractFragmentedPodSpec(ctx, component.definition).Return(nil, expectedError)
 
-				result, err := component.GetInstanceSummaries(ctx)
+				result, err := component.GetExtractedInstances(ctx)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to get fragmented pod specs"))
 				Expect(err.Error()).To(ContainSubstring(expectedError.Error()))
@@ -651,7 +651,7 @@ var _ = Describe("Component", func() {
 				mockExtractor.EXPECT().ExtractFragmentedPodSpec(ctx, component.definition).Return(nil, DefinitionNotFoundError("not found"))
 				mockExtractor.EXPECT().ExtractPodMetadata(ctx, component.definition).Return(nil, expectedError)
 
-				result, err := component.GetInstanceSummaries(ctx)
+				result, err := component.GetExtractedInstances(ctx)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to get pod metadata"))
 				Expect(err.Error()).To(ContainSubstring(expectedError.Error()))
@@ -670,7 +670,7 @@ var _ = Describe("Component", func() {
 				mockExtractor.EXPECT().ExtractPodMetadata(ctx, component.definition).Return(nil, DefinitionNotFoundError("not found"))
 				mockExtractor.EXPECT().ExtractScale(ctx, component.definition).Return(nil, expectedError)
 
-				result, err := component.GetInstanceSummaries(ctx)
+				result, err := component.GetExtractedInstances(ctx)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to get scales"))
 				Expect(err.Error()).To(ContainSubstring(expectedError.Error()))

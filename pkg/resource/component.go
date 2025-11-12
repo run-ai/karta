@@ -57,8 +57,8 @@ type Status struct {
 	MatchedStatuses []v1alpha1.ResourceStatus `json:"matchedStatuses"`
 }
 
-// InstanceSummary represents all extracted data for a single instance
-type InstanceSummary struct {
+// ExtractedInstance represents all extracted data for a single instance
+type ExtractedInstance struct {
 	PodTemplateSpec   *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
 	PodSpec           *corev1.PodSpec         `json:"podSpec,omitempty"`
 	FragmentedPodSpec *FragmentedPodSpec      `json:"fragmentedPodSpec,omitempty"`
@@ -195,8 +195,8 @@ func (c *Component) GetStatus(ctx context.Context) (*Status, error) {
 	return status, nil
 }
 
-// GetInstanceSummaries aggregates all extraction results into a map of instance summaries
-func (c *Component) GetInstanceSummaries(ctx context.Context) (map[string]InstanceSummary, error) {
+// GetExtractedInstances aggregates all extraction results into a map of instance id to ExtractedInstance
+func (c *Component) GetExtractedInstances(ctx context.Context) (map[string]ExtractedInstance, error) {
 	instanceIds, err := c.GetInstanceIds(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", errGetInstanceIds, err)
@@ -227,44 +227,44 @@ func (c *Component) GetInstanceSummaries(ctx context.Context) (map[string]Instan
 		return nil, fmt.Errorf("failed to get scales: %w", err)
 	}
 
-	summaries := make(map[string]InstanceSummary, len(instanceIds))
+	result := make(map[string]ExtractedInstance, len(instanceIds))
 	for _, instanceID := range instanceIds {
-		summary := InstanceSummary{}
+		extractedInstance := ExtractedInstance{}
 
 		if podTemplateSpecs != nil {
 			if pts, ok := podTemplateSpecs[instanceID]; ok {
-				summary.PodTemplateSpec = &pts
+				extractedInstance.PodTemplateSpec = &pts
 			}
 		}
 
 		if podSpecs != nil {
 			if ps, ok := podSpecs[instanceID]; ok {
-				summary.PodSpec = &ps
+				extractedInstance.PodSpec = &ps
 			}
 		}
 
 		if fragmentedPodSpecs != nil {
 			if fps, ok := fragmentedPodSpecs[instanceID]; ok {
-				summary.FragmentedPodSpec = &fps
+				extractedInstance.FragmentedPodSpec = &fps
 			}
 		}
 
 		if metadata != nil {
 			if md, ok := metadata[instanceID]; ok {
-				summary.Metadata = &md
+				extractedInstance.Metadata = &md
 			}
 		}
 
 		if scales != nil {
 			if scale, ok := scales[instanceID]; ok {
-				summary.Scale = &scale
+				extractedInstance.Scale = &scale
 			}
 		}
 
-		summaries[instanceID] = summary
+		result[instanceID] = extractedInstance
 	}
 
-	return summaries, nil
+	return result, nil
 }
 
 // HasPodDefinition returns true if this component defines pods
