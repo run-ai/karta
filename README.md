@@ -95,7 +95,7 @@ factory := resource.NewComponentFactoryFromObject(resourceInterface, jobSetObjec
 
 // Get the child component (replicatedjob) which has the instances
 component, _ := factory.GetComponent("replicatedjob")
-summaries, _ := component.GetInstanceSummaries()
+summaries, _ := component.GetExtractedInstances(ctx)
 
 // Access pod template specs, metadata, and scale info for each instance
 for instanceID, summary := range summaries {
