@@ -214,14 +214,17 @@ type ConditionsDefinition struct {
 	Path string `json:"path" jq:"validate"`
 
 	// TypeFieldName is the field name for the condition type
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=type
 	TypeFieldName string `json:"typeFieldName"`
 
 	// StatusFieldName is the field name for the condition status
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=status
 	StatusFieldName string `json:"statusFieldName"`
 
 	// MessageFieldName is the field name for the condition text message
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=message
 	MessageFieldName *string `json:"messageFieldName"`
 }

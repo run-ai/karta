@@ -337,10 +337,7 @@ spec:
                                     the condition type
                                   type: string
                               required:
-                              - messageFieldName
                               - path
-                              - statusFieldName
-                              - typeFieldName
                               type: object
                             phaseDefinition:
                               description: PhaseDefinition defines how to extract
@@ -703,10 +700,7 @@ spec:
                                   condition type
                                 type: string
                             required:
-                            - messageFieldName
                             - path
-                            - statusFieldName
-                            - typeFieldName
                             type: object
                           phaseDefinition:
                             description: PhaseDefinition defines how to extract a
