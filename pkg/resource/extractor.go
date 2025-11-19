@@ -151,12 +151,12 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 		schedulerNameResults     []string
 		labelsResults            []map[string]string
 		annotationsResults       []map[string]string
-		resourcesResults         []corev1.ResourceRequirements
+		resourcesResults         []*corev1.ResourceRequirements
 		resourceClaimsResults    [][]corev1.PodResourceClaim
 		podAffinityResults       []*corev1.PodAffinity
 		nodeAffinityResults      []*corev1.NodeAffinity
 		containersResults        [][]corev1.Container
-		containerResults         []corev1.Container
+		containerResults         []*corev1.Container
 		priorityClassNameResults []string
 		imageResults             []string
 	)
@@ -238,6 +238,85 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 	return fragmentedSpecs, nil
 }
 
+// ExtractStatus evaluates the status of the component based on the status definition.
+func (e *InterfaceExtractor) ExtractStatus(ctx context.Context, definition v1alpha1.ComponentDefinition) (*Status, error) {
+	if definition.StatusDefinition == nil {
+		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have status definition", definition.Name))
+	}
+
+	statusDef := definition.StatusDefinition
+
+	var phase *string
+	if statusDef.PhaseDefinition != nil {
+		var phases []string
+		if err := extract(ctx, &statusDef.PhaseDefinition.Path, e.queryEvaluator, &phases); err != nil {
+			return nil, fmt.Errorf("failed to extract phase: %w", err)
+		}
+		if len(phases) > 0 {
+			phase = &phases[0]
+		}
+	}
+
+	conditions, err := e.extractConditions(ctx, statusDef.ConditionsDefinition)
+	if err != nil {
+		return nil, err
+	}
+
+	matchedStatuses := matchStatus(phase, conditions, statusDef.StatusMappings)
+
+	status := Status{
+		Phase:           phase,
+		Conditions:      conditions,
+		MatchedStatuses: matchedStatuses,
+	}
+
+	return &status, nil
+}
+
+func (e *InterfaceExtractor) extractConditions(ctx context.Context, condDef *v1alpha1.ConditionsDefinition) ([]Condition, error) {
+
+	if condDef == nil {
+		return []Condition{}, nil
+	}
+
+	var extractedRawConditions [][]map[string]any
+	if err := extract(ctx, &condDef.Path, e.queryEvaluator, &extractedRawConditions); err != nil {
+		return nil, fmt.Errorf("failed to extract conditions: %w", err)
+	}
+
+	// As Condition path is a path to a list of conditions, extract returns a slice of slice in size one/zero,
+	// so we need to flatten it
+	rawConditions := lo.Flatten(extractedRawConditions)
+
+	conditions := make([]Condition, 0, len(rawConditions))
+	for _, condMap := range rawConditions {
+		cond := Condition{}
+
+		if typeVal, ok := condMap[condDef.TypeFieldName]; ok {
+			if typeStr, ok := typeVal.(string); ok {
+				cond.Type = typeStr
+			}
+		}
+
+		if statusVal, ok := condMap[condDef.StatusFieldName]; ok {
+			if statusStr, ok := statusVal.(string); ok {
+				cond.Status = statusStr
+			}
+		}
+
+		if condDef.MessageFieldName != nil {
+			if msgVal, ok := condMap[*condDef.MessageFieldName]; ok {
+				if msgStr, ok := msgVal.(string); ok {
+					cond.Message = msgStr
+				}
+			}
+		}
+
+		conditions = append(conditions, cond)
+	}
+	return conditions, nil
+}
+
 func (e *InterfaceExtractor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) {
 	if definition.InstanceIdPath == nil {
 		return nil, DefinitionNotFoundError("no instance id path defined")
@@ -310,4 +389,68 @@ func convertViaJSON(src any, dst any) error {
 	}
 
 	return nil
+}
+
+func matchStatus(phase *string, conditions []Condition, mappings v1alpha1.StatusMappings) []v1alpha1.ResourceStatus {
+	conditionsMap := make(map[string]Condition, len(conditions))
+	for _, cond := range conditions {
+		conditionsMap[cond.Type] = cond
+	}
+
+	matchedStatuses := make([]v1alpha1.ResourceStatus, 0)
+	if evaluateMatchers(phase, conditionsMap, mappings.Running) {
+		matchedStatuses = append(matchedStatuses, v1alpha1.RunningStatus)
+	}
+
+	if evaluateMatchers(phase, conditionsMap, mappings.Failed) {
+		matchedStatuses = append(matchedStatuses, v1alpha1.FailedStatus)
+	}
+
+	if evaluateMatchers(phase, conditionsMap, mappings.Completed) {
+		matchedStatuses = append(matchedStatuses, v1alpha1.CompletedStatus)
+	}
+
+	if evaluateMatchers(phase, conditionsMap, mappings.Initializing) {
+		matchedStatuses = append(matchedStatuses, v1alpha1.InitializingStatus)
+	}
+
+	if len(matchedStatuses) == 0 {
+		return []v1alpha1.ResourceStatus{v1alpha1.UndefinedStatus}
+	}
+
+	return matchedStatuses
+}
+
+func evaluateMatchers(phase *string, conditionsMap map[string]Condition, matchers []v1alpha1.StatusMatcher) bool {
+	for _, matcher := range matchers {
+		if match(phase, conditionsMap, matcher) {
+			return true
+		}
+	}
+	return false
+}
+
+func match(phase *string, conditionsMap map[string]Condition, matcher v1alpha1.StatusMatcher) bool {
+	if matcher.ByPhase != "" {
+		if phase == nil || *phase != matcher.ByPhase {
+			return false
+		}
+	}
+
+	if len(matcher.ByConditions) == 0 {
+		return true
+	}
+
+	for _, expectedCond := range matcher.ByConditions {
+		actualCond, found := conditionsMap[expectedCond.Type]
+		if !found {
+			return false
+		}
+
+		if expectedCond.Status != "" && actualCond.Status != expectedCond.Status {
+			return false
+		}
+	}
+
+	return true
 }

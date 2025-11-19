@@ -99,4 +99,4 @@ download-dependencies:
 	go mod download
 
 .PHONY: check
-ci: download-dependencies validate test lint
+check: download-dependencies validate test lint

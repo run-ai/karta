@@ -19,6 +19,7 @@ type Extractor interface {
 	ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error)
 	ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error)
 	ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error)
+	ExtractStatus(ctx context.Context, definition v1alpha1.ComponentDefinition) (*Status, error)
 	ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error)
 }
 
@@ -74,4 +75,22 @@ func (f *ComponentFactory) GetRootComponent() (*Component, error) {
 	}
 
 	return f.GetComponent(f.ri.Spec.StructureDefinition.RootComponent.Name)
+}
+
+// GetChildComponents retrieves all child components
+func (f *ComponentFactory) GetChildComponents() ([]*Component, error) {
+	if f.ri == nil {
+		return nil, fmt.Errorf("resource interface is nil")
+	}
+
+	childComponents := make([]*Component, 0, len(f.ri.Spec.StructureDefinition.ChildComponents))
+	for _, childDefinition := range f.ri.Spec.StructureDefinition.ChildComponents {
+		component, err := f.GetComponent(childDefinition.Name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get child component %s: %w", childDefinition.Name, err)
+		}
+		childComponents = append(childComponents, component)
+	}
+
+	return childComponents, nil
 }
