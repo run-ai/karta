@@ -51,7 +51,15 @@ spec:
         kind: "Deployment"
       ownerRef: "inferenceservice"
       specDefinition:
-        podTemplateSpecPath: ".spec.predictor.template"
+        fragmentedPodSpecDefinition:
+          nodeAffinityPath: .spec.predictor.affinity.nodeAffinity
+          podAffinityPath: .spec.predictor.affinity.podAffinity
+          priorityClassNamePath: .spec.predictor.priorityClassName
+          schedulerNamePath: .spec.predictor.schedulerName
+          labelsPath: .spec.predictor.labels
+          annotationsPath: .spec.predictor.annotations
+          containerPath: '.spec.predictor | ( (.[]?  | select(type =="object" and  .storageUri )))'
+          containersPath: .spec.predictor.containers
       scaleDefinition:
         minReplicasPath: ".spec.predictor.minReplicas"
         maxReplicasPath: ".spec.predictor.maxReplicas"
