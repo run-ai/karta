@@ -57,7 +57,12 @@ spec:
           priorityClassNamePath: .spec.predictor.priorityClassName
           schedulerNamePath: .spec.predictor.schedulerName
           labelsPath: .spec.predictor.labels
-          annotationsPath: .spec.predictor.annotations
+          annotationsPath: .spec.predictor.annotations\
+          # Targets the built-in framework predictor cases (e.g., 'tensorflow', 'pytorch').
+          # This query uses 'storageUri' existence as the marker for built-in framework.
+          # If a built-in runtime is defined, this path resolves to the runtime object.
+          # If a Custom Predictor is used (defined via 'containers'), this path resolves to **null**,
+          # allowing the 'containersPath' definition to take precedence and resolve the PodSpec.
           containerPath: '.spec.predictor | ( (.[]?  | select(type =="object" and  .storageUri )))'
           containersPath: .spec.predictor.containers
       scaleDefinition:
