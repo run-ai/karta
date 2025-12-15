@@ -452,6 +452,7 @@ func updateSliceField[T any](a *Accessor, ctx context.Context, def v1alpha1.Comp
 }
 
 func (a *Accessor) assign(ctx context.Context, definition v1alpha1.ComponentDefinition, path string, values []any) error {
+	// If instance id path is defined, use assign zip as the expression is an array expression (each cordinate per instance)
 	if definition.InstanceIdPath != nil {
 		return a.jqRunner.AssignZip(ctx, path, values)
 	} else {
@@ -478,6 +479,8 @@ func extract[T any](ctx context.Context, path *string, accessor jq.Runner, out *
 	return nil
 }
 
+// safeGetByIndex Generic function for safely retrieving a slice element.
+// Returns zero value if slice is nil or index is out of range
 func safeGetByIndex[T any](slice []T, index int) T {
 	var zero T
 

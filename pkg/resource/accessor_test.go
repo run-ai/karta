@@ -452,12 +452,12 @@ var _ = Describe("Accessor", func() {
 	Describe("Error Handling", func() {
 		Context("safeConvertSlice", func() {
 			It("should handle conversion errors gracefully", func() {
-				// Create a mock evaluator that returns data that can't be converted
-				mockEvaluator := jq.NewMockRunner(gomock.NewController(GinkgoT()))
-				evaluator := NewAccessor(mockEvaluator)
+				// Create a mock runner that returns data that can't be converted
+				mockRunner := jq.NewMockRunner(gomock.NewController(GinkgoT()))
+				accesor := NewAccessor(mockRunner)
 
 				// Test with incompatible data types that should fail conversion
-				mockEvaluator.EXPECT().
+				mockRunner.EXPECT().
 					Evaluate(gomock.Any(), "spec.podTemplate").
 					Return([]any{
 						map[string]any{
@@ -473,21 +473,21 @@ var _ = Describe("Accessor", func() {
 					},
 				}
 
-				_, err := evaluator.ExtractPodTemplateSpec(ctx, definition)
+				_, err := accesor.ExtractPodTemplateSpec(ctx, definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to convert object"))
 			})
 
 			It("should handle circular reference errors in JSON conversion", func() {
-				// Create a mock evaluator that returns circular reference data
-				mockEvaluator := jq.NewMockRunner(gomock.NewController(GinkgoT()))
-				evaluator := NewAccessor(mockEvaluator)
+				// Create a mock runner that returns circular reference data
+				mockRunner := jq.NewMockRunner(gomock.NewController(GinkgoT()))
+				accesor := NewAccessor(mockRunner)
 
 				// Create a circular reference that would break JSON marshaling
 				circularData := make(map[string]any)
 				circularData["self"] = circularData
 
-				mockEvaluator.EXPECT().
+				mockRunner.EXPECT().
 					Evaluate(gomock.Any(), "spec.resources").
 					Return([]any{circularData}, nil)
 
@@ -500,7 +500,7 @@ var _ = Describe("Accessor", func() {
 					},
 				}
 
-				_, err := evaluator.ExtractFragmentedPodSpec(ctx, definition)
+				_, err := accesor.ExtractFragmentedPodSpec(ctx, definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to convert object"))
 			})
@@ -974,10 +974,10 @@ var _ = Describe("Accessor", func() {
 			})
 
 			It("should handle invalid phase path", func() {
-				mockEvaluator := jq.NewMockRunner(gomock.NewController(GinkgoT()))
-				accessor := NewAccessor(mockEvaluator)
+				mockRunner := jq.NewMockRunner(gomock.NewController(GinkgoT()))
+				accessor := NewAccessor(mockRunner)
 
-				mockEvaluator.EXPECT().
+				mockRunner.EXPECT().
 					Evaluate(gomock.Any(), ".status.invalidPath").
 					Return(nil, errors.New("query evaluation failed"))
 
