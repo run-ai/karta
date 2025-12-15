@@ -18,7 +18,7 @@ type A = []any
 var _ = Describe("Runner", func() {
 	var (
 		ctx        context.Context
-		executor   Runner
+		runner     Runner
 		testObject M
 	)
 
@@ -50,47 +50,47 @@ var _ = Describe("Runner", func() {
 				},
 			},
 		}
-		executor = NewDefaultRunner(testObject)
+		runner = NewDefaultRunner(testObject)
 	})
 
 	Describe("Basic JQ evaluation", func() {
 		It("should evaluate simple path expressions", func() {
-			results, err := executor.Evaluate(ctx, ".metadata.name")
+			results, err := runner.Evaluate(ctx, ".metadata.name")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(Equal("test-pod"))
 		})
 
 		It("should evaluate array access", func() {
-			results, err := executor.Evaluate(ctx, ".spec.containers[0].name")
+			results, err := runner.Evaluate(ctx, ".spec.containers[0].name")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(Equal("web"))
 		})
 
 		It("should evaluate array iteration", func() {
-			results, err := executor.Evaluate(ctx, ".spec.containers[].name")
+			results, err := runner.Evaluate(ctx, ".spec.containers[].name")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(2))
 			Expect(results).To(ConsistOf("web", "sidecar"))
 		})
 
 		It("should handle nested array iteration", func() {
-			results, err := executor.Evaluate(ctx, ".spec.containers[0].ports[].containerPort")
+			results, err := runner.Evaluate(ctx, ".spec.containers[0].ports[].containerPort")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(2))
 			Expect(results).To(ConsistOf(float64(80), float64(443)))
 		})
 
 		It("should handle non-existent paths", func() {
-			results, err := executor.Evaluate(ctx, ".metadata.nonexistent")
+			results, err := runner.Evaluate(ctx, ".metadata.nonexistent")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(BeNil())
 		})
 
 		It("should handle empty results", func() {
-			results, err := executor.Evaluate(ctx, ".spec.containers[] | select(.name == \"notfound\")")
+			results, err := runner.Evaluate(ctx, ".spec.containers[] | select(.name == \"notfound\")")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(BeEmpty())
 		})
@@ -98,28 +98,28 @@ var _ = Describe("Runner", func() {
 
 	Describe("JQ filters and expressions", func() {
 		It("should evaluate boolean expressions", func() {
-			results, err := executor.Evaluate(ctx, ".metadata.name == \"test-pod\"")
+			results, err := runner.Evaluate(ctx, ".metadata.name == \"test-pod\"")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(BeTrue())
 		})
 
 		It("should evaluate select filters", func() {
-			results, err := executor.Evaluate(ctx, ".spec.containers[] | select(.name == \"web\") | .image")
+			results, err := runner.Evaluate(ctx, ".spec.containers[] | select(.name == \"web\") | .image")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(Equal("nginx:1.20"))
 		})
 
 		It("should evaluate map operations", func() {
-			results, err := executor.Evaluate(ctx, ".spec.containers | map(.name)")
+			results, err := runner.Evaluate(ctx, ".spec.containers | map(.name)")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(ConsistOf("web", "sidecar"))
 		})
 
 		It("should handle complex expressions", func() {
-			results, err := executor.Evaluate(ctx, ".spec.containers | length")
+			results, err := runner.Evaluate(ctx, ".spec.containers | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(BeNumerically("==", 2))
@@ -128,7 +128,7 @@ var _ = Describe("Runner", func() {
 
 	Describe("Error handling", func() {
 		It("should return JQParseError for invalid syntax", func() {
-			_, err := executor.Evaluate(ctx, ".invalid[[[syntax")
+			_, err := runner.Evaluate(ctx, ".invalid[[[syntax")
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeAssignableToTypeOf(&JQParseError{}))
 		})
@@ -137,7 +137,7 @@ var _ = Describe("Runner", func() {
 			cancelCtx, cancel := context.WithCancel(ctx)
 			cancel()
 
-			_, err := executor.Evaluate(cancelCtx, ".metadata.name")
+			_, err := runner.Evaluate(cancelCtx, ".metadata.name")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("context canceled"))
 		})
@@ -260,7 +260,7 @@ var _ = Describe("Runner", func() {
 	})
 
 	Describe("Default values", func() {
-		var exec Runner
+		var runner Runner
 
 		BeforeEach(func() {
 			testData := M{
@@ -281,12 +281,12 @@ var _ = Describe("Runner", func() {
 					},
 				},
 			}
-			exec = NewDefaultRunner(testData)
+			runner = NewDefaultRunner(testData)
 		})
 
 		Context("with // alternative operator", func() {
 			It("should return actual value when path exists", func() {
-				results, err := exec.Evaluate(ctx, `.labels.app // "default-app"`)
+				results, err := runner.Evaluate(ctx, `.labels.app // "default-app"`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -294,7 +294,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should return default value when path does not exist", func() {
-				results, err := exec.Evaluate(ctx, `.labels.nonexistent // "default-value"`)
+				results, err := runner.Evaluate(ctx, `.labels.nonexistent // "default-value"`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -302,7 +302,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should return default value when intermediate path is null", func() {
-				results, err := exec.Evaluate(ctx, `.missing.nested.path // "fallback"`)
+				results, err := runner.Evaluate(ctx, `.missing.nested.path // "fallback"`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -310,7 +310,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should handle numeric default values", func() {
-				results, err := exec.Evaluate(ctx, `.spec.replicas // 1`)
+				results, err := runner.Evaluate(ctx, `.spec.replicas // 1`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -318,7 +318,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should handle boolean default values", func() {
-				results, err := exec.Evaluate(ctx, `.spec.enabled // true`)
+				results, err := runner.Evaluate(ctx, `.spec.enabled // true`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -326,7 +326,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should handle object default values", func() {
-				results, err := exec.Evaluate(ctx, `.status // {"phase": "Unknown"}`)
+				results, err := runner.Evaluate(ctx, `.status // {"phase": "Unknown"}`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -334,7 +334,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should handle array default values", func() {
-				results, err := exec.Evaluate(ctx, `.spec.volumes // []`)
+				results, err := runner.Evaluate(ctx, `.spec.volumes // []`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -344,7 +344,7 @@ var _ = Describe("Runner", func() {
 
 		Context("with has() function", func() {
 			It("should return true for existing keys", func() {
-				results, err := exec.Evaluate(ctx, `.labels | has("app")`)
+				results, err := runner.Evaluate(ctx, `.labels | has("app")`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -352,7 +352,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should return false for non-existing keys", func() {
-				results, err := exec.Evaluate(ctx, `.labels | has("nonexistent")`)
+				results, err := runner.Evaluate(ctx, `.labels | has("nonexistent")`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -360,7 +360,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should work with conditional defaults", func() {
-				results, err := exec.Evaluate(ctx, `if (.labels | has("environment")) then .labels.environment else "development" end`)
+				results, err := runner.Evaluate(ctx, `if (.labels | has("environment")) then .labels.environment else "development" end`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -370,7 +370,7 @@ var _ = Describe("Runner", func() {
 
 		Context("with complex default patterns", func() {
 			It("should chain multiple default operators", func() {
-				results, err := exec.Evaluate(ctx, `.labels.environment // .annotations.environment // "staging"`)
+				results, err := runner.Evaluate(ctx, `.labels.environment // .annotations.environment // "staging"`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -378,7 +378,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should use defaults in array operations", func() {
-				results, err := exec.Evaluate(ctx, `(.spec.containers // []) | length`)
+				results, err := runner.Evaluate(ctx, `(.spec.containers // []) | length`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -386,7 +386,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should use defaults with map operations", func() {
-				results, err := exec.Evaluate(ctx, `(.spec.containers // []) | map(.name // "unnamed")`)
+				results, err := runner.Evaluate(ctx, `(.spec.containers // []) | map(.name // "unnamed")`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -394,7 +394,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should handle defaults in selections", func() {
-				results, err := exec.Evaluate(ctx, `(.spec.containers // []) | map(select(.name // "default" | startswith("m"))) | length`)
+				results, err := runner.Evaluate(ctx, `(.spec.containers // []) | map(select(.name // "default" | startswith("m"))) | length`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -408,12 +408,12 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"name": "original",
 			}
-			exec := NewDefaultRunner(testData)
+			runner := NewDefaultRunner(testData)
 
-			err := exec.Assign(ctx, ".name", "updated")
+			err := runner.Assign(ctx, ".name", "updated")
 			Expect(err).ToNot(HaveOccurred())
 
-			updated, err := exec.GetObject()
+			updated, err := runner.GetObject()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(updated).To(Equal(M{"name": "updated"}))
 		})
@@ -425,12 +425,12 @@ var _ = Describe("Runner", func() {
 					"example": "example",
 				},
 			}
-			exec := NewDefaultRunner(testData)
+			runner := NewDefaultRunner(testData)
 
-			err := exec.Assign(ctx, ".metadata.name", "updated")
+			err := runner.Assign(ctx, ".metadata.name", "updated")
 			Expect(err).ToNot(HaveOccurred())
 
-			updated, err := exec.GetObject()
+			updated, err := runner.GetObject()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(updated).To(Equal(M{"metadata": M{"name": "updated", "example": "example"}}))
 		})
@@ -440,12 +440,12 @@ var _ = Describe("Runner", func() {
 				"primary":  "value1",
 				"fallback": "value2",
 			}
-			exec := NewDefaultRunner(testData)
+			runner := NewDefaultRunner(testData)
 
-			err := exec.Assign(ctx, ".primary // .fallback", "updated")
+			err := runner.Assign(ctx, ".primary // .fallback", "updated")
 			Expect(err).ToNot(HaveOccurred())
 
-			updated, err := exec.GetObject()
+			updated, err := runner.GetObject()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(updated).To(Equal(M{"primary": "updated", "fallback": "value2"}))
 		})
@@ -454,12 +454,12 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"fallback": "value",
 			}
-			exec := NewDefaultRunner(testData)
+			runner := NewDefaultRunner(testData)
 
-			err := exec.Assign(ctx, ".primary // .fallback", "updated")
+			err := runner.Assign(ctx, ".primary // .fallback", "updated")
 			Expect(err).ToNot(HaveOccurred())
 
-			updated, err := exec.GetObject()
+			updated, err := runner.GetObject()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(updated.(M)["fallback"]).To(Equal("updated"))
 		})
@@ -468,12 +468,12 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"items": A{M{"name": "a"}, M{"name": "b"}, M{"name": "c"}},
 			}
-			exec := NewDefaultRunner(testData)
+			runner := NewDefaultRunner(testData)
 
-			err := exec.Assign(ctx, ".items[1] | .name", "updated")
+			err := runner.Assign(ctx, ".items[1] | .name", "updated")
 			Expect(err).ToNot(HaveOccurred())
 
-			updated, err := exec.GetObject()
+			updated, err := runner.GetObject()
 			Expect(err).ToNot(HaveOccurred())
 			items := updated.(M)["items"].(A)
 			Expect(items).To(Equal(A{M{"name": "a"}, M{"name": "updated"}, M{"name": "c"}}))
@@ -485,17 +485,17 @@ var _ = Describe("Runner", func() {
 					"replicas": 3,
 				},
 			}
-			exec := NewDefaultRunner(testData)
+			runner := NewDefaultRunner(testData)
 
 			newSpec := M{
 				"replicas": 5,
 				"template": M{"name": "pod"},
 			}
 
-			err := exec.Assign(ctx, ".spec", newSpec)
+			err := runner.Assign(ctx, ".spec", newSpec)
 			Expect(err).ToNot(HaveOccurred())
 
-			updated, err := exec.GetObject()
+			updated, err := runner.GetObject()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(updated.(M)["spec"]).To(testutils.BeJSONEquivalentTo(newSpec))
 		})
@@ -505,12 +505,12 @@ var _ = Describe("Runner", func() {
 				"spec": M{
 					"containers": []corev1.Container{{Name: "test-container"}},
 				}}
-			exec := NewDefaultRunner(testData)
+			runner := NewDefaultRunner(testData)
 
-			err := exec.Assign(ctx, ".spec.containers", []corev1.Container{{Name: "updated"}})
+			err := runner.Assign(ctx, ".spec.containers", []corev1.Container{{Name: "updated"}})
 			Expect(err).ToNot(HaveOccurred())
 
-			updated, err := exec.GetObject()
+			updated, err := runner.GetObject()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(updated).To(testutils.BeJSONEquivalentTo(M{"spec": M{"containers": []corev1.Container{{Name: "updated"}}}}))
 		})
@@ -524,12 +524,12 @@ var _ = Describe("Runner", func() {
 					M{"id": 2, "name": "second"},
 				},
 			}
-			exec := NewDefaultRunner(testData)
+			runner := NewDefaultRunner(testData)
 
-			err := exec.AssignZip(ctx, ".items[] | select(.id == 1) | .name", A{"updated"})
+			err := runner.AssignZip(ctx, ".items[] | select(.id == 1) | .name", A{"updated"})
 			Expect(err).ToNot(HaveOccurred())
 
-			updated, err := exec.GetObject()
+			updated, err := runner.GetObject()
 			Expect(err).ToNot(HaveOccurred())
 			items := updated.(M)["items"].(A)
 			Expect(items[0].(M)["name"]).To(Equal("updated"))
@@ -540,12 +540,12 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"items": A{"a", "b", "c"},
 			}
-			exec := NewDefaultRunner(testData)
+			runner := NewDefaultRunner(testData)
 
-			err := exec.AssignZip(ctx, ".items[]", A{"d", "e", "f"})
+			err := runner.AssignZip(ctx, ".items[]", A{"d", "e", "f"})
 			Expect(err).ToNot(HaveOccurred())
 
-			updated, err := exec.GetObject()
+			updated, err := runner.GetObject()
 			Expect(err).ToNot(HaveOccurred())
 			items := updated.(M)["items"].(A)
 			Expect(items).To(Equal(A{"d", "e", "f"}))
@@ -555,12 +555,12 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"items": A{M{"name": "a"}, M{"name": "b"}, M{"name": "c"}},
 			}
-			exec := NewDefaultRunner(testData)
+			runner := NewDefaultRunner(testData)
 
-			err := exec.AssignZip(ctx, ".items[] | .name", A{"d", "e", "f"})
+			err := runner.AssignZip(ctx, ".items[] | .name", A{"d", "e", "f"})
 			Expect(err).ToNot(HaveOccurred())
 
-			updated, err := exec.GetObject()
+			updated, err := runner.GetObject()
 			Expect(err).ToNot(HaveOccurred())
 			items := updated.(M)["items"].(A)
 			Expect(items).To(Equal(A{M{"name": "d"}, M{"name": "e"}, M{"name": "f"}}))
@@ -570,12 +570,12 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"items": A{M{"name": "a"}, M{"name": "b", "value": 1}, M{"name": "c", "value": 2}},
 			}
-			exec := NewDefaultRunner(testData)
+			runner := NewDefaultRunner(testData)
 
-			err := exec.AssignZip(ctx, ".items[] | .value", A{nil, 3, nil})
+			err := runner.AssignZip(ctx, ".items[] | .value", A{nil, 3, nil})
 			Expect(err).ToNot(HaveOccurred())
 
-			updated, err := exec.GetObject()
+			updated, err := runner.GetObject()
 			Expect(err).ToNot(HaveOccurred())
 			items := updated.(M)["items"].(A)
 			Expect(items).To(testutils.BeJSONEquivalentTo(A{M{"name": "a", "value": nil}, M{"name": "b", "value": 3}, M{"name": "c", "value": nil}}))
@@ -585,9 +585,9 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"items": A{"a", "b", "c"},
 			}
-			exec := NewDefaultRunner(testData)
+			runner := NewDefaultRunner(testData)
 
-			err := exec.AssignZip(ctx, ".items[]", A{"d", "e"})
+			err := runner.AssignZip(ctx, ".items[]", A{"d", "e"})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("array length mismatch"))
 		})
