@@ -1,27 +1,30 @@
 package resource
 
 import (
+	"errors"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 	"github.com/run-ai/kai-bolt/test/types"
+	testutils "github.com/run-ai/kai-bolt/test/types/utils"
 )
 
 var _ = Describe("ComponentFactory", func() {
 	var (
-		ctrl          *gomock.Controller
-		mockExtractor *MockExtractor
-		ri            *v1alpha1.ResourceInterface
-		factory       *ComponentFactory
+		ctrl         *gomock.Controller
+		mockAccessor *MockComponentAccessor
+		ri           *v1alpha1.ResourceInterface
+		factory      *ComponentFactory
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		mockExtractor = NewMockExtractor(ctrl)
+		mockAccessor = NewMockComponentAccessor(ctrl)
 		ri = types.PyFlowRI()
-		factory = NewComponentFactory(ri, mockExtractor)
+		factory = NewComponentFactory(ri, mockAccessor)
 	})
 
 	AfterEach(func() {
@@ -65,15 +68,15 @@ var _ = Describe("ComponentFactory", func() {
 	})
 
 	Context("component sharing", func() {
-		It("should share the same extractor instance across components", func() {
+		It("should share the same accessor instance across components", func() {
 			master, err := factory.GetComponent("master")
 			Expect(err).NotTo(HaveOccurred())
 
 			worker, err := factory.GetComponent("worker")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(master.extractor).To(Equal(mockExtractor))
-			Expect(worker.extractor).To(Equal(mockExtractor))
+			Expect(master.accessor).To(Equal(mockAccessor))
+			Expect(worker.accessor).To(Equal(mockAccessor))
 		})
 	})
 
@@ -93,6 +96,50 @@ var _ = Describe("ComponentFactory", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(components).To(BeNil())
 			Expect(err.Error()).To(ContainSubstring("resource interface is nil"))
+		})
+	})
+
+	Context("GetResource", func() {
+		It("should return updated client.Object", func() {
+			var object map[string]interface{}
+			convertViaJSON(types.NewPyFlowObject(), &object)
+
+			mockAccessor.EXPECT().
+				GetObject().
+				Return(object, nil)
+
+			result, err := factory.GetResource()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).NotTo(BeNil())
+			Expect(result).To(testutils.BeJSONEquivalentTo(object))
+		})
+
+		It("should propagate GetObject errors", func() {
+			expectedError := errors.New("failed to get updated data")
+
+			mockAccessor.EXPECT().
+				GetObject().
+				Return(nil, expectedError)
+
+			result, err := factory.GetResource()
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(expectedError))
+			Expect(result).To(BeNil())
+		})
+
+		It("should return error when object is not client.Object", func() {
+			nonClientObject := map[string]interface{}{
+				"kind": "SomeKind",
+			}
+
+			mockAccessor.EXPECT().
+				GetObject().
+				Return(nonClientObject, nil)
+
+			result, err := factory.GetResource()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("invalid Kubernetes object"))
+			Expect(result).To(BeNil())
 		})
 	})
 })

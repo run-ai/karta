@@ -3,6 +3,7 @@ package resource
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -14,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/query"
+	"github.com/run-ai/kai-bolt/pkg/jq"
 	"github.com/run-ai/kai-bolt/test/types"
 )
 
@@ -59,19 +60,19 @@ const (
 	noScaleError           = "does not have scale definition"
 )
 
-func extractorForObject(
+func accessorForObject(
 	ri *v1alpha1.ResourceInterface,
 	object client.Object,
 	componentName string,
-) (*InterfaceExtractor, *Component) {
-	extractor := NewInterfaceExtractor(query.NewDefaultJqEvaluator(object))
+) (*Accessor, *Component) {
+	accessor := NewAccessor(jq.NewDefaultRunner(object))
 	factory := NewComponentFactoryFromObject(ri, object)
 	comp, err := factory.GetComponent(componentName)
 	Expect(err).NotTo(HaveOccurred())
-	return extractor, comp
+	return accessor, comp
 }
 
-var _ = Describe("InterfaceExtractor", func() {
+var _ = Describe("Accessor", func() {
 	var (
 		ctx context.Context
 
@@ -83,9 +84,9 @@ var _ = Describe("InterfaceExtractor", func() {
 		jobgroupFactory *ComponentFactory
 		reactorFactory  *ComponentFactory
 
-		pyflowExtractor   *InterfaceExtractor
-		jobgroupExtractor *InterfaceExtractor
-		reactorExtractor  *InterfaceExtractor
+		pyflowAccessor   *Accessor
+		jobgroupAccessor *Accessor
+		reactorAccessor  *Accessor
 	)
 
 	BeforeEach(func() {
@@ -106,9 +107,9 @@ var _ = Describe("InterfaceExtractor", func() {
 		reactorFactory = NewComponentFactoryFromObject(reactorRI, reactorObject)
 
 		// Initialize extractors
-		pyflowExtractor = NewInterfaceExtractor(query.NewDefaultJqEvaluator(pyflowObject))
-		jobgroupExtractor = NewInterfaceExtractor(query.NewDefaultJqEvaluator(jobgroupObject))
-		reactorExtractor = NewInterfaceExtractor(query.NewDefaultJqEvaluator(reactorObject))
+		pyflowAccessor = NewAccessor(jq.NewDefaultRunner(pyflowObject))
+		jobgroupAccessor = NewAccessor(jq.NewDefaultRunner(jobgroupObject))
+		reactorAccessor = NewAccessor(jq.NewDefaultRunner(reactorObject))
 	})
 
 	Describe("ExtractPodTemplateSpec", func() {
@@ -118,7 +119,7 @@ var _ = Describe("InterfaceExtractor", func() {
 					masterComp, err := pyflowFactory.GetComponent(masterComponentName)
 					Expect(err).NotTo(HaveOccurred())
 
-					result, err := pyflowExtractor.ExtractPodTemplateSpec(ctx, masterComp.definition)
+					result, err := pyflowAccessor.ExtractPodTemplateSpec(ctx, masterComp.definition)
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(HaveLen(1))
@@ -131,7 +132,7 @@ var _ = Describe("InterfaceExtractor", func() {
 					workerComp, err := pyflowFactory.GetComponent(workerComponentName)
 					Expect(err).NotTo(HaveOccurred())
 
-					result, err := pyflowExtractor.ExtractPodTemplateSpec(ctx, workerComp.definition)
+					result, err := pyflowAccessor.ExtractPodTemplateSpec(ctx, workerComp.definition)
 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(result).To(HaveLen(1))
@@ -146,7 +147,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				jobComp, err := jobgroupFactory.GetComponent(jobComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = jobgroupExtractor.ExtractPodTemplateSpec(ctx, jobComp.definition)
+				_, err = jobgroupAccessor.ExtractPodTemplateSpec(ctx, jobComp.definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(noPodTemplateSpecError))
 			})
@@ -155,7 +156,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				serviceComp, err := reactorFactory.GetComponent(serviceComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = reactorExtractor.ExtractPodTemplateSpec(ctx, serviceComp.definition)
+				_, err = reactorAccessor.ExtractPodTemplateSpec(ctx, serviceComp.definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(noPodTemplateSpecError))
 			})
@@ -168,7 +169,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				jobComp, err := jobgroupFactory.GetComponent(jobComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := jobgroupExtractor.ExtractPodSpec(ctx, jobComp.definition)
+				result, err := jobgroupAccessor.ExtractPodSpec(ctx, jobComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(HaveLen(2))
@@ -183,7 +184,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				masterComp, err := pyflowFactory.GetComponent(masterComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = pyflowExtractor.ExtractPodSpec(ctx, masterComp.definition)
+				_, err = pyflowAccessor.ExtractPodSpec(ctx, masterComp.definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(noPodSpecError))
 			})
@@ -192,7 +193,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				serviceComp, err := reactorFactory.GetComponent(serviceComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = reactorExtractor.ExtractPodSpec(ctx, serviceComp.definition)
+				_, err = reactorAccessor.ExtractPodSpec(ctx, serviceComp.definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(noPodSpecError))
 			})
@@ -205,7 +206,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				jobComp, err := jobgroupFactory.GetComponent(jobComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := jobgroupExtractor.ExtractPodMetadata(ctx, jobComp.definition)
+				result, err := jobgroupAccessor.ExtractPodMetadata(ctx, jobComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(HaveLen(2))
@@ -220,7 +221,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				masterComp, err := pyflowFactory.GetComponent(masterComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = pyflowExtractor.ExtractPodMetadata(ctx, masterComp.definition)
+				_, err = pyflowAccessor.ExtractPodMetadata(ctx, masterComp.definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(noMetadataError))
 			})
@@ -229,7 +230,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				serviceComp, err := reactorFactory.GetComponent(serviceComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = reactorExtractor.ExtractPodMetadata(ctx, serviceComp.definition)
+				_, err = reactorAccessor.ExtractPodMetadata(ctx, serviceComp.definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(noMetadataError))
 			})
@@ -242,7 +243,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				serviceComp, err := reactorFactory.GetComponent(serviceComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := reactorExtractor.ExtractFragmentedPodSpec(ctx, serviceComp.definition)
+				result, err := reactorAccessor.ExtractFragmentedPodSpec(ctx, serviceComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(HaveLen(3)) // api + worker + cache services
@@ -329,7 +330,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				masterComp, err := pyflowFactory.GetComponent(masterComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = pyflowExtractor.ExtractFragmentedPodSpec(ctx, masterComp.definition)
+				_, err = pyflowAccessor.ExtractFragmentedPodSpec(ctx, masterComp.definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(noFragmentedSpecError))
 			})
@@ -338,7 +339,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				jobComp, err := jobgroupFactory.GetComponent(jobComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = jobgroupExtractor.ExtractFragmentedPodSpec(ctx, jobComp.definition)
+				_, err = jobgroupAccessor.ExtractFragmentedPodSpec(ctx, jobComp.definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(noFragmentedSpecError))
 			})
@@ -351,7 +352,7 @@ var _ = Describe("InterfaceExtractor", func() {
 					},
 				}
 
-				_, err := reactorExtractor.ExtractFragmentedPodSpec(ctx, definition)
+				_, err := reactorAccessor.ExtractFragmentedPodSpec(ctx, definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(noFragmentedSpecError))
 			})
@@ -362,7 +363,7 @@ var _ = Describe("InterfaceExtractor", func() {
 					SpecDefinition: nil,
 				}
 
-				_, err := reactorExtractor.ExtractFragmentedPodSpec(ctx, definition)
+				_, err := reactorAccessor.ExtractFragmentedPodSpec(ctx, definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(noSpecDefinitionError))
 			})
@@ -375,7 +376,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				masterComp, err := pyflowFactory.GetComponent(masterComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := pyflowExtractor.ExtractScale(ctx, masterComp.definition)
+				result, err := pyflowAccessor.ExtractScale(ctx, masterComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(HaveLen(1))
@@ -388,7 +389,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				workerComp, err := pyflowFactory.GetComponent(workerComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := pyflowExtractor.ExtractScale(ctx, workerComp.definition)
+				result, err := pyflowAccessor.ExtractScale(ctx, workerComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(HaveLen(1))
@@ -403,7 +404,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				jobComp, err := jobgroupFactory.GetComponent(jobComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := jobgroupExtractor.ExtractScale(ctx, jobComp.definition)
+				result, err := jobgroupAccessor.ExtractScale(ctx, jobComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(HaveLen(2))                   // indexer + processor
@@ -418,7 +419,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				serviceComp, err := reactorFactory.GetComponent(serviceComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := reactorExtractor.ExtractScale(ctx, serviceComp.definition)
+				result, err := reactorAccessor.ExtractScale(ctx, serviceComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(HaveLen(3)) // api + worker + cache services
@@ -441,7 +442,7 @@ var _ = Describe("InterfaceExtractor", func() {
 					ScaleDefinition: nil,
 				}
 
-				_, err := reactorExtractor.ExtractScale(ctx, definition)
+				_, err := reactorAccessor.ExtractScale(ctx, definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(noScaleError))
 			})
@@ -452,12 +453,12 @@ var _ = Describe("InterfaceExtractor", func() {
 		Context("safeConvertSlice", func() {
 			It("should handle conversion errors gracefully", func() {
 				// Create a mock evaluator that returns data that can't be converted
-				mockEvaluator := query.NewMockQueryEvaluator(gomock.NewController(GinkgoT()))
-				extractor := NewInterfaceExtractor(mockEvaluator)
+				mockEvaluator := jq.NewMockRunner(gomock.NewController(GinkgoT()))
+				extractor := NewAccessor(mockEvaluator)
 
 				// Test with incompatible data types that should fail conversion
 				mockEvaluator.EXPECT().
-					Evaluate(gomock.Any(), "spec.podTemplate").
+					Extract(gomock.Any(), "spec.podTemplate").
 					Return([]any{
 						map[string]any{
 							"metadata": "this is a string, not ObjectMeta",
@@ -479,15 +480,15 @@ var _ = Describe("InterfaceExtractor", func() {
 
 			It("should handle circular reference errors in JSON conversion", func() {
 				// Create a mock evaluator that returns circular reference data
-				mockEvaluator := query.NewMockQueryEvaluator(gomock.NewController(GinkgoT()))
-				extractor := NewInterfaceExtractor(mockEvaluator)
+				mockEvaluator := jq.NewMockRunner(gomock.NewController(GinkgoT()))
+				extractor := NewAccessor(mockEvaluator)
 
 				// Create a circular reference that would break JSON marshaling
 				circularData := make(map[string]any)
 				circularData["self"] = circularData
 
 				mockEvaluator.EXPECT().
-					Evaluate(gomock.Any(), "spec.resources").
+					Extract(gomock.Any(), "spec.resources").
 					Return([]any{circularData}, nil)
 
 				definition := v1alpha1.ComponentDefinition{
@@ -512,7 +513,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				jobComp, err := jobgroupFactory.GetComponent(jobComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := jobgroupExtractor.ExtractInstanceIds(ctx, jobComp.definition)
+				result, err := jobgroupAccessor.ExtractInstanceIds(ctx, jobComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal([]string{"indexer", "processor"}))
@@ -524,7 +525,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				serviceComp, err := reactorFactory.GetComponent(serviceComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := reactorExtractor.ExtractInstanceIds(ctx, serviceComp.definition)
+				result, err := reactorAccessor.ExtractInstanceIds(ctx, serviceComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(ConsistOf("api", "worker", "cache"))
@@ -536,7 +537,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				masterComp, err := pyflowFactory.GetComponent(masterComponentName)
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := pyflowExtractor.ExtractInstanceIds(ctx, masterComp.definition)
+				result, err := pyflowAccessor.ExtractInstanceIds(ctx, masterComp.definition)
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeNil())
 
@@ -553,12 +554,12 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				factory := NewComponentFactoryFromObject(jobgroupRI, jobgroupObject)
 
-				extractor := NewInterfaceExtractor(query.NewDefaultJqEvaluator(jobgroupObject))
+				accessor := NewAccessor(jq.NewDefaultRunner(jobgroupObject))
 
 				comp, err := factory.GetComponent("job")
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := extractor.ExtractInstanceIds(ctx, comp.definition)
+				result, err := accessor.ExtractInstanceIds(ctx, comp.definition)
 				Expect(err).To(HaveOccurred())
 				Expect(result).To(BeNil())
 				Expect(err.Error()).To(ContainSubstring("instance id path contained empty string values"))
@@ -575,9 +576,9 @@ var _ = Describe("InterfaceExtractor", func() {
 					Type:   "Running",
 					Status: metav1.ConditionTrue,
 				}
-				extractor, pyflowComp := extractorForObject(pyflowRI, pyflowObject, "pyflow")
+				accessor, pyflowComp := accessorForObject(pyflowRI, pyflowObject, "pyflow")
 
-				result, err := extractor.ExtractStatus(ctx, pyflowComp.definition)
+				result, err := accessor.ExtractStatus(ctx, pyflowComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -594,9 +595,9 @@ var _ = Describe("InterfaceExtractor", func() {
 					Type:   "NotMatching",
 					Status: metav1.ConditionTrue,
 				}
-				extractor, pyflowComp := extractorForObject(pyflowRI, pyflowObject, "pyflow")
+				accessor, pyflowComp := accessorForObject(pyflowRI, pyflowObject, "pyflow")
 
-				result, err := extractor.ExtractStatus(ctx, pyflowComp.definition)
+				result, err := accessor.ExtractStatus(ctx, pyflowComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -607,9 +608,9 @@ var _ = Describe("InterfaceExtractor", func() {
 				pyflowObject := types.NewPyFlowObject()
 				pyflowObject.Status.Conditions = []metav1.Condition{}
 
-				extractor, pyflowComp := extractorForObject(pyflowRI, pyflowObject, "pyflow")
+				accessor, pyflowComp := accessorForObject(pyflowRI, pyflowObject, "pyflow")
 
-				result, err := extractor.ExtractStatus(ctx, pyflowComp.definition)
+				result, err := accessor.ExtractStatus(ctx, pyflowComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -626,9 +627,9 @@ var _ = Describe("InterfaceExtractor", func() {
 						Message: "Pod failed due to OOMKilled",
 					},
 				}
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -643,9 +644,9 @@ var _ = Describe("InterfaceExtractor", func() {
 			It("should extract phase from status", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "running"
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -657,7 +658,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				pyflowComp, err := pyflowFactory.GetComponent("pyflow")
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := pyflowExtractor.ExtractStatus(ctx, pyflowComp.definition)
+				result, err := pyflowAccessor.ExtractStatus(ctx, pyflowComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -669,7 +670,7 @@ var _ = Describe("InterfaceExtractor", func() {
 				pyflowComp, err := pyflowFactory.GetComponent("pyflow")
 				Expect(err).NotTo(HaveOccurred())
 
-				result, err := pyflowExtractor.ExtractStatus(ctx, pyflowComp.definition)
+				result, err := pyflowAccessor.ExtractStatus(ctx, pyflowComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -689,9 +690,9 @@ var _ = Describe("InterfaceExtractor", func() {
 						}},
 					},
 				}
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -702,9 +703,9 @@ var _ = Describe("InterfaceExtractor", func() {
 			It("should extract status with phase and match Running", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "running"
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -728,9 +729,9 @@ var _ = Describe("InterfaceExtractor", func() {
 				reactorObject.Status.Conditions = []metav1.Condition{
 					{Type: "Initialized", Status: metav1.ConditionTrue},
 				}
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -748,9 +749,9 @@ var _ = Describe("InterfaceExtractor", func() {
 				}
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "running"
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -768,9 +769,9 @@ var _ = Describe("InterfaceExtractor", func() {
 				}
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "failed"
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -788,9 +789,9 @@ var _ = Describe("InterfaceExtractor", func() {
 				}
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "completed"
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -801,9 +802,9 @@ var _ = Describe("InterfaceExtractor", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "unknown"
 
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -829,9 +830,9 @@ var _ = Describe("InterfaceExtractor", func() {
 						},
 					},
 				}
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -855,9 +856,9 @@ var _ = Describe("InterfaceExtractor", func() {
 						},
 					},
 				}
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -885,9 +886,9 @@ var _ = Describe("InterfaceExtractor", func() {
 						},
 					},
 				}
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -912,9 +913,9 @@ var _ = Describe("InterfaceExtractor", func() {
 						},
 					},
 				}
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -947,9 +948,9 @@ var _ = Describe("InterfaceExtractor", func() {
 					},
 				}
 
-				extractor, reactorComp := extractorForObject(customRI, reactorObject, "reactor")
+				accessor, reactorComp := accessorForObject(customRI, reactorObject, "reactor")
 
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -964,7 +965,7 @@ var _ = Describe("InterfaceExtractor", func() {
 					StatusDefinition: nil,
 				}
 
-				_, err := pyflowExtractor.ExtractStatus(ctx, definition)
+				_, err := pyflowAccessor.ExtractStatus(ctx, definition)
 
 				Expect(err).To(HaveOccurred())
 				var defNotFoundErr DefinitionNotFoundError
@@ -973,11 +974,11 @@ var _ = Describe("InterfaceExtractor", func() {
 			})
 
 			It("should handle invalid phase path", func() {
-				mockEvaluator := query.NewMockQueryEvaluator(gomock.NewController(GinkgoT()))
-				extractor := NewInterfaceExtractor(mockEvaluator)
+				mockEvaluator := jq.NewMockRunner(gomock.NewController(GinkgoT()))
+				accessor := NewAccessor(mockEvaluator)
 
 				mockEvaluator.EXPECT().
-					Evaluate(gomock.Any(), ".status.invalidPath").
+					Extract(gomock.Any(), ".status.invalidPath").
 					Return(nil, errors.New("query evaluation failed"))
 
 				definition := v1alpha1.ComponentDefinition{
@@ -990,7 +991,7 @@ var _ = Describe("InterfaceExtractor", func() {
 					},
 				}
 
-				_, err := extractor.ExtractStatus(ctx, definition)
+				_, err := accessor.ExtractStatus(ctx, definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to extract phase"))
 			})
@@ -1008,7 +1009,7 @@ var _ = Describe("InterfaceExtractor", func() {
 					},
 				}
 
-				_, err := pyflowExtractor.ExtractStatus(ctx, definition)
+				_, err := pyflowAccessor.ExtractStatus(ctx, definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to extract conditions"))
 			})
@@ -1019,8 +1020,8 @@ var _ = Describe("InterfaceExtractor", func() {
 					{Type: "Ready"},
 				}
 
-				extractor, reactorComp := extractorForObject(reactorRI, reactorObject, "reactor")
-				result, err := extractor.ExtractStatus(ctx, reactorComp.definition)
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
@@ -1028,6 +1029,307 @@ var _ = Describe("InterfaceExtractor", func() {
 				Expect(result.Conditions[0].Type).To(Equal("Ready"))
 				Expect(result.Conditions[0].Status).To(BeEmpty())
 			})
+		})
+	})
+	Describe("UpdatePodSpec", func() {
+		// JobGroup RI has PodSpecPath
+		It("should update pod spec with instance Ids", func() {
+			jobgroupObject := types.NewJobGroupObject()
+			jobgroupRI := types.JobGroupRI()
+			accessor, jobgroupComp := accessorForObject(jobgroupRI, jobgroupObject, "job")
+			currentPodSpecs, err := accessor.ExtractPodSpec(ctx, jobgroupComp.definition)
+			Expect(err).NotTo(HaveOccurred())
+			for i := range currentPodSpecs {
+				currentPodSpecs[i].Containers = []corev1.Container{{Name: "updated-container-" + strconv.Itoa(i), Resources: corev1.ResourceRequirements{Claims: []corev1.ResourceClaim{{Name: "updated-resource-claim-" + strconv.Itoa(i)}}}}}
+				currentPodSpecs[i].SchedulerName = "updated-scheduler-" + strconv.Itoa(i)
+			}
+
+			err = accessor.UpdatePodSpec(ctx, jobgroupComp.definition, currentPodSpecs)
+			Expect(err).NotTo(HaveOccurred())
+
+			updatedObject, err := accessor.GetObject()
+			Expect(err).NotTo(HaveOccurred())
+			updatedJobgroupObject := types.JobGroup{}
+			err = convertViaJSON(updatedObject, &updatedJobgroupObject)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[0].Spec.Containers).To(HaveLen(1))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[0].Spec.Containers[0].Name).To(Equal("updated-container-0"))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[0].Spec.Containers[0].Resources.Claims).To(HaveLen(1))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[0].Spec.Containers[0].Resources.Claims[0].Name).To(Equal("updated-resource-claim-0"))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[0].Spec.SchedulerName).To(Equal("updated-scheduler-0"))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[1].Spec.Containers).To(HaveLen(1))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[1].Spec.Containers[0].Name).To(Equal("updated-container-1"))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[1].Spec.Containers[0].Resources.Claims).To(HaveLen(1))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[1].Spec.Containers[0].Resources.Claims[0].Name).To(Equal("updated-resource-claim-1"))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[1].Spec.SchedulerName).To(Equal("updated-scheduler-1"))
+		})
+		It("should remove fields that are not present in the updated pod specs", func() {
+			jobgroupObject := types.NewJobGroupObject()
+			jobgroupRI := types.JobGroupRI()
+			accessor, jobgroupComp := accessorForObject(jobgroupRI, jobgroupObject, "job")
+			currentPodSpecs, err := accessor.ExtractPodSpec(ctx, jobgroupComp.definition)
+			Expect(err).NotTo(HaveOccurred())
+
+			for i := range currentPodSpecs {
+				currentPodSpecs[i].Containers = []corev1.Container{}
+			}
+
+			err = accessor.UpdatePodSpec(ctx, jobgroupComp.definition, currentPodSpecs)
+			Expect(err).NotTo(HaveOccurred())
+
+			updatedObject, err := accessor.GetObject()
+			Expect(err).NotTo(HaveOccurred())
+			updatedJobgroupObject := types.JobGroup{}
+			err = convertViaJSON(updatedObject, &updatedJobgroupObject)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[0].Spec.Containers).To(BeEmpty())
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[1].Spec.Containers).To(BeEmpty())
+
+		})
+
+		It("should return error for RI without PodSpecPath", func() {
+			pyflowObject := types.NewPyFlowObject()
+			// PyFlow does not have PodSpecPath
+			pyflowRI := types.PyFlowRI()
+			accessor, masterComp := accessorForObject(pyflowRI, pyflowObject, "master")
+
+			podSpecs := []corev1.PodSpec{{
+				Containers: []corev1.Container{{Name: "test-container"}},
+			}}
+
+			err := accessor.UpdatePodSpec(ctx, masterComp.definition, podSpecs)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(noPodSpecError))
+		})
+	})
+
+	Describe("UpdateFragmentedPodSpec", func() {
+		// Reactor RI has FragmentedPodSpecDefinition
+		It("should update pod spec with fragmented pod spec", func() {
+			reactorObject := types.NewReactorObject()
+			reactorRI := types.ReactorRI()
+			accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "service")
+			currentFragmentedPodSpecs, err := accessor.ExtractFragmentedPodSpec(ctx, reactorComp.definition)
+			Expect(err).NotTo(HaveOccurred())
+
+			for i := range currentFragmentedPodSpecs {
+				currentFragmentedPodSpecs[i].Containers = []corev1.Container{{Name: "updated-container-" + strconv.Itoa(i)}}
+				currentFragmentedPodSpecs[i].Labels = map[string]string{"updated": "true"}
+				currentFragmentedPodSpecs[i].Annotations = map[string]string{"updated": "true"}
+				currentFragmentedPodSpecs[i].Resources = &corev1.ResourceRequirements{Claims: []corev1.ResourceClaim{{Name: "updated-resource-claim-" + strconv.Itoa(i)}}}
+			}
+			err = accessor.UpdateFragmentedPodSpec(ctx, reactorComp.definition, currentFragmentedPodSpecs)
+			Expect(err).NotTo(HaveOccurred())
+			instanceIds, err := reactorComp.GetInstanceIds(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			updatedObject, err := accessor.GetObject()
+			Expect(err).NotTo(HaveOccurred())
+			updatedReactorObject := types.Reactor{}
+			err = convertViaJSON(updatedObject, &updatedReactorObject)
+			Expect(err).NotTo(HaveOccurred())
+			for i, instanceId := range instanceIds {
+				Expect(updatedReactorObject.Spec.Services[instanceId].Containers).To(HaveLen(1))
+				Expect(updatedReactorObject.Spec.Services[instanceId].Containers[0].Name).To(Equal("updated-container-" + strconv.Itoa(i)))
+				Expect(updatedReactorObject.Spec.Services[instanceId].Resources.Claims).To(HaveLen(1))
+				Expect(updatedReactorObject.Spec.Services[instanceId].Resources.Claims[0].Name).To(Equal("updated-resource-claim-" + strconv.Itoa(i)))
+				Expect(updatedReactorObject.Spec.Services[instanceId].Labels).To(HaveKeyWithValue("updated", "true"))
+				Expect(updatedReactorObject.Spec.Services[instanceId].Annotations).To(HaveKeyWithValue("updated", "true"))
+			}
+		})
+
+		It("should update containers and verify other fields remain unchanged", func() {
+			reactorObject := types.NewReactorObject()
+			reactorRI := types.ReactorRI()
+			reactorObject.ObjectMeta.Labels = map[string]string{"updated": "true"}
+			accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "service")
+			currentFragmentedPodSpecs, err := accessor.ExtractFragmentedPodSpec(ctx, reactorComp.definition)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Store original labels to verify they remain unchanged
+			originalLabels := make([]map[string]string, len(currentFragmentedPodSpecs))
+			for i := range currentFragmentedPodSpecs {
+				originalLabels[i] = make(map[string]string)
+				for k, v := range currentFragmentedPodSpecs[i].Labels {
+					originalLabels[i][k] = v
+				}
+				currentFragmentedPodSpecs[i].Containers = []corev1.Container{{
+					Name:  "updated-container-" + strconv.Itoa(i),
+					Image: "updated-image:" + strconv.Itoa(i),
+				}}
+			}
+
+			err = accessor.UpdateFragmentedPodSpec(ctx, reactorComp.definition, currentFragmentedPodSpecs)
+			Expect(err).NotTo(HaveOccurred())
+			instanceIds, err := reactorComp.GetInstanceIds(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			updatedObject, err := accessor.GetObject()
+			Expect(err).NotTo(HaveOccurred())
+			updatedReactorObject := types.Reactor{}
+			err = convertViaJSON(updatedObject, &updatedReactorObject)
+			Expect(err).NotTo(HaveOccurred())
+
+			for i, instanceId := range instanceIds {
+				// Verify containers were updated
+				Expect(updatedReactorObject.Spec.Services[instanceId].Containers).To(HaveLen(1))
+				Expect(updatedReactorObject.Spec.Services[instanceId].Containers[0].Name).To(Equal("updated-container-" + strconv.Itoa(i)))
+				Expect(updatedReactorObject.Spec.Services[instanceId].Containers[0].Image).To(Equal("updated-image:" + strconv.Itoa(i)))
+				// Verify labels remain unchanged (not part of UpdateFragmentedPodSpec)
+				for k, v := range originalLabels[i] {
+					Expect(updatedReactorObject.Spec.Services[instanceId].Labels).To(HaveKeyWithValue(k, v))
+				}
+			}
+		})
+
+		It("should return error for RI without FragmentedPodSpecDefinition", func() {
+			pyflowObject := types.NewPyFlowObject()
+			pyflowRI := types.PyFlowRI()
+			accessor, masterComp := accessorForObject(pyflowRI, pyflowObject, "master")
+
+			fragmentedSpecs := []FragmentedPodSpec{{
+				Containers: []corev1.Container{{Name: "test-container"}},
+			}}
+
+			err := accessor.UpdateFragmentedPodSpec(ctx, masterComp.definition, fragmentedSpecs)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(noFragmentedSpecError))
+		})
+	})
+
+	Describe("UpdatePodTemplateSpec", func() {
+		// PyFlow RI has PodTemplateSpecPath
+		It("should update master pod template spec with resource claims", func() {
+			pyflowObject := types.NewPyFlowObject()
+			pyflowRI := types.PyFlowRI()
+			accessor, masterComp := accessorForObject(pyflowRI, pyflowObject, "master")
+
+			currentPodTemplateSpecs, err := accessor.ExtractPodTemplateSpec(ctx, masterComp.definition)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(currentPodTemplateSpecs).To(HaveLen(1))
+
+			currentPodTemplateSpecs[0].Spec.ResourceClaims = []corev1.PodResourceClaim{
+				{
+					Name: "test-claim",
+				},
+			}
+
+			err = accessor.UpdatePodTemplateSpec(ctx, masterComp.definition, currentPodTemplateSpecs)
+			Expect(err).NotTo(HaveOccurred())
+
+			updatedObject, err := accessor.GetObject()
+			Expect(err).NotTo(HaveOccurred())
+			updatedPyflowObject := types.PyFlow{}
+			err = convertViaJSON(updatedObject, &updatedPyflowObject)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(updatedPyflowObject.Spec.Master.Template.Spec.ResourceClaims).To(HaveLen(1))
+			Expect(updatedPyflowObject.Spec.Master.Template.Spec.ResourceClaims[0].Name).To(Equal("test-claim"))
+		})
+
+		It("should update worker pod template spec", func() {
+			pyflowObject := types.NewPyFlowObject()
+			pyflowRI := types.PyFlowRI()
+			accessor, workerComp := accessorForObject(pyflowRI, pyflowObject, "worker")
+
+			currentPodTemplateSpecs, err := accessor.ExtractPodTemplateSpec(ctx, workerComp.definition)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(currentPodTemplateSpecs).To(HaveLen(1))
+
+			// Modify labels and add resource claims
+			currentPodTemplateSpecs[0].ObjectMeta.Labels["updated"] = "true"
+			currentPodTemplateSpecs[0].Spec.ResourceClaims = []corev1.PodResourceClaim{
+				{
+					Name: "worker-claim",
+				},
+			}
+
+			err = accessor.UpdatePodTemplateSpec(ctx, workerComp.definition, currentPodTemplateSpecs)
+			Expect(err).NotTo(HaveOccurred())
+
+			updatedObject, err := accessor.GetObject()
+			Expect(err).NotTo(HaveOccurred())
+			updatedPyflowObject := types.PyFlow{}
+			err = convertViaJSON(updatedObject, &updatedPyflowObject)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(updatedPyflowObject.Spec.Worker.Template.ObjectMeta.Labels).To(HaveKeyWithValue("updated", "true"))
+			Expect(updatedPyflowObject.Spec.Worker.Template.Spec.ResourceClaims).To(HaveLen(1))
+			Expect(updatedPyflowObject.Spec.Worker.Template.Spec.ResourceClaims[0].Name).To(Equal("worker-claim"))
+		})
+
+		It("should return error for workloads without PodTemplateSpecPath", func() {
+			jobgroupObject := types.NewJobGroupObject()
+			// JobGroup does not have PodTemplateSpecPath
+			jobgroupRI := types.JobGroupRI()
+			accessor, jobComp := accessorForObject(jobgroupRI, jobgroupObject, "job")
+
+			podTemplateSpecs := []corev1.PodTemplateSpec{{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "test-container"}},
+				},
+			}}
+
+			err := accessor.UpdatePodTemplateSpec(ctx, jobComp.definition, podTemplateSpecs)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(noPodTemplateSpecError))
+		})
+	})
+
+	Describe("UpdatePodMetadata", func() {
+		// JobGroup RI has MetadataPath
+		It("should update pod metadata with instance Ids", func() {
+			jobgroupObject := types.NewJobGroupObject()
+			jobgroupRI := types.JobGroupRI()
+			jobgroupObject.Spec.ReplicatedJobs[0].Metadata.Labels = map[string]string{"current": "true"}
+			jobgroupObject.Spec.ReplicatedJobs[1].Metadata.Labels = map[string]string{"current": "true"}
+			accessor, jobgroupComp := accessorForObject(jobgroupRI, jobgroupObject, "job")
+
+			currentPodMetadata, err := accessor.ExtractPodMetadata(ctx, jobgroupComp.definition)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(currentPodMetadata).To(HaveLen(2))
+
+			for i := range currentPodMetadata {
+				currentPodMetadata[i].Labels["updated"] = "true"
+				currentPodMetadata[i].Labels["index"] = strconv.Itoa(i)
+				currentPodMetadata[i].Annotations = map[string]string{
+					"update-test": "value-" + strconv.Itoa(i),
+				}
+			}
+
+			err = accessor.UpdatePodMetadata(ctx, jobgroupComp.definition, currentPodMetadata)
+			Expect(err).NotTo(HaveOccurred())
+
+			updatedObject, err := accessor.GetObject()
+			Expect(err).NotTo(HaveOccurred())
+			updatedJobgroupObject := types.JobGroup{}
+			err = convertViaJSON(updatedObject, &updatedJobgroupObject)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[0].Metadata.Labels).To(HaveKeyWithValue("updated", "true"))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[0].Metadata.Labels).To(HaveKeyWithValue("index", "0"))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[0].Metadata.Annotations).To(HaveKeyWithValue("update-test", "value-0"))
+			// Current labels should remain unchanged
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[0].Metadata.Labels).To(HaveKeyWithValue("current", "true"))
+
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[1].Metadata.Labels).To(HaveKeyWithValue("updated", "true"))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[1].Metadata.Labels).To(HaveKeyWithValue("index", "1"))
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[1].Metadata.Annotations).To(HaveKeyWithValue("update-test", "value-1"))
+			// Current labels should remain unchanged
+			Expect(updatedJobgroupObject.Spec.ReplicatedJobs[1].Metadata.Labels).To(HaveKeyWithValue("current", "true"))
+		})
+
+		It("should return error for workloads without MetadataPath", func() {
+			pyflowObject := types.NewPyFlowObject()
+			// PyFlow does not have MetadataPath
+			pyflowRI := types.PyFlowRI()
+			accessor, masterComp := accessorForObject(pyflowRI, pyflowObject, "master")
+
+			podMetadata := []metav1.ObjectMeta{{
+				Labels: map[string]string{"test": "value"},
+			}}
+
+			err := accessor.UpdatePodMetadata(ctx, masterComp.definition, podMetadata)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring(noMetadataError))
 		})
 	})
 })
