@@ -171,6 +171,7 @@ func (r *runner) safeRunWithVariables(ctx context.Context, q *gojq.Code, input a
 	return results, nil
 }
 
+// getJsonData performs lazy JSON conversion with sync.Once
 func (r *runner) getJsonData() (any, error) {
 	r.jsonOnce.Do(func() {
 		converted, err := convertToPrimitive(r.source)

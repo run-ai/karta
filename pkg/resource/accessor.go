@@ -23,17 +23,17 @@ func (e DefinitionNotFoundError) Error() string {
 
 // Accessor implements extraction and updating of resource data using jq.Runner
 type Accessor struct {
-	jqAccessor jq.Runner
+	jqRunner jq.Runner
 }
 
-func NewAccessor(jqAccessor jq.Runner) *Accessor {
+func NewAccessor(jqRunner jq.Runner) *Accessor {
 	return &Accessor{
-		jqAccessor: jqAccessor,
+		jqRunner: jqRunner,
 	}
 }
 
 func (a *Accessor) GetObject() (map[string]interface{}, error) {
-	object, err := a.jqAccessor.GetObject()
+	object, err := a.jqRunner.GetObject()
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (a *Accessor) ExtractPodTemplateSpec(ctx context.Context, definition v1alph
 	}
 
 	var podTemplateSpec []corev1.PodTemplateSpec
-	err := extract(ctx, definition.SpecDefinition.PodTemplateSpecPath, a.jqAccessor, &podTemplateSpec)
+	err := extract(ctx, definition.SpecDefinition.PodTemplateSpecPath, a.jqRunner, &podTemplateSpec)
 
 	return podTemplateSpec, err
 }
@@ -69,7 +69,7 @@ func (a *Accessor) ExtractPodSpec(ctx context.Context, definition v1alpha1.Compo
 	}
 
 	var podSpec []corev1.PodSpec
-	err := extract(ctx, definition.SpecDefinition.PodSpecPath, a.jqAccessor, &podSpec)
+	err := extract(ctx, definition.SpecDefinition.PodSpecPath, a.jqRunner, &podSpec)
 
 	return podSpec, err
 }
@@ -84,7 +84,7 @@ func (a *Accessor) ExtractPodMetadata(ctx context.Context, definition v1alpha1.C
 	}
 
 	var podMetadata []metav1.ObjectMeta
-	err := extract(ctx, definition.SpecDefinition.MetadataPath, a.jqAccessor, &podMetadata)
+	err := extract(ctx, definition.SpecDefinition.MetadataPath, a.jqRunner, &podMetadata)
 
 	return podMetadata, err
 }
@@ -102,17 +102,17 @@ func (a *Accessor) ExtractScale(ctx context.Context, definition v1alpha1.Compone
 
 	scaleCount := 0
 
-	if err := extract(ctx, definition.ScaleDefinition.ReplicasPath, a.jqAccessor, &replicas); err != nil {
+	if err := extract(ctx, definition.ScaleDefinition.ReplicasPath, a.jqRunner, &replicas); err != nil {
 		return nil, err
 	}
 	scaleCount = max(scaleCount, len(replicas))
 
-	if err := extract(ctx, definition.ScaleDefinition.MinReplicasPath, a.jqAccessor, &minReplicas); err != nil {
+	if err := extract(ctx, definition.ScaleDefinition.MinReplicasPath, a.jqRunner, &minReplicas); err != nil {
 		return nil, err
 	}
 	scaleCount = max(scaleCount, len(minReplicas))
 
-	if err := extract(ctx, definition.ScaleDefinition.MaxReplicasPath, a.jqAccessor, &maxReplicas); err != nil {
+	if err := extract(ctx, definition.ScaleDefinition.MaxReplicasPath, a.jqRunner, &maxReplicas); err != nil {
 		return nil, err
 	}
 	scaleCount = max(scaleCount, len(maxReplicas))
@@ -156,57 +156,57 @@ func (a *Accessor) ExtractFragmentedPodSpec(ctx context.Context, definition v1al
 
 	specCount := 0
 
-	if err := extract(ctx, fragmentedDefinition.SchedulerNamePath, a.jqAccessor, &schedulerNameResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.SchedulerNamePath, a.jqRunner, &schedulerNameResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(schedulerNameResults))
 
-	if err := extract(ctx, fragmentedDefinition.LabelsPath, a.jqAccessor, &labelsResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.LabelsPath, a.jqRunner, &labelsResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(labelsResults))
 
-	if err := extract(ctx, fragmentedDefinition.AnnotationsPath, a.jqAccessor, &annotationsResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.AnnotationsPath, a.jqRunner, &annotationsResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(annotationsResults))
 
-	if err := extract(ctx, fragmentedDefinition.ResourcesPath, a.jqAccessor, &resourcesResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ResourcesPath, a.jqRunner, &resourcesResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(resourcesResults))
 
-	if err := extract(ctx, fragmentedDefinition.ResourceClaimsPath, a.jqAccessor, &resourceClaimsResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ResourceClaimsPath, a.jqRunner, &resourceClaimsResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(resourceClaimsResults))
 
-	if err := extract(ctx, fragmentedDefinition.PodAffinityPath, a.jqAccessor, &podAffinityResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.PodAffinityPath, a.jqRunner, &podAffinityResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(podAffinityResults))
 
-	if err := extract(ctx, fragmentedDefinition.NodeAffinityPath, a.jqAccessor, &nodeAffinityResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.NodeAffinityPath, a.jqRunner, &nodeAffinityResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(nodeAffinityResults))
 
-	if err := extract(ctx, fragmentedDefinition.ContainersPath, a.jqAccessor, &containersResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ContainersPath, a.jqRunner, &containersResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(containersResults))
 
-	if err := extract(ctx, fragmentedDefinition.ContainerPath, a.jqAccessor, &containerResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ContainerPath, a.jqRunner, &containerResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(containerResults))
 
-	if err := extract(ctx, fragmentedDefinition.PriorityClassNamePath, a.jqAccessor, &priorityClassNameResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.PriorityClassNamePath, a.jqRunner, &priorityClassNameResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(priorityClassNameResults))
 
-	if err := extract(ctx, fragmentedDefinition.ImagePath, a.jqAccessor, &imageResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ImagePath, a.jqRunner, &imageResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(imageResults))
@@ -242,7 +242,7 @@ func (a *Accessor) ExtractStatus(ctx context.Context, definition v1alpha1.Compon
 	var phase *string
 	if statusDef.PhaseDefinition != nil {
 		var phases []string
-		if err := extract(ctx, &statusDef.PhaseDefinition.Path, a.jqAccessor, &phases); err != nil {
+		if err := extract(ctx, &statusDef.PhaseDefinition.Path, a.jqRunner, &phases); err != nil {
 			return nil, fmt.Errorf("failed to extract phase: %w", err)
 		}
 		if len(phases) > 0 {
@@ -272,7 +272,7 @@ func (a *Accessor) extractConditions(ctx context.Context, condDef *v1alpha1.Cond
 	}
 
 	var extractedRawConditions [][]map[string]any
-	if err := extract(ctx, &condDef.Path, a.jqAccessor, &extractedRawConditions); err != nil {
+	if err := extract(ctx, &condDef.Path, a.jqRunner, &extractedRawConditions); err != nil {
 		return nil, fmt.Errorf("failed to extract conditions: %w", err)
 	}
 
@@ -315,7 +315,7 @@ func (a *Accessor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.C
 	}
 
 	var instanceIds []string
-	err := extract(ctx, definition.InstanceIdPath, a.jqAccessor, &instanceIds)
+	err := extract(ctx, definition.InstanceIdPath, a.jqRunner, &instanceIds)
 	if err != nil {
 		return nil, err
 	}
@@ -452,9 +452,9 @@ func updateSliceField[T any](a *Accessor, ctx context.Context, def v1alpha1.Comp
 
 func (a *Accessor) assign(ctx context.Context, definition v1alpha1.ComponentDefinition, path string, values []any) error {
 	if definition.InstanceIdPath != nil {
-		return a.jqAccessor.AssignZip(ctx, path, values)
+		return a.jqRunner.AssignZip(ctx, path, values)
 	} else {
-		return a.jqAccessor.Assign(ctx, path, values[0])
+		return a.jqRunner.Assign(ctx, path, values[0])
 	}
 }
 
