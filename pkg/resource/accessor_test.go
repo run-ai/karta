@@ -63,15 +63,15 @@ func extractorForObject(
 	ri *v1alpha1.ResourceInterface,
 	object client.Object,
 	componentName string,
-) (*InterfaceExtractor, *Component) {
-	extractor := NewInterfaceExtractor(query.NewDefaultJqEvaluator(object))
+) (*Accessor, *Component) {
+	extractor := NewAccessor(query.NewDefaultRunner(object))
 	factory := NewComponentFactoryFromObject(ri, object)
 	comp, err := factory.GetComponent(componentName)
 	Expect(err).NotTo(HaveOccurred())
 	return extractor, comp
 }
 
-var _ = Describe("InterfaceExtractor", func() {
+var _ = Describe("Accessor", func() {
 	var (
 		ctx context.Context
 
@@ -83,9 +83,9 @@ var _ = Describe("InterfaceExtractor", func() {
 		jobgroupFactory *ComponentFactory
 		reactorFactory  *ComponentFactory
 
-		pyflowExtractor   *InterfaceExtractor
-		jobgroupExtractor *InterfaceExtractor
-		reactorExtractor  *InterfaceExtractor
+		pyflowExtractor   *Accessor
+		jobgroupExtractor *Accessor
+		reactorExtractor  *Accessor
 	)
 
 	BeforeEach(func() {
@@ -106,9 +106,9 @@ var _ = Describe("InterfaceExtractor", func() {
 		reactorFactory = NewComponentFactoryFromObject(reactorRI, reactorObject)
 
 		// Initialize extractors
-		pyflowExtractor = NewInterfaceExtractor(query.NewDefaultJqEvaluator(pyflowObject))
-		jobgroupExtractor = NewInterfaceExtractor(query.NewDefaultJqEvaluator(jobgroupObject))
-		reactorExtractor = NewInterfaceExtractor(query.NewDefaultJqEvaluator(reactorObject))
+		pyflowExtractor = NewAccessor(query.NewDefaultRunner(pyflowObject))
+		jobgroupExtractor = NewAccessor(query.NewDefaultRunner(jobgroupObject))
+		reactorExtractor = NewAccessor(query.NewDefaultRunner(reactorObject))
 	})
 
 	Describe("ExtractPodTemplateSpec", func() {
@@ -452,8 +452,8 @@ var _ = Describe("InterfaceExtractor", func() {
 		Context("safeConvertSlice", func() {
 			It("should handle conversion errors gracefully", func() {
 				// Create a mock evaluator that returns data that can't be converted
-				mockEvaluator := query.NewMockQueryEvaluator(gomock.NewController(GinkgoT()))
-				extractor := NewInterfaceExtractor(mockEvaluator)
+				mockEvaluator := query.NewMockRunner(gomock.NewController(GinkgoT()))
+				extractor := NewAccessor(mockEvaluator)
 
 				// Test with incompatible data types that should fail conversion
 				mockEvaluator.EXPECT().
@@ -479,8 +479,8 @@ var _ = Describe("InterfaceExtractor", func() {
 
 			It("should handle circular reference errors in JSON conversion", func() {
 				// Create a mock evaluator that returns circular reference data
-				mockEvaluator := query.NewMockQueryEvaluator(gomock.NewController(GinkgoT()))
-				extractor := NewInterfaceExtractor(mockEvaluator)
+				mockEvaluator := query.NewMockRunner(gomock.NewController(GinkgoT()))
+				extractor := NewAccessor(mockEvaluator)
 
 				// Create a circular reference that would break JSON marshaling
 				circularData := make(map[string]any)
@@ -553,7 +553,7 @@ var _ = Describe("InterfaceExtractor", func() {
 
 				factory := NewComponentFactoryFromObject(jobgroupRI, jobgroupObject)
 
-				extractor := NewInterfaceExtractor(query.NewDefaultJqEvaluator(jobgroupObject))
+				extractor := NewAccessor(query.NewDefaultRunner(jobgroupObject))
 
 				comp, err := factory.GetComponent("job")
 				Expect(err).NotTo(HaveOccurred())
@@ -973,8 +973,8 @@ var _ = Describe("InterfaceExtractor", func() {
 			})
 
 			It("should handle invalid phase path", func() {
-				mockEvaluator := query.NewMockQueryEvaluator(gomock.NewController(GinkgoT()))
-				extractor := NewInterfaceExtractor(mockEvaluator)
+				mockEvaluator := query.NewMockRunner(gomock.NewController(GinkgoT()))
+				extractor := NewAccessor(mockEvaluator)
 
 				mockEvaluator.EXPECT().
 					Evaluate(gomock.Any(), ".status.invalidPath").

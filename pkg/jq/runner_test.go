@@ -9,10 +9,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("JqEvaluator", func() {
+var _ = Describe("Runner", func() {
 	var (
 		ctx        context.Context
-		evaluator  *JqEvaluator
+		evaluator  Runner
 		testObject map[string]any
 	)
 
@@ -44,7 +44,7 @@ var _ = Describe("JqEvaluator", func() {
 				},
 			},
 		}
-		evaluator = NewDefaultJqEvaluator(testObject)
+		evaluator = NewDefaultRunner(testObject)
 	})
 
 	Describe("Basic JQ evaluation", func() {
@@ -140,7 +140,7 @@ var _ = Describe("JqEvaluator", func() {
 	Describe("Result count limits", func() {
 		var (
 			largeObject map[string]any
-			limitedEval *JqEvaluator
+			limitedEval Runner
 			maxResults  = 5
 		)
 
@@ -161,7 +161,7 @@ var _ = Describe("JqEvaluator", func() {
 			}
 			largeObject["items"] = items
 
-			limitedEval = NewJqEvaluator(largeObject, &maxResults, nil)
+			limitedEval = NewRunner(largeObject, &maxResults, nil)
 		})
 
 		It("should respect max results limit", func() {
@@ -181,7 +181,7 @@ var _ = Describe("JqEvaluator", func() {
 
 	Describe("Timeout limits", func() {
 		var (
-			fastTimeoutEval *JqEvaluator
+			fastTimeoutEval Runner
 			maxResults      = 1000
 			timeoutMs       = 1 // Very short timeout
 		)
@@ -202,7 +202,7 @@ var _ = Describe("JqEvaluator", func() {
 			}
 			slowObject["data"] = data
 
-			fastTimeoutEval = NewJqEvaluator(slowObject, &maxResults, &timeoutMs)
+			fastTimeoutEval = NewRunner(slowObject, &maxResults, &timeoutMs)
 		})
 
 		It("should respect timeout limits for complex operations", func() {
@@ -222,7 +222,7 @@ var _ = Describe("JqEvaluator", func() {
 
 		It("should work with longer timeout for the same operation", func() {
 			longerTimeoutMs := 10000
-			longerTimeoutEval := NewJqEvaluator(testObject, &maxResults, &longerTimeoutMs)
+			longerTimeoutEval := NewRunner(testObject, &maxResults, &longerTimeoutMs)
 
 			results, err := longerTimeoutEval.Evaluate(ctx, ".spec.containers[].name")
 			Expect(err).ToNot(HaveOccurred())
@@ -233,26 +233,26 @@ var _ = Describe("JqEvaluator", func() {
 	Describe("JSON conversion", func() {
 		It("should handle different source object types", func() {
 			// Test with string
-			stringEval := NewDefaultJqEvaluator("test-string")
+			stringEval := NewDefaultRunner("test-string")
 			results, err := stringEval.Evaluate(ctx, ". | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 11))
 
 			// Test with number
-			numberEval := NewDefaultJqEvaluator(42)
+			numberEval := NewDefaultRunner(42)
 			results, err = numberEval.Evaluate(ctx, ". + 8")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 50))
 
 			// Test with array
-			arrayEval := NewDefaultJqEvaluator([]any{1, 2, 3})
+			arrayEval := NewDefaultRunner([]any{1, 2, 3})
 			results, err = arrayEval.Evaluate(ctx, ". | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 3))
 		})
 
 		It("should handle nil values", func() {
-			nilEval := NewDefaultJqEvaluator(nil)
+			nilEval := NewDefaultRunner(nil)
 			results, err := nilEval.Evaluate(ctx, ".")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
@@ -261,7 +261,7 @@ var _ = Describe("JqEvaluator", func() {
 	})
 
 	Describe("Default values", func() {
-		var eval *JqEvaluator
+		var eval Runner
 
 		BeforeEach(func() {
 			testData := map[string]any{
@@ -282,7 +282,7 @@ var _ = Describe("JqEvaluator", func() {
 					},
 				},
 			}
-			eval = NewDefaultJqEvaluator(testData)
+			eval = NewDefaultRunner(testData)
 		})
 
 		Context("with // alternative operator", func() {

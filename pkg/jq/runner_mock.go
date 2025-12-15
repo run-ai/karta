@@ -16,32 +16,32 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockQueryEvaluator is a mock of QueryEvaluator interface.
-type MockQueryEvaluator struct {
+// MockRunner is a mock of Runner interface.
+type MockRunner struct {
 	ctrl     *gomock.Controller
-	recorder *MockQueryEvaluatorMockRecorder
+	recorder *MockRunnerMockRecorder
 	isgomock struct{}
 }
 
-// MockQueryEvaluatorMockRecorder is the mock recorder for MockQueryEvaluator.
-type MockQueryEvaluatorMockRecorder struct {
-	mock *MockQueryEvaluator
+// MockRunnerMockRecorder is the mock recorder for MockRunner.
+type MockRunnerMockRecorder struct {
+	mock *MockRunner
 }
 
-// NewMockQueryEvaluator creates a new mock instance.
-func NewMockQueryEvaluator(ctrl *gomock.Controller) *MockQueryEvaluator {
-	mock := &MockQueryEvaluator{ctrl: ctrl}
-	mock.recorder = &MockQueryEvaluatorMockRecorder{mock}
+// NewMockRunner creates a new mock instance.
+func NewMockRunner(ctrl *gomock.Controller) *MockRunner {
+	mock := &MockRunner{ctrl: ctrl}
+	mock.recorder = &MockRunnerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockQueryEvaluator) EXPECT() *MockQueryEvaluatorMockRecorder {
+func (m *MockRunner) EXPECT() *MockRunnerMockRecorder {
 	return m.recorder
 }
 
 // Evaluate mocks base method.
-func (m *MockQueryEvaluator) Evaluate(ctx context.Context, expression string) ([]any, error) {
+func (m *MockRunner) Evaluate(ctx context.Context, expression string) ([]any, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Evaluate", ctx, expression)
 	ret0, _ := ret[0].([]any)
@@ -50,7 +50,7 @@ func (m *MockQueryEvaluator) Evaluate(ctx context.Context, expression string) ([
 }
 
 // Evaluate indicates an expected call of Evaluate.
-func (mr *MockQueryEvaluatorMockRecorder) Evaluate(ctx, expression any) *gomock.Call {
+func (mr *MockRunnerMockRecorder) Evaluate(ctx, expression any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Evaluate", reflect.TypeOf((*MockQueryEvaluator)(nil).Evaluate), ctx, expression)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Evaluate", reflect.TypeOf((*MockRunner)(nil).Evaluate), ctx, expression)
 }

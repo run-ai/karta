@@ -49,9 +49,9 @@ func NewComponentFactory(ri *v1alpha1.ResourceInterface, extractor Extractor) *C
 
 // NewComponentFactoryFromObject creates a new ResourceInterface-based component factory from a Kubernetes object
 func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object client.Object) *ComponentFactory {
-	queryEvaluator := jq.NewDefaultJqEvaluator(object)
-	extractor := NewInterfaceExtractor(queryEvaluator)
-	return NewComponentFactory(ri, extractor)
+	jqRunner := jq.NewDefaultRunner(object)
+	accessor := NewAccessor(jqRunner)
+	return NewComponentFactory(ri, accessor)
 }
 
 // GetComponent retrieves a component by name

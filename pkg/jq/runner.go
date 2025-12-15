@@ -12,8 +12,8 @@ import (
 
 //go:generate mockgen -source=runner.go -destination=runner_mock.go -package=jq Runner
 
-// QueryEvaluator interface for query evaluation against data
-type QueryEvaluator interface {
+// Runner interface for query evaluation against data
+type Runner interface {
 	Evaluate(ctx context.Context, expression string) ([]any, error)
 }
 
@@ -22,8 +22,8 @@ const (
 	defaultTimeoutInMilliseconds = 10000
 )
 
-// JqEvaluator handles JQ evaluation against a source object
-type JqEvaluator struct {
+// runner handles JQ evaluation against a source object
+type runner struct {
 	source any
 
 	maxResults   int
@@ -35,47 +35,47 @@ type JqEvaluator struct {
 	jsonErr  error
 }
 
-func NewDefaultJqEvaluator(source any) *JqEvaluator {
-	return &JqEvaluator{
+func NewDefaultRunner(source any) Runner {
+	return &runner{
 		source:       source,
 		maxResults:   defaultMaxResults,
 		queryTimeout: defaultTimeoutInMilliseconds * time.Millisecond,
 	}
 }
 
-func NewJqEvaluator(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) *JqEvaluator {
-	e := NewDefaultJqEvaluator(source)
+func NewRunner(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) Runner {
+	r := NewDefaultRunner(source).(*runner)
 
 	if queryMaxResults != nil {
-		e.maxResults = *queryMaxResults
+		r.maxResults = *queryMaxResults
 	}
 	if queryTimeoutInMilliseconds != nil {
-		e.queryTimeout = time.Duration(*queryTimeoutInMilliseconds) * time.Millisecond
+		r.queryTimeout = time.Duration(*queryTimeoutInMilliseconds) * time.Millisecond
 	}
 
-	return e
+	return r
 }
 
 // Evaluate executes a JQ expression
-func (e *JqEvaluator) Evaluate(ctx context.Context, expression string) ([]any, error) {
+func (r *runner) Evaluate(ctx context.Context, expression string) ([]any, error) {
 	// Get JSON data (lazy conversion)
-	jsonData, err := e.getJsonData()
+	jsonData, err := r.getJsonData()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get JSON data: %w", err)
 	}
 
 	// Compile the expression to a runnable query
-	query, err := e.compile(expression)
+	query, err := r.compile(expression)
 	if err != nil {
 		return nil, err
 	}
 
 	// Execute query
-	return e.safeRun(ctx, query, jsonData, expression)
+	return r.safeRun(ctx, query, jsonData, expression)
 }
 
-func (e *JqEvaluator) safeRun(ctx context.Context, q *gojq.Code, input any, expression string) ([]any, error) {
-	innerCtx, cancel := context.WithTimeout(ctx, e.queryTimeout)
+func (r *runner) safeRun(ctx context.Context, q *gojq.Code, input any, expression string) ([]any, error) {
+	innerCtx, cancel := context.WithTimeout(ctx, r.queryTimeout)
 	defer cancel()
 
 	iter := q.RunWithContext(innerCtx, input)
@@ -91,36 +91,36 @@ func (e *JqEvaluator) safeRun(ctx context.Context, q *gojq.Code, input any, expr
 		}
 		results = append(results, v)
 
-		if len(results) >= e.maxResults {
-			return nil, fmt.Errorf("query results exceed the allowed number %d", e.maxResults)
+		if len(results) >= r.maxResults {
+			return nil, fmt.Errorf("query results exceed the allowed number %d", r.maxResults)
 		}
 	}
 	return results, nil
 }
 
 // getJsonData performs lazy JSON conversion with sync.Once
-func (e *JqEvaluator) getJsonData() (any, error) {
-	e.jsonOnce.Do(func() {
-		jsonBytes, err := json.Marshal(e.source)
+func (r *runner) getJsonData() (any, error) {
+	r.jsonOnce.Do(func() {
+		jsonBytes, err := json.Marshal(r.source)
 		if err != nil {
-			e.jsonErr = fmt.Errorf("failed to marshal source object to JSON: %w", err)
+			r.jsonErr = fmt.Errorf("failed to marshal source object to JSON: %w", err)
 			return
 		}
 
-		if err := json.Unmarshal(jsonBytes, &e.jsonData); err != nil {
-			e.jsonErr = fmt.Errorf("failed to unmarshal JSON data: %w", err)
+		if err := json.Unmarshal(jsonBytes, &r.jsonData); err != nil {
+			r.jsonErr = fmt.Errorf("failed to unmarshal JSON data: %w", err)
 			return
 		}
 	})
 
-	if e.jsonErr != nil {
-		return nil, e.jsonErr
+	if r.jsonErr != nil {
+		return nil, r.jsonErr
 	}
 
-	return e.jsonData, nil
+	return r.jsonData, nil
 }
 
-func (e *JqEvaluator) compile(expression string) (*gojq.Code, error) {
+func (r *runner) compile(expression string) (*gojq.Code, error) {
 	parsed, err := gojq.Parse(expression)
 	if err != nil {
 		return nil, &JQParseError{Expression: expression, Err: err}
