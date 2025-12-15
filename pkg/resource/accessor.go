@@ -32,6 +32,7 @@ func NewAccessor(jqRunner jq.Runner) *Accessor {
 	}
 }
 
+// GetObject returns the object as a map[string]interface{}
 func (a *Accessor) GetObject() (map[string]interface{}, error) {
 	object, err := a.jqRunner.GetObject()
 	if err != nil {
