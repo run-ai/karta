@@ -1,4 +1,4 @@
-package query
+package jq
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/itchyny/gojq"
 )
 
-//go:generate mockgen -source=evaluator.go -destination=evaluator_mock.go -package=query QueryEvaluator
+//go:generate mockgen -source=runner.go -destination=runner_mock.go -package=jq Runner
 
 // QueryEvaluator interface for query evaluation against data
 type QueryEvaluator interface {

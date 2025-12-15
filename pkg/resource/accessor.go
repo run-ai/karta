@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/query"
+	jq "github.com/run-ai/kai-bolt/pkg/jq"
 )
 
 // DefinitionNotFoundError represents an error when a requested definition is not found
@@ -23,10 +23,10 @@ func (e DefinitionNotFoundError) Error() string {
 
 // InterfaceExtractor implements extraction using QueryEvaluator
 type InterfaceExtractor struct {
-	queryEvaluator query.QueryEvaluator
+	queryEvaluator jq.QueryEvaluator
 }
 
-func NewInterfaceExtractor(queryEvaluator query.QueryEvaluator) *InterfaceExtractor {
+func NewInterfaceExtractor(queryEvaluator jq.QueryEvaluator) *InterfaceExtractor {
 	return &InterfaceExtractor{
 		queryEvaluator: queryEvaluator,
 	}
@@ -117,7 +117,7 @@ func (e *InterfaceExtractor) ExtractScale(ctx context.Context, definition v1alph
 	return scales, nil
 }
 
-func extract[T any](ctx context.Context, path *string, evaluator query.QueryEvaluator, out *[]T) error {
+func extract[T any](ctx context.Context, path *string, evaluator jq.QueryEvaluator, out *[]T) error {
 	if path == nil {
 		return nil
 	}

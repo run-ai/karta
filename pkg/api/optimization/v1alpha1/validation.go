@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	query "github.com/run-ai/kai-bolt/pkg/jq"
+	jq "github.com/run-ai/kai-bolt/pkg/jq"
 )
 
 type RIValidator struct {
@@ -37,7 +37,7 @@ func (v *RIValidator) Validate() error {
 		errs = append(errs, instructionErrs...)
 	}
 
-	if jqErrs := query.ValidateJQExpressions(v.ri); jqErrs != nil {
+	if jqErrs := jq.ValidateJQExpressions(v.ri); jqErrs != nil {
 		errs = append(errs, jqErrs...)
 	}
 

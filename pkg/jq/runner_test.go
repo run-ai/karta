@@ -1,4 +1,4 @@
-package query
+package jq
 
 import (
 	"context"
