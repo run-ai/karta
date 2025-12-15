@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/query"
+	query "github.com/run-ai/kai-bolt/pkg/jq"
 )
 
 var _ = Describe("PodQuerier", func() {

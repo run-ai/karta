@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/query"
+	query "github.com/run-ai/kai-bolt/pkg/jq"
 	"github.com/run-ai/kai-bolt/test/types"
 )
 
