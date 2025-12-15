@@ -464,7 +464,7 @@ func extract[T any](ctx context.Context, path *string, accessor jq.Runner, out *
 		return nil
 	}
 
-	results, err := accessor.Extract(ctx, *path)
+	results, err := accessor.Evaluate(ctx, *path)
 	if err != nil {
 		return err
 	}

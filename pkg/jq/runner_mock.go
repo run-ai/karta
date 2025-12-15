@@ -16,43 +16,43 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockExtractor is a mock of Extractor interface.
-type MockExtractor struct {
+// MockEvaluator is a mock of Evaluator interface.
+type MockEvaluator struct {
 	ctrl     *gomock.Controller
-	recorder *MockExtractorMockRecorder
+	recorder *MockEvaluatorMockRecorder
 	isgomock struct{}
 }
 
-// MockExtractorMockRecorder is the mock recorder for MockExtractor.
-type MockExtractorMockRecorder struct {
-	mock *MockExtractor
+// MockEvaluatorMockRecorder is the mock recorder for MockEvaluator.
+type MockEvaluatorMockRecorder struct {
+	mock *MockEvaluator
 }
 
-// NewMockExtractor creates a new mock instance.
-func NewMockExtractor(ctrl *gomock.Controller) *MockExtractor {
-	mock := &MockExtractor{ctrl: ctrl}
-	mock.recorder = &MockExtractorMockRecorder{mock}
+// NewMockEvaluator creates a new mock instance.
+func NewMockEvaluator(ctrl *gomock.Controller) *MockEvaluator {
+	mock := &MockEvaluator{ctrl: ctrl}
+	mock.recorder = &MockEvaluatorMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockExtractor) EXPECT() *MockExtractorMockRecorder {
+func (m *MockEvaluator) EXPECT() *MockEvaluatorMockRecorder {
 	return m.recorder
 }
 
-// Extract mocks base method.
-func (m *MockExtractor) Extract(ctx context.Context, expression string) ([]any, error) {
+// Evaluate mocks base method.
+func (m *MockEvaluator) Evaluate(ctx context.Context, expression string) ([]any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Extract", ctx, expression)
+	ret := m.ctrl.Call(m, "Evaluate", ctx, expression)
 	ret0, _ := ret[0].([]any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Extract indicates an expected call of Extract.
-func (mr *MockExtractorMockRecorder) Extract(ctx, expression any) *gomock.Call {
+// Evaluate indicates an expected call of Evaluate.
+func (mr *MockEvaluatorMockRecorder) Evaluate(ctx, expression any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Extract", reflect.TypeOf((*MockExtractor)(nil).Extract), ctx, expression)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Evaluate", reflect.TypeOf((*MockEvaluator)(nil).Evaluate), ctx, expression)
 }
 
 // MockAssigner is a mock of Assigner interface.
@@ -159,19 +159,19 @@ func (mr *MockRunnerMockRecorder) AssignZip(ctx, expression, values any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssignZip", reflect.TypeOf((*MockRunner)(nil).AssignZip), ctx, expression, values)
 }
 
-// Extract mocks base method.
-func (m *MockRunner) Extract(ctx context.Context, expression string) ([]any, error) {
+// Evaluate mocks base method.
+func (m *MockRunner) Evaluate(ctx context.Context, expression string) ([]any, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Extract", ctx, expression)
+	ret := m.ctrl.Call(m, "Evaluate", ctx, expression)
 	ret0, _ := ret[0].([]any)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Extract indicates an expected call of Extract.
-func (mr *MockRunnerMockRecorder) Extract(ctx, expression any) *gomock.Call {
+// Evaluate indicates an expected call of Evaluate.
+func (mr *MockRunnerMockRecorder) Evaluate(ctx, expression any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Extract", reflect.TypeOf((*MockRunner)(nil).Extract), ctx, expression)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Evaluate", reflect.TypeOf((*MockRunner)(nil).Evaluate), ctx, expression)
 }
 
 // GetObject mocks base method.

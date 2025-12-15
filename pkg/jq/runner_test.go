@@ -55,42 +55,42 @@ var _ = Describe("Runner", func() {
 
 	Describe("Basic JQ evaluation", func() {
 		It("should evaluate simple path expressions", func() {
-			results, err := executor.Extract(ctx, ".metadata.name")
+			results, err := executor.Evaluate(ctx, ".metadata.name")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(Equal("test-pod"))
 		})
 
 		It("should evaluate array access", func() {
-			results, err := executor.Extract(ctx, ".spec.containers[0].name")
+			results, err := executor.Evaluate(ctx, ".spec.containers[0].name")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(Equal("web"))
 		})
 
 		It("should evaluate array iteration", func() {
-			results, err := executor.Extract(ctx, ".spec.containers[].name")
+			results, err := executor.Evaluate(ctx, ".spec.containers[].name")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(2))
 			Expect(results).To(ConsistOf("web", "sidecar"))
 		})
 
 		It("should handle nested array iteration", func() {
-			results, err := executor.Extract(ctx, ".spec.containers[0].ports[].containerPort")
+			results, err := executor.Evaluate(ctx, ".spec.containers[0].ports[].containerPort")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(2))
 			Expect(results).To(ConsistOf(float64(80), float64(443)))
 		})
 
 		It("should handle non-existent paths", func() {
-			results, err := executor.Extract(ctx, ".metadata.nonexistent")
+			results, err := executor.Evaluate(ctx, ".metadata.nonexistent")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(BeNil())
 		})
 
 		It("should handle empty results", func() {
-			results, err := executor.Extract(ctx, ".spec.containers[] | select(.name == \"notfound\")")
+			results, err := executor.Evaluate(ctx, ".spec.containers[] | select(.name == \"notfound\")")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(BeEmpty())
 		})
@@ -98,28 +98,28 @@ var _ = Describe("Runner", func() {
 
 	Describe("JQ filters and expressions", func() {
 		It("should evaluate boolean expressions", func() {
-			results, err := executor.Extract(ctx, ".metadata.name == \"test-pod\"")
+			results, err := executor.Evaluate(ctx, ".metadata.name == \"test-pod\"")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(BeTrue())
 		})
 
 		It("should evaluate select filters", func() {
-			results, err := executor.Extract(ctx, ".spec.containers[] | select(.name == \"web\") | .image")
+			results, err := executor.Evaluate(ctx, ".spec.containers[] | select(.name == \"web\") | .image")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(Equal("nginx:1.20"))
 		})
 
 		It("should evaluate map operations", func() {
-			results, err := executor.Extract(ctx, ".spec.containers | map(.name)")
+			results, err := executor.Evaluate(ctx, ".spec.containers | map(.name)")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(ConsistOf("web", "sidecar"))
 		})
 
 		It("should handle complex expressions", func() {
-			results, err := executor.Extract(ctx, ".spec.containers | length")
+			results, err := executor.Evaluate(ctx, ".spec.containers | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(BeNumerically("==", 2))
@@ -128,7 +128,7 @@ var _ = Describe("Runner", func() {
 
 	Describe("Error handling", func() {
 		It("should return JQParseError for invalid syntax", func() {
-			_, err := executor.Extract(ctx, ".invalid[[[syntax")
+			_, err := executor.Evaluate(ctx, ".invalid[[[syntax")
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeAssignableToTypeOf(&JQParseError{}))
 		})
@@ -137,7 +137,7 @@ var _ = Describe("Runner", func() {
 			cancelCtx, cancel := context.WithCancel(ctx)
 			cancel()
 
-			_, err := executor.Extract(cancelCtx, ".metadata.name")
+			_, err := executor.Evaluate(cancelCtx, ".metadata.name")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("context canceled"))
 		})
@@ -171,14 +171,14 @@ var _ = Describe("Runner", func() {
 		})
 
 		It("should respect max results limit", func() {
-			results, err := limitedExec.Extract(ctx, ".items[].id")
+			results, err := limitedExec.Evaluate(ctx, ".items[].id")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("query results exceed the allowed number 5"))
 			Expect(results).To(BeNil())
 		})
 
 		It("should allow results under the limit", func() {
-			results, err := limitedExec.Extract(ctx, ".items[0:3][].id")
+			results, err := limitedExec.Evaluate(ctx, ".items[0:3][].id")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(3))
 			Expect(results).To(ConsistOf(float64(0), float64(1), float64(2)))
@@ -212,7 +212,7 @@ var _ = Describe("Runner", func() {
 		})
 
 		It("should respect timeout limits for complex operations", func() {
-			_, err := fastTimeoutExec.Extract(ctx, ".data | map(select(.nested | length > 50)) | length")
+			_, err := fastTimeoutExec.Evaluate(ctx, ".data | map(select(.nested | length > 50)) | length")
 
 			Expect(err).To(HaveOccurred())
 
@@ -226,7 +226,7 @@ var _ = Describe("Runner", func() {
 			longerTimeoutMs := 10000
 			longerTimeoutExec := NewRunner(testObject, &maxResults, &longerTimeoutMs)
 
-			results, err := longerTimeoutExec.Extract(ctx, ".spec.containers[].name")
+			results, err := longerTimeoutExec.Evaluate(ctx, ".spec.containers[].name")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(2))
 		})
@@ -235,24 +235,24 @@ var _ = Describe("Runner", func() {
 	Describe("JSON conversion", func() {
 		It("should handle different source object types", func() {
 			stringExec := NewDefaultRunner("test-string")
-			results, err := stringExec.Extract(ctx, ". | length")
+			results, err := stringExec.Evaluate(ctx, ". | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 11))
 
 			numberExec := NewDefaultRunner(42)
-			results, err = numberExec.Extract(ctx, ". + 8")
+			results, err = numberExec.Evaluate(ctx, ". + 8")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 50))
 
 			arrayExec := NewDefaultRunner(A{1, 2, 3})
-			results, err = arrayExec.Extract(ctx, ". | length")
+			results, err = arrayExec.Evaluate(ctx, ". | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 3))
 		})
 
 		It("should handle nil values", func() {
 			nilExec := NewDefaultRunner(nil)
-			results, err := nilExec.Extract(ctx, ".")
+			results, err := nilExec.Evaluate(ctx, ".")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(BeNil())
@@ -286,7 +286,7 @@ var _ = Describe("Runner", func() {
 
 		Context("with // alternative operator", func() {
 			It("should return actual value when path exists", func() {
-				results, err := exec.Extract(ctx, `.labels.app // "default-app"`)
+				results, err := exec.Evaluate(ctx, `.labels.app // "default-app"`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -294,7 +294,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should return default value when path does not exist", func() {
-				results, err := exec.Extract(ctx, `.labels.nonexistent // "default-value"`)
+				results, err := exec.Evaluate(ctx, `.labels.nonexistent // "default-value"`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -302,7 +302,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should return default value when intermediate path is null", func() {
-				results, err := exec.Extract(ctx, `.missing.nested.path // "fallback"`)
+				results, err := exec.Evaluate(ctx, `.missing.nested.path // "fallback"`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -310,7 +310,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should handle numeric default values", func() {
-				results, err := exec.Extract(ctx, `.spec.replicas // 1`)
+				results, err := exec.Evaluate(ctx, `.spec.replicas // 1`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -318,7 +318,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should handle boolean default values", func() {
-				results, err := exec.Extract(ctx, `.spec.enabled // true`)
+				results, err := exec.Evaluate(ctx, `.spec.enabled // true`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -326,7 +326,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should handle object default values", func() {
-				results, err := exec.Extract(ctx, `.status // {"phase": "Unknown"}`)
+				results, err := exec.Evaluate(ctx, `.status // {"phase": "Unknown"}`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -334,7 +334,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should handle array default values", func() {
-				results, err := exec.Extract(ctx, `.spec.volumes // []`)
+				results, err := exec.Evaluate(ctx, `.spec.volumes // []`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -344,7 +344,7 @@ var _ = Describe("Runner", func() {
 
 		Context("with has() function", func() {
 			It("should return true for existing keys", func() {
-				results, err := exec.Extract(ctx, `.labels | has("app")`)
+				results, err := exec.Evaluate(ctx, `.labels | has("app")`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -352,7 +352,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should return false for non-existing keys", func() {
-				results, err := exec.Extract(ctx, `.labels | has("nonexistent")`)
+				results, err := exec.Evaluate(ctx, `.labels | has("nonexistent")`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -360,7 +360,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should work with conditional defaults", func() {
-				results, err := exec.Extract(ctx, `if (.labels | has("environment")) then .labels.environment else "development" end`)
+				results, err := exec.Evaluate(ctx, `if (.labels | has("environment")) then .labels.environment else "development" end`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -370,7 +370,7 @@ var _ = Describe("Runner", func() {
 
 		Context("with complex default patterns", func() {
 			It("should chain multiple default operators", func() {
-				results, err := exec.Extract(ctx, `.labels.environment // .annotations.environment // "staging"`)
+				results, err := exec.Evaluate(ctx, `.labels.environment // .annotations.environment // "staging"`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -378,7 +378,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should use defaults in array operations", func() {
-				results, err := exec.Extract(ctx, `(.spec.containers // []) | length`)
+				results, err := exec.Evaluate(ctx, `(.spec.containers // []) | length`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -386,7 +386,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should use defaults with map operations", func() {
-				results, err := exec.Extract(ctx, `(.spec.containers // []) | map(.name // "unnamed")`)
+				results, err := exec.Evaluate(ctx, `(.spec.containers // []) | map(.name // "unnamed")`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))
@@ -394,7 +394,7 @@ var _ = Describe("Runner", func() {
 			})
 
 			It("should handle defaults in selections", func() {
-				results, err := exec.Extract(ctx, `(.spec.containers // []) | map(select(.name // "default" | startswith("m"))) | length`)
+				results, err := exec.Evaluate(ctx, `(.spec.containers // []) | map(select(.name // "default" | startswith("m"))) | length`)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(results).To(HaveLen(1))

@@ -106,7 +106,7 @@ var _ = Describe("Accessor", func() {
 		jobgroupFactory = NewComponentFactoryFromObject(jobgroupRI, jobgroupObject)
 		reactorFactory = NewComponentFactoryFromObject(reactorRI, reactorObject)
 
-		// Initialize extractors
+		// Initialize evaluators
 		pyflowAccessor = NewAccessor(jq.NewDefaultRunner(pyflowObject))
 		jobgroupAccessor = NewAccessor(jq.NewDefaultRunner(jobgroupObject))
 		reactorAccessor = NewAccessor(jq.NewDefaultRunner(reactorObject))
@@ -424,7 +424,7 @@ var _ = Describe("Accessor", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(HaveLen(3)) // api + worker + cache services
 
-				// Extract the replica values (map iteration order is non-deterministic)
+				// Evaluate the replica values (map iteration order is non-deterministic)
 				replicaCounts := make([]int32, len(result))
 				for i, scale := range result {
 					replicaCounts[i] = *scale.Replicas
@@ -454,11 +454,11 @@ var _ = Describe("Accessor", func() {
 			It("should handle conversion errors gracefully", func() {
 				// Create a mock evaluator that returns data that can't be converted
 				mockEvaluator := jq.NewMockRunner(gomock.NewController(GinkgoT()))
-				extractor := NewAccessor(mockEvaluator)
+				evaluator := NewAccessor(mockEvaluator)
 
 				// Test with incompatible data types that should fail conversion
 				mockEvaluator.EXPECT().
-					Extract(gomock.Any(), "spec.podTemplate").
+					Evaluate(gomock.Any(), "spec.podTemplate").
 					Return([]any{
 						map[string]any{
 							"metadata": "this is a string, not ObjectMeta",
@@ -473,7 +473,7 @@ var _ = Describe("Accessor", func() {
 					},
 				}
 
-				_, err := extractor.ExtractPodTemplateSpec(ctx, definition)
+				_, err := evaluator.ExtractPodTemplateSpec(ctx, definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to convert object"))
 			})
@@ -481,14 +481,14 @@ var _ = Describe("Accessor", func() {
 			It("should handle circular reference errors in JSON conversion", func() {
 				// Create a mock evaluator that returns circular reference data
 				mockEvaluator := jq.NewMockRunner(gomock.NewController(GinkgoT()))
-				extractor := NewAccessor(mockEvaluator)
+				evaluator := NewAccessor(mockEvaluator)
 
 				// Create a circular reference that would break JSON marshaling
 				circularData := make(map[string]any)
 				circularData["self"] = circularData
 
 				mockEvaluator.EXPECT().
-					Extract(gomock.Any(), "spec.resources").
+					Evaluate(gomock.Any(), "spec.resources").
 					Return([]any{circularData}, nil)
 
 				definition := v1alpha1.ComponentDefinition{
@@ -500,7 +500,7 @@ var _ = Describe("Accessor", func() {
 					},
 				}
 
-				_, err := extractor.ExtractFragmentedPodSpec(ctx, definition)
+				_, err := evaluator.ExtractFragmentedPodSpec(ctx, definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to convert object"))
 			})
@@ -978,7 +978,7 @@ var _ = Describe("Accessor", func() {
 				accessor := NewAccessor(mockEvaluator)
 
 				mockEvaluator.EXPECT().
-					Extract(gomock.Any(), ".status.invalidPath").
+					Evaluate(gomock.Any(), ".status.invalidPath").
 					Return(nil, errors.New("query evaluation failed"))
 
 				definition := v1alpha1.ComponentDefinition{

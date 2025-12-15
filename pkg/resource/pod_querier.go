@@ -21,13 +21,13 @@ func (e InstanceNotFoundError) Error() string {
 // PodQuerier handles JQ-based querying operations against pods
 type PodQuerier struct {
 	pod       *corev1.Pod
-	extractor jq.Extractor
+	evaluator jq.Evaluator
 }
 
 func NewPodQuerier(pod *corev1.Pod) *PodQuerier {
 	return &PodQuerier{
 		pod:       pod,
-		extractor: jq.NewDefaultRunner(pod),
+		evaluator: jq.NewDefaultRunner(pod),
 	}
 }
 
@@ -52,7 +52,7 @@ func (pq *PodQuerier) MatchesComponentType(ctx context.Context, selector *v1alph
 
 // checkKeyExists returns true if the key exists
 func (pq *PodQuerier) checkKeyExists(ctx context.Context, keyPath string) (bool, error) {
-	results, err := pq.extractor.Extract(ctx, keyPath)
+	results, err := pq.evaluator.Evaluate(ctx, keyPath)
 	if err != nil {
 		return false, err
 	}
@@ -74,7 +74,7 @@ func (pq *PodQuerier) checkKeyValue(ctx context.Context, keyPath, expectedValue 
 	}
 
 	query := fmt.Sprintf("%s == %s", keyPath, serializedValue)
-	results, err := pq.extractor.Extract(ctx, query)
+	results, err := pq.evaluator.Evaluate(ctx, query)
 	if err != nil {
 		return false, err
 	}
@@ -97,7 +97,7 @@ func (pq *PodQuerier) ExtractGroupKeys(ctx context.Context, keyPaths []string) (
 	groupKeys := make([]string, 0, len(keyPaths))
 
 	for _, keyPath := range keyPaths {
-		results, err := pq.extractor.Extract(ctx, keyPath)
+		results, err := pq.evaluator.Evaluate(ctx, keyPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to evaluate group key path %q: %w", keyPath, err)
 		}
@@ -120,7 +120,7 @@ func (pq *PodQuerier) PassesFilters(ctx context.Context, filters []string) (bool
 	}
 
 	for _, filter := range filters {
-		results, err := pq.extractor.Extract(ctx, filter)
+		results, err := pq.evaluator.Evaluate(ctx, filter)
 		if err != nil {
 			return false, fmt.Errorf("failed to evaluate filter %q: %w", filter, err)
 		}
@@ -148,7 +148,7 @@ func (pq *PodQuerier) GetMatchingInstanceId(ctx context.Context, instanceSelecto
 		return "", fmt.Errorf("no instance selector provided but instance ids are not empty")
 	}
 
-	results, err := pq.extractor.Extract(ctx, instanceSelector.IdPath)
+	results, err := pq.evaluator.Evaluate(ctx, instanceSelector.IdPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to evaluate instance id path %s: %w", instanceSelector.IdPath, err)
 	}

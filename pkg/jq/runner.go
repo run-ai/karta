@@ -12,8 +12,8 @@ import (
 
 //go:generate mockgen -source=runner.go -destination=runner_mock.go -package=jq Runner
 
-type Extractor interface {
-	Extract(ctx context.Context, expression string) ([]any, error)
+type Evaluator interface {
+	Evaluate(ctx context.Context, expression string) ([]any, error)
 }
 
 type Assigner interface {
@@ -25,7 +25,7 @@ type Assigner interface {
 }
 
 type Runner interface {
-	Extractor
+	Evaluator
 	Assigner
 	GetObject() (any, error)
 }
@@ -55,11 +55,7 @@ func NewDefaultRunner(source any) Runner {
 }
 
 func NewRunner(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) Runner {
-	r := &runner{
-		source:       source,
-		maxResults:   defaultMaxResults,
-		queryTimeout: defaultTimeoutInMilliseconds * time.Millisecond,
-	}
+	r := NewDefaultRunner(source).(*runner)
 
 	if queryMaxResults != nil {
 		r.maxResults = *queryMaxResults
@@ -71,7 +67,7 @@ func NewRunner(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int
 	return r
 }
 
-func (r *runner) Extract(ctx context.Context, expression string) ([]any, error) {
+func (r *runner) Evaluate(ctx context.Context, expression string) ([]any, error) {
 	jsonData, err := r.getJsonData()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get JSON data: %w", err)
