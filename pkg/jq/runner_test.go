@@ -145,9 +145,9 @@ var _ = Describe("Runner", func() {
 
 	Describe("Result count limits", func() {
 		var (
-			largeObject M
-			limitedExec Runner
-			maxResults  = 5
+			largeObject   M
+			limitedRunner Runner
+			maxResults    = 5
 		)
 
 		BeforeEach(func() {
@@ -167,18 +167,18 @@ var _ = Describe("Runner", func() {
 			}
 			largeObject["items"] = items
 
-			limitedExec = NewRunner(largeObject, &maxResults, nil)
+			limitedRunner = NewRunner(largeObject, &maxResults, nil)
 		})
 
 		It("should respect max results limit", func() {
-			results, err := limitedExec.Evaluate(ctx, ".items[].id")
+			results, err := limitedRunner.Evaluate(ctx, ".items[].id")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("query results exceed the allowed number 5"))
 			Expect(results).To(BeNil())
 		})
 
 		It("should allow results under the limit", func() {
-			results, err := limitedExec.Evaluate(ctx, ".items[0:3][].id")
+			results, err := limitedRunner.Evaluate(ctx, ".items[0:3][].id")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(3))
 			Expect(results).To(ConsistOf(float64(0), float64(1), float64(2)))
@@ -187,9 +187,9 @@ var _ = Describe("Runner", func() {
 
 	Describe("Timeout limits", func() {
 		var (
-			fastTimeoutExec Runner
-			maxResults      = 1000
-			timeoutMs       = 1
+			fastTimeoutRunner Runner
+			maxResults        = 1000
+			timeoutMs         = 1 // Very short timeout
 		)
 
 		BeforeEach(func() {
@@ -208,25 +208,29 @@ var _ = Describe("Runner", func() {
 			}
 			slowObject["data"] = data
 
-			fastTimeoutExec = NewRunner(slowObject, &maxResults, &timeoutMs)
+			fastTimeoutRunner = NewRunner(slowObject, &maxResults, &timeoutMs)
 		})
 
 		It("should respect timeout limits for complex operations", func() {
-			_, err := fastTimeoutExec.Evaluate(ctx, ".data | map(select(.nested | length > 50)) | length")
+			// With 1ms timeout and 10,000 items, this should deterministically timeout
+			_, err := fastTimeoutRunner.Evaluate(ctx, ".data | map(select(.nested | length > 50)) | length")
 
+			// 1ms timeout should be too short for processing 10,000 items
 			Expect(err).To(HaveOccurred())
 
+			// Should be a JQExecutionError wrapping context.DeadlineExceeded
 			var jqExecError *JQExecutionError
 			Expect(errors.As(err, &jqExecError)).To(BeTrue())
 
+			// The wrapped error should be context.DeadlineExceeded
 			Expect(errors.Is(jqExecError.Unwrap(), context.DeadlineExceeded)).To(BeTrue())
 		})
 
 		It("should work with longer timeout for the same operation", func() {
 			longerTimeoutMs := 10000
-			longerTimeoutExec := NewRunner(testObject, &maxResults, &longerTimeoutMs)
+			longerTimeoutRunner := NewRunner(testObject, &maxResults, &longerTimeoutMs)
 
-			results, err := longerTimeoutExec.Evaluate(ctx, ".spec.containers[].name")
+			results, err := longerTimeoutRunner.Evaluate(ctx, ".spec.containers[].name")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(2))
 		})
@@ -234,25 +238,28 @@ var _ = Describe("Runner", func() {
 
 	Describe("JSON conversion", func() {
 		It("should handle different source object types", func() {
-			stringExec := NewDefaultRunner("test-string")
-			results, err := stringExec.Evaluate(ctx, ". | length")
+			// Test with string
+			stringRunner := NewDefaultRunner("test-string")
+			results, err := stringRunner.Evaluate(ctx, ". | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 11))
 
-			numberExec := NewDefaultRunner(42)
-			results, err = numberExec.Evaluate(ctx, ". + 8")
+			// Test with number
+			numberRunner := NewDefaultRunner(42)
+			results, err = numberRunner.Evaluate(ctx, ". + 8")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 50))
 
-			arrayExec := NewDefaultRunner(A{1, 2, 3})
-			results, err = arrayExec.Evaluate(ctx, ". | length")
+			// Test with array
+			arrayRunner := NewDefaultRunner(A{1, 2, 3})
+			results, err = arrayRunner.Evaluate(ctx, ". | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 3))
 		})
 
 		It("should handle nil values", func() {
-			nilExec := NewDefaultRunner(nil)
-			results, err := nilExec.Evaluate(ctx, ".")
+			nilRunner := NewDefaultRunner(nil)
+			results, err := nilRunner.Evaluate(ctx, ".")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			Expect(results[0]).To(BeNil())
@@ -435,7 +442,7 @@ var _ = Describe("Runner", func() {
 			Expect(updated).To(Equal(M{"metadata": M{"name": "updated", "example": "example"}}))
 		})
 
-		It("should update with alternative operator when primary exists", func() {
+		It("should update primary with alternative operator when primary exists", func() {
 			testData := M{
 				"primary":  "value1",
 				"fallback": "value2",
