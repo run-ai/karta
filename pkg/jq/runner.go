@@ -35,12 +35,14 @@ const (
 	defaultTimeoutInMilliseconds = 10000
 )
 
+// runner handles JQ evaluation against a source object
 type runner struct {
 	source any
 
 	maxResults   int
 	queryTimeout time.Duration
 
+	// Lazy JSON conversion
 	jsonOnce sync.Once
 	jsonData any
 	jsonErr  error
@@ -67,6 +69,7 @@ func NewRunner(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int
 	return r
 }
 
+// Evaluate executes a JQ expression
 func (r *runner) Evaluate(ctx context.Context, expression string) ([]any, error) {
 	jsonData, err := r.getJsonData()
 	if err != nil {
@@ -101,7 +104,6 @@ func (r *runner) AssignZip(ctx context.Context, expression string, values []any)
 }
 
 func (r *runner) assignWithExpression(ctx context.Context, updateExpression string, variables []string, values []any) error {
-	// Validate that variables and values have the same length
 	if len(variables) != len(values) {
 		return fmt.Errorf("variables and values length mismatch: %d variables but %d values", len(variables), len(values))
 	}
@@ -111,7 +113,6 @@ func (r *runner) assignWithExpression(ctx context.Context, updateExpression stri
 		return fmt.Errorf("failed to get JSON data: %w", err)
 	}
 
-	// Convert all values to primitives
 	convertedValues := make([]any, len(values))
 	for i, val := range values {
 		converted, err := convertToPrimitive(val)
