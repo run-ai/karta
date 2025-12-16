@@ -164,7 +164,7 @@ func (c *Component) GetPodMetadata(ctx context.Context) (map[string]metav1.Objec
 }
 
 func (c *Component) UpdatePodTemplateSpec(ctx context.Context, instaceIdToPodTemplateSpec map[string]corev1.PodTemplateSpec) error {
-	podTemplateSpecs, err := unzipWithInstanceIds(ctx, c, instaceIdToPodTemplateSpec)
+	_, podTemplateSpecs, err := unzipWithInstanceIds(ctx, c, instaceIdToPodTemplateSpec)
 	if err != nil {
 		return fmt.Errorf("failed to unzip given pod template specs and instance ids: %w", err)
 	}
@@ -173,7 +173,7 @@ func (c *Component) UpdatePodTemplateSpec(ctx context.Context, instaceIdToPodTem
 }
 
 func (c *Component) UpdatePodSpec(ctx context.Context, instaceIdToPodSpec map[string]corev1.PodSpec) error {
-	podSpecs, err := unzipWithInstanceIds(ctx, c, instaceIdToPodSpec)
+	_, podSpecs, err := unzipWithInstanceIds(ctx, c, instaceIdToPodSpec)
 	if err != nil {
 		return fmt.Errorf("failed to unzip given pod specs and instance ids: %w", err)
 	}
@@ -182,7 +182,7 @@ func (c *Component) UpdatePodSpec(ctx context.Context, instaceIdToPodSpec map[st
 }
 
 func (c *Component) UpdatePodMetadata(ctx context.Context, instaceIdToPodMetadata map[string]metav1.ObjectMeta) error {
-	podMetadata, err := unzipWithInstanceIds(ctx, c, instaceIdToPodMetadata)
+	_, podMetadata, err := unzipWithInstanceIds(ctx, c, instaceIdToPodMetadata)
 	if err != nil {
 		return fmt.Errorf("failed to unzip given pod metadata and instance ids: %w", err)
 	}
@@ -191,7 +191,7 @@ func (c *Component) UpdatePodMetadata(ctx context.Context, instaceIdToPodMetadat
 }
 
 func (c *Component) UpdateFragmentedPodSpec(ctx context.Context, instaceIdToFragmentedPodSpec map[string]FragmentedPodSpec) error {
-	fragmentedPodSpecs, err := unzipWithInstanceIds(ctx, c, instaceIdToFragmentedPodSpec)
+	_, fragmentedPodSpecs, err := unzipWithInstanceIds(ctx, c, instaceIdToFragmentedPodSpec)
 	if err != nil {
 		return fmt.Errorf("failed to unzip given fragmented pod specs and instance ids: %w", err)
 	}
@@ -354,21 +354,21 @@ func zipWithInstanceIds[T any](instanceIds []string, results []T) (map[string]T,
 }
 
 // unzipWithInstanceIds converts a map of instance ID to value into an ordered slice
-func unzipWithInstanceIds[T any](ctx context.Context, c *Component, valueMap map[string]T) ([]T, error) {
+func unzipWithInstanceIds[T any](ctx context.Context, c *Component, valueMap map[string]T) ([]string, []T, error) {
 	instanceIds, err := c.GetInstanceIds(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", errGetInstanceIds, err)
+		return nil, nil, fmt.Errorf("%s: %w", errGetInstanceIds, err)
 	}
 
 	results := make([]T, 0, len(instanceIds))
 	for _, instanceId := range instanceIds {
 		value, ok := valueMap[instanceId]
 		if !ok {
-			return nil, fmt.Errorf("value not found for instance id: %s", instanceId)
+			return nil, nil, fmt.Errorf("value not found for instance id: %s", instanceId)
 		}
 		results = append(results, value)
 	}
-	return results, nil
+	return instanceIds, results, nil
 }
 
 func isDefinitionNotFoundError(err error) bool {
