@@ -424,7 +424,7 @@ var _ = Describe("Accessor", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(HaveLen(3)) // api + worker + cache services
 
-				// Evaluate the replica values (map iteration order is non-deterministic)
+				// Extract the replica values (map iteration order is non-deterministic)
 				replicaCounts := make([]int32, len(result))
 				for i, scale := range result {
 					replicaCounts[i] = *scale.Replicas
@@ -1039,11 +1039,11 @@ var _ = Describe("Accessor", func() {
 			accessor, jobgroupComp := accessorForObject(jobgroupRI, jobgroupObject, "job")
 			currentPodSpecs, err := accessor.ExtractPodSpec(ctx, jobgroupComp.definition)
 			Expect(err).NotTo(HaveOccurred())
+
 			for i := range currentPodSpecs {
 				currentPodSpecs[i].Containers = []corev1.Container{{Name: "updated-container-" + strconv.Itoa(i), Resources: corev1.ResourceRequirements{Claims: []corev1.ResourceClaim{{Name: "updated-resource-claim-" + strconv.Itoa(i)}}}}}
 				currentPodSpecs[i].SchedulerName = "updated-scheduler-" + strconv.Itoa(i)
 			}
-
 			err = accessor.UpdatePodSpec(ctx, jobgroupComp.definition, currentPodSpecs)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -1073,7 +1073,6 @@ var _ = Describe("Accessor", func() {
 			for i := range currentPodSpecs {
 				currentPodSpecs[i].Containers = []corev1.Container{}
 			}
-
 			err = accessor.UpdatePodSpec(ctx, jobgroupComp.definition, currentPodSpecs)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -1096,8 +1095,8 @@ var _ = Describe("Accessor", func() {
 			podSpecs := []corev1.PodSpec{{
 				Containers: []corev1.Container{{Name: "test-container"}},
 			}}
-
 			err := accessor.UpdatePodSpec(ctx, masterComp.definition, podSpecs)
+
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring(noPodSpecError))
 		})
@@ -1120,6 +1119,7 @@ var _ = Describe("Accessor", func() {
 			}
 			err = accessor.UpdateFragmentedPodSpec(ctx, reactorComp.definition, currentFragmentedPodSpecs)
 			Expect(err).NotTo(HaveOccurred())
+
 			instanceIds, err := reactorComp.GetInstanceIds(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			updatedObject, err := accessor.GetObject()
@@ -1157,9 +1157,9 @@ var _ = Describe("Accessor", func() {
 					Image: "updated-image:" + strconv.Itoa(i),
 				}}
 			}
-
 			err = accessor.UpdateFragmentedPodSpec(ctx, reactorComp.definition, currentFragmentedPodSpecs)
 			Expect(err).NotTo(HaveOccurred())
+
 			instanceIds, err := reactorComp.GetInstanceIds(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			updatedObject, err := accessor.GetObject()
