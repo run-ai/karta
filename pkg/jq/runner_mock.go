@@ -55,6 +55,21 @@ func (mr *MockEvaluatorMockRecorder) Evaluate(ctx, expression any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Evaluate", reflect.TypeOf((*MockEvaluator)(nil).Evaluate), ctx, expression)
 }
 
+// GetObject mocks base method.
+func (m *MockEvaluator) GetObject() (any, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetObject")
+	ret0, _ := ret[0].(any)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetObject indicates an expected call of GetObject.
+func (mr *MockEvaluatorMockRecorder) GetObject() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObject", reflect.TypeOf((*MockEvaluator)(nil).GetObject))
+}
+
 // MockAssigner is a mock of Assigner interface.
 type MockAssigner struct {
 	ctrl     *gomock.Controller

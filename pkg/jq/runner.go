@@ -13,7 +13,10 @@ import (
 //go:generate mockgen -source=runner.go -destination=runner_mock.go -package=jq Runner
 
 type Evaluator interface {
+	// Evaluate evaluates a JQ expression and returns the results.
 	Evaluate(ctx context.Context, expression string) ([]any, error)
+	// GetObject returns the object as a golang basic type.
+	GetObject() (any, error)
 }
 
 type Assigner interface {
@@ -27,7 +30,6 @@ type Assigner interface {
 type Runner interface {
 	Evaluator
 	Assigner
-	GetObject() (any, error)
 }
 
 const (
@@ -43,9 +45,9 @@ type runner struct {
 	queryTimeout time.Duration
 
 	// Lazy JSON conversion
-	jsonOnce sync.Once
-	jsonData any
-	jsonErr  error
+	jsonOnce   sync.Once
+	objectData any
+	jsonErr    error
 }
 
 func NewDefaultRunner(source any) Runner {
@@ -71,7 +73,7 @@ func NewRunner(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int
 
 // Evaluate executes a JQ expression
 func (r *runner) Evaluate(ctx context.Context, expression string) ([]any, error) {
-	jsonData, err := r.getJsonData()
+	objectData, err := r.getObjectData()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get JSON data: %w", err)
 	}
@@ -81,7 +83,7 @@ func (r *runner) Evaluate(ctx context.Context, expression string) ([]any, error)
 		return nil, err
 	}
 
-	return r.safeRunWithVariables(ctx, query, jsonData, expression, nil)
+	return r.safeRunWithVariables(ctx, query, objectData, expression, nil)
 }
 
 func (r *runner) Assign(ctx context.Context, expression string, value any) error {
@@ -91,6 +93,7 @@ func (r *runner) Assign(ctx context.Context, expression string, value any) error
 
 func (r *runner) AssignZip(ctx context.Context, expression string, values []any) error {
 	// JQ expression to update array items using zip operation while verifying the length of the number of matched keys and  values array
+	// First it evalutes the paths array expression, then it set per path with the corresponding value.
 	updateExpression := fmt.Sprintf(`
 		[path(%s)] as $paths |
 		if ($paths | length) == ($val | length) then
@@ -108,7 +111,7 @@ func (r *runner) assignWithExpression(ctx context.Context, updateExpression stri
 		return fmt.Errorf("variables and values length mismatch: %d variables but %d values", len(variables), len(values))
 	}
 
-	jsonData, err := r.getJsonData()
+	objectData, err := r.getObjectData()
 	if err != nil {
 		return fmt.Errorf("failed to get JSON data: %w", err)
 	}
@@ -127,21 +130,21 @@ func (r *runner) assignWithExpression(ctx context.Context, updateExpression stri
 		return &JQCompileError{Expression: updateExpression, Err: err}
 	}
 
-	results, err := r.safeRunWithVariables(ctx, query, jsonData, updateExpression, convertedValues)
+	results, err := r.safeRunWithVariables(ctx, query, objectData, updateExpression, convertedValues)
 	if err != nil {
 		return err
 	}
 
 	if len(results) == 0 {
-		return fmt.Errorf("update query returned no results")
+		return fmt.Errorf("update query returned no results for expression: %s", updateExpression)
 	}
 
-	r.jsonData = results[0]
+	r.objectData = results[0]
 	return nil
 }
 
 func (r *runner) GetObject() (any, error) {
-	return r.getJsonData()
+	return r.getObjectData()
 }
 
 func (r *runner) safeRunWithVariables(ctx context.Context, q *gojq.Code, input any, expression string, variables []any) ([]any, error) {
@@ -168,22 +171,22 @@ func (r *runner) safeRunWithVariables(ctx context.Context, q *gojq.Code, input a
 	return results, nil
 }
 
-// getJsonData performs lazy JSON conversion with sync.Once
-func (r *runner) getJsonData() (any, error) {
+// getObjectData performs lazy JSON conversion with sync.Once
+func (r *runner) getObjectData() (any, error) {
 	r.jsonOnce.Do(func() {
 		converted, err := convertToPrimitive(r.source)
 		if err != nil {
 			r.jsonErr = fmt.Errorf("failed to convert source to primitive: %w", err)
 			return
 		}
-		r.jsonData = converted
+		r.objectData = converted
 	})
 
 	if r.jsonErr != nil {
 		return nil, r.jsonErr
 	}
 
-	return r.jsonData, nil
+	return r.objectData, nil
 }
 
 func (r *runner) compile(expression string, variables []string) (*gojq.Code, error) {
