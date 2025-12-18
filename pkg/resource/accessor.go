@@ -419,6 +419,18 @@ func (a *Accessor) UpdateFragmentedPodSpec(ctx context.Context, definition v1alp
 	return nil
 }
 
+func (a *Accessor) updateField(ctx context.Context, def v1alpha1.ComponentDefinition, path *string, values []any, isEmpty func(any) bool) error {
+	if path != nil {
+		return a.assign(ctx, def, *path, values)
+	}
+	for _, v := range values {
+		if !isEmpty(v) {
+			return fmt.Errorf("path is not defined and values are not empty")
+		}
+	}
+	return nil
+}
+
 func (a *Accessor) updateStringField(ctx context.Context, def v1alpha1.ComponentDefinition, path *string, specs []FragmentedPodSpec, getter func(FragmentedPodSpec) string) error {
 	values := lo.Map(specs, func(s FragmentedPodSpec, _ int) any { return getter(s) })
 	return a.updateField(ctx, def, path, values, func(v any) bool { return v.(string) == "" })
@@ -439,20 +451,8 @@ func updateSliceField[T any](a *Accessor, ctx context.Context, def v1alpha1.Comp
 	return a.updateField(ctx, def, path, values, func(v any) bool { return len(v.([]T)) == 0 })
 }
 
-func (a *Accessor) updateField(ctx context.Context, def v1alpha1.ComponentDefinition, path *string, values []any, isEmpty func(any) bool) error {
-	if path != nil {
-		return a.assign(ctx, def, *path, values)
-	}
-	for _, v := range values {
-		if !isEmpty(v) {
-			return fmt.Errorf("path is not defined and values are not empty")
-		}
-	}
-	return nil
-}
-
 func (a *Accessor) assign(ctx context.Context, definition v1alpha1.ComponentDefinition, path string, values []any) error {
-	// If instance id path is defined, use assign zip as the expression is an array expression (each cordinate per instance)
+	// If instance id path is defined, use assign zip as the expression is an array expression (each coordinate per instance)
 	if definition.InstanceIdPath != nil {
 		return a.jqRunner.AssignZip(ctx, path, values)
 	} else {

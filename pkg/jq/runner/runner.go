@@ -1,4 +1,4 @@
-package jq
+package runner
 
 import (
 	"context"
@@ -8,29 +8,8 @@ import (
 	"time"
 
 	"github.com/itchyny/gojq"
+	"github.com/run-ai/kai-bolt/pkg/jq"
 )
-
-//go:generate mockgen -source=runner.go -destination=runner_mock.go -package=jq Runner
-
-type Evaluator interface {
-	// Evaluate evaluates a JQ expression and returns the results.
-	Evaluate(ctx context.Context, expression string) ([]any, error)
-	// GetObject returns the object as a golang basic type.
-	GetObject() (any, error)
-}
-
-type Assigner interface {
-	// Assign assigns a value to a given expression. e.g .name = "updated"
-	Assign(ctx context.Context, expression string, value any) error
-	// AssignZip assigns an array of values to a given array expression using zip operation. e.g .items[] = ["a", "b", "c"]
-	// The length of the values array must match the length of the array expression.
-	AssignZip(ctx context.Context, expression string, values []any) error
-}
-
-type Runner interface {
-	Evaluator
-	Assigner
-}
 
 const (
 	defaultMaxResults            = 1000
@@ -50,7 +29,7 @@ type runner struct {
 	jsonErr    error
 }
 
-func NewDefaultRunner(source any) Runner {
+func NewDefault(source any) jq.Runner {
 	return &runner{
 		source:       source,
 		maxResults:   defaultMaxResults,
@@ -58,8 +37,8 @@ func NewDefaultRunner(source any) Runner {
 	}
 }
 
-func NewRunner(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) Runner {
-	r := NewDefaultRunner(source).(*runner)
+func New(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) jq.Runner {
+	r := NewDefault(source).(*runner)
 
 	if queryMaxResults != nil {
 		r.maxResults = *queryMaxResults
@@ -93,7 +72,7 @@ func (r *runner) Assign(ctx context.Context, expression string, value any) error
 
 func (r *runner) AssignZip(ctx context.Context, expression string, values []any) error {
 	// JQ expression to update array items using zip operation while verifying the length of the number of matched keys and  values array
-	// First it evalutes the paths array expression, then it set per path with the corresponding value.
+	// First it evaluates the paths array expression, then it set per path with the corresponding value.
 	updateExpression := fmt.Sprintf(`
 		[path(%s)] as $paths |
 		if ($paths | length) == ($val | length) then
@@ -136,6 +115,7 @@ func (r *runner) assignWithExpression(ctx context.Context, updateExpression stri
 	}
 
 	if len(results) == 0 {
+		// Should not happen as the query is expected to return at least one result.
 		return fmt.Errorf("update query returned no results for expression: %s", updateExpression)
 	}
 

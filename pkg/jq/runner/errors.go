@@ -1,4 +1,4 @@
-package jq
+package runner
 
 import "fmt"
 

@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/run-ai/kai-bolt/pkg/jq/runner"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -15,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/jq"
 	"github.com/run-ai/kai-bolt/test/types"
 )
 
@@ -65,7 +65,7 @@ func accessorForObject(
 	object client.Object,
 	componentName string,
 ) (*Accessor, *Component) {
-	accessor := NewAccessor(jq.NewDefaultRunner(object))
+	accessor := NewAccessor(runner.NewDefault(object))
 	factory := NewComponentFactoryFromObject(ri, object)
 	comp, err := factory.GetComponent(componentName)
 	Expect(err).NotTo(HaveOccurred())
@@ -107,9 +107,9 @@ var _ = Describe("Accessor", func() {
 		reactorFactory = NewComponentFactoryFromObject(reactorRI, reactorObject)
 
 		// Initialize evaluators
-		pyflowAccessor = NewAccessor(jq.NewDefaultRunner(pyflowObject))
-		jobgroupAccessor = NewAccessor(jq.NewDefaultRunner(jobgroupObject))
-		reactorAccessor = NewAccessor(jq.NewDefaultRunner(reactorObject))
+		pyflowAccessor = NewAccessor(runner.NewDefault(pyflowObject))
+		jobgroupAccessor = NewAccessor(runner.NewDefault(jobgroupObject))
+		reactorAccessor = NewAccessor(runner.NewDefault(reactorObject))
 	})
 
 	Describe("ExtractPodTemplateSpec", func() {
@@ -453,8 +453,8 @@ var _ = Describe("Accessor", func() {
 		Context("safeConvertSlice", func() {
 			It("should handle conversion errors gracefully", func() {
 				// Create a mock runner that returns data that can't be converted
-				mockRunner := jq.NewMockRunner(gomock.NewController(GinkgoT()))
-				accesor := NewAccessor(mockRunner)
+				mockRunner := runner.NewMockRunner(gomock.NewController(GinkgoT()))
+				accessor := NewAccessor(mockRunner)
 
 				// Test with incompatible data types that should fail conversion
 				mockRunner.EXPECT().
@@ -473,15 +473,15 @@ var _ = Describe("Accessor", func() {
 					},
 				}
 
-				_, err := accesor.ExtractPodTemplateSpec(ctx, definition)
+				_, err := accessor.ExtractPodTemplateSpec(ctx, definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to convert object"))
 			})
 
 			It("should handle circular reference errors in JSON conversion", func() {
 				// Create a mock runner that returns circular reference data
-				mockRunner := jq.NewMockRunner(gomock.NewController(GinkgoT()))
-				accesor := NewAccessor(mockRunner)
+				mockRunner := runner.NewMockRunner(gomock.NewController(GinkgoT()))
+				accessor := NewAccessor(mockRunner)
 
 				// Create a circular reference that would break JSON marshaling
 				circularData := make(map[string]any)
@@ -500,7 +500,7 @@ var _ = Describe("Accessor", func() {
 					},
 				}
 
-				_, err := accesor.ExtractFragmentedPodSpec(ctx, definition)
+				_, err := accessor.ExtractFragmentedPodSpec(ctx, definition)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to convert object"))
 			})
@@ -554,7 +554,7 @@ var _ = Describe("Accessor", func() {
 
 				factory := NewComponentFactoryFromObject(jobgroupRI, jobgroupObject)
 
-				accessor := NewAccessor(jq.NewDefaultRunner(jobgroupObject))
+				accessor := NewAccessor(runner.NewDefault(jobgroupObject))
 
 				comp, err := factory.GetComponent("job")
 				Expect(err).NotTo(HaveOccurred())
@@ -974,7 +974,7 @@ var _ = Describe("Accessor", func() {
 			})
 
 			It("should handle invalid phase path", func() {
-				mockRunner := jq.NewMockRunner(gomock.NewController(GinkgoT()))
+				mockRunner := runner.NewMockRunner(gomock.NewController(GinkgoT()))
 				accessor := NewAccessor(mockRunner)
 
 				mockRunner.EXPECT().

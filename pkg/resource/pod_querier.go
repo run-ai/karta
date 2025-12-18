@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/run-ai/kai-bolt/pkg/jq/runner"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
@@ -27,7 +28,7 @@ type PodQuerier struct {
 func NewPodQuerier(pod *corev1.Pod) *PodQuerier {
 	return &PodQuerier{
 		pod:       pod,
-		evaluator: jq.NewDefaultRunner(pod),
+		evaluator: runner.NewDefault(pod),
 	}
 }
 

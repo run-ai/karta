@@ -4,17 +4,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/run-ai/kai-bolt/pkg/jq/runner"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/jq"
 )
 
-//go:generate mockgen -source=component_factory.go -destination=accessor_mock.go -package=resource ComponentAccessor
-type ComponentAccessor interface {
+type ComponentReader interface {
 	ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error)
 	ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error)
 	ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error)
@@ -22,11 +21,20 @@ type ComponentAccessor interface {
 	ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error)
 	ExtractStatus(ctx context.Context, definition v1alpha1.ComponentDefinition) (*Status, error)
 	ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error)
+	GetObject() (map[string]interface{}, error)
+}
+
+type ComponentWriter interface {
 	UpdatePodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, podTemplateSpecs []corev1.PodTemplateSpec) error
 	UpdatePodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, podSpecs []corev1.PodSpec) error
 	UpdatePodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition, podMetadata []metav1.ObjectMeta) error
 	UpdateFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, fragmentedPodSpecs []FragmentedPodSpec) error
-	GetObject() (map[string]interface{}, error)
+}
+
+//go:generate mockgen -source=component_factory.go -destination=accessor_mock.go -package=resource ComponentAccessor
+type ComponentAccessor interface {
+	ComponentReader
+	ComponentWriter
 }
 
 type ComponentFactory struct {
@@ -55,7 +63,7 @@ func NewComponentFactory(ri *v1alpha1.ResourceInterface, accessor ComponentAcces
 
 // NewComponentFactoryFromObject creates a new ResourceInterface-based component factory from a Kubernetes object
 func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object client.Object) *ComponentFactory {
-	jqRunner := jq.NewDefaultRunner(object)
+	jqRunner := runner.NewDefault(object)
 	accessor := NewAccessor(jqRunner)
 	return NewComponentFactory(ri, accessor)
 }

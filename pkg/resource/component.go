@@ -163,8 +163,8 @@ func (c *Component) GetPodMetadata(ctx context.Context) (map[string]metav1.Objec
 	return zipWithInstanceIds(instanceIds, podMetadata)
 }
 
-func (c *Component) UpdatePodTemplateSpec(ctx context.Context, instaceIdToPodTemplateSpec map[string]corev1.PodTemplateSpec) error {
-	_, podTemplateSpecs, err := unzipWithInstanceIds(ctx, c, instaceIdToPodTemplateSpec)
+func (c *Component) UpdatePodTemplateSpec(ctx context.Context, instanceIdToPodTemplateSpec map[string]corev1.PodTemplateSpec) error {
+	_, podTemplateSpecs, err := unzipWithInstanceIds(ctx, c, instanceIdToPodTemplateSpec)
 	if err != nil {
 		return fmt.Errorf("failed to unzip given pod template specs and instance ids: %w", err)
 	}
@@ -172,8 +172,8 @@ func (c *Component) UpdatePodTemplateSpec(ctx context.Context, instaceIdToPodTem
 	return c.accessor.UpdatePodTemplateSpec(ctx, c.definition, podTemplateSpecs)
 }
 
-func (c *Component) UpdatePodSpec(ctx context.Context, instaceIdToPodSpec map[string]corev1.PodSpec) error {
-	_, podSpecs, err := unzipWithInstanceIds(ctx, c, instaceIdToPodSpec)
+func (c *Component) UpdatePodSpec(ctx context.Context, instanceIdToPodSpec map[string]corev1.PodSpec) error {
+	_, podSpecs, err := unzipWithInstanceIds(ctx, c, instanceIdToPodSpec)
 	if err != nil {
 		return fmt.Errorf("failed to unzip given pod specs and instance ids: %w", err)
 	}
@@ -181,8 +181,8 @@ func (c *Component) UpdatePodSpec(ctx context.Context, instaceIdToPodSpec map[st
 	return c.accessor.UpdatePodSpec(ctx, c.definition, podSpecs)
 }
 
-func (c *Component) UpdatePodMetadata(ctx context.Context, instaceIdToPodMetadata map[string]metav1.ObjectMeta) error {
-	_, podMetadata, err := unzipWithInstanceIds(ctx, c, instaceIdToPodMetadata)
+func (c *Component) UpdatePodMetadata(ctx context.Context, instanceIdToPodMetadata map[string]metav1.ObjectMeta) error {
+	_, podMetadata, err := unzipWithInstanceIds(ctx, c, instanceIdToPodMetadata)
 	if err != nil {
 		return fmt.Errorf("failed to unzip given pod metadata and instance ids: %w", err)
 	}
@@ -190,8 +190,8 @@ func (c *Component) UpdatePodMetadata(ctx context.Context, instaceIdToPodMetadat
 	return c.accessor.UpdatePodMetadata(ctx, c.definition, podMetadata)
 }
 
-func (c *Component) UpdateFragmentedPodSpec(ctx context.Context, instaceIdToFragmentedPodSpec map[string]FragmentedPodSpec) error {
-	_, fragmentedPodSpecs, err := unzipWithInstanceIds(ctx, c, instaceIdToFragmentedPodSpec)
+func (c *Component) UpdateFragmentedPodSpec(ctx context.Context, instanceIdToFragmentedPodSpec map[string]FragmentedPodSpec) error {
+	_, fragmentedPodSpecs, err := unzipWithInstanceIds(ctx, c, instanceIdToFragmentedPodSpec)
 	if err != nil {
 		return fmt.Errorf("failed to unzip given fragmented pod specs and instance ids: %w", err)
 	}

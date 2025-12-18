@@ -1,11 +1,12 @@
-package jq
+package runner
 
 import (
 	"context"
 	"errors"
 	"strings"
 
-	testutils "github.com/run-ai/kai-bolt/test/types/utils"
+	"github.com/run-ai/kai-bolt/pkg/jq"
+	testutils "github.com/run-ai/kai-bolt/test/types/jsonutils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -18,7 +19,7 @@ type A = []any
 var _ = Describe("Runner", func() {
 	var (
 		ctx        context.Context
-		runner     Runner
+		runner     jq.Runner
 		testObject M
 	)
 
@@ -50,7 +51,7 @@ var _ = Describe("Runner", func() {
 				},
 			},
 		}
-		runner = NewDefaultRunner(testObject)
+		runner = NewDefault(testObject)
 	})
 
 	Describe("Basic JQ evaluation", func() {
@@ -146,7 +147,7 @@ var _ = Describe("Runner", func() {
 	Describe("Result count limits", func() {
 		var (
 			largeObject   M
-			limitedRunner Runner
+			limitedRunner jq.Runner
 			maxResults    = 5
 		)
 
@@ -167,7 +168,7 @@ var _ = Describe("Runner", func() {
 			}
 			largeObject["items"] = items
 
-			limitedRunner = NewRunner(largeObject, &maxResults, nil)
+			limitedRunner = New(largeObject, &maxResults, nil)
 		})
 
 		It("should respect max results limit", func() {
@@ -187,7 +188,7 @@ var _ = Describe("Runner", func() {
 
 	Describe("Timeout limits", func() {
 		var (
-			fastTimeoutRunner Runner
+			fastTimeoutRunner jq.Runner
 			maxResults        = 1000
 			timeoutMs         = 1 // Very short timeout
 		)
@@ -208,7 +209,7 @@ var _ = Describe("Runner", func() {
 			}
 			slowObject["data"] = data
 
-			fastTimeoutRunner = NewRunner(slowObject, &maxResults, &timeoutMs)
+			fastTimeoutRunner = New(slowObject, &maxResults, &timeoutMs)
 		})
 
 		It("should respect timeout limits for complex operations", func() {
@@ -228,7 +229,7 @@ var _ = Describe("Runner", func() {
 
 		It("should work with longer timeout for the same operation", func() {
 			longerTimeoutMs := 10000
-			longerTimeoutRunner := NewRunner(testObject, &maxResults, &longerTimeoutMs)
+			longerTimeoutRunner := New(testObject, &maxResults, &longerTimeoutMs)
 
 			results, err := longerTimeoutRunner.Evaluate(ctx, ".spec.containers[].name")
 			Expect(err).ToNot(HaveOccurred())
@@ -239,26 +240,26 @@ var _ = Describe("Runner", func() {
 	Describe("JSON conversion", func() {
 		It("should handle different source object types", func() {
 			// Test with string
-			stringRunner := NewDefaultRunner("test-string")
+			stringRunner := NewDefault("test-string")
 			results, err := stringRunner.Evaluate(ctx, ". | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 11))
 
 			// Test with number
-			numberRunner := NewDefaultRunner(42)
+			numberRunner := NewDefault(42)
 			results, err = numberRunner.Evaluate(ctx, ". + 8")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 50))
 
 			// Test with array
-			arrayRunner := NewDefaultRunner(A{1, 2, 3})
+			arrayRunner := NewDefault(A{1, 2, 3})
 			results, err = arrayRunner.Evaluate(ctx, ". | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 3))
 		})
 
 		It("should handle nil values", func() {
-			nilRunner := NewDefaultRunner(nil)
+			nilRunner := NewDefault(nil)
 			results, err := nilRunner.Evaluate(ctx, ".")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
@@ -267,7 +268,7 @@ var _ = Describe("Runner", func() {
 	})
 
 	Describe("Default values", func() {
-		var runner Runner
+		var runner jq.Runner
 
 		BeforeEach(func() {
 			testData := M{
@@ -288,7 +289,7 @@ var _ = Describe("Runner", func() {
 					},
 				},
 			}
-			runner = NewDefaultRunner(testData)
+			runner = NewDefault(testData)
 		})
 
 		Context("with // alternative operator", func() {
@@ -415,7 +416,7 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"name": "original",
 			}
-			runner := NewDefaultRunner(testData)
+			runner := NewDefault(testData)
 
 			err := runner.Assign(ctx, ".name", "updated")
 			Expect(err).ToNot(HaveOccurred())
@@ -432,7 +433,7 @@ var _ = Describe("Runner", func() {
 					"example": "example",
 				},
 			}
-			runner := NewDefaultRunner(testData)
+			runner := NewDefault(testData)
 
 			err := runner.Assign(ctx, ".metadata.name", "updated")
 			Expect(err).ToNot(HaveOccurred())
@@ -447,7 +448,7 @@ var _ = Describe("Runner", func() {
 				"primary":  "value1",
 				"fallback": "value2",
 			}
-			runner := NewDefaultRunner(testData)
+			runner := NewDefault(testData)
 
 			err := runner.Assign(ctx, ".primary // .fallback", "updated")
 			Expect(err).ToNot(HaveOccurred())
@@ -461,7 +462,7 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"fallback": "value",
 			}
-			runner := NewDefaultRunner(testData)
+			runner := NewDefault(testData)
 
 			err := runner.Assign(ctx, ".primary // .fallback", "updated")
 			Expect(err).ToNot(HaveOccurred())
@@ -475,7 +476,7 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"items": A{M{"name": "a"}, M{"name": "b"}, M{"name": "c"}},
 			}
-			runner := NewDefaultRunner(testData)
+			runner := NewDefault(testData)
 
 			err := runner.Assign(ctx, ".items[1] | .name", "updated")
 			Expect(err).ToNot(HaveOccurred())
@@ -492,7 +493,7 @@ var _ = Describe("Runner", func() {
 					"replicas": 3,
 				},
 			}
-			runner := NewDefaultRunner(testData)
+			runner := NewDefault(testData)
 
 			newSpec := M{
 				"replicas": 5,
@@ -512,7 +513,7 @@ var _ = Describe("Runner", func() {
 				"spec": M{
 					"containers": []corev1.Container{{Name: "test-container"}},
 				}}
-			runner := NewDefaultRunner(testData)
+			runner := NewDefault(testData)
 
 			err := runner.Assign(ctx, ".spec.containers", []corev1.Container{{Name: "updated"}})
 			Expect(err).ToNot(HaveOccurred())
@@ -520,6 +521,84 @@ var _ = Describe("Runner", func() {
 			updated, err := runner.GetObject()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(updated).To(testutils.BeJSONEquivalentTo(M{"spec": M{"containers": []corev1.Container{{Name: "updated"}}}}))
+		})
+
+		Context("non-existent paths", func() {
+			It("should create intermediate objects for non-existent simple path", func() {
+				testData := M{
+					"existing": "value",
+				}
+				runner := NewDefault(testData)
+
+				err := runner.Assign(ctx, ".newField", "created")
+				Expect(err).ToNot(HaveOccurred())
+
+				updated, err := runner.GetObject()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(updated.(M)["newField"]).To(Equal("created"))
+				Expect(updated.(M)["existing"]).To(Equal("value"))
+			})
+
+			It("should create deeply nested non-existent path", func() {
+				testData := M{
+					"existing": "value",
+				}
+				runner := NewDefault(testData)
+
+				err := runner.Assign(ctx, ".a.b.c.d.e", "deep-value")
+				Expect(err).ToNot(HaveOccurred())
+
+				updated, err := runner.GetObject()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(updated.(M)["a"].(M)["b"].(M)["c"].(M)["d"].(M)["e"]).To(Equal("deep-value"))
+			})
+
+			It("should create non-existent nested path in existing object", func() {
+				testData := M{
+					"metadata": M{
+						"name": "test",
+					},
+				}
+				runner := NewDefault(testData)
+
+				err := runner.Assign(ctx, ".metadata.labels.app", "myapp")
+				Expect(err).ToNot(HaveOccurred())
+
+				updated, err := runner.GetObject()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(updated.(M)["metadata"].(M)["name"]).To(Equal("test"))
+				Expect(updated.(M)["metadata"].(M)["labels"].(M)["app"]).To(Equal("myapp"))
+			})
+
+			It("should handle assigning to non-existent path with complex value", func() {
+				testData := M{
+					"existing": "value",
+				}
+				runner := NewDefault(testData)
+
+				newValue := M{
+					"key1": "value1",
+					"key2": A{1, 2, 3},
+				}
+
+				err := runner.Assign(ctx, ".newComplex", newValue)
+				Expect(err).ToNot(HaveOccurred())
+
+				updated, err := runner.GetObject()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(updated.(M)["newComplex"]).To(testutils.BeJSONEquivalentTo(newValue))
+			})
+		})
+
+		Context("error handling", func() {
+			It("should return JQParseError for malformed JQ syntax", func() {
+				testData := M{"name": "test"}
+				runner := NewDefault(testData)
+
+				err := runner.Assign(ctx, ".invalid[[[", "value")
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeAssignableToTypeOf(&JQParseError{}))
+			})
 		})
 	})
 
@@ -531,7 +610,7 @@ var _ = Describe("Runner", func() {
 					M{"id": 2, "name": "second"},
 				},
 			}
-			runner := NewDefaultRunner(testData)
+			runner := NewDefault(testData)
 
 			err := runner.AssignZip(ctx, ".items[] | select(.id == 1) | .name", A{"updated"})
 			Expect(err).ToNot(HaveOccurred())
@@ -547,7 +626,7 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"items": A{"a", "b", "c"},
 			}
-			runner := NewDefaultRunner(testData)
+			runner := NewDefault(testData)
 
 			err := runner.AssignZip(ctx, ".items[]", A{"d", "e", "f"})
 			Expect(err).ToNot(HaveOccurred())
@@ -562,7 +641,7 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"items": A{M{"name": "a"}, M{"name": "b"}, M{"name": "c"}},
 			}
-			runner := NewDefaultRunner(testData)
+			runner := NewDefault(testData)
 
 			err := runner.AssignZip(ctx, ".items[] | .name", A{"d", "e", "f"})
 			Expect(err).ToNot(HaveOccurred())
@@ -577,7 +656,7 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"items": A{M{"name": "a"}, M{"name": "b", "value": 1}, M{"name": "c", "value": 2}},
 			}
-			runner := NewDefaultRunner(testData)
+			runner := NewDefault(testData)
 
 			err := runner.AssignZip(ctx, ".items[] | .value", A{nil, 3, nil})
 			Expect(err).ToNot(HaveOccurred())
@@ -592,7 +671,7 @@ var _ = Describe("Runner", func() {
 			testData := M{
 				"items": A{"a", "b", "c"},
 			}
-			runner := NewDefaultRunner(testData)
+			runner := NewDefault(testData)
 
 			err := runner.AssignZip(ctx, ".items[]", A{"d", "e"})
 			Expect(err).To(HaveOccurred())
