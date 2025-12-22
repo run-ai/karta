@@ -1140,7 +1140,7 @@ var _ = Describe("Accessor", func() {
 		It("should update containers and verify other fields remain unchanged", func() {
 			reactorObject := types.NewReactorObject()
 			reactorRI := types.ReactorRI()
-			reactorObject.ObjectMeta.Labels = map[string]string{"updated": "true"}
+			reactorObject.Labels = map[string]string{"updated": "true"}
 			accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "service")
 			currentFragmentedPodSpecs, err := accessor.ExtractFragmentedPodSpec(ctx, reactorComp.definition)
 			Expect(err).NotTo(HaveOccurred())
@@ -1235,7 +1235,7 @@ var _ = Describe("Accessor", func() {
 			Expect(currentPodTemplateSpecs).To(HaveLen(1))
 
 			// Modify labels and add resource claims
-			currentPodTemplateSpecs[0].ObjectMeta.Labels["updated"] = "true"
+			currentPodTemplateSpecs[0].Labels["updated"] = "true"
 			currentPodTemplateSpecs[0].Spec.ResourceClaims = []corev1.PodResourceClaim{
 				{
 					Name: "worker-claim",
