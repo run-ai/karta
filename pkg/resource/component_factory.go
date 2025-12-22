@@ -9,10 +9,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/query"
+	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 )
 
-//go:generate mockgen -source=component_factory.go -destination=extractor_mock.go -package=resource Extractor
+//go:generate mockgen -source=component_factory.go -destination=accessor_mock.go -package=resource Extractor
 type Extractor interface {
 	ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error)
 	ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error)
@@ -49,9 +49,9 @@ func NewComponentFactory(ri *v1alpha1.ResourceInterface, extractor Extractor) *C
 
 // NewComponentFactoryFromObject creates a new ResourceInterface-based component factory from a Kubernetes object
 func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object client.Object) *ComponentFactory {
-	queryEvaluator := query.NewDefaultJqEvaluator(object)
-	extractor := NewInterfaceExtractor(queryEvaluator)
-	return NewComponentFactory(ri, extractor)
+	jqRunner := execution.NewDefault(object)
+	accessor := NewAccessor(jqRunner)
+	return NewComponentFactory(ri, accessor)
 }
 
 // GetComponent retrieves a component by name

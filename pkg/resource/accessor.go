@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/query"
+	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 )
 
 // DefinitionNotFoundError represents an error when a requested definition is not found
@@ -21,18 +21,18 @@ func (e DefinitionNotFoundError) Error() string {
 	return string(e)
 }
 
-// InterfaceExtractor implements extraction using QueryEvaluator
-type InterfaceExtractor struct {
-	queryEvaluator query.QueryEvaluator
+// Accessor implements extraction using jq.Runner
+type Accessor struct {
+	jqRunner execution.Runner
 }
 
-func NewInterfaceExtractor(queryEvaluator query.QueryEvaluator) *InterfaceExtractor {
-	return &InterfaceExtractor{
-		queryEvaluator: queryEvaluator,
+func NewAccessor(jqRunner execution.Runner) *Accessor {
+	return &Accessor{
+		jqRunner: jqRunner,
 	}
 }
 
-func (e *InterfaceExtractor) ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error) {
+func (a *Accessor) ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error) {
 	if definition.SpecDefinition == nil {
 		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
 	}
@@ -42,12 +42,12 @@ func (e *InterfaceExtractor) ExtractPodTemplateSpec(ctx context.Context, definit
 	}
 
 	var podTemplateSpec []corev1.PodTemplateSpec
-	err := extract(ctx, definition.SpecDefinition.PodTemplateSpecPath, e.queryEvaluator, &podTemplateSpec)
+	err := extract(ctx, definition.SpecDefinition.PodTemplateSpecPath, a.jqRunner, &podTemplateSpec)
 
 	return podTemplateSpec, err
 }
 
-func (e *InterfaceExtractor) ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error) {
+func (a *Accessor) ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error) {
 	if definition.SpecDefinition == nil {
 		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
 	}
@@ -57,12 +57,12 @@ func (e *InterfaceExtractor) ExtractPodSpec(ctx context.Context, definition v1al
 	}
 
 	var podSpec []corev1.PodSpec
-	err := extract(ctx, definition.SpecDefinition.PodSpecPath, e.queryEvaluator, &podSpec)
+	err := extract(ctx, definition.SpecDefinition.PodSpecPath, a.jqRunner, &podSpec)
 
 	return podSpec, err
 }
 
-func (e *InterfaceExtractor) ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error) {
+func (a *Accessor) ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error) {
 	if definition.SpecDefinition == nil {
 		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
 	}
@@ -72,12 +72,12 @@ func (e *InterfaceExtractor) ExtractPodMetadata(ctx context.Context, definition 
 	}
 
 	var podMetadata []metav1.ObjectMeta
-	err := extract(ctx, definition.SpecDefinition.MetadataPath, e.queryEvaluator, &podMetadata)
+	err := extract(ctx, definition.SpecDefinition.MetadataPath, a.jqRunner, &podMetadata)
 
 	return podMetadata, err
 }
 
-func (e *InterfaceExtractor) ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error) {
+func (a *Accessor) ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error) {
 	if definition.ScaleDefinition == nil {
 		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have scale definition", definition.Name))
 	}
@@ -90,17 +90,17 @@ func (e *InterfaceExtractor) ExtractScale(ctx context.Context, definition v1alph
 
 	scaleCount := 0
 
-	if err := extract(ctx, definition.ScaleDefinition.ReplicasPath, e.queryEvaluator, &replicas); err != nil {
+	if err := extract(ctx, definition.ScaleDefinition.ReplicasPath, a.jqRunner, &replicas); err != nil {
 		return nil, err
 	}
 	scaleCount = max(scaleCount, len(replicas))
 
-	if err := extract(ctx, definition.ScaleDefinition.MinReplicasPath, e.queryEvaluator, &minReplicas); err != nil {
+	if err := extract(ctx, definition.ScaleDefinition.MinReplicasPath, a.jqRunner, &minReplicas); err != nil {
 		return nil, err
 	}
 	scaleCount = max(scaleCount, len(minReplicas))
 
-	if err := extract(ctx, definition.ScaleDefinition.MaxReplicasPath, e.queryEvaluator, &maxReplicas); err != nil {
+	if err := extract(ctx, definition.ScaleDefinition.MaxReplicasPath, a.jqRunner, &maxReplicas); err != nil {
 		return nil, err
 	}
 	scaleCount = max(scaleCount, len(maxReplicas))
@@ -117,12 +117,12 @@ func (e *InterfaceExtractor) ExtractScale(ctx context.Context, definition v1alph
 	return scales, nil
 }
 
-func extract[T any](ctx context.Context, path *string, evaluator query.QueryEvaluator, out *[]T) error {
+func extract[T any](ctx context.Context, path *string, runner execution.Runner, out *[]T) error {
 	if path == nil {
 		return nil
 	}
 
-	results, err := evaluator.Evaluate(ctx, *path)
+	results, err := runner.Evaluate(ctx, *path)
 	if err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func extract[T any](ctx context.Context, path *string, evaluator query.QueryEval
 	return nil
 }
 
-func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error) {
+func (a *Accessor) ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error) {
 	if definition.SpecDefinition == nil {
 		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
 	}
@@ -163,57 +163,57 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 
 	specCount := 0
 
-	if err := extract(ctx, fragmentedDefinition.SchedulerNamePath, e.queryEvaluator, &schedulerNameResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.SchedulerNamePath, a.jqRunner, &schedulerNameResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(schedulerNameResults))
 
-	if err := extract(ctx, fragmentedDefinition.LabelsPath, e.queryEvaluator, &labelsResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.LabelsPath, a.jqRunner, &labelsResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(labelsResults))
 
-	if err := extract(ctx, fragmentedDefinition.AnnotationsPath, e.queryEvaluator, &annotationsResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.AnnotationsPath, a.jqRunner, &annotationsResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(annotationsResults))
 
-	if err := extract(ctx, fragmentedDefinition.ResourcesPath, e.queryEvaluator, &resourcesResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ResourcesPath, a.jqRunner, &resourcesResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(resourcesResults))
 
-	if err := extract(ctx, fragmentedDefinition.ResourceClaimsPath, e.queryEvaluator, &resourceClaimsResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ResourceClaimsPath, a.jqRunner, &resourceClaimsResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(resourceClaimsResults))
 
-	if err := extract(ctx, fragmentedDefinition.PodAffinityPath, e.queryEvaluator, &podAffinityResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.PodAffinityPath, a.jqRunner, &podAffinityResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(podAffinityResults))
 
-	if err := extract(ctx, fragmentedDefinition.NodeAffinityPath, e.queryEvaluator, &nodeAffinityResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.NodeAffinityPath, a.jqRunner, &nodeAffinityResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(nodeAffinityResults))
 
-	if err := extract(ctx, fragmentedDefinition.ContainersPath, e.queryEvaluator, &containersResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ContainersPath, a.jqRunner, &containersResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(containersResults))
 
-	if err := extract(ctx, fragmentedDefinition.ContainerPath, e.queryEvaluator, &containerResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ContainerPath, a.jqRunner, &containerResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(containerResults))
 
-	if err := extract(ctx, fragmentedDefinition.PriorityClassNamePath, e.queryEvaluator, &priorityClassNameResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.PriorityClassNamePath, a.jqRunner, &priorityClassNameResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(priorityClassNameResults))
 
-	if err := extract(ctx, fragmentedDefinition.ImagePath, e.queryEvaluator, &imageResults); err != nil {
+	if err := extract(ctx, fragmentedDefinition.ImagePath, a.jqRunner, &imageResults); err != nil {
 		return nil, err
 	}
 	specCount = max(specCount, len(imageResults))
@@ -239,7 +239,7 @@ func (e *InterfaceExtractor) ExtractFragmentedPodSpec(ctx context.Context, defin
 }
 
 // ExtractStatus evaluates the status of the component based on the status definition.
-func (e *InterfaceExtractor) ExtractStatus(ctx context.Context, definition v1alpha1.ComponentDefinition) (*Status, error) {
+func (a *Accessor) ExtractStatus(ctx context.Context, definition v1alpha1.ComponentDefinition) (*Status, error) {
 	if definition.StatusDefinition == nil {
 		return nil, DefinitionNotFoundError(fmt.Sprintf("component %s does not have status definition", definition.Name))
 	}
@@ -249,7 +249,7 @@ func (e *InterfaceExtractor) ExtractStatus(ctx context.Context, definition v1alp
 	var phase *string
 	if statusDef.PhaseDefinition != nil {
 		var phases []string
-		if err := extract(ctx, &statusDef.PhaseDefinition.Path, e.queryEvaluator, &phases); err != nil {
+		if err := extract(ctx, &statusDef.PhaseDefinition.Path, a.jqRunner, &phases); err != nil {
 			return nil, fmt.Errorf("failed to extract phase: %w", err)
 		}
 		if len(phases) > 0 {
@@ -257,7 +257,7 @@ func (e *InterfaceExtractor) ExtractStatus(ctx context.Context, definition v1alp
 		}
 	}
 
-	conditions, err := e.extractConditions(ctx, statusDef.ConditionsDefinition)
+	conditions, err := a.extractConditions(ctx, statusDef.ConditionsDefinition)
 	if err != nil {
 		return nil, err
 	}
@@ -273,14 +273,14 @@ func (e *InterfaceExtractor) ExtractStatus(ctx context.Context, definition v1alp
 	return &status, nil
 }
 
-func (e *InterfaceExtractor) extractConditions(ctx context.Context, condDef *v1alpha1.ConditionsDefinition) ([]Condition, error) {
+func (a *Accessor) extractConditions(ctx context.Context, condDef *v1alpha1.ConditionsDefinition) ([]Condition, error) {
 
 	if condDef == nil {
 		return []Condition{}, nil
 	}
 
 	var extractedRawConditions [][]map[string]any
-	if err := extract(ctx, &condDef.Path, e.queryEvaluator, &extractedRawConditions); err != nil {
+	if err := extract(ctx, &condDef.Path, a.jqRunner, &extractedRawConditions); err != nil {
 		return nil, fmt.Errorf("failed to extract conditions: %w", err)
 	}
 
@@ -317,13 +317,13 @@ func (e *InterfaceExtractor) extractConditions(ctx context.Context, condDef *v1a
 	return conditions, nil
 }
 
-func (e *InterfaceExtractor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) {
+func (a *Accessor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) {
 	if definition.InstanceIdPath == nil {
 		return nil, DefinitionNotFoundError("no instance id path defined")
 	}
 
 	var instanceIds []string
-	err := extract(ctx, definition.InstanceIdPath, e.queryEvaluator, &instanceIds)
+	err := extract(ctx, definition.InstanceIdPath, a.jqRunner, &instanceIds)
 	if err != nil {
 		return nil, err
 	}
