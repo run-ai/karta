@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	jq "github.com/run-ai/kai-bolt/pkg/jq/execution"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 )
 
 //go:generate mockgen -source=component_factory.go -destination=accessor_mock.go -package=resource Extractor
@@ -49,7 +49,7 @@ func NewComponentFactory(ri *v1alpha1.ResourceInterface, extractor Extractor) *C
 
 // NewComponentFactoryFromObject creates a new ResourceInterface-based component factory from a Kubernetes object
 func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object client.Object) *ComponentFactory {
-	jqRunner := jq.NewDefault(object)
+	jqRunner := execution.NewDefault(object)
 	accessor := NewAccessor(jqRunner)
 	return NewComponentFactory(ri, accessor)
 }

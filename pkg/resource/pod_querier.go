@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	jq "github.com/run-ai/kai-bolt/pkg/jq/execution"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 )
 
 // InstanceNotFoundError is returned when a pod's extracted instance ID doesn't match any valid instance IDs
@@ -21,13 +21,13 @@ func (e InstanceNotFoundError) Error() string {
 // PodQuerier handles JQ-based querying operations against pods
 type PodQuerier struct {
 	pod      *corev1.Pod
-	jqRunner jq.Runner
+	jqRunner execution.Runner
 }
 
 func NewPodQuerier(pod *corev1.Pod) *PodQuerier {
 	return &PodQuerier{
 		pod:      pod,
-		jqRunner: jq.NewDefault(pod),
+		jqRunner: execution.NewDefault(pod),
 	}
 }
 

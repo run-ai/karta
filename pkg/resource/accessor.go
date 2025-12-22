@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
-	jq "github.com/run-ai/kai-bolt/pkg/jq/execution"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 )
 
 // DefinitionNotFoundError represents an error when a requested definition is not found
@@ -23,10 +23,10 @@ func (e DefinitionNotFoundError) Error() string {
 
 // Accessor implements extraction using jq.Runner
 type Accessor struct {
-	jqRunner jq.Runner
+	jqRunner execution.Runner
 }
 
-func NewAccessor(jqRunner jq.Runner) *Accessor {
+func NewAccessor(jqRunner execution.Runner) *Accessor {
 	return &Accessor{
 		jqRunner: jqRunner,
 	}
@@ -117,7 +117,7 @@ func (a *Accessor) ExtractScale(ctx context.Context, definition v1alpha1.Compone
 	return scales, nil
 }
 
-func extract[T any](ctx context.Context, path *string, runner jq.Runner, out *[]T) error {
+func extract[T any](ctx context.Context, path *string, runner execution.Runner, out *[]T) error {
 	if path == nil {
 		return nil
 	}
