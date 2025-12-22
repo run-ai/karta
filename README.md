@@ -112,3 +112,37 @@ status, _ := rootComponent.GetStatus(ctx)
 // status.Phase: raw phase string from the workload
 // status.Conditions: []Condition with Type, Status, Message fields
 ```
+
+### Update Capabilities
+The Resource Interface also supports updating the workload resource. You can modify pod specifications, metadata, or specific fields using the Component API.
+
+The same paths defined in `SpecDefinition` are used for both extraction and updates.
+
+```go
+// ... assuming factory and component are already created ...
+
+// 1. Prepare the updates
+// Map instance IDs to the new values you want to set
+updates := map[string]resource.FragmentedPodSpec{
+    "master": {
+        SchedulerName: "my-custom-scheduler",
+        Labels: map[string]string{
+            "my-label": "true",
+        },
+    },
+    "worker": {
+        SchedulerName: "my-custom-scheduler",
+    },
+}
+
+// 2. Apply the updates
+// This modifies the underlying unstructured object in the factory
+err := component.UpdateFragmentedPodSpec(ctx, updates)
+if err != nil {
+    // Handle error
+}
+
+// 3. Get the updated object to apply it back to the cluster
+updatedObject, _ := factory.GetObject()
+// ... use dynamic client to Update/Patch the object in Kubernetes ...
+```

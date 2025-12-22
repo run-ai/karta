@@ -17,7 +17,7 @@ const errGetInstanceIds = "failed to get instance ids"
 type Component struct {
 	name       string
 	definition v1alpha1.ComponentDefinition
-	extractor  Extractor
+	accessor   ComponentAccessor
 }
 
 type FragmentedPodSpec struct {
@@ -93,7 +93,7 @@ func (c *Component) Definition() v1alpha1.ComponentDefinition {
 
 // GetPodTemplateSpec extracts pod template specs mapped by instance id
 func (c *Component) GetPodTemplateSpec(ctx context.Context) (map[string]corev1.PodTemplateSpec, error) {
-	podTemplateSpecs, err := c.extractor.ExtractPodTemplateSpec(ctx, c.definition)
+	podTemplateSpecs, err := c.accessor.ExtractPodTemplateSpec(ctx, c.definition)
 	if err != nil {
 		if isDefinitionNotFoundError(err) {
 			return nil, nil
@@ -111,7 +111,7 @@ func (c *Component) GetPodTemplateSpec(ctx context.Context) (map[string]corev1.P
 
 // GetFragmentedPodSpec extracts fragmented pod specs mapped by instance id
 func (c *Component) GetFragmentedPodSpec(ctx context.Context) (map[string]FragmentedPodSpec, error) {
-	fragmentedPodSpecs, err := c.extractor.ExtractFragmentedPodSpec(ctx, c.definition)
+	fragmentedPodSpecs, err := c.accessor.ExtractFragmentedPodSpec(ctx, c.definition)
 	if err != nil {
 		if isDefinitionNotFoundError(err) {
 			return nil, nil
@@ -129,7 +129,7 @@ func (c *Component) GetFragmentedPodSpec(ctx context.Context) (map[string]Fragme
 
 // GetPodSpec extracts pod specs mapped by instance id
 func (c *Component) GetPodSpec(ctx context.Context) (map[string]corev1.PodSpec, error) {
-	podSpecs, err := c.extractor.ExtractPodSpec(ctx, c.definition)
+	podSpecs, err := c.accessor.ExtractPodSpec(ctx, c.definition)
 	if err != nil {
 		if isDefinitionNotFoundError(err) {
 			return nil, nil
@@ -147,7 +147,7 @@ func (c *Component) GetPodSpec(ctx context.Context) (map[string]corev1.PodSpec, 
 
 // GetPodMetadata extracts pod metadata mapped by instance id
 func (c *Component) GetPodMetadata(ctx context.Context) (map[string]metav1.ObjectMeta, error) {
-	podMetadata, err := c.extractor.ExtractPodMetadata(ctx, c.definition)
+	podMetadata, err := c.accessor.ExtractPodMetadata(ctx, c.definition)
 	if err != nil {
 		if isDefinitionNotFoundError(err) {
 			return nil, nil
@@ -163,9 +163,45 @@ func (c *Component) GetPodMetadata(ctx context.Context) (map[string]metav1.Objec
 	return zipWithInstanceIds(instanceIds, podMetadata)
 }
 
+func (c *Component) UpdatePodTemplateSpec(ctx context.Context, instanceIdToPodTemplateSpec map[string]corev1.PodTemplateSpec) error {
+	_, podTemplateSpecs, err := unzipWithInstanceIds(ctx, c, instanceIdToPodTemplateSpec)
+	if err != nil {
+		return fmt.Errorf("failed to unzip given pod template specs and instance ids: %w", err)
+	}
+
+	return c.accessor.UpdatePodTemplateSpec(ctx, c.definition, podTemplateSpecs)
+}
+
+func (c *Component) UpdatePodSpec(ctx context.Context, instanceIdToPodSpec map[string]corev1.PodSpec) error {
+	_, podSpecs, err := unzipWithInstanceIds(ctx, c, instanceIdToPodSpec)
+	if err != nil {
+		return fmt.Errorf("failed to unzip given pod specs and instance ids: %w", err)
+	}
+
+	return c.accessor.UpdatePodSpec(ctx, c.definition, podSpecs)
+}
+
+func (c *Component) UpdatePodMetadata(ctx context.Context, instanceIdToPodMetadata map[string]metav1.ObjectMeta) error {
+	_, podMetadata, err := unzipWithInstanceIds(ctx, c, instanceIdToPodMetadata)
+	if err != nil {
+		return fmt.Errorf("failed to unzip given pod metadata and instance ids: %w", err)
+	}
+
+	return c.accessor.UpdatePodMetadata(ctx, c.definition, podMetadata)
+}
+
+func (c *Component) UpdateFragmentedPodSpec(ctx context.Context, instanceIdToFragmentedPodSpec map[string]FragmentedPodSpec) error {
+	_, fragmentedPodSpecs, err := unzipWithInstanceIds(ctx, c, instanceIdToFragmentedPodSpec)
+	if err != nil {
+		return fmt.Errorf("failed to unzip given fragmented pod specs and instance ids: %w", err)
+	}
+
+	return c.accessor.UpdateFragmentedPodSpec(ctx, c.definition, fragmentedPodSpecs)
+}
+
 // GetScale extracts scale data mapped by instance id
 func (c *Component) GetScale(ctx context.Context) (map[string]Scale, error) {
-	scales, err := c.extractor.ExtractScale(ctx, c.definition)
+	scales, err := c.accessor.ExtractScale(ctx, c.definition)
 	if err != nil {
 		if isDefinitionNotFoundError(err) {
 			return nil, nil
@@ -184,7 +220,7 @@ func (c *Component) GetScale(ctx context.Context) (map[string]Scale, error) {
 // GetStatus extracts status information from the component
 // Note: Status is typically defined only on the root component, not on instances
 func (c *Component) GetStatus(ctx context.Context) (*Status, error) {
-	status, err := c.extractor.ExtractStatus(ctx, c.definition)
+	status, err := c.accessor.ExtractStatus(ctx, c.definition)
 	if err != nil {
 		if isDefinitionNotFoundError(err) {
 			return nil, nil
@@ -291,7 +327,7 @@ func (c *Component) HasInstanceIdDefinition() bool {
 
 // GetInstanceIds extracts instance identifiers for this component
 func (c *Component) GetInstanceIds(ctx context.Context) ([]string, error) {
-	instanceIds, err := c.extractor.ExtractInstanceIds(ctx, c.definition)
+	instanceIds, err := c.accessor.ExtractInstanceIds(ctx, c.definition)
 	if err != nil {
 		if isDefinitionNotFoundError(err) {
 			// If no definition was given, assume there is a single instance with empty id
@@ -315,6 +351,24 @@ func zipWithInstanceIds[T any](instanceIds []string, results []T) (map[string]T,
 	}
 
 	return zipped, nil
+}
+
+// unzipWithInstanceIds converts a map of instance ID to value into an ordered slice
+func unzipWithInstanceIds[T any](ctx context.Context, c *Component, valueMap map[string]T) ([]string, []T, error) {
+	instanceIds, err := c.GetInstanceIds(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s: %w", errGetInstanceIds, err)
+	}
+
+	results := make([]T, 0, len(instanceIds))
+	for _, instanceId := range instanceIds {
+		value, ok := valueMap[instanceId]
+		if !ok {
+			return nil, nil, fmt.Errorf("value not found for instance id: %s", instanceId)
+		}
+		results = append(results, value)
+	}
+	return instanceIds, results, nil
 }
 
 func isDefinitionNotFoundError(err error) bool {

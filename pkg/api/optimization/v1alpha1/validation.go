@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	jq "github.com/run-ai/kai-bolt/pkg/jq"
+	"github.com/run-ai/kai-bolt/pkg/jq"
 )
 
 type RIValidator struct {

@@ -21,7 +21,7 @@ func (e DefinitionNotFoundError) Error() string {
 	return string(e)
 }
 
-// Accessor implements extraction using jq.Runner
+// Accessor implements extraction and updating of resource data using jq.Runner
 type Accessor struct {
 	jqRunner execution.Runner
 }
@@ -30,6 +30,19 @@ func NewAccessor(jqRunner execution.Runner) *Accessor {
 	return &Accessor{
 		jqRunner: jqRunner,
 	}
+}
+
+// GetObject returns the object as a map[string]interface{}
+func (a *Accessor) GetObject() (map[string]interface{}, error) {
+	object, err := a.jqRunner.GetObject()
+	if err != nil {
+		return nil, err
+	}
+	objectMap, ok := object.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("object is not a map[string]interface{}")
+	}
+	return objectMap, nil
 }
 
 func (a *Accessor) ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error) {
@@ -115,25 +128,6 @@ func (a *Accessor) ExtractScale(ctx context.Context, definition v1alpha1.Compone
 	}
 
 	return scales, nil
-}
-
-func extract[T any](ctx context.Context, path *string, runner execution.Runner, out *[]T) error {
-	if path == nil {
-		return nil
-	}
-
-	results, err := runner.Evaluate(ctx, *path)
-	if err != nil {
-		return err
-	}
-
-	converted, err := safeConvertSlice[T](results)
-	if err != nil {
-		return err
-	}
-
-	*out = converted
-	return nil
 }
 
 func (a *Accessor) ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error) {
@@ -274,7 +268,6 @@ func (a *Accessor) ExtractStatus(ctx context.Context, definition v1alpha1.Compon
 }
 
 func (a *Accessor) extractConditions(ctx context.Context, condDef *v1alpha1.ConditionsDefinition) ([]Condition, error) {
-
 	if condDef == nil {
 		return []Condition{}, nil
 	}
@@ -334,6 +327,156 @@ func (a *Accessor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.C
 	}
 
 	return instanceIds, nil
+}
+
+func (a *Accessor) UpdatePodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, podTemplateSpecs []corev1.PodTemplateSpec) error {
+	if definition.SpecDefinition == nil {
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
+	}
+
+	if definition.SpecDefinition.PodTemplateSpecPath == nil {
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have pod template spec definition", definition.Name))
+	}
+
+	return a.assign(ctx, definition, *definition.SpecDefinition.PodTemplateSpecPath, lo.Map(podTemplateSpecs, func(podTemplateSpec corev1.PodTemplateSpec, _ int) any { return podTemplateSpec }))
+}
+
+func (a *Accessor) UpdatePodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, podSpecs []corev1.PodSpec) error {
+	if definition.SpecDefinition == nil {
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
+	}
+
+	if definition.SpecDefinition.PodSpecPath == nil {
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have pod spec definition", definition.Name))
+	}
+
+	return a.assign(ctx, definition, *definition.SpecDefinition.PodSpecPath, lo.Map(podSpecs, func(podSpec corev1.PodSpec, _ int) any { return podSpec }))
+}
+
+func (a *Accessor) UpdatePodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition, podMetadata []metav1.ObjectMeta) error {
+	if definition.SpecDefinition == nil {
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
+	}
+
+	if definition.SpecDefinition.MetadataPath == nil {
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have pod metadata definition", definition.Name))
+	}
+	return a.assign(ctx, definition, *definition.SpecDefinition.MetadataPath, lo.Map(podMetadata, func(podMetadata metav1.ObjectMeta, _ int) any { return podMetadata }))
+}
+
+func (a *Accessor) UpdateFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, fragmentedPodSpecs []FragmentedPodSpec) error {
+	if definition.SpecDefinition == nil {
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have spec definition", definition.Name))
+	}
+
+	if definition.SpecDefinition.FragmentedPodSpecDefinition == nil {
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have fragmented pod spec definition", definition.Name))
+	}
+
+	fragmentedDef := definition.SpecDefinition.FragmentedPodSpecDefinition
+
+	// String fields
+	if err := a.updateStringField(ctx, definition, fragmentedDef.SchedulerNamePath, fragmentedPodSpecs, func(s FragmentedPodSpec) string { return s.SchedulerName }); err != nil {
+		return fmt.Errorf("failed to update scheduler name: %w", err)
+	}
+	if err := a.updateStringField(ctx, definition, fragmentedDef.PriorityClassNamePath, fragmentedPodSpecs, func(s FragmentedPodSpec) string { return s.PriorityClassName }); err != nil {
+		return fmt.Errorf("failed to update priority class name: %w", err)
+	}
+	if err := a.updateStringField(ctx, definition, fragmentedDef.ImagePath, fragmentedPodSpecs, func(s FragmentedPodSpec) string { return s.Image }); err != nil {
+		return fmt.Errorf("failed to update image: %w", err)
+	}
+
+	// Map fields
+	if err := updateMapField(a, ctx, definition, fragmentedDef.LabelsPath, fragmentedPodSpecs, func(s FragmentedPodSpec) map[string]string { return s.Labels }); err != nil {
+		return fmt.Errorf("failed to update labels: %w", err)
+	}
+	if err := updateMapField(a, ctx, definition, fragmentedDef.AnnotationsPath, fragmentedPodSpecs, func(s FragmentedPodSpec) map[string]string { return s.Annotations }); err != nil {
+		return fmt.Errorf("failed to update annotations: %w", err)
+	}
+
+	// Pointer fields
+	if err := updateStructPointerField(a, ctx, definition, fragmentedDef.ResourcesPath, fragmentedPodSpecs, func(s FragmentedPodSpec) *corev1.ResourceRequirements { return s.Resources }); err != nil {
+		return fmt.Errorf("failed to update resources: %w", err)
+	}
+	if err := updateStructPointerField(a, ctx, definition, fragmentedDef.PodAffinityPath, fragmentedPodSpecs, func(s FragmentedPodSpec) *corev1.PodAffinity { return s.PodAffinity }); err != nil {
+		return fmt.Errorf("failed to update pod affinity: %w", err)
+	}
+	if err := updateStructPointerField(a, ctx, definition, fragmentedDef.NodeAffinityPath, fragmentedPodSpecs, func(s FragmentedPodSpec) *corev1.NodeAffinity { return s.NodeAffinity }); err != nil {
+		return fmt.Errorf("failed to update node affinity: %w", err)
+	}
+	if err := updateStructPointerField(a, ctx, definition, fragmentedDef.ContainerPath, fragmentedPodSpecs, func(s FragmentedPodSpec) *corev1.Container { return s.Container }); err != nil {
+		return fmt.Errorf("failed to update container: %w", err)
+	}
+
+	// Slice fields
+	if err := updateSliceField(a, ctx, definition, fragmentedDef.ResourceClaimsPath, fragmentedPodSpecs, func(s FragmentedPodSpec) []corev1.PodResourceClaim { return s.ResourceClaims }); err != nil {
+		return fmt.Errorf("failed to update resource claims: %w", err)
+	}
+	if err := updateSliceField(a, ctx, definition, fragmentedDef.ContainersPath, fragmentedPodSpecs, func(s FragmentedPodSpec) []corev1.Container { return s.Containers }); err != nil {
+		return fmt.Errorf("failed to update containers: %w", err)
+	}
+
+	return nil
+}
+
+func (a *Accessor) updateField(ctx context.Context, def v1alpha1.ComponentDefinition, path *string, values []any, isEmpty func(any) bool) error {
+	if path != nil {
+		return a.assign(ctx, def, *path, values)
+	}
+	for _, v := range values {
+		if !isEmpty(v) {
+			return fmt.Errorf("path is not defined and values are not empty")
+		}
+	}
+	return nil
+}
+
+func (a *Accessor) updateStringField(ctx context.Context, def v1alpha1.ComponentDefinition, path *string, specs []FragmentedPodSpec, getter func(FragmentedPodSpec) string) error {
+	values := lo.Map(specs, func(s FragmentedPodSpec, _ int) any { return getter(s) })
+	return a.updateField(ctx, def, path, values, func(v any) bool { return v.(string) == "" })
+}
+
+func updateMapField[K comparable, V any](a *Accessor, ctx context.Context, def v1alpha1.ComponentDefinition, path *string, specs []FragmentedPodSpec, getter func(FragmentedPodSpec) map[K]V) error {
+	values := lo.Map(specs, func(s FragmentedPodSpec, _ int) any { return getter(s) })
+	return a.updateField(ctx, def, path, values, func(v any) bool { return len(v.(map[K]V)) == 0 })
+}
+
+func updateStructPointerField[T any](a *Accessor, ctx context.Context, def v1alpha1.ComponentDefinition, path *string, specs []FragmentedPodSpec, getter func(FragmentedPodSpec) *T) error {
+	values := lo.Map(specs, func(s FragmentedPodSpec, _ int) any { return getter(s) })
+	return a.updateField(ctx, def, path, values, func(v any) bool { return v.(*T) == nil })
+}
+
+func updateSliceField[T any](a *Accessor, ctx context.Context, def v1alpha1.ComponentDefinition, path *string, specs []FragmentedPodSpec, getter func(FragmentedPodSpec) []T) error {
+	values := lo.Map(specs, func(s FragmentedPodSpec, _ int) any { return getter(s) })
+	return a.updateField(ctx, def, path, values, func(v any) bool { return len(v.([]T)) == 0 })
+}
+
+func (a *Accessor) assign(ctx context.Context, definition v1alpha1.ComponentDefinition, path string, values []any) error {
+	// If instance id path is defined, use assign zip as the expression is an array expression (each coordinate per instance)
+	if definition.InstanceIdPath != nil {
+		return a.jqRunner.AssignZip(ctx, path, values)
+	} else {
+		return a.jqRunner.Assign(ctx, path, values[0])
+	}
+}
+
+func extract[T any](ctx context.Context, path *string, accessor execution.Runner, out *[]T) error {
+	if path == nil {
+		return nil
+	}
+
+	results, err := accessor.Evaluate(ctx, *path)
+	if err != nil {
+		return err
+	}
+
+	converted, err := safeConvertSlice[T](results)
+	if err != nil {
+		return err
+	}
+
+	*out = converted
+	return nil
 }
 
 // safeGetByIndex Generic function for safely retrieving a slice element.

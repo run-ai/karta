@@ -235,15 +235,15 @@ var _ = Describe("Pod Utils", func() {
 
 	Describe("InferPodComponentInstance", func() {
 		var (
-			ctrl          *gomock.Controller
-			mockExtractor *resource.MockExtractor
-			factory       *resource.ComponentFactory
-			podQuerier    *resource.PodQuerier
+			ctrl         *gomock.Controller
+			mockAccessor *resource.MockComponentAccessor
+			factory      *resource.ComponentFactory
+			podQuerier   *resource.PodQuerier
 		)
 
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
-			mockExtractor = resource.NewMockExtractor(ctrl)
+			mockAccessor = resource.NewMockComponentAccessor(ctrl)
 
 			pod := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
@@ -270,7 +270,7 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				factory = resource.NewComponentFactory(ri, mockExtractor)
+				factory = resource.NewComponentFactory(ri, mockAccessor)
 
 				instancePtr, err := InferPodComponentInstance(ctx, podQuerier, "non-existent", factory)
 				Expect(err).To(HaveOccurred())
@@ -297,10 +297,10 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				factory = resource.NewComponentFactory(ri, mockExtractor)
+				factory = resource.NewComponentFactory(ri, mockAccessor)
 
 				// Mock GetInstanceIds to return definition not found error (no instanceIdPath)
-				mockExtractor.EXPECT().
+				mockAccessor.EXPECT().
 					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
 					Return(nil, resource.DefinitionNotFoundError("no instanceIdPath"))
 
@@ -339,10 +339,10 @@ var _ = Describe("Pod Utils", func() {
 			})
 
 			It("should return matching instance ID", func() {
-				factory = resource.NewComponentFactory(ri, mockExtractor)
+				factory = resource.NewComponentFactory(ri, mockAccessor)
 
 				// Mock GetInstanceIds to return multiple instance IDs
-				mockExtractor.EXPECT().
+				mockAccessor.EXPECT().
 					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
 					Return([]string{"gpu-workers", "cpu-workers"}, nil)
 
@@ -365,10 +365,10 @@ var _ = Describe("Pod Utils", func() {
 			})
 
 			It("should return nil when matching returns empty string", func() {
-				factory = resource.NewComponentFactory(ri, mockExtractor)
+				factory = resource.NewComponentFactory(ri, mockAccessor)
 
 				// Mock GetInstanceIds to return single empty instance ID (single instance case)
-				mockExtractor.EXPECT().
+				mockAccessor.EXPECT().
 					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
 					Return([]string{""}, nil)
 
@@ -398,10 +398,10 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				factory = resource.NewComponentFactory(ri, mockExtractor)
+				factory = resource.NewComponentFactory(ri, mockAccessor)
 
 				// Mock GetInstanceIds to return multiple instance IDs
-				mockExtractor.EXPECT().
+				mockAccessor.EXPECT().
 					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
 					Return([]string{"gpu-workers", "cpu-workers"}, nil)
 
@@ -435,10 +435,10 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				factory = resource.NewComponentFactory(ri, mockExtractor)
+				factory = resource.NewComponentFactory(ri, mockAccessor)
 
 				// Mock GetInstanceIds to return error
-				mockExtractor.EXPECT().
+				mockAccessor.EXPECT().
 					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
 					Return(nil, errors.New("extraction failed"))
 
@@ -469,10 +469,10 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				factory = resource.NewComponentFactory(ri, mockExtractor)
+				factory = resource.NewComponentFactory(ri, mockAccessor)
 
 				// Mock GetInstanceIds to return instance IDs
-				mockExtractor.EXPECT().
+				mockAccessor.EXPECT().
 					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
 					Return([]string{"worker1", "worker2"}, nil)
 
@@ -497,10 +497,10 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				factory = resource.NewComponentFactory(ri, mockExtractor)
+				factory = resource.NewComponentFactory(ri, mockAccessor)
 
 				// Mock GetInstanceIds to return instance IDs
-				mockExtractor.EXPECT().
+				mockAccessor.EXPECT().
 					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
 					Return([]string{"worker1", "worker2"}, nil)
 

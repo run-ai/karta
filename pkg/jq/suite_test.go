@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestQuery(t *testing.T) {
+func TestJq(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Query Suite")
+	RunSpecs(t, "Jq Suite")
 }

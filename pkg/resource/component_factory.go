@@ -6,32 +6,46 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 )
 
-//go:generate mockgen -source=component_factory.go -destination=accessor_mock.go -package=resource Extractor
-type Extractor interface {
+type ComponentReader interface {
 	ExtractPodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodTemplateSpec, error)
-	ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error)
 	ExtractPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]corev1.PodSpec, error)
 	ExtractPodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]metav1.ObjectMeta, error)
+	ExtractFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]FragmentedPodSpec, error)
 	ExtractScale(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]Scale, error)
 	ExtractStatus(ctx context.Context, definition v1alpha1.ComponentDefinition) (*Status, error)
 	ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error)
+	GetObject() (map[string]interface{}, error)
+}
+
+type ComponentWriter interface {
+	UpdatePodTemplateSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, podTemplateSpecs []corev1.PodTemplateSpec) error
+	UpdatePodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, podSpecs []corev1.PodSpec) error
+	UpdatePodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition, podMetadata []metav1.ObjectMeta) error
+	UpdateFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, fragmentedPodSpecs []FragmentedPodSpec) error
+}
+
+//go:generate mockgen -source=component_factory.go -destination=accessor_mock.go -package=resource ComponentAccessor
+type ComponentAccessor interface {
+	ComponentReader
+	ComponentWriter
 }
 
 type ComponentFactory struct {
-	ri        *v1alpha1.ResourceInterface
-	extractor Extractor // Shared extractor instance
+	ri       *v1alpha1.ResourceInterface
+	accessor ComponentAccessor
 
-	componentDefinitionsByName map[string]v1alpha1.ComponentDefinition // Fast component definition lookup
+	componentDefinitionsByName map[string]v1alpha1.ComponentDefinition
 }
 
 // NewComponentFactory creates a new ResourceInterface-based component factory
-func NewComponentFactory(ri *v1alpha1.ResourceInterface, extractor Extractor) *ComponentFactory {
+func NewComponentFactory(ri *v1alpha1.ResourceInterface, accessor ComponentAccessor) *ComponentFactory {
 	definitionsByName := make(map[string]v1alpha1.ComponentDefinition)
 
 	// Create single slice with all components (root + children)
@@ -42,14 +56,14 @@ func NewComponentFactory(ri *v1alpha1.ResourceInterface, extractor Extractor) *C
 
 	return &ComponentFactory{
 		ri:                         ri,
-		extractor:                  extractor,
+		accessor:                   accessor,
 		componentDefinitionsByName: definitionsByName,
 	}
 }
 
 // NewComponentFactoryFromObject creates a new ResourceInterface-based component factory from a Kubernetes object
 func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object client.Object) *ComponentFactory {
-	jqRunner := execution.NewDefault(object)
+	jqRunner := execution.NewDefaultRunner(object)
 	accessor := NewAccessor(jqRunner)
 	return NewComponentFactory(ri, accessor)
 }
@@ -64,7 +78,7 @@ func (f *ComponentFactory) GetComponent(name string) (*Component, error) {
 	return &Component{
 		name:       name,
 		definition: definition,
-		extractor:  f.extractor,
+		accessor:   f.accessor,
 	}, nil
 }
 
@@ -93,4 +107,30 @@ func (f *ComponentFactory) GetChildComponents() ([]*Component, error) {
 	}
 
 	return childComponents, nil
+}
+
+func (f *ComponentFactory) GetResource() (client.Object, error) {
+	object, err := f.accessor.GetObject()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updated data: %w", err)
+	}
+	u := &unstructured.Unstructured{Object: object}
+	if err := validateKubernetesObject(u); err != nil {
+		return nil, fmt.Errorf("invalid Kubernetes object: %w", err)
+	}
+	return u, nil
+}
+
+func validateKubernetesObject(u *unstructured.Unstructured) error {
+	gvk := u.GroupVersionKind()
+	if gvk.Group == "" && gvk.Version == "" { // Core groups might have empty Group, but need Version
+		return fmt.Errorf("missing apiVersion")
+	}
+	if gvk.Kind == "" {
+		return fmt.Errorf("missing kind")
+	}
+	if u.GetName() == "" && u.GetGenerateName() == "" {
+		return fmt.Errorf("missing metadata.name or metadata.generateName")
+	}
+	return nil
 }
