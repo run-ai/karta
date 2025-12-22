@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/run-ai/kai-bolt/pkg/jq/runner"
+	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -410,7 +410,7 @@ var _ = Describe("PodQuerier", func() {
 
 				matches, err := querier.MatchesComponentType(ctx, selector)
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(BeAssignableToTypeOf(&runner.JQParseError{}))
+				Expect(err).To(BeAssignableToTypeOf(&execution.JQParseError{}))
 				Expect(matches).To(BeFalse())
 			})
 		})

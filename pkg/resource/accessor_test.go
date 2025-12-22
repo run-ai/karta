@@ -7,7 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/run-ai/kai-bolt/pkg/jq/runner"
+	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -65,7 +65,7 @@ func accessorForObject(
 	object client.Object,
 	componentName string,
 ) (*Accessor, *Component) {
-	accessor := NewAccessor(runner.NewDefault(object))
+	accessor := NewAccessor(execution.NewDefault(object))
 	factory := NewComponentFactoryFromObject(ri, object)
 	comp, err := factory.GetComponent(componentName)
 	Expect(err).NotTo(HaveOccurred())
@@ -107,9 +107,9 @@ var _ = Describe("Accessor", func() {
 		reactorFactory = NewComponentFactoryFromObject(reactorRI, reactorObject)
 
 		// Initialize evaluators
-		pyflowAccessor = NewAccessor(runner.NewDefault(pyflowObject))
-		jobgroupAccessor = NewAccessor(runner.NewDefault(jobgroupObject))
-		reactorAccessor = NewAccessor(runner.NewDefault(reactorObject))
+		pyflowAccessor = NewAccessor(execution.NewDefault(pyflowObject))
+		jobgroupAccessor = NewAccessor(execution.NewDefault(jobgroupObject))
+		reactorAccessor = NewAccessor(execution.NewDefault(reactorObject))
 	})
 
 	Describe("ExtractPodTemplateSpec", func() {
@@ -452,8 +452,8 @@ var _ = Describe("Accessor", func() {
 	Describe("Error Handling", func() {
 		Context("safeConvertSlice", func() {
 			It("should handle conversion errors gracefully", func() {
-				// Create a mock runner that returns data that can't be converted
-				mockRunner := runner.NewMockRunner(gomock.NewController(GinkgoT()))
+				// Create a mock execution that returns data that can't be converted
+				mockRunner := execution.NewMockRunner(gomock.NewController(GinkgoT()))
 				accessor := NewAccessor(mockRunner)
 
 				// Test with incompatible data types that should fail conversion
@@ -479,8 +479,8 @@ var _ = Describe("Accessor", func() {
 			})
 
 			It("should handle circular reference errors in JSON conversion", func() {
-				// Create a mock runner that returns circular reference data
-				mockRunner := runner.NewMockRunner(gomock.NewController(GinkgoT()))
+				// Create a mock execution that returns circular reference data
+				mockRunner := execution.NewMockRunner(gomock.NewController(GinkgoT()))
 				accessor := NewAccessor(mockRunner)
 
 				// Create a circular reference that would break JSON marshaling
@@ -554,7 +554,7 @@ var _ = Describe("Accessor", func() {
 
 				factory := NewComponentFactoryFromObject(jobgroupRI, jobgroupObject)
 
-				accessor := NewAccessor(runner.NewDefault(jobgroupObject))
+				accessor := NewAccessor(execution.NewDefault(jobgroupObject))
 
 				comp, err := factory.GetComponent("job")
 				Expect(err).NotTo(HaveOccurred())
@@ -974,7 +974,7 @@ var _ = Describe("Accessor", func() {
 			})
 
 			It("should handle invalid phase path", func() {
-				mockRunner := runner.NewMockRunner(gomock.NewController(GinkgoT()))
+				mockRunner := execution.NewMockRunner(gomock.NewController(GinkgoT()))
 				accessor := NewAccessor(mockRunner)
 
 				mockRunner.EXPECT().

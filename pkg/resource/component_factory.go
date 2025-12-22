@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/run-ai/kai-bolt/pkg/jq/runner"
+	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -63,7 +63,7 @@ func NewComponentFactory(ri *v1alpha1.ResourceInterface, accessor ComponentAcces
 
 // NewComponentFactoryFromObject creates a new ResourceInterface-based component factory from a Kubernetes object
 func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object client.Object) *ComponentFactory {
-	jqRunner := runner.NewDefault(object)
+	jqRunner := execution.NewDefault(object)
 	accessor := NewAccessor(jqRunner)
 	return NewComponentFactory(ri, accessor)
 }

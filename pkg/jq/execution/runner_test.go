@@ -1,11 +1,10 @@
-package runner
+package execution
 
 import (
 	"context"
 	"errors"
 	"strings"
 
-	"github.com/run-ai/kai-bolt/pkg/jq"
 	testutils "github.com/run-ai/kai-bolt/test/types/jsonutils"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -19,7 +18,7 @@ type A = []any
 var _ = Describe("Runner", func() {
 	var (
 		ctx        context.Context
-		runner     jq.Runner
+		runner     Runner
 		testObject M
 	)
 
@@ -147,7 +146,7 @@ var _ = Describe("Runner", func() {
 	Describe("Result count limits", func() {
 		var (
 			largeObject   M
-			limitedRunner jq.Runner
+			limitedRunner Runner
 			maxResults    = 5
 		)
 
@@ -188,7 +187,7 @@ var _ = Describe("Runner", func() {
 
 	Describe("Timeout limits", func() {
 		var (
-			fastTimeoutRunner jq.Runner
+			fastTimeoutRunner Runner
 			maxResults        = 1000
 			timeoutMs         = 1 // Very short timeout
 		)
@@ -268,7 +267,7 @@ var _ = Describe("Runner", func() {
 	})
 
 	Describe("Default values", func() {
-		var runner jq.Runner
+		var runner Runner
 
 		BeforeEach(func() {
 			testData := M{

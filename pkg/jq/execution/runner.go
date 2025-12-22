@@ -1,4 +1,4 @@
-package runner
+package execution
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/itchyny/gojq"
-	"github.com/run-ai/kai-bolt/pkg/jq"
 )
 
 const (
@@ -29,7 +28,7 @@ type runner struct {
 	jsonErr    error
 }
 
-func NewDefault(source any) jq.Runner {
+func NewDefault(source any) Runner {
 	return &runner{
 		source:       source,
 		maxResults:   defaultMaxResults,
@@ -37,7 +36,7 @@ func NewDefault(source any) jq.Runner {
 	}
 }
 
-func New(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) jq.Runner {
+func New(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) Runner {
 	r := NewDefault(source).(*runner)
 
 	if queryMaxResults != nil {

@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/jq"
+	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 )
 
 // DefinitionNotFoundError represents an error when a requested definition is not found
@@ -23,10 +23,10 @@ func (e DefinitionNotFoundError) Error() string {
 
 // Accessor implements extraction and updating of resource data using jq.Runner
 type Accessor struct {
-	jqRunner jq.Runner
+	jqRunner execution.Runner
 }
 
-func NewAccessor(jqRunner jq.Runner) *Accessor {
+func NewAccessor(jqRunner execution.Runner) *Accessor {
 	return &Accessor{
 		jqRunner: jqRunner,
 	}
@@ -460,7 +460,7 @@ func (a *Accessor) assign(ctx context.Context, definition v1alpha1.ComponentDefi
 	}
 }
 
-func extract[T any](ctx context.Context, path *string, accessor jq.Runner, out *[]T) error {
+func extract[T any](ctx context.Context, path *string, accessor execution.Runner, out *[]T) error {
 	if path == nil {
 		return nil
 	}
