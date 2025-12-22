@@ -65,7 +65,7 @@ func accessorForObject(
 	object client.Object,
 	componentName string,
 ) (*Accessor, *Component) {
-	accessor := NewAccessor(execution.NewDefault(object))
+	accessor := NewAccessor(execution.NewDefaultRunner(object))
 	factory := NewComponentFactoryFromObject(ri, object)
 	comp, err := factory.GetComponent(componentName)
 	Expect(err).NotTo(HaveOccurred())
@@ -107,9 +107,9 @@ var _ = Describe("Accessor", func() {
 		reactorFactory = NewComponentFactoryFromObject(reactorRI, reactorObject)
 
 		// Initialize evaluators
-		pyflowAccessor = NewAccessor(execution.NewDefault(pyflowObject))
-		jobgroupAccessor = NewAccessor(execution.NewDefault(jobgroupObject))
-		reactorAccessor = NewAccessor(execution.NewDefault(reactorObject))
+		pyflowAccessor = NewAccessor(execution.NewDefaultRunner(pyflowObject))
+		jobgroupAccessor = NewAccessor(execution.NewDefaultRunner(jobgroupObject))
+		reactorAccessor = NewAccessor(execution.NewDefaultRunner(reactorObject))
 	})
 
 	Describe("ExtractPodTemplateSpec", func() {
@@ -554,7 +554,7 @@ var _ = Describe("Accessor", func() {
 
 				factory := NewComponentFactoryFromObject(jobgroupRI, jobgroupObject)
 
-				accessor := NewAccessor(execution.NewDefault(jobgroupObject))
+				accessor := NewAccessor(execution.NewDefaultRunner(jobgroupObject))
 
 				comp, err := factory.GetComponent("job")
 				Expect(err).NotTo(HaveOccurred())

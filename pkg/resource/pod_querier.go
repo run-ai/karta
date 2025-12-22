@@ -27,7 +27,7 @@ type PodQuerier struct {
 func NewPodQuerier(pod *corev1.Pod) *PodQuerier {
 	return &PodQuerier{
 		pod:       pod,
-		evaluator: execution.NewDefault(pod),
+		evaluator: execution.NewDefaultRunner(pod),
 	}
 }
 

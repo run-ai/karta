@@ -63,7 +63,7 @@ func NewComponentFactory(ri *v1alpha1.ResourceInterface, accessor ComponentAcces
 
 // NewComponentFactoryFromObject creates a new ResourceInterface-based component factory from a Kubernetes object
 func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object client.Object) *ComponentFactory {
-	jqRunner := execution.NewDefault(object)
+	jqRunner := execution.NewDefaultRunner(object)
 	accessor := NewAccessor(jqRunner)
 	return NewComponentFactory(ri, accessor)
 }

@@ -28,7 +28,7 @@ type runner struct {
 	jsonErr    error
 }
 
-func NewDefault(source any) Runner {
+func NewDefaultRunner(source any) Runner {
 	return &runner{
 		source:       source,
 		maxResults:   defaultMaxResults,
@@ -36,8 +36,8 @@ func NewDefault(source any) Runner {
 	}
 }
 
-func New(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) Runner {
-	r := NewDefault(source).(*runner)
+func NewRunner(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) Runner {
+	r := NewDefaultRunner(source).(*runner)
 
 	if queryMaxResults != nil {
 		r.maxResults = *queryMaxResults
