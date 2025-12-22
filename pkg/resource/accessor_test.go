@@ -6,6 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -14,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	query "github.com/run-ai/kai-bolt/pkg/jq"
 	"github.com/run-ai/kai-bolt/test/types"
 )
 
@@ -64,7 +64,7 @@ func extractorForObject(
 	object client.Object,
 	componentName string,
 ) (*Accessor, *Component) {
-	extractor := NewAccessor(query.NewDefaultRunner(object))
+	extractor := NewAccessor(execution.NewDefault(object))
 	factory := NewComponentFactoryFromObject(ri, object)
 	comp, err := factory.GetComponent(componentName)
 	Expect(err).NotTo(HaveOccurred())
@@ -106,9 +106,9 @@ var _ = Describe("Accessor", func() {
 		reactorFactory = NewComponentFactoryFromObject(reactorRI, reactorObject)
 
 		// Initialize extractors
-		pyflowExtractor = NewAccessor(query.NewDefaultRunner(pyflowObject))
-		jobgroupExtractor = NewAccessor(query.NewDefaultRunner(jobgroupObject))
-		reactorExtractor = NewAccessor(query.NewDefaultRunner(reactorObject))
+		pyflowExtractor = NewAccessor(execution.NewDefault(pyflowObject))
+		jobgroupExtractor = NewAccessor(execution.NewDefault(jobgroupObject))
+		reactorExtractor = NewAccessor(execution.NewDefault(reactorObject))
 	})
 
 	Describe("ExtractPodTemplateSpec", func() {
@@ -452,7 +452,7 @@ var _ = Describe("Accessor", func() {
 		Context("safeConvertSlice", func() {
 			It("should handle conversion errors gracefully", func() {
 				// Create a mock evaluator that returns data that can't be converted
-				mockEvaluator := query.NewMockRunner(gomock.NewController(GinkgoT()))
+				mockEvaluator := execution.NewMockRunner(gomock.NewController(GinkgoT()))
 				extractor := NewAccessor(mockEvaluator)
 
 				// Test with incompatible data types that should fail conversion
@@ -479,7 +479,7 @@ var _ = Describe("Accessor", func() {
 
 			It("should handle circular reference errors in JSON conversion", func() {
 				// Create a mock evaluator that returns circular reference data
-				mockEvaluator := query.NewMockRunner(gomock.NewController(GinkgoT()))
+				mockEvaluator := execution.NewMockRunner(gomock.NewController(GinkgoT()))
 				extractor := NewAccessor(mockEvaluator)
 
 				// Create a circular reference that would break JSON marshaling
@@ -553,7 +553,7 @@ var _ = Describe("Accessor", func() {
 
 				factory := NewComponentFactoryFromObject(jobgroupRI, jobgroupObject)
 
-				extractor := NewAccessor(query.NewDefaultRunner(jobgroupObject))
+				extractor := NewAccessor(execution.NewDefault(jobgroupObject))
 
 				comp, err := factory.GetComponent("job")
 				Expect(err).NotTo(HaveOccurred())
@@ -973,7 +973,7 @@ var _ = Describe("Accessor", func() {
 			})
 
 			It("should handle invalid phase path", func() {
-				mockEvaluator := query.NewMockRunner(gomock.NewController(GinkgoT()))
+				mockEvaluator := execution.NewMockRunner(gomock.NewController(GinkgoT()))
 				extractor := NewAccessor(mockEvaluator)
 
 				mockEvaluator.EXPECT().

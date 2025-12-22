@@ -1,4 +1,4 @@
-package jq
+package execution
 
 import (
 	"context"
@@ -9,13 +9,6 @@ import (
 
 	"github.com/itchyny/gojq"
 )
-
-//go:generate mockgen -source=runner.go -destination=runner_mock.go -package=jq Runner
-
-// Runner interface for query evaluation against data
-type Runner interface {
-	Evaluate(ctx context.Context, expression string) ([]any, error)
-}
 
 const (
 	defaultMaxResults            = 1000
@@ -35,7 +28,7 @@ type runner struct {
 	jsonErr  error
 }
 
-func NewDefaultRunner(source any) Runner {
+func NewDefault(source any) Runner {
 	return &runner{
 		source:       source,
 		maxResults:   defaultMaxResults,
@@ -43,8 +36,8 @@ func NewDefaultRunner(source any) Runner {
 	}
 }
 
-func NewRunner(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) Runner {
-	r := NewDefaultRunner(source).(*runner)
+func New(source any, queryMaxResults *int, queryTimeoutInMilliseconds *int) Runner {
+	r := NewDefault(source).(*runner)
 
 	if queryMaxResults != nil {
 		r.maxResults = *queryMaxResults

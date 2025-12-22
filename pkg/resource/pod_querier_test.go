@@ -6,12 +6,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	query "github.com/run-ai/kai-bolt/pkg/jq/execution"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	query "github.com/run-ai/kai-bolt/pkg/jq"
 )
 
 var _ = Describe("PodQuerier", func() {

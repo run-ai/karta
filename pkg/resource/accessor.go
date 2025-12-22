@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
+	jq "github.com/run-ai/kai-bolt/pkg/jq/execution"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	jq "github.com/run-ai/kai-bolt/pkg/jq"
 )
 
 // DefinitionNotFoundError represents an error when a requested definition is not found

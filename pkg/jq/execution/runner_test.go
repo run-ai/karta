@@ -1,4 +1,4 @@
-package jq
+package execution
 
 import (
 	"context"
@@ -44,7 +44,7 @@ var _ = Describe("Runner", func() {
 				},
 			},
 		}
-		evaluator = NewDefaultRunner(testObject)
+		evaluator = NewDefault(testObject)
 	})
 
 	Describe("Basic JQ evaluation", func() {
@@ -161,7 +161,7 @@ var _ = Describe("Runner", func() {
 			}
 			largeObject["items"] = items
 
-			limitedEval = NewRunner(largeObject, &maxResults, nil)
+			limitedEval = New(largeObject, &maxResults, nil)
 		})
 
 		It("should respect max results limit", func() {
@@ -202,7 +202,7 @@ var _ = Describe("Runner", func() {
 			}
 			slowObject["data"] = data
 
-			fastTimeoutEval = NewRunner(slowObject, &maxResults, &timeoutMs)
+			fastTimeoutEval = New(slowObject, &maxResults, &timeoutMs)
 		})
 
 		It("should respect timeout limits for complex operations", func() {
@@ -222,7 +222,7 @@ var _ = Describe("Runner", func() {
 
 		It("should work with longer timeout for the same operation", func() {
 			longerTimeoutMs := 10000
-			longerTimeoutEval := NewRunner(testObject, &maxResults, &longerTimeoutMs)
+			longerTimeoutEval := New(testObject, &maxResults, &longerTimeoutMs)
 
 			results, err := longerTimeoutEval.Evaluate(ctx, ".spec.containers[].name")
 			Expect(err).ToNot(HaveOccurred())
@@ -233,26 +233,26 @@ var _ = Describe("Runner", func() {
 	Describe("JSON conversion", func() {
 		It("should handle different source object types", func() {
 			// Test with string
-			stringEval := NewDefaultRunner("test-string")
+			stringEval := NewDefault("test-string")
 			results, err := stringEval.Evaluate(ctx, ". | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 11))
 
 			// Test with number
-			numberEval := NewDefaultRunner(42)
+			numberEval := NewDefault(42)
 			results, err = numberEval.Evaluate(ctx, ". + 8")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 50))
 
 			// Test with array
-			arrayEval := NewDefaultRunner([]any{1, 2, 3})
+			arrayEval := NewDefault([]any{1, 2, 3})
 			results, err = arrayEval.Evaluate(ctx, ". | length")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results[0]).To(BeNumerically("==", 3))
 		})
 
 		It("should handle nil values", func() {
-			nilEval := NewDefaultRunner(nil)
+			nilEval := NewDefault(nil)
 			results, err := nilEval.Evaluate(ctx, ".")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(results).To(HaveLen(1))
@@ -282,7 +282,7 @@ var _ = Describe("Runner", func() {
 					},
 				},
 			}
-			eval = NewDefaultRunner(testData)
+			eval = NewDefault(testData)
 		})
 
 		Context("with // alternative operator", func() {
