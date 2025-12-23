@@ -325,6 +325,10 @@ spec:
                                   description: Path is the JQ path to the conditions
                                     array
                                   type: string
+                                reasonFieldName:
+                                  description: ReasonFieldName is the field name for
+                                    the condition reason
+                                  type: string
                                 statusFieldName:
                                   description: StatusFieldName is the field name for
                                     the condition status
@@ -369,6 +373,10 @@ spec:
                                             condition type and status that must be
                                             present.
                                           properties:
+                                            reason:
+                                              description: Reason is the expected
+                                                condition reason
+                                              type: string
                                             status:
                                               description: Status is the expected
                                                 condition status
@@ -378,7 +386,6 @@ spec:
                                                 to match
                                               type: string
                                           required:
-                                          - status
                                           - type
                                           type: object
                                         type: array
@@ -406,6 +413,10 @@ spec:
                                             condition type and status that must be
                                             present.
                                           properties:
+                                            reason:
+                                              description: Reason is the expected
+                                                condition reason
+                                              type: string
                                             status:
                                               description: Status is the expected
                                                 condition status
@@ -415,7 +426,6 @@ spec:
                                                 to match
                                               type: string
                                           required:
-                                          - status
                                           - type
                                           type: object
                                         type: array
@@ -443,6 +453,10 @@ spec:
                                             condition type and status that must be
                                             present.
                                           properties:
+                                            reason:
+                                              description: Reason is the expected
+                                                condition reason
+                                              type: string
                                             status:
                                               description: Status is the expected
                                                 condition status
@@ -452,7 +466,6 @@ spec:
                                                 to match
                                               type: string
                                           required:
-                                          - status
                                           - type
                                           type: object
                                         type: array
@@ -480,6 +493,10 @@ spec:
                                             condition type and status that must be
                                             present.
                                           properties:
+                                            reason:
+                                              description: Reason is the expected
+                                                condition reason
+                                              type: string
                                             status:
                                               description: Status is the expected
                                                 condition status
@@ -489,7 +506,6 @@ spec:
                                                 to match
                                               type: string
                                           required:
-                                          - status
                                           - type
                                           type: object
                                         type: array
@@ -683,6 +699,10 @@ spec:
                                 description: Path is the JQ path to the conditions
                                   array
                                 type: string
+                              reasonFieldName:
+                                description: ReasonFieldName is the field name for
+                                  the condition reason
+                                type: string
                               statusFieldName:
                                 description: StatusFieldName is the field name for
                                   the condition status
@@ -726,6 +746,10 @@ spec:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
                                         properties:
+                                          reason:
+                                            description: Reason is the expected condition
+                                              reason
+                                            type: string
                                           status:
                                             description: Status is the expected condition
                                               status
@@ -735,7 +759,6 @@ spec:
                                               to match
                                             type: string
                                         required:
-                                        - status
                                         - type
                                         type: object
                                       type: array
@@ -762,6 +785,10 @@ spec:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
                                         properties:
+                                          reason:
+                                            description: Reason is the expected condition
+                                              reason
+                                            type: string
                                           status:
                                             description: Status is the expected condition
                                               status
@@ -771,7 +798,6 @@ spec:
                                               to match
                                             type: string
                                         required:
-                                        - status
                                         - type
                                         type: object
                                       type: array
@@ -798,6 +824,10 @@ spec:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
                                         properties:
+                                          reason:
+                                            description: Reason is the expected condition
+                                              reason
+                                            type: string
                                           status:
                                             description: Status is the expected condition
                                               status
@@ -807,7 +837,6 @@ spec:
                                               to match
                                             type: string
                                         required:
-                                        - status
                                         - type
                                         type: object
                                       type: array
@@ -834,6 +863,10 @@ spec:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
                                         properties:
+                                          reason:
+                                            description: Reason is the expected condition
+                                              reason
+                                            type: string
                                           status:
                                             description: Status is the expected condition
                                               status
@@ -843,7 +876,6 @@ spec:
                                               to match
                                             type: string
                                         required:
-                                        - status
                                         - type
                                         type: object
                                       type: array

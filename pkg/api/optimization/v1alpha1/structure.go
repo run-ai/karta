@@ -224,6 +224,10 @@ type ConditionsDefinition struct {
 	// MessageFieldName is the field name for the condition text message
 	// +kubebuilder:validation:Optional
 	MessageFieldName *string `json:"messageFieldName"`
+
+	// ReasonFieldName is the field name for the condition reason
+	// +kubebuilder:validation:Optional
+	ReasonFieldName *string `json:"reasonFieldName"`
 }
 
 // StatusMappings define how to map extracted status information to ResourceStatus values.
@@ -269,6 +273,10 @@ type ExpectedCondition struct {
 	Type string `json:"type"`
 
 	// Status is the expected condition status
-	// +kubebuilder:validation:Required
-	Status string `json:"status"`
+	// +kubebuilder:validation:Optional
+	Status *string `json:"status,omitempty"`
+
+	// Reason is the expected condition reason
+	// +kubebuilder:validation:Optional
+	Reason *string `json:"reason,omitempty"`
 }
