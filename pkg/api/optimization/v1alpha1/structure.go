@@ -214,15 +214,18 @@ type ConditionsDefinition struct {
 	Path string `json:"path" jq:"validate"`
 
 	// TypeFieldName is the field name for the condition type
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=type
 	TypeFieldName string `json:"typeFieldName"`
 
 	// StatusFieldName is the field name for the condition status
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=status
 	StatusFieldName string `json:"statusFieldName"`
 
 	// MessageFieldName is the field name for the condition text message
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=message
 	MessageFieldName *string `json:"messageFieldName"`
 
 	// ReasonFieldName is the field name for the condition reason
@@ -231,23 +234,29 @@ type ConditionsDefinition struct {
 }
 
 // StatusMappings define how to map extracted status information to ResourceStatus values.
+// Each status field contains an array of matchers evaluated with OR logic:
+// if ANY matcher in the array succeeds, that status is matched.
 type StatusMappings struct {
-	// Initializing defines matchers for the Initializing status
+	// Initializing defines matchers for the Initializing status.
+	// Multiple matchers are OR'd together.
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	Initializing []StatusMatcher `json:"initializing,omitempty"`
 
-	// Running defines matchers for the Running status
+	// Running defines matchers for the Running status.
+	// Multiple matchers are OR'd together.
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	Running []StatusMatcher `json:"running,omitempty"`
 
-	// Completed defines matchers for the Completed status
+	// Completed defines matchers for the Completed status.
+	// Multiple matchers are OR'd together.
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	Completed []StatusMatcher `json:"completed,omitempty"`
 
-	// Failed defines matchers for the Failed status
+	// Failed defines matchers for the Failed status.
+	// Multiple matchers are OR'd together.
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	Failed []StatusMatcher `json:"failed,omitempty"`

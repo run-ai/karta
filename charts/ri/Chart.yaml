@@ -1,0 +1,9 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v2
+name: ri
+description: A Helm chart for deploying Resource Interfaces (RI) by NVIDIA.
+type: application
+version: 0.0.1
+appVersion: "0.0.0"

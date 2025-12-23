@@ -3,8 +3,9 @@ package instructions
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 	"k8s.io/utils/ptr"
+
+	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 )
 
 var _ = Describe("StructureSummary", func() {

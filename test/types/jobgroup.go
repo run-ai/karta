@@ -3,12 +3,13 @@
 package types
 
 import (
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/utils/ptr"
+
+	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 )
 
 // JobGroup represents a JobSet-like job with array of replicated jobs

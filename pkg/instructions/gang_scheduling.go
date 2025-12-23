@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/samber/lo"
+
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 	"github.com/run-ai/kai-bolt/pkg/resource"
-	"github.com/samber/lo"
 )
 
 // PodGroupingEffectiveComponent contains the effective component information for pod grouping
