@@ -230,6 +230,7 @@ type ConditionsDefinition struct {
 
 	// ReasonFieldName is the field name for the condition reason
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=reason
 	ReasonFieldName *string `json:"reasonFieldName"`
 }
 

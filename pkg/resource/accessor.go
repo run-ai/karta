@@ -293,7 +293,7 @@ func (a *Accessor) extractConditions(ctx context.Context, condDef *v1alpha1.Cond
 
 		if statusVal, ok := condMap[condDef.StatusFieldName]; ok {
 			if statusStr, ok := statusVal.(string); ok {
-				cond.Status = statusStr
+				cond.Status = &statusStr
 			}
 		}
 
@@ -301,6 +301,14 @@ func (a *Accessor) extractConditions(ctx context.Context, condDef *v1alpha1.Cond
 			if msgVal, ok := condMap[*condDef.MessageFieldName]; ok {
 				if msgStr, ok := msgVal.(string); ok {
 					cond.Message = msgStr
+				}
+			}
+		}
+
+		if condDef.ReasonFieldName != nil {
+			if reasonVal, ok := condMap[*condDef.ReasonFieldName]; ok {
+				if reasonStr, ok := reasonVal.(string); ok {
+					cond.Reason = &reasonStr
 				}
 			}
 		}
@@ -590,7 +598,11 @@ func match(phase *string, conditionsMap map[string]Condition, matcher v1alpha1.S
 			return false
 		}
 
-		if expectedCond.Status != "" && actualCond.Status != expectedCond.Status {
+		if expectedCond.Status != nil && *expectedCond.Status != "" && *actualCond.Status != *expectedCond.Status {
+			return false
+		}
+
+		if expectedCond.Reason != nil && *expectedCond.Reason != "" && (actualCond.Reason == nil || *actualCond.Reason != *expectedCond.Reason) {
 			return false
 		}
 	}

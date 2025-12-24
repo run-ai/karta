@@ -585,7 +585,7 @@ var _ = Describe("Accessor", func() {
 				Expect(result.Phase).To(BeNil())
 				Expect(result.Conditions).To(HaveLen(1))
 				Expect(result.Conditions[0].Type).To(Equal("Running"))
-				Expect(result.Conditions[0].Status).To(Equal("True"))
+				Expect(result.Conditions[0].Status).To(Equal(ptr.To("True")))
 				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
 			})
 
@@ -635,7 +635,32 @@ var _ = Describe("Accessor", func() {
 				Expect(result).NotTo(BeNil())
 				Expect(result.Conditions).To(HaveLen(1))
 				Expect(result.Conditions[0].Type).To(Equal("Failed"))
-				Expect(result.Conditions[0].Status).To(Equal("True"))
+				Expect(result.Conditions[0].Status).To(Equal(ptr.To("True")))
+				Expect(result.Conditions[0].Message).To(Equal("Pod failed due to OOMKilled"))
+			})
+
+			It("should extract conditions with reason field", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{
+						Type:    "Failed",
+						Status:  metav1.ConditionTrue,
+						Reason:  "OOMKilled",
+						Message: "Pod failed due to OOMKilled",
+					},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.Conditions).To(HaveLen(1))
+				Expect(result.Conditions[0].Type).To(Equal("Failed"))
+				Expect(result.Conditions[0].Status).To(Equal(ptr.To("True")))
+				Expect(result.Conditions[0].Reason).To(Equal(ptr.To("OOMKilled")))
 				Expect(result.Conditions[0].Message).To(Equal("Pod failed due to OOMKilled"))
 			})
 		})
@@ -686,7 +711,7 @@ var _ = Describe("Accessor", func() {
 						{ByPhase: "running"},
 						{ByPhase: "active"},
 						{ByConditions: []v1alpha1.ExpectedCondition{
-							{Type: "Ready", Status: "True"},
+							{Type: "Ready", Status: ptr.To("True")},
 						}},
 					},
 				}
@@ -720,7 +745,7 @@ var _ = Describe("Accessor", func() {
 					Initializing: []v1alpha1.StatusMatcher{
 						{
 							ByConditions: []v1alpha1.ExpectedCondition{
-								{Type: "Initialized", Status: "True"},
+								{Type: "Initialized", Status: ptr.To("True")},
 							},
 						},
 					},
@@ -824,8 +849,8 @@ var _ = Describe("Accessor", func() {
 						{
 							ByPhase: "running",
 							ByConditions: []v1alpha1.ExpectedCondition{
-								{Type: "Ready", Status: "True"},
-								{Type: "Available", Status: "False"},
+								{Type: "Ready", Status: ptr.To("True")},
+								{Type: "Available", Status: ptr.To("False")},
 							},
 						},
 					},
@@ -851,7 +876,7 @@ var _ = Describe("Accessor", func() {
 						{
 							ByPhase: "running",
 							ByConditions: []v1alpha1.ExpectedCondition{
-								{Type: "Ready", Status: "True"},
+								{Type: "Ready", Status: ptr.To("True")},
 							},
 						},
 					},
@@ -881,7 +906,7 @@ var _ = Describe("Accessor", func() {
 					Initializing: []v1alpha1.StatusMatcher{
 						{
 							ByConditions: []v1alpha1.ExpectedCondition{
-								{Type: "Ready", Status: "True"},
+								{Type: "Ready", Status: ptr.To("True")},
 							},
 						},
 					},
@@ -907,8 +932,8 @@ var _ = Describe("Accessor", func() {
 						{
 							ByPhase: "running",
 							ByConditions: []v1alpha1.ExpectedCondition{
-								{Type: "Ready", Status: "True"},
-								{Type: "Failed", Status: "False"},
+								{Type: "Ready", Status: ptr.To("True")},
+								{Type: "Failed", Status: ptr.To("False")},
 							},
 						},
 					},
@@ -920,6 +945,133 @@ var _ = Describe("Accessor", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
 				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
+			})
+
+			It("should match when reason field matches", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Failed", Status: metav1.ConditionTrue, Reason: "OOMKilled"},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Failed: []v1alpha1.StatusMatcher{
+						{
+							ByConditions: []v1alpha1.ExpectedCondition{
+								{Type: "Failed", Status: ptr.To("True"), Reason: ptr.To("OOMKilled")},
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.FailedStatus))
+			})
+
+			It("should not match when reason field does not match", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Failed", Status: metav1.ConditionTrue, Reason: "CrashLoopBackOff"},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Failed: []v1alpha1.StatusMatcher{
+						{
+							ByConditions: []v1alpha1.ExpectedCondition{
+								{Type: "Failed", Status: ptr.To("True"), Reason: ptr.To("OOMKilled")},
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
+			})
+
+			It("should not match when reason is expected but condition has no reason", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Failed", Status: metav1.ConditionTrue},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Failed: []v1alpha1.StatusMatcher{
+						{
+							ByConditions: []v1alpha1.ExpectedCondition{
+								{Type: "Failed", Status: ptr.To("True"), Reason: ptr.To("OOMKilled")},
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
+			})
+
+			It("should match when no reason is expected and condition has a reason", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Failed", Status: metav1.ConditionTrue, Reason: "OOMKilled"},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Failed: []v1alpha1.StatusMatcher{
+						{
+							ByConditions: []v1alpha1.ExpectedCondition{
+								{Type: "Failed", Status: ptr.To("True")},
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.FailedStatus))
+			})
+
+			It("should match with multiple conditions including reason", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Ready", Status: metav1.ConditionFalse},
+					{Type: "Failed", Status: metav1.ConditionTrue, Reason: "OOMKilled"},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Failed: []v1alpha1.StatusMatcher{
+						{
+							ByConditions: []v1alpha1.ExpectedCondition{
+								{Type: "Ready", Status: ptr.To("False")},
+								{Type: "Failed", Reason: ptr.To("OOMKilled")},
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.FailedStatus))
 			})
 		})
 
@@ -941,7 +1093,7 @@ var _ = Describe("Accessor", func() {
 						Completed: []v1alpha1.StatusMatcher{
 							{
 								ByConditions: []v1alpha1.ExpectedCondition{
-									{Type: "Completed", Status: "True"},
+									{Type: "Completed", Status: ptr.To("True")},
 								},
 							},
 						},
@@ -1027,7 +1179,7 @@ var _ = Describe("Accessor", func() {
 				Expect(result).NotTo(BeNil())
 				Expect(result.Conditions).To(HaveLen(1))
 				Expect(result.Conditions[0].Type).To(Equal("Ready"))
-				Expect(result.Conditions[0].Status).To(BeEmpty())
+				Expect(*result.Conditions[0].Status).To(BeEmpty())
 			})
 		})
 	})
