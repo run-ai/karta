@@ -3,6 +3,7 @@ package resource
 import (
 	"context"
 	"errors"
+
 	"k8s.io/utils/ptr"
 
 	. "github.com/onsi/ginkgo/v2"
