@@ -274,6 +274,10 @@ type StatusMatcher struct {
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	ByConditions []ExpectedCondition `json:"byConditions,omitempty"`
+
+	// ByExpression is a JQ expression that matches against the object for status matching
+	// +kubebuilder:validation:Optional
+	ByExpression string `json:"byExpression,omitempty" jq:"validate"`
 }
 
 // ExpectedCondition defines a condition type and status that must be present.

@@ -393,6 +393,11 @@ spec:
                                           type: object
                                         type: array
                                         x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        type: string
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -434,6 +439,11 @@ spec:
                                           type: object
                                         type: array
                                         x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        type: string
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -475,6 +485,11 @@ spec:
                                           type: object
                                         type: array
                                         x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        type: string
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -516,6 +531,11 @@ spec:
                                           type: object
                                         type: array
                                         x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        type: string
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -772,6 +792,11 @@ spec:
                                         type: object
                                       type: array
                                       x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      type: string
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
@@ -812,6 +837,11 @@ spec:
                                         type: object
                                       type: array
                                       x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      type: string
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
@@ -852,6 +882,11 @@ spec:
                                         type: object
                                       type: array
                                       x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      type: string
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
@@ -892,6 +927,11 @@ spec:
                                         type: object
                                       type: array
                                       x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      type: string
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
