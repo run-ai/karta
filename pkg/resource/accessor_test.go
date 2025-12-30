@@ -650,7 +650,6 @@ var _ = Describe("Accessor", func() {
 					},
 				}
 				reactorRI := types.ReactorRI()
-				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
 				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
 				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)

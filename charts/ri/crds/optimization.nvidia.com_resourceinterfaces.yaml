@@ -371,6 +371,8 @@ spec:
                                       byConditions:
                                         description: ByConditions matches against
                                           specific condition combinations (ANDed together)
+                                          at least one of status or reason must be
+                                          used.
                                         items:
                                           description: ExpectedCondition defines a
                                             condition type and status that must be
@@ -412,6 +414,8 @@ spec:
                                       byConditions:
                                         description: ByConditions matches against
                                           specific condition combinations (ANDed together)
+                                          at least one of status or reason must be
+                                          used.
                                         items:
                                           description: ExpectedCondition defines a
                                             condition type and status that must be
@@ -453,6 +457,8 @@ spec:
                                       byConditions:
                                         description: ByConditions matches against
                                           specific condition combinations (ANDed together)
+                                          at least one of status or reason must be
+                                          used.
                                         items:
                                           description: ExpectedCondition defines a
                                             condition type and status that must be
@@ -494,6 +500,8 @@ spec:
                                       byConditions:
                                         description: ByConditions matches against
                                           specific condition combinations (ANDed together)
+                                          at least one of status or reason must be
+                                          used.
                                         items:
                                           description: ExpectedCondition defines a
                                             condition type and status that must be
@@ -750,7 +758,8 @@ spec:
                                   properties:
                                     byConditions:
                                       description: ByConditions matches against specific
-                                        condition combinations (ANDed together)
+                                        condition combinations (ANDed together) at
+                                        least one of status or reason must be used.
                                       items:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
@@ -790,7 +799,8 @@ spec:
                                   properties:
                                     byConditions:
                                       description: ByConditions matches against specific
-                                        condition combinations (ANDed together)
+                                        condition combinations (ANDed together) at
+                                        least one of status or reason must be used.
                                       items:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
@@ -830,7 +840,8 @@ spec:
                                   properties:
                                     byConditions:
                                       description: ByConditions matches against specific
-                                        condition combinations (ANDed together)
+                                        condition combinations (ANDed together) at
+                                        least one of status or reason must be used.
                                       items:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
@@ -870,7 +881,8 @@ spec:
                                   properties:
                                     byConditions:
                                       description: ByConditions matches against specific
-                                        condition combinations (ANDed together)
+                                        condition combinations (ANDed together) at
+                                        least one of status or reason must be used.
                                       items:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.

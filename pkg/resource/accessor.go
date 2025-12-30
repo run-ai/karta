@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/utils/ptr"
 	"strings"
 
 	"github.com/samber/lo"
@@ -598,11 +599,13 @@ func match(phase *string, conditionsMap map[string]Condition, matcher v1alpha1.S
 			return false
 		}
 
-		if expectedCond.Status != nil && *expectedCond.Status != "" && *actualCond.Status != *expectedCond.Status {
+		expectedValue := ptr.Deref(expectedCond.Status, "")
+		if expectedValue != "" && expectedValue != ptr.Deref(actualCond.Status, "") {
 			return false
 		}
 
-		if expectedCond.Reason != nil && *expectedCond.Reason != "" && (actualCond.Reason == nil || *actualCond.Reason != *expectedCond.Reason) {
+		expectedValue = ptr.Deref(expectedCond.Reason, "")
+		if expectedValue != "" && expectedValue != ptr.Deref(actualCond.Reason, "") {
 			return false
 		}
 	}
