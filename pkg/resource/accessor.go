@@ -595,7 +595,7 @@ func evaluateMatchers(ctx context.Context, jqRunner execution.Runner, phase *str
 	for _, matcher := range matchers {
 		matched, err := match(ctx, jqRunner, phase, conditionsMap, matcher)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("failed to evaluate matcher: %w", err)
 		}
 		if matched {
 			return true, nil
@@ -611,50 +611,59 @@ func match(ctx context.Context, jqRunner execution.Runner, phase *string, condit
 		}
 	}
 
-	if len(matcher.ByConditions) > 0 {
-		for _, expectedCond := range matcher.ByConditions {
-			actualCond, found := conditionsMap[expectedCond.Type]
-			if !found {
-				return false, nil
-			}
+	for _, expectedCond := range matcher.ByConditions {
+		actualCond, found := checkCondition(conditionsMap, expectedCond)
+		if !found {
+			return false, nil
+		}
 
-			if expectedCond.Status != nil && *expectedCond.Status != "" && *actualCond.Status != *expectedCond.Status {
-				return false, nil
-			}
+		if expectedCond.Status != nil && *expectedCond.Status != "" && *actualCond.Status != *expectedCond.Status {
+			return false, nil
+		}
 
-			if expectedCond.Reason != nil && *expectedCond.Reason != "" && (actualCond.Reason == nil || *actualCond.Reason != *expectedCond.Reason) {
-				return false, nil
-			}
+		if expectedCond.Reason != nil && *expectedCond.Reason != "" && (actualCond.Reason == nil || *actualCond.Reason != *expectedCond.Reason) {
+			return false, nil
 		}
 	}
 
 	if matcher.ByExpression != "" {
-		results, err := jqRunner.Evaluate(ctx, matcher.ByExpression)
+		matched, err := matchByExpression(ctx, jqRunner, matcher)
 		if err != nil {
-			return false, fmt.Errorf("failed to evaluate ByExpression: %w", err)
+			return false, err
 		}
 
-		// Check if the expression returned a truthy value
-		if len(results) == 0 {
-			return false, nil
-		}
-
-		// Check the first result for truthiness
-		result := results[0]
-		if result == nil {
-			return false, nil
-		}
-
-		// Handle boolean results
-		if boolResult, ok := result.(bool); ok {
-			if !boolResult {
-				return false, nil
-			}
-		}
-
-		// If we get here with a non-nil result, consider it truthy
-		// (following common JQ convention where non-null/non-false values are truthy)
+		return matched, nil
 	}
 
 	return true, nil
+}
+
+func matchByExpression(ctx context.Context, jqRunner execution.Runner, matcher v1alpha1.StatusMatcher) (bool, error) {
+	results, err := jqRunner.Evaluate(ctx, matcher.ByExpression)
+	if err != nil {
+		return false, fmt.Errorf("failed to evaluate ByExpression: %w", err)
+	}
+
+	if len(results) == 0 {
+		return false, nil
+	}
+
+	result := results[0]
+	if result == nil {
+		return false, nil
+	}
+
+	if boolResult, ok := result.(bool); ok {
+		return boolResult, nil
+	}
+
+	return false, nil
+}
+
+func checkCondition(conditionsMap map[string]Condition, expectedCond v1alpha1.ExpectedCondition) (Condition, bool) {
+	actualCond, found := conditionsMap[expectedCond.Type]
+	if !found {
+		return Condition{}, false
+	}
+	return actualCond, true
 }
