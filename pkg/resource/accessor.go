@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/utils/ptr"
 	"strings"
+
+	"k8s.io/utils/ptr"
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
