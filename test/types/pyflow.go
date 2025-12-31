@@ -72,12 +72,22 @@ func PyFlowRI() *v1alpha1.ResourceInterface {
 							StatusFieldName: "status",
 						},
 						StatusMappings: v1alpha1.StatusMappings{
+							Initializing: []v1alpha1.StatusMatcher{
+								{
+									ByConditions: []v1alpha1.ExpectedCondition{
+										{
+											Type:   "Initializing",
+											Reason: ptr.To("Init"),
+										},
+									},
+								},
+							},
 							Running: []v1alpha1.StatusMatcher{
 								{
 									ByConditions: []v1alpha1.ExpectedCondition{
 										{
 											Type:   "Running",
-											Status: "True",
+											Status: ptr.To("True"),
 										},
 									},
 								},

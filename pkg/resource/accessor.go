@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/utils/ptr"
+
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -293,7 +295,7 @@ func (a *Accessor) extractConditions(ctx context.Context, condDef *v1alpha1.Cond
 
 		if statusVal, ok := condMap[condDef.StatusFieldName]; ok {
 			if statusStr, ok := statusVal.(string); ok {
-				cond.Status = statusStr
+				cond.Status = &statusStr
 			}
 		}
 
@@ -301,6 +303,14 @@ func (a *Accessor) extractConditions(ctx context.Context, condDef *v1alpha1.Cond
 			if msgVal, ok := condMap[*condDef.MessageFieldName]; ok {
 				if msgStr, ok := msgVal.(string); ok {
 					cond.Message = msgStr
+				}
+			}
+		}
+
+		if condDef.ReasonFieldName != nil {
+			if reasonVal, ok := condMap[*condDef.ReasonFieldName]; ok {
+				if reasonStr, ok := reasonVal.(string); ok {
+					cond.Reason = &reasonStr
 				}
 			}
 		}
@@ -590,7 +600,13 @@ func match(phase *string, conditionsMap map[string]Condition, matcher v1alpha1.S
 			return false
 		}
 
-		if expectedCond.Status != "" && actualCond.Status != expectedCond.Status {
+		expectedValue := ptr.Deref(expectedCond.Status, "")
+		if expectedValue != "" && expectedValue != ptr.Deref(actualCond.Status, "") {
+			return false
+		}
+
+		expectedValue = ptr.Deref(expectedCond.Reason, "")
+		if expectedValue != "" && expectedValue != ptr.Deref(actualCond.Reason, "") {
 			return false
 		}
 	}

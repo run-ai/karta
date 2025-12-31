@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"k8s.io/utils/ptr"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -439,7 +441,7 @@ var _ = Describe("Component", func() {
 				expectedStatus := Status{
 					Phase: stringPtr("running"),
 					Conditions: []Condition{
-						{Type: "Ready", Status: "True", Message: "All pods are ready"},
+						{Type: "Ready", Status: ptr.To("True"), Message: "All pods are ready"},
 					},
 					MatchedStatuses: []v1alpha1.ResourceStatus{v1alpha1.RunningStatus},
 				}

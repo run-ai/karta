@@ -74,7 +74,7 @@ func JobGroupRI() *v1alpha1.ResourceInterface {
 									ByConditions: []v1alpha1.ExpectedCondition{
 										{
 											Type:   "Running",
-											Status: "True",
+											Status: ptr.To("True"),
 										},
 									},
 								},
