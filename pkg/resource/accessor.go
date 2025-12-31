@@ -657,7 +657,15 @@ func matchByExpression(ctx context.Context, jqRunner execution.Runner, matcher v
 		return false, nil
 	}
 
-	// Convert result to string for comparison
+	resultStr, err := resultAsString(result)
+	if err != nil {
+		return false, err
+	}
+
+	return resultStr == matcher.ByExpression.ExpectedResult, nil
+}
+
+func resultAsString(result any) (string, error) {
 	var resultStr string
 	switch v := result.(type) {
 	case string:
@@ -676,12 +684,11 @@ func matchByExpression(ctx context.Context, jqRunner execution.Runner, matcher v
 		// For complex types, use JSON representation
 		jsonBytes, err := json.Marshal(result)
 		if err != nil {
-			return false, fmt.Errorf("failed to marshal result: %w", err)
+			return "", fmt.Errorf("failed to marshal result: %w", err)
 		}
 		resultStr = string(jsonBytes)
 	}
-
-	return resultStr == matcher.ByExpression.ExpectedResult, nil
+	return resultStr, nil
 }
 
 func checkCondition(conditionsMap map[string]Condition, expectedCond v1alpha1.ExpectedCondition) (Condition, bool) {
