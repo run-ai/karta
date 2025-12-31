@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/utils/ptr"
+
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -617,11 +619,13 @@ func match(ctx context.Context, jqRunner execution.Runner, phase *string, condit
 			return false, nil
 		}
 
-		if expectedCond.Status != nil && *expectedCond.Status != "" && *actualCond.Status != *expectedCond.Status {
+		expectedValue := ptr.Deref(expectedCond.Status, "")
+		if expectedValue != "" && expectedValue != ptr.Deref(actualCond.Status, "") {
 			return false, nil
 		}
 
-		if expectedCond.Reason != nil && *expectedCond.Reason != "" && (actualCond.Reason == nil || *actualCond.Reason != *expectedCond.Reason) {
+		expectedValue = ptr.Deref(expectedCond.Reason, "")
+		if expectedValue != "" && expectedValue != ptr.Deref(actualCond.Reason, "") {
 			return false, nil
 		}
 	}

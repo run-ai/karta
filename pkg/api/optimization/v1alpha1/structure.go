@@ -270,7 +270,7 @@ type StatusMatcher struct {
 	// +kubebuilder:validation:Optional
 	ByPhase string `json:"byPhase,omitempty"`
 
-	// ByConditions matches against specific condition combinations (ANDed together)
+	// ByConditions matches against specific condition combinations (ANDed together) at least one of status or reason must be used.
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	ByConditions []ExpectedCondition `json:"byConditions,omitempty"`
