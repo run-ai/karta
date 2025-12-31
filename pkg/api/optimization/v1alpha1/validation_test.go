@@ -404,7 +404,10 @@ var _ = Describe("RIValidator", func() {
 			It("should pass with valid ByExpression", func() {
 				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
 					{
-						ByExpression: ".status.phase == \"Running\"",
+						ByExpression: &ExpressionMatcher{
+							Expression:     ".status.phase == \"Running\"",
+							ExpectedResult: "true",
+						},
 					},
 				}
 				validator = NewRIValidator(riWithJQPaths)
@@ -416,7 +419,10 @@ var _ = Describe("RIValidator", func() {
 			It("should fail with dangerous ByExpression using del", func() {
 				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
 					{
-						ByExpression: "del(.status)",
+						ByExpression: &ExpressionMatcher{
+							Expression:     "del(.status)",
+							ExpectedResult: "true",
+						},
 					},
 				}
 				validator = NewRIValidator(riWithJQPaths)
@@ -429,7 +435,10 @@ var _ = Describe("RIValidator", func() {
 			It("should fail with invalid ByExpression syntax", func() {
 				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
 					{
-						ByExpression: ".status.phase == ",
+						ByExpression: &ExpressionMatcher{
+							Expression:     ".status.phase == ",
+							ExpectedResult: "true",
+						},
 					},
 				}
 				validator = NewRIValidator(riWithJQPaths)
@@ -441,16 +450,16 @@ var _ = Describe("RIValidator", func() {
 			It("should validate ByExpression in multiple status matchers", func() {
 				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = StatusMappings{
 					Initializing: []StatusMatcher{
-						{ByExpression: ".status.phase == \"Pending\""},
+						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Pending\"", ExpectedResult: "true"}},
 					},
 					Running: []StatusMatcher{
-						{ByExpression: ".status.phase == \"Running\""},
+						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Running\"", ExpectedResult: "true"}},
 					},
 					Completed: []StatusMatcher{
-						{ByExpression: ".status.phase == \"Succeeded\""},
+						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Succeeded\"", ExpectedResult: "true"}},
 					},
 					Failed: []StatusMatcher{
-						{ByExpression: ".status.phase == \"Failed\""},
+						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Failed\"", ExpectedResult: "true"}},
 					},
 				}
 				validator = NewRIValidator(riWithJQPaths)
@@ -462,13 +471,13 @@ var _ = Describe("RIValidator", func() {
 			It("should fail when one ByExpression in multiple matchers is invalid", func() {
 				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = StatusMappings{
 					Initializing: []StatusMatcher{
-						{ByExpression: ".status.phase == \"Pending\""},
+						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Pending\"", ExpectedResult: "true"}},
 					},
 					Running: []StatusMatcher{
-						{ByExpression: "del(.status)"},
+						{ByExpression: &ExpressionMatcher{Expression: "del(.status)", ExpectedResult: "true"}},
 					},
 					Completed: []StatusMatcher{
-						{ByExpression: ".status.phase == \"Succeeded\""},
+						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Succeeded\"", ExpectedResult: "true"}},
 					},
 				}
 				validator = NewRIValidator(riWithJQPaths)

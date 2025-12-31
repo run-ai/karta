@@ -1081,7 +1081,10 @@ var _ = Describe("Accessor", func() {
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
-							ByExpression: `.status.phase == "running"`,
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.phase == "running"`,
+								ExpectedResult: "true",
+							},
 						},
 					},
 				}
@@ -1101,7 +1104,10 @@ var _ = Describe("Accessor", func() {
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Failed: []v1alpha1.StatusMatcher{
 						{
-							ByExpression: `.status.phase == "failed"`,
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.phase == "failed"`,
+								ExpectedResult: "true",
+							},
 						},
 					},
 				}
@@ -1124,7 +1130,10 @@ var _ = Describe("Accessor", func() {
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
-							ByExpression: `.status.phase == "running" and (.status.conditions[] | select(.type == "Ready") | .status == "True")`,
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.phase == "running" and (.status.conditions[] | select(.type == "Ready") | .status == "True")`,
+								ExpectedResult: "true",
+							},
 						},
 					},
 				}
@@ -1147,8 +1156,11 @@ var _ = Describe("Accessor", func() {
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
-							ByPhase:      "running",
-							ByExpression: `.status.conditions | length > 0`,
+							ByPhase: "running",
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.conditions | length > 0`,
+								ExpectedResult: "true",
+							},
 						},
 					},
 				}
@@ -1169,8 +1181,11 @@ var _ = Describe("Accessor", func() {
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
-							ByPhase:      "running",
-							ByExpression: `.status.conditions | length > 0`,
+							ByPhase: "running",
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.conditions | length > 0`,
+								ExpectedResult: "true",
+							},
 						},
 					},
 				}
@@ -1197,7 +1212,10 @@ var _ = Describe("Accessor", func() {
 							ByConditions: []v1alpha1.ExpectedCondition{
 								{Type: "Ready", Status: ptr.To("True")},
 							},
-							ByExpression: `.status.conditions | length > 0`,
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.conditions | length > 0`,
+								ExpectedResult: "true",
+							},
 						},
 					},
 				}
@@ -1217,7 +1235,10 @@ var _ = Describe("Accessor", func() {
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
-							ByExpression: `.status.nonExistentField`,
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.nonExistentField`,
+								ExpectedResult: "true",
+							},
 						},
 					},
 				}
@@ -1237,7 +1258,10 @@ var _ = Describe("Accessor", func() {
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
-							ByExpression: `.status.phase ==`,
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.phase ==`,
+								ExpectedResult: "true",
+							},
 						},
 					},
 				}

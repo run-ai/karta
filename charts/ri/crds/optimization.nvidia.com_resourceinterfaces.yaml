@@ -399,7 +399,19 @@ spec:
                                         description: ByExpression is a JQ expression
                                           that matches against the object for status
                                           matching
-                                        type: string
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value from the expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -447,7 +459,19 @@ spec:
                                         description: ByExpression is a JQ expression
                                           that matches against the object for status
                                           matching
-                                        type: string
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value from the expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -495,7 +519,19 @@ spec:
                                         description: ByExpression is a JQ expression
                                           that matches against the object for status
                                           matching
-                                        type: string
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value from the expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -543,7 +579,19 @@ spec:
                                         description: ByExpression is a JQ expression
                                           that matches against the object for status
                                           matching
-                                        type: string
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value from the expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -805,7 +853,19 @@ spec:
                                       description: ByExpression is a JQ expression
                                         that matches against the object for status
                                         matching
-                                      type: string
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value from the expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
@@ -851,7 +911,19 @@ spec:
                                       description: ByExpression is a JQ expression
                                         that matches against the object for status
                                         matching
-                                      type: string
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value from the expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
@@ -897,7 +969,19 @@ spec:
                                       description: ByExpression is a JQ expression
                                         that matches against the object for status
                                         matching
-                                      type: string
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value from the expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
@@ -943,7 +1027,19 @@ spec:
                                       description: ByExpression is a JQ expression
                                         that matches against the object for status
                                         matching
-                                      type: string
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value from the expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
