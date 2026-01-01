@@ -402,7 +402,8 @@ spec:
                                         properties:
                                           expectedResult:
                                             description: ExpectedResult is the expected
-                                              result value from the expression evaluation
+                                              result value in string format from the
+                                              expression evaluation
                                             type: string
                                           expression:
                                             description: Expression is the JQ expression
@@ -462,7 +463,8 @@ spec:
                                         properties:
                                           expectedResult:
                                             description: ExpectedResult is the expected
-                                              result value from the expression evaluation
+                                              result value in string format from the
+                                              expression evaluation
                                             type: string
                                           expression:
                                             description: Expression is the JQ expression
@@ -522,7 +524,8 @@ spec:
                                         properties:
                                           expectedResult:
                                             description: ExpectedResult is the expected
-                                              result value from the expression evaluation
+                                              result value in string format from the
+                                              expression evaluation
                                             type: string
                                           expression:
                                             description: Expression is the JQ expression
@@ -582,7 +585,8 @@ spec:
                                         properties:
                                           expectedResult:
                                             description: ExpectedResult is the expected
-                                              result value from the expression evaluation
+                                              result value in string format from the
+                                              expression evaluation
                                             type: string
                                           expression:
                                             description: Expression is the JQ expression
@@ -856,7 +860,8 @@ spec:
                                       properties:
                                         expectedResult:
                                           description: ExpectedResult is the expected
-                                            result value from the expression evaluation
+                                            result value in string format from the
+                                            expression evaluation
                                           type: string
                                         expression:
                                           description: Expression is the JQ expression
@@ -914,7 +919,8 @@ spec:
                                       properties:
                                         expectedResult:
                                           description: ExpectedResult is the expected
-                                            result value from the expression evaluation
+                                            result value in string format from the
+                                            expression evaluation
                                           type: string
                                         expression:
                                           description: Expression is the JQ expression
@@ -972,7 +978,8 @@ spec:
                                       properties:
                                         expectedResult:
                                           description: ExpectedResult is the expected
-                                            result value from the expression evaluation
+                                            result value in string format from the
+                                            expression evaluation
                                           type: string
                                         expression:
                                           description: Expression is the JQ expression
@@ -1030,7 +1037,8 @@ spec:
                                       properties:
                                         expectedResult:
                                           description: ExpectedResult is the expected
-                                            result value from the expression evaluation
+                                            result value in string format from the
+                                            expression evaluation
                                           type: string
                                         expression:
                                           description: Expression is the JQ expression

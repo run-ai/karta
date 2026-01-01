@@ -286,7 +286,7 @@ type ExpressionMatcher struct {
 	// +kubebuilder:validation:Required
 	Expression string `json:"expression" jq:"validate"`
 
-	// ExpectedResult is the expected result value from the expression evaluation
+	// ExpectedResult is the expected result value in string format from the expression evaluation
 	// +kubebuilder:validation:Required
 	ExpectedResult string `json:"expectedResult"`
 }
