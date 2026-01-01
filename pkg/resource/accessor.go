@@ -643,7 +643,10 @@ func match(ctx context.Context, jqRunner execution.Runner, phase *string, condit
 }
 
 func matchByExpression(ctx context.Context, jqRunner execution.Runner, matcher v1alpha1.StatusMatcher) (bool, error) {
-	results, err := jqRunner.Evaluate(ctx, matcher.ByExpression.Expression)
+	// Construct a jq expression that compares the result with the expected value
+	comparisonExpr := fmt.Sprintf("(%s) | tostring == \"%s\"", matcher.ByExpression.Expression, matcher.ByExpression.ExpectedResult)
+
+	results, err := jqRunner.Evaluate(ctx, comparisonExpr)
 	if err != nil {
 		return false, fmt.Errorf("failed to evaluate ByExpression: %w", err)
 	}
@@ -657,38 +660,13 @@ func matchByExpression(ctx context.Context, jqRunner execution.Runner, matcher v
 		return false, nil
 	}
 
-	resultStr, err := resultAsString(result)
-	if err != nil {
-		return false, err
+	// The result must be a boolean from the jq comparison expression
+	matched, ok := result.(bool)
+	if !ok {
+		return false, fmt.Errorf("expression comparison did not return a boolean, got %T", result)
 	}
 
-	return resultStr == matcher.ByExpression.ExpectedResult, nil
-}
-
-func resultAsString(result any) (string, error) {
-	var resultStr string
-	switch v := result.(type) {
-	case string:
-		resultStr = v
-	case bool:
-		if v {
-			resultStr = "true"
-		} else {
-			resultStr = "false"
-		}
-	case float64:
-		resultStr = fmt.Sprintf("%g", v)
-	case int:
-		resultStr = fmt.Sprintf("%d", v)
-	default:
-		// For complex types, use JSON representation
-		jsonBytes, err := json.Marshal(result)
-		if err != nil {
-			return "", fmt.Errorf("failed to marshal result: %w", err)
-		}
-		resultStr = string(jsonBytes)
-	}
-	return resultStr, nil
+	return matched, nil
 }
 
 func checkCondition(conditionsMap map[string]Condition, expectedCond v1alpha1.ExpectedCondition) (Condition, bool) {

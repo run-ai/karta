@@ -1074,7 +1074,7 @@ var _ = Describe("Accessor", func() {
 				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.FailedStatus))
 			})
 
-			It("should match status with ByExpression returning true", func() {
+			It("should match status with ByExpression returning string 'running'", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "running"
 				reactorRI := types.ReactorRI()
@@ -1082,8 +1082,8 @@ var _ = Describe("Accessor", func() {
 					Running: []v1alpha1.StatusMatcher{
 						{
 							ByExpression: &v1alpha1.ExpressionMatcher{
-								Expression:     `.status.phase == "running"`,
-								ExpectedResult: "true",
+								Expression:     `.status.phase`,
+								ExpectedResult: "running",
 							},
 						},
 					},
