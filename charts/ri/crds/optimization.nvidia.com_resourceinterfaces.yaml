@@ -395,6 +395,24 @@ spec:
                                           type: object
                                         type: array
                                         x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value in string format from the
+                                              expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -438,6 +456,24 @@ spec:
                                           type: object
                                         type: array
                                         x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value in string format from the
+                                              expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -481,6 +517,24 @@ spec:
                                           type: object
                                         type: array
                                         x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value in string format from the
+                                              expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -524,6 +578,24 @@ spec:
                                           type: object
                                         type: array
                                         x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value in string format from the
+                                              expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -781,6 +853,24 @@ spec:
                                         type: object
                                       type: array
                                       x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value in string format from the
+                                            expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
@@ -822,6 +912,24 @@ spec:
                                         type: object
                                       type: array
                                       x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value in string format from the
+                                            expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
@@ -863,6 +971,24 @@ spec:
                                         type: object
                                       type: array
                                       x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value in string format from the
+                                            expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
@@ -904,6 +1030,24 @@ spec:
                                         type: object
                                       type: array
                                       x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value in string format from the
+                                            expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value

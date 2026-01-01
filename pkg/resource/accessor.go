@@ -258,7 +258,10 @@ func (a *Accessor) ExtractStatus(ctx context.Context, definition v1alpha1.Compon
 		return nil, err
 	}
 
-	matchedStatuses := matchStatus(phase, conditions, statusDef.StatusMappings)
+	matchedStatuses, err := matchStatus(ctx, a.jqRunner, phase, conditions, statusDef.StatusMappings)
+	if err != nil {
+		return nil, fmt.Errorf("failed to match status: %w", err)
+	}
 
 	status := Status{
 		Phase:           phase,
@@ -544,72 +547,132 @@ func convertViaJSON(src any, dst any) error {
 	return nil
 }
 
-func matchStatus(phase *string, conditions []Condition, mappings v1alpha1.StatusMappings) []v1alpha1.ResourceStatus {
+func matchStatus(ctx context.Context, jqRunner execution.Runner, phase *string, conditions []Condition, mappings v1alpha1.StatusMappings) ([]v1alpha1.ResourceStatus, error) {
 	conditionsMap := make(map[string]Condition, len(conditions))
 	for _, cond := range conditions {
 		conditionsMap[cond.Type] = cond
 	}
 
 	matchedStatuses := make([]v1alpha1.ResourceStatus, 0)
-	if evaluateMatchers(phase, conditionsMap, mappings.Running) {
+	matched, err := evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Running)
+	if err != nil {
+		return nil, err
+	}
+	if matched {
 		matchedStatuses = append(matchedStatuses, v1alpha1.RunningStatus)
 	}
 
-	if evaluateMatchers(phase, conditionsMap, mappings.Failed) {
+	matched, err = evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Failed)
+	if err != nil {
+		return nil, err
+	}
+	if matched {
 		matchedStatuses = append(matchedStatuses, v1alpha1.FailedStatus)
 	}
 
-	if evaluateMatchers(phase, conditionsMap, mappings.Completed) {
+	matched, err = evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Completed)
+	if err != nil {
+		return nil, err
+	}
+	if matched {
 		matchedStatuses = append(matchedStatuses, v1alpha1.CompletedStatus)
 	}
 
-	if evaluateMatchers(phase, conditionsMap, mappings.Initializing) {
+	matched, err = evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Initializing)
+	if err != nil {
+		return nil, err
+	}
+	if matched {
 		matchedStatuses = append(matchedStatuses, v1alpha1.InitializingStatus)
 	}
 
 	if len(matchedStatuses) == 0 {
-		return []v1alpha1.ResourceStatus{v1alpha1.UndefinedStatus}
+		return []v1alpha1.ResourceStatus{v1alpha1.UndefinedStatus}, nil
 	}
 
-	return matchedStatuses
+	return matchedStatuses, nil
 }
 
-func evaluateMatchers(phase *string, conditionsMap map[string]Condition, matchers []v1alpha1.StatusMatcher) bool {
+func evaluateMatchers(ctx context.Context, jqRunner execution.Runner, phase *string, conditionsMap map[string]Condition, matchers []v1alpha1.StatusMatcher) (bool, error) {
 	for _, matcher := range matchers {
-		if match(phase, conditionsMap, matcher) {
-			return true
+		matched, err := match(ctx, jqRunner, phase, conditionsMap, matcher)
+		if err != nil {
+			return false, fmt.Errorf("failed to evaluate matcher: %w", err)
+		}
+		if matched {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
-func match(phase *string, conditionsMap map[string]Condition, matcher v1alpha1.StatusMatcher) bool {
+func match(ctx context.Context, jqRunner execution.Runner, phase *string, conditionsMap map[string]Condition, matcher v1alpha1.StatusMatcher) (bool, error) {
 	if matcher.ByPhase != "" {
 		if phase == nil || *phase != matcher.ByPhase {
-			return false
+			return false, nil
 		}
-	}
-
-	if len(matcher.ByConditions) == 0 {
-		return true
 	}
 
 	for _, expectedCond := range matcher.ByConditions {
-		actualCond, found := conditionsMap[expectedCond.Type]
+		actualCond, found := checkCondition(conditionsMap, expectedCond)
 		if !found {
-			return false
+			return false, nil
 		}
 
 		expectedValue := ptr.Deref(expectedCond.Status, "")
 		if expectedValue != "" && expectedValue != ptr.Deref(actualCond.Status, "") {
-			return false
+			return false, nil
 		}
 
 		expectedValue = ptr.Deref(expectedCond.Reason, "")
 		if expectedValue != "" && expectedValue != ptr.Deref(actualCond.Reason, "") {
-			return false
+			return false, nil
 		}
 	}
 
-	return true
+	if matcher.ByExpression != nil {
+		matched, err := matchByExpression(ctx, jqRunner, matcher)
+		if err != nil {
+			return false, err
+		}
+
+		return matched, nil
+	}
+
+	return true, nil
+}
+
+func matchByExpression(ctx context.Context, jqRunner execution.Runner, matcher v1alpha1.StatusMatcher) (bool, error) {
+	// Construct a jq expression that compares the result with the expected value
+	comparisonExpr := fmt.Sprintf("(%s) | tostring == \"%s\"", matcher.ByExpression.Expression, matcher.ByExpression.ExpectedResult)
+
+	results, err := jqRunner.Evaluate(ctx, comparisonExpr)
+	if err != nil {
+		return false, fmt.Errorf("failed to evaluate ByExpression: %w", err)
+	}
+
+	if len(results) == 0 {
+		return false, nil
+	}
+
+	result := results[0]
+	if result == nil {
+		return false, nil
+	}
+
+	// The result must be a boolean from the jq comparison expression
+	matched, ok := result.(bool)
+	if !ok {
+		return false, fmt.Errorf("expression comparison did not return a boolean, got %T", result)
+	}
+
+	return matched, nil
+}
+
+func checkCondition(conditionsMap map[string]Condition, expectedCond v1alpha1.ExpectedCondition) (Condition, bool) {
+	actualCond, found := conditionsMap[expectedCond.Type]
+	if !found {
+		return Condition{}, false
+	}
+	return actualCond, true
 }

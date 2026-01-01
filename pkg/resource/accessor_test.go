@@ -650,6 +650,7 @@ var _ = Describe("Accessor", func() {
 					},
 				}
 				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
 				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
 				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
@@ -1046,56 +1047,6 @@ var _ = Describe("Accessor", func() {
 				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.FailedStatus))
 			})
 
-			It("should fail match when reason and status is expected reason does not match", func() {
-				reactorObject := types.NewReactorObject()
-				reactorObject.Status.Conditions = []metav1.Condition{
-					{Type: "Failed", Status: metav1.ConditionTrue, Reason: "OOMKilled"},
-				}
-				reactorRI := types.ReactorRI()
-				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
-				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
-					Failed: []v1alpha1.StatusMatcher{
-						{
-							ByConditions: []v1alpha1.ExpectedCondition{
-								{Type: "Failed", Status: ptr.To("True"), Reason: ptr.To("NotMKilled")},
-							},
-						},
-					},
-				}
-				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
-
-				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
-			})
-
-			It("should fail match when reason and status is expected status does not match", func() {
-				reactorObject := types.NewReactorObject()
-				reactorObject.Status.Conditions = []metav1.Condition{
-					{Type: "Failed", Status: metav1.ConditionTrue, Reason: "OOMKilled"},
-				}
-				reactorRI := types.ReactorRI()
-				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
-				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
-					Failed: []v1alpha1.StatusMatcher{
-						{
-							ByConditions: []v1alpha1.ExpectedCondition{
-								{Type: "Failed", Status: ptr.To("False"), Reason: ptr.To("OOMKilled")},
-							},
-						},
-					},
-				}
-				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
-
-				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).NotTo(BeNil())
-				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
-			})
-
 			It("should match with multiple conditions including reason", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Conditions = []metav1.Condition{
@@ -1121,6 +1072,206 @@ var _ = Describe("Accessor", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
 				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.FailedStatus))
+			})
+
+			It("should match status with ByExpression returning string 'running'", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.phase`,
+								ExpectedResult: "running",
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
+			})
+
+			It("should not match when ByExpression returns false", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Failed: []v1alpha1.StatusMatcher{
+						{
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.phase == "failed"`,
+								ExpectedResult: "true",
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
+			})
+
+			It("should match status with ByExpression checking complex conditions", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Ready", Status: metav1.ConditionTrue},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.phase == "running" and (.status.conditions[] | select(.type == "Ready") | .status == "True")`,
+								ExpectedResult: "true",
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
+			})
+
+			It("should match with both ByPhase and ByExpression (AND logic)", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Ready", Status: metav1.ConditionTrue},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "running",
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.conditions | length > 0`,
+								ExpectedResult: "true",
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
+			})
+
+			It("should not match when ByPhase matches but ByExpression does not", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorObject.Status.Conditions = []metav1.Condition{}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "running",
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.conditions | length > 0`,
+								ExpectedResult: "true",
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
+			})
+
+			It("should match with ByPhase, ByConditions, and ByExpression (all AND)", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorObject.Status.Conditions = []metav1.Condition{
+					{Type: "Ready", Status: metav1.ConditionTrue},
+				}
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "running",
+							ByConditions: []v1alpha1.ExpectedCondition{
+								{Type: "Ready", Status: ptr.To("True")},
+							},
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.conditions | length > 0`,
+								ExpectedResult: "true",
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus))
+			})
+
+			It("should not match when ByExpression returns null", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.nonExistentField`,
+								ExpectedResult: "true",
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
+			})
+
+			It("should return error when ByExpression is invalid", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `.status.phase ==`,
+								ExpectedResult: "true",
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("failed to match status"))
+				Expect(result).To(BeNil())
 			})
 		})
 

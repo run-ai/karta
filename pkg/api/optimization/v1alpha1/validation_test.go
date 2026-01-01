@@ -399,6 +399,94 @@ var _ = Describe("RIValidator", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("del function is not allowed"))
 		})
+
+		Context("ByExpression validation", func() {
+			It("should pass with valid ByExpression", func() {
+				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
+					{
+						ByExpression: &ExpressionMatcher{
+							Expression:     ".status.phase == \"Running\"",
+							ExpectedResult: "true",
+						},
+					},
+				}
+				validator = NewRIValidator(riWithJQPaths)
+
+				err := validator.Validate()
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should fail with dangerous ByExpression using del", func() {
+				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
+					{
+						ByExpression: &ExpressionMatcher{
+							Expression:     "del(.status)",
+							ExpectedResult: "true",
+						},
+					},
+				}
+				validator = NewRIValidator(riWithJQPaths)
+
+				err := validator.Validate()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("del function is not allowed"))
+			})
+
+			It("should fail with invalid ByExpression syntax", func() {
+				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
+					{
+						ByExpression: &ExpressionMatcher{
+							Expression:     ".status.phase == ",
+							ExpectedResult: "true",
+						},
+					},
+				}
+				validator = NewRIValidator(riWithJQPaths)
+
+				err := validator.Validate()
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should validate ByExpression in multiple status matchers", func() {
+				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = StatusMappings{
+					Initializing: []StatusMatcher{
+						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Pending\"", ExpectedResult: "true"}},
+					},
+					Running: []StatusMatcher{
+						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Running\"", ExpectedResult: "true"}},
+					},
+					Completed: []StatusMatcher{
+						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Succeeded\"", ExpectedResult: "true"}},
+					},
+					Failed: []StatusMatcher{
+						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Failed\"", ExpectedResult: "true"}},
+					},
+				}
+				validator = NewRIValidator(riWithJQPaths)
+
+				err := validator.Validate()
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should fail when one ByExpression in multiple matchers is invalid", func() {
+				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = StatusMappings{
+					Initializing: []StatusMatcher{
+						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Pending\"", ExpectedResult: "true"}},
+					},
+					Running: []StatusMatcher{
+						{ByExpression: &ExpressionMatcher{Expression: "del(.status)", ExpectedResult: "true"}},
+					},
+					Completed: []StatusMatcher{
+						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Succeeded\"", ExpectedResult: "true"}},
+					},
+				}
+				validator = NewRIValidator(riWithJQPaths)
+
+				err := validator.Validate()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("del function is not allowed"))
+			})
+		})
 	})
 
 	Describe("short circuit on errors", func() {
