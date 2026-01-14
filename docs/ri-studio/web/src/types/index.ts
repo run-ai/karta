@@ -23,6 +23,7 @@ export interface ExtractResponse {
 export interface ComponentResult {
   name: string;
   kind?: GroupVersionKind;
+  ownerRef?: string;
   podTemplateSpec?: Record<string, any>;
   podSpec?: Record<string, any>;
   podMetadata?: Record<string, any>;
@@ -78,6 +79,28 @@ export interface ErrorResponse {
   error: string;
 }
 
+// Hierarchy Visualization Types
 
+export interface HierarchyNodeData {
+  kind?: GroupVersionKind;
+  scale?: Scale;
+  hasSpec: boolean;
+  instanceCount?: number;
+  error?: string;
+  componentName: string;
+  instanceId?: string;
+}
 
+export interface HierarchyNode {
+  id: string;
+  type: 'root' | 'component' | 'instance' | 'pod';
+  label: string;
+  data: HierarchyNodeData;
+}
 
+export interface HierarchyEdge {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+}

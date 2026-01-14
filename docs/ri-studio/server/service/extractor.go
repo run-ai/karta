@@ -89,8 +89,9 @@ func (s *ExtractorService) Extract(ctx context.Context, crYAML, riYAML string) (
 // extractFromComponent extracts information from a single component
 func (s *ExtractorService) extractFromComponent(ctx context.Context, crData map[string]interface{}, componentDef v1alpha1.ComponentDefinition) models.ComponentResult {
 	result := models.ComponentResult{
-		Name: componentDef.Name,
-		Kind: componentDef.Kind,
+		Name:     componentDef.Name,
+		Kind:     componentDef.Kind,
+		OwnerRef: componentDef.OwnerRef,
 	}
 
 	// Create JQ evaluator for the CR data

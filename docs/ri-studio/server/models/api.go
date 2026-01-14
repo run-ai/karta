@@ -36,6 +36,7 @@ type ExtractResponse struct {
 type ComponentResult struct {
 	Name            string                                `json:"name"`
 	Kind            *v1alpha1.GroupVersionKind            `json:"kind,omitempty"`
+	OwnerRef        *string                               `json:"ownerRef,omitempty"`
 	PodTemplateSpec map[string]corev1.PodTemplateSpec     `json:"podTemplateSpec,omitempty"`
 	PodSpec         map[string]corev1.PodSpec             `json:"podSpec,omitempty"`
 	PodMetadata     map[string]metav1.ObjectMeta          `json:"podMetadata,omitempty"`

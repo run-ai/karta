@@ -10,23 +10,123 @@ kind: ResourceInterface
 spec:
   structureDefinition:
     rootComponent:
-      name: "example"
+      name: "jobset"
       kind:
-        group: "example.com"
-        version: "v1"
-        kind: "Example"
+        group: "jobset.x-k8s.io"
+        version: "v1alpha2"
+        kind: "JobSet"
       statusDefinition:
+        conditionsDefinition:
+          path: ".status.conditions"
+          typeFieldName: "type"
+          statusFieldName: "status"
         statusMappings:
+          initializing:
+          - byConditions:
+            - type: "StartupPolicyInProgress"
+              status: "True"
           running:
-            - byPhase: "Running"
+          - byConditions:
+            - type: "StartupPolicyCompleted"
+              status: "True"
+            - type: "Completed"
+              status: "False"
+            - type: "Failed"
+              status: "False"
+          completed:
+          - byConditions:
+            - type: "Completed"
+              status: "True"
+          failed:
+          - byConditions:
+            - type: "Failed"
+              status: "True"
+
+    childComponents:
+    - name: "replicatedjob"
+      kind:
+        group: "batch"
+        version: "v1"
+        kind: "Job"
+      ownerRef: "jobset"
+      specDefinition:
+        podTemplateSpecPath: ".spec.replicatedJobs[].template.spec.template"
+      scaleDefinition:
+        replicasPath: ".spec.replicatedJobs[].replicas"
+      instanceIdPath: ".spec.replicatedJobs[].name"
+      podSelector:
+        componentInstanceSelector:
+          idPath: '.metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]'
+
+  optimizationInstructions:
+    gangScheduling:
+      podGroups:
+      - name: "job"
+        members:
+        - componentName: "replicatedjob"
+          groupByKeyPaths:
+          - '.metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]'
 `;
 
-const DEFAULT_CR = `apiVersion: example.com/v1
-kind: Example
+const DEFAULT_CR = `apiVersion: jobset.x-k8s.io/v1alpha2
+kind: JobSet
 metadata:
-  name: my-example
+  name: pytorch-distributed-training
 spec:
-  # Add your custom resource spec here
+  # 1. Network: Automatically creates a headless service for pod-to-pod communication
+  network:
+    enableDNSHostnames: true
+    subdomain: pytorch-svc # Pods reach each other at: <pod-name>.pytorch-svc
+
+  # 2. Success Policy: The JobSet is "Done" when the 'driver' finishes.
+  #    (Workers run indefinitely until the driver kills them or finishes).
+  successPolicy:
+    operator: Any
+    targetReplicatedJobs:
+      - driver
+
+  failurePolicy:
+    maxRestarts: 3
+
+  replicatedJobs:
+    # --- Group A: The Driver (Leader) ---
+    - name: driver
+      replicas: 1
+      template:
+        spec:
+          parallelism: 1
+          completions: 1
+          backoffLimit: 0
+          template:
+            spec:
+              containers:
+              - name: pytorch
+                image: pytorch/pytorch:latest
+                command: ["python", "train_script.py", "--role", "master"]
+                env:
+                - name: MASTER_ADDR
+                  value: "pytorch-distributed-training-driver-0-0.pytorch-svc"
+              restartPolicy: Never
+
+    # --- Group B: The Workers ---
+    - name: workers
+      replicas: 4
+      template:
+        spec:
+          parallelism: 1
+          completions: 1
+          backoffLimit: 0 
+          template:
+            spec:
+              containers:
+              - name: pytorch
+                image: pytorch/pytorch:latest
+                command: ["python", "train_script.py", "--role", "worker"]
+                env:
+                - name: MASTER_ADDR
+                  # Connects to the driver defined above
+                  value: "pytorch-distributed-training-driver-0-0.pytorch-svc"
+              restartPolicy: Never
 `;
 
 function App() {
