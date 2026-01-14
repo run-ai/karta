@@ -121,6 +121,34 @@ func (f *ComponentFactory) GetResource() (client.Object, error) {
 	return u, nil
 }
 
+func (f *ComponentFactory) IsContainSpecDefinition() (bool, error) {
+	components, err := f.GetChildComponents()
+	if err != nil {
+		return false, fmt.Errorf("failed to get child components: %w", err)
+	}
+	rootComponent, err := f.GetRootComponent()
+	if err != nil {
+		return false, fmt.Errorf("failed to get root component: %w", err)
+	}
+	components = append(components, rootComponent)
+	for _, component := range components {
+		if isComponentHasSpecDefinition(component.Definition()) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func isComponentHasSpecDefinition(componentDefinition v1alpha1.ComponentDefinition) bool {
+	if componentDefinition.SpecDefinition == nil {
+		return false
+	}
+
+	return componentDefinition.SpecDefinition.PodTemplateSpecPath != nil ||
+		componentDefinition.SpecDefinition.PodSpecPath != nil ||
+		componentDefinition.SpecDefinition.FragmentedPodSpecDefinition != nil
+}
+
 func validateKubernetesObject(u *unstructured.Unstructured) error {
 	gvk := u.GroupVersionKind()
 	if gvk.Group == "" && gvk.Version == "" { // Core groups might have empty Group, but need Version

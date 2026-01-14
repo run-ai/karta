@@ -6,6 +6,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
 	"github.com/run-ai/kai-bolt/test/types"
@@ -142,4 +144,212 @@ var _ = Describe("ComponentFactory", func() {
 			Expect(result).To(BeNil())
 		})
 	})
+
+	Context("IsContainSpecDefinition", func() {
+		Context("components with spec definitions", func() {
+			It("should return true when child components have PodTemplateSpecPath", func() {
+				// PyFlowRI has master/worker with PodTemplateSpecPath
+				result, err := factory.IsContainSpecDefinition()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+
+			It("should return true when child components have PodSpecPath", func() {
+				// JobGroupRI has job component with PodSpecPath
+				factory.ri = types.JobGroupRI()
+				factory = NewComponentFactory(factory.ri, mockAccessor)
+
+				result, err := factory.IsContainSpecDefinition()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+
+			It("should return true when child components have FragmentedPodSpecDefinition", func() {
+				// ReactorRI has service component with FragmentedPodSpecDefinition
+				factory.ri = types.ReactorRI()
+				factory = NewComponentFactory(factory.ri, mockAccessor)
+
+				result, err := factory.IsContainSpecDefinition()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+
+			It("should return true when root component has spec definition", func() {
+				factory.ri = riWithRootSpecOnly()
+				factory = NewComponentFactory(factory.ri, mockAccessor)
+
+				result, err := factory.IsContainSpecDefinition()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeTrue())
+			})
+		})
+
+		Context("components without spec definitions", func() {
+			It("should return false when all components have nil SpecDefinition", func() {
+				factory.ri = riWithNoSpecs()
+				factory = NewComponentFactory(factory.ri, mockAccessor)
+
+				result, err := factory.IsContainSpecDefinition()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+
+			It("should return false when all components have empty SpecDefinition", func() {
+				factory.ri = riWithEmptySpecs()
+				factory = NewComponentFactory(factory.ri, mockAccessor)
+
+				result, err := factory.IsContainSpecDefinition()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(BeFalse())
+			})
+		})
+	})
 })
+
+// Helper functions for test ResourceInterface instances
+
+// riWithNoSpecs creates a ResourceInterface where all components have nil SpecDefinition
+func riWithNoSpecs() *v1alpha1.ResourceInterface {
+	return &v1alpha1.ResourceInterface{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "no-specs",
+		},
+		Spec: v1alpha1.ResourceInterfaceSpec{
+			StructureDefinition: v1alpha1.StructureDefinition{
+				RootComponent: v1alpha1.ComponentDefinition{
+					Name: "root",
+					Kind: &v1alpha1.GroupVersionKind{
+						Group:   "test.example.com",
+						Version: "v1",
+						Kind:    "NoSpecs",
+					},
+					// SpecDefinition is nil
+				},
+				ChildComponents: []v1alpha1.ComponentDefinition{
+					{
+						Name:     "child1",
+						OwnerRef: ptr.To("root"),
+						// SpecDefinition is nil
+					},
+					{
+						Name:     "child2",
+						OwnerRef: ptr.To("root"),
+						// SpecDefinition is nil
+					},
+				},
+			},
+		},
+	}
+}
+
+// riWithEmptySpecs creates a ResourceInterface where all components have empty SpecDefinition
+func riWithEmptySpecs() *v1alpha1.ResourceInterface {
+	return &v1alpha1.ResourceInterface{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "empty-specs",
+		},
+		Spec: v1alpha1.ResourceInterfaceSpec{
+			StructureDefinition: v1alpha1.StructureDefinition{
+				RootComponent: v1alpha1.ComponentDefinition{
+					Name: "root",
+					Kind: &v1alpha1.GroupVersionKind{
+						Group:   "test.example.com",
+						Version: "v1",
+						Kind:    "EmptySpecs",
+					},
+					SpecDefinition: &v1alpha1.SpecDefinition{
+						// All fields nil
+					},
+				},
+				ChildComponents: []v1alpha1.ComponentDefinition{
+					{
+						Name:           "child1",
+						OwnerRef:       ptr.To("root"),
+						SpecDefinition: &v1alpha1.SpecDefinition{
+							// All fields nil
+						},
+					},
+					{
+						Name:           "child2",
+						OwnerRef:       ptr.To("root"),
+						SpecDefinition: &v1alpha1.SpecDefinition{
+							// All fields nil
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// riWithRootSpecOnly creates a ResourceInterface where only root has spec definition
+func riWithRootSpecOnly() *v1alpha1.ResourceInterface {
+	return &v1alpha1.ResourceInterface{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "root-spec-only",
+		},
+		Spec: v1alpha1.ResourceInterfaceSpec{
+			StructureDefinition: v1alpha1.StructureDefinition{
+				RootComponent: v1alpha1.ComponentDefinition{
+					Name: "root",
+					Kind: &v1alpha1.GroupVersionKind{
+						Group:   "test.example.com",
+						Version: "v1",
+						Kind:    "RootSpecOnly",
+					},
+					SpecDefinition: &v1alpha1.SpecDefinition{
+						PodTemplateSpecPath: ptr.To(".spec.template"),
+					},
+				},
+				ChildComponents: []v1alpha1.ComponentDefinition{
+					{
+						Name:     "child1",
+						OwnerRef: ptr.To("root"),
+						// SpecDefinition is nil
+					},
+					{
+						Name:     "child2",
+						OwnerRef: ptr.To("root"),
+						// SpecDefinition is nil
+					},
+				},
+			},
+		},
+	}
+}
+
+// riWithPartialChildSpecs creates a ResourceInterface where only one child has spec definition
+func riWithPartialChildSpecs() *v1alpha1.ResourceInterface {
+	return &v1alpha1.ResourceInterface{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "partial-child-specs",
+		},
+		Spec: v1alpha1.ResourceInterfaceSpec{
+			StructureDefinition: v1alpha1.StructureDefinition{
+				RootComponent: v1alpha1.ComponentDefinition{
+					Name: "root",
+					Kind: &v1alpha1.GroupVersionKind{
+						Group:   "test.example.com",
+						Version: "v1",
+						Kind:    "PartialChildSpecs",
+					},
+					// SpecDefinition is nil
+				},
+				ChildComponents: []v1alpha1.ComponentDefinition{
+					{
+						Name:     "child-with-spec",
+						OwnerRef: ptr.To("root"),
+						SpecDefinition: &v1alpha1.SpecDefinition{
+							PodSpecPath: ptr.To(".spec.child1.podSpec"),
+						},
+					},
+					{
+						Name:     "child-without-spec",
+						OwnerRef: ptr.To("root"),
+						// SpecDefinition is nil
+					},
+				},
+			},
+		},
+	}
+}
