@@ -317,39 +317,3 @@ func riWithRootSpecOnly() *v1alpha1.ResourceInterface {
 		},
 	}
 }
-
-// riWithPartialChildSpecs creates a ResourceInterface where only one child has spec definition
-func riWithPartialChildSpecs() *v1alpha1.ResourceInterface {
-	return &v1alpha1.ResourceInterface{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "partial-child-specs",
-		},
-		Spec: v1alpha1.ResourceInterfaceSpec{
-			StructureDefinition: v1alpha1.StructureDefinition{
-				RootComponent: v1alpha1.ComponentDefinition{
-					Name: "root",
-					Kind: &v1alpha1.GroupVersionKind{
-						Group:   "test.example.com",
-						Version: "v1",
-						Kind:    "PartialChildSpecs",
-					},
-					// SpecDefinition is nil
-				},
-				ChildComponents: []v1alpha1.ComponentDefinition{
-					{
-						Name:     "child-with-spec",
-						OwnerRef: ptr.To("root"),
-						SpecDefinition: &v1alpha1.SpecDefinition{
-							PodSpecPath: ptr.To(".spec.child1.podSpec"),
-						},
-					},
-					{
-						Name:     "child-without-spec",
-						OwnerRef: ptr.To("root"),
-						// SpecDefinition is nil
-					},
-				},
-			},
-		},
-	}
-}
