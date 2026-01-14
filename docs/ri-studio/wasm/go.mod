@@ -2,8 +2,6 @@ module github.com/run-ai/kai-bolt/docs/ri-studio/wasm
 
 go 1.24.6
 
-replace github.com/run-ai/kai-bolt => ../../../
-
 require (
 	github.com/run-ai/kai-bolt v0.0.0-00010101000000-000000000000
 	k8s.io/api v0.33.0
