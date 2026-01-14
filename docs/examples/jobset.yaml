@@ -45,7 +45,7 @@ spec:
         kind: "Job"
       ownerRef: "jobset"
       specDefinition:
-        podTemplateSpecPath: ".spec.replicatedJobs[].template"
+        podTemplateSpecPath: ".spec.replicatedJobs[].template.spec.template"
       scaleDefinition:
         replicasPath: ".spec.replicatedJobs[].replicas"
       instanceIdPath: ".spec.replicatedJobs[].name"
