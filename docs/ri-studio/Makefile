@@ -17,7 +17,7 @@ build-wasm: ## Build the WASM binary and copy wasm_exec.js
 	@mkdir -p wasm/examples
 	@rsync -a --delete ../examples/ wasm/examples/
 	@echo "Building WASM binary..."
-	cd wasm && go mod tidy && GOOS=js GOARCH=wasm go build -o ../web/public/wasm.wasm .
+	cd wasm && GOOS=js GOARCH=wasm go build -o ../web/public/wasm.wasm .
 	@echo "Copying wasm_exec.js from Go SDK..."
 	@if [ -f "$$(go env GOROOT)/misc/wasm/wasm_exec.js" ]; then \
 		cp "$$(go env GOROOT)/misc/wasm/wasm_exec.js" web/public/wasm_exec.js; \

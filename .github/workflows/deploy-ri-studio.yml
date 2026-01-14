@@ -44,6 +44,9 @@ jobs:
 
       - name: Build WASM and Static Site
         run: |
+          # Use Go Workspace to correctly resolve local modules
+          go work init . docs/ri-studio/wasm
+          
           cd docs/ri-studio
           make build-static
 
