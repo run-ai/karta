@@ -81,6 +81,7 @@ func ReactorRI() *v1alpha1.ResourceInterface {
 							Path:             ".status.conditions",
 							TypeFieldName:    "type",
 							StatusFieldName:  "status",
+							ReasonFieldName:  ptr.To("reason"),
 							MessageFieldName: ptr.To("message"),
 						},
 						StatusMappings: v1alpha1.StatusMappings{

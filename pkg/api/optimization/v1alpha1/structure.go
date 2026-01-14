@@ -227,6 +227,11 @@ type ConditionsDefinition struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=message
 	MessageFieldName *string `json:"messageFieldName"`
+
+	// ReasonFieldName is the field name for the condition reason
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=reason
+	ReasonFieldName *string `json:"reasonFieldName"`
 }
 
 // StatusMappings define how to map extracted status information to ResourceStatus values.
@@ -265,10 +270,25 @@ type StatusMatcher struct {
 	// +kubebuilder:validation:Optional
 	ByPhase string `json:"byPhase,omitempty"`
 
-	// ByConditions matches against specific condition combinations (ANDed together)
+	// ByConditions matches against specific condition combinations (ANDed together) at least one of status or reason must be used.
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	ByConditions []ExpectedCondition `json:"byConditions,omitempty"`
+
+	// ByExpression is a JQ expression that matches against the object for status matching
+	// +kubebuilder:validation:Optional
+	ByExpression *ExpressionMatcher `json:"byExpression,omitempty"`
+}
+
+// ExpressionMatcher defines a JQ expression and its expected result for status matching.
+type ExpressionMatcher struct {
+	// Expression is the JQ expression to evaluate
+	// +kubebuilder:validation:Required
+	Expression string `json:"expression" jq:"validate"`
+
+	// ExpectedResult is the expected result value in string format from the expression evaluation
+	// +kubebuilder:validation:Required
+	ExpectedResult string `json:"expectedResult"`
 }
 
 // ExpectedCondition defines a condition type and status that must be present.
@@ -278,6 +298,10 @@ type ExpectedCondition struct {
 	Type string `json:"type"`
 
 	// Status is the expected condition status
-	// +kubebuilder:validation:Required
-	Status string `json:"status"`
+	// +kubebuilder:validation:Optional
+	Status *string `json:"status,omitempty"`
+
+	// Reason is the expected condition reason
+	// +kubebuilder:validation:Optional
+	Reason *string `json:"reason,omitempty"`
 }

@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/query"
+	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 )
 
 // InstanceNotFoundError is returned when a pod's extracted instance ID doesn't match any valid instance IDs
@@ -20,14 +20,14 @@ func (e InstanceNotFoundError) Error() string {
 
 // PodQuerier handles JQ-based querying operations against pods
 type PodQuerier struct {
-	pod            *corev1.Pod
-	queryEvaluator query.QueryEvaluator
+	pod       *corev1.Pod
+	evaluator execution.Evaluator
 }
 
 func NewPodQuerier(pod *corev1.Pod) *PodQuerier {
 	return &PodQuerier{
-		pod:            pod,
-		queryEvaluator: query.NewDefaultJqEvaluator(pod),
+		pod:       pod,
+		evaluator: execution.NewDefaultRunner(pod),
 	}
 }
 
@@ -52,7 +52,7 @@ func (pq *PodQuerier) MatchesComponentType(ctx context.Context, selector *v1alph
 
 // checkKeyExists returns true if the key exists
 func (pq *PodQuerier) checkKeyExists(ctx context.Context, keyPath string) (bool, error) {
-	results, err := pq.queryEvaluator.Evaluate(ctx, keyPath)
+	results, err := pq.evaluator.Evaluate(ctx, keyPath)
 	if err != nil {
 		return false, err
 	}
@@ -74,7 +74,7 @@ func (pq *PodQuerier) checkKeyValue(ctx context.Context, keyPath, expectedValue 
 	}
 
 	query := fmt.Sprintf("%s == %s", keyPath, serializedValue)
-	results, err := pq.queryEvaluator.Evaluate(ctx, query)
+	results, err := pq.evaluator.Evaluate(ctx, query)
 	if err != nil {
 		return false, err
 	}
@@ -97,7 +97,7 @@ func (pq *PodQuerier) ExtractGroupKeys(ctx context.Context, keyPaths []string) (
 	groupKeys := make([]string, 0, len(keyPaths))
 
 	for _, keyPath := range keyPaths {
-		results, err := pq.queryEvaluator.Evaluate(ctx, keyPath)
+		results, err := pq.evaluator.Evaluate(ctx, keyPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to evaluate group key path %q: %w", keyPath, err)
 		}
@@ -120,7 +120,7 @@ func (pq *PodQuerier) PassesFilters(ctx context.Context, filters []string) (bool
 	}
 
 	for _, filter := range filters {
-		results, err := pq.queryEvaluator.Evaluate(ctx, filter)
+		results, err := pq.evaluator.Evaluate(ctx, filter)
 		if err != nil {
 			return false, fmt.Errorf("failed to evaluate filter %q: %w", filter, err)
 		}
@@ -148,7 +148,7 @@ func (pq *PodQuerier) GetMatchingInstanceId(ctx context.Context, instanceSelecto
 		return "", fmt.Errorf("no instance selector provided but instance ids are not empty")
 	}
 
-	results, err := pq.queryEvaluator.Evaluate(ctx, instanceSelector.IdPath)
+	results, err := pq.evaluator.Evaluate(ctx, instanceSelector.IdPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to evaluate instance id path %s: %w", instanceSelector.IdPath, err)
 	}

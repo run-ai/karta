@@ -326,6 +326,11 @@ spec:
                                   description: Path is the JQ path to the conditions
                                     array
                                   type: string
+                                reasonFieldName:
+                                  default: reason
+                                  description: ReasonFieldName is the field name for
+                                    the condition reason
+                                  type: string
                                 statusFieldName:
                                   default: status
                                   description: StatusFieldName is the field name for
@@ -366,11 +371,17 @@ spec:
                                       byConditions:
                                         description: ByConditions matches against
                                           specific condition combinations (ANDed together)
+                                          at least one of status or reason must be
+                                          used.
                                         items:
                                           description: ExpectedCondition defines a
                                             condition type and status that must be
                                             present.
                                           properties:
+                                            reason:
+                                              description: Reason is the expected
+                                                condition reason
+                                              type: string
                                             status:
                                               description: Status is the expected
                                                 condition status
@@ -380,11 +391,28 @@ spec:
                                                 to match
                                               type: string
                                           required:
-                                          - status
                                           - type
                                           type: object
                                         type: array
                                         x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value in string format from the
+                                              expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -404,11 +432,17 @@ spec:
                                       byConditions:
                                         description: ByConditions matches against
                                           specific condition combinations (ANDed together)
+                                          at least one of status or reason must be
+                                          used.
                                         items:
                                           description: ExpectedCondition defines a
                                             condition type and status that must be
                                             present.
                                           properties:
+                                            reason:
+                                              description: Reason is the expected
+                                                condition reason
+                                              type: string
                                             status:
                                               description: Status is the expected
                                                 condition status
@@ -418,11 +452,28 @@ spec:
                                                 to match
                                               type: string
                                           required:
-                                          - status
                                           - type
                                           type: object
                                         type: array
                                         x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value in string format from the
+                                              expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -442,11 +493,17 @@ spec:
                                       byConditions:
                                         description: ByConditions matches against
                                           specific condition combinations (ANDed together)
+                                          at least one of status or reason must be
+                                          used.
                                         items:
                                           description: ExpectedCondition defines a
                                             condition type and status that must be
                                             present.
                                           properties:
+                                            reason:
+                                              description: Reason is the expected
+                                                condition reason
+                                              type: string
                                             status:
                                               description: Status is the expected
                                                 condition status
@@ -456,11 +513,28 @@ spec:
                                                 to match
                                               type: string
                                           required:
-                                          - status
                                           - type
                                           type: object
                                         type: array
                                         x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value in string format from the
+                                              expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -480,11 +554,17 @@ spec:
                                       byConditions:
                                         description: ByConditions matches against
                                           specific condition combinations (ANDed together)
+                                          at least one of status or reason must be
+                                          used.
                                         items:
                                           description: ExpectedCondition defines a
                                             condition type and status that must be
                                             present.
                                           properties:
+                                            reason:
+                                              description: Reason is the expected
+                                                condition reason
+                                              type: string
                                             status:
                                               description: Status is the expected
                                                 condition status
@@ -494,11 +574,28 @@ spec:
                                                 to match
                                               type: string
                                           required:
-                                          - status
                                           - type
                                           type: object
                                         type: array
                                         x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value in string format from the
+                                              expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
                                       byPhase:
                                         description: ByPhase matches against a specific
                                           phase value
@@ -689,6 +786,11 @@ spec:
                                 description: Path is the JQ path to the conditions
                                   array
                                 type: string
+                              reasonFieldName:
+                                default: reason
+                                description: ReasonFieldName is the field name for
+                                  the condition reason
+                                type: string
                               statusFieldName:
                                 default: status
                                 description: StatusFieldName is the field name for
@@ -728,11 +830,16 @@ spec:
                                   properties:
                                     byConditions:
                                       description: ByConditions matches against specific
-                                        condition combinations (ANDed together)
+                                        condition combinations (ANDed together) at
+                                        least one of status or reason must be used.
                                       items:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
                                         properties:
+                                          reason:
+                                            description: Reason is the expected condition
+                                              reason
+                                            type: string
                                           status:
                                             description: Status is the expected condition
                                               status
@@ -742,11 +849,28 @@ spec:
                                               to match
                                             type: string
                                         required:
-                                        - status
                                         - type
                                         type: object
                                       type: array
                                       x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value in string format from the
+                                            expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
@@ -765,11 +889,16 @@ spec:
                                   properties:
                                     byConditions:
                                       description: ByConditions matches against specific
-                                        condition combinations (ANDed together)
+                                        condition combinations (ANDed together) at
+                                        least one of status or reason must be used.
                                       items:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
                                         properties:
+                                          reason:
+                                            description: Reason is the expected condition
+                                              reason
+                                            type: string
                                           status:
                                             description: Status is the expected condition
                                               status
@@ -779,11 +908,28 @@ spec:
                                               to match
                                             type: string
                                         required:
-                                        - status
                                         - type
                                         type: object
                                       type: array
                                       x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value in string format from the
+                                            expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
@@ -802,11 +948,16 @@ spec:
                                   properties:
                                     byConditions:
                                       description: ByConditions matches against specific
-                                        condition combinations (ANDed together)
+                                        condition combinations (ANDed together) at
+                                        least one of status or reason must be used.
                                       items:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
                                         properties:
+                                          reason:
+                                            description: Reason is the expected condition
+                                              reason
+                                            type: string
                                           status:
                                             description: Status is the expected condition
                                               status
@@ -816,11 +967,28 @@ spec:
                                               to match
                                             type: string
                                         required:
-                                        - status
                                         - type
                                         type: object
                                       type: array
                                       x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value in string format from the
+                                            expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
@@ -839,11 +1007,16 @@ spec:
                                   properties:
                                     byConditions:
                                       description: ByConditions matches against specific
-                                        condition combinations (ANDed together)
+                                        condition combinations (ANDed together) at
+                                        least one of status or reason must be used.
                                       items:
                                         description: ExpectedCondition defines a condition
                                           type and status that must be present.
                                         properties:
+                                          reason:
+                                            description: Reason is the expected condition
+                                              reason
+                                            type: string
                                           status:
                                             description: Status is the expected condition
                                               status
@@ -853,11 +1026,28 @@ spec:
                                               to match
                                             type: string
                                         required:
-                                        - status
                                         - type
                                         type: object
                                       type: array
                                       x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value in string format from the
+                                            expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
                                     byPhase:
                                       description: ByPhase matches against a specific
                                         phase value
