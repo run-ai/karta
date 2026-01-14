@@ -1,0 +1,12 @@
+# WASM artifacts
+web/public/wasm.wasm
+web/public/wasm_exec.js
+wasm/wasm.wasm
+wasm/examples/
+
+# Frontend build artifacts
+web/dist/
+web/node_modules/
+
+# Server binary
+server/ri-studio

@@ -1,9 +1,11 @@
-module github.com/run-ai/kai-bolt/docs/ri-studio/server
+module github.com/run-ai/kai-bolt/docs/ri-studio/wasm
 
 go 1.24.6
 
+replace github.com/run-ai/kai-bolt => ../../../
+
 require (
-	github.com/run-ai/kai-bolt v0.0.0
+	github.com/run-ai/kai-bolt v0.0.0-00010101000000-000000000000
 	k8s.io/api v0.33.0
 	k8s.io/apimachinery v0.33.4
 	sigs.k8s.io/yaml v1.4.0
@@ -51,8 +53,3 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 )
-
-replace github.com/run-ai/kai-bolt => ../../../
-
-
-

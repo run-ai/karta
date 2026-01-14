@@ -1,51 +1,42 @@
 import {
-  ValidateRequest,
   ValidateResponse,
-  ExtractRequest,
   ExtractResponse,
   ExamplesListResponse,
   ExampleResponse,
 } from '../types';
+import { wasmService } from './wasm';
 
-const API_BASE = '/api';
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || response.statusText);
-  }
-  return response.json();
-}
-
+/**
+ * API service that uses WASM for all operations
+ * This provides a static, server-free implementation
+ */
 export const api = {
+  /**
+   * Validate a Resource Interface YAML
+   */
   async validateRI(ri: string): Promise<ValidateResponse> {
-    const request: ValidateRequest = { ri };
-    const response = await fetch(`${API_BASE}/validate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-    return handleResponse<ValidateResponse>(response);
+    return wasmService.validateRI(ri);
   },
 
+  /**
+   * Extract data from a Custom Resource using a Resource Interface
+   */
   async extract(cr: string, ri: string): Promise<ExtractResponse> {
-    const request: ExtractRequest = { cr, ri };
-    const response = await fetch(`${API_BASE}/extract`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-    return handleResponse<ExtractResponse>(response);
+    return wasmService.extract(cr, ri);
   },
 
+  /**
+   * List all available example Resource Interfaces
+   */
   async listExamples(): Promise<ExamplesListResponse> {
-    const response = await fetch(`${API_BASE}/examples`);
-    return handleResponse<ExamplesListResponse>(response);
+    return wasmService.listExamples();
   },
 
+  /**
+   * Get a specific example Resource Interface by name
+   */
   async getExample(name: string): Promise<ExampleResponse> {
-    const response = await fetch(`${API_BASE}/examples/${name}`);
-    return handleResponse<ExampleResponse>(response);
+    return wasmService.getExample(name);
   },
 };
 
