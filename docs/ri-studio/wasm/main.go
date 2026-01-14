@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/query"
+	"github.com/run-ai/kai-bolt/pkg/jq/execution"
 	"github.com/run-ai/kai-bolt/pkg/resource"
 )
 
@@ -66,16 +66,16 @@ type ExampleResponse struct {
 
 func main() {
 	c := make(chan struct{})
-	
+
 	// Register WASM functions
 	js.Global().Set("validateRI", js.FuncOf(validateRIWrapper))
 	js.Global().Set("extractData", js.FuncOf(extractDataWrapper))
 	js.Global().Set("listExamples", js.FuncOf(listExamplesWrapper))
 	js.Global().Set("getExample", js.FuncOf(getExampleWrapper))
-	
+
 	// Signal that WASM is ready
 	js.Global().Call("postMessage", map[string]interface{}{"type": "wasmReady"})
-	
+
 	<-c
 }
 
@@ -84,11 +84,11 @@ func validateRIWrapper(this js.Value, args []js.Value) interface{} {
 	if len(args) < 1 {
 		return errorResponse("RI YAML argument is required")
 	}
-	
+
 	riYAML := args[0].String()
-	
+
 	response := validateRI(riYAML)
-	
+
 	return jsValue(response)
 }
 
@@ -127,19 +127,19 @@ func extractDataWrapper(this js.Value, args []js.Value) interface{} {
 	if len(args) < 2 {
 		return errorResponse("CR YAML and RI YAML arguments are required")
 	}
-	
+
 	crYAML := args[0].String()
 	riYAML := args[1].String()
-	
+
 	response := extractData(crYAML, riYAML)
-	
+
 	return jsValue(response)
 }
 
 // extractData extracts information from a CR using an RI definition
 func extractData(crYAML, riYAML string) ExtractResponse {
 	ctx := context.Background()
-	
+
 	// Validate inputs
 	if strings.TrimSpace(crYAML) == "" {
 		return ExtractResponse{
@@ -209,11 +209,11 @@ func extractFromComponent(ctx context.Context, crData map[string]interface{}, co
 	}
 
 	// Create JQ evaluator for the CR data
-	evaluator := query.NewDefaultJqEvaluator(crData)
-	extractor := resource.NewInterfaceExtractor(evaluator)
+	jqRunner := execution.NewDefaultRunner(crData)
+	accessor := resource.NewAccessor(jqRunner)
 
 	// Create a component wrapper
-	comp := createComponent(componentDef, extractor)
+	comp := createComponent(componentDef, accessor)
 
 	// Extract instance IDs
 	instanceIds, err := comp.GetInstanceIds(ctx)
@@ -292,21 +292,21 @@ func extractFromComponent(ctx context.Context, crData map[string]interface{}, co
 }
 
 // createComponent creates a component wrapper
-func createComponent(def v1alpha1.ComponentDefinition, extractor resource.Extractor) *componentWrapper {
+func createComponent(def v1alpha1.ComponentDefinition, accessor resource.ComponentAccessor) *componentWrapper {
 	return &componentWrapper{
 		definition: def,
-		extractor:  extractor,
+		accessor:   accessor,
 	}
 }
 
 // componentWrapper wraps a component definition with an extractor
 type componentWrapper struct {
 	definition v1alpha1.ComponentDefinition
-	extractor  resource.Extractor
+	accessor   resource.ComponentAccessor
 }
 
 func (c *componentWrapper) GetInstanceIds(ctx context.Context) ([]string, error) {
-	instanceIds, err := c.extractor.ExtractInstanceIds(ctx, c.definition)
+	instanceIds, err := c.accessor.ExtractInstanceIds(ctx, c.definition)
 	if err != nil {
 		var defNotFoundErr resource.DefinitionNotFoundError
 		if errors.As(err, &defNotFoundErr) {
@@ -323,7 +323,7 @@ func (c *componentWrapper) GetPodTemplateSpec(ctx context.Context) (map[string]c
 		return nil, err
 	}
 
-	podTemplateSpecs, err := c.extractor.ExtractPodTemplateSpec(ctx, c.definition)
+	podTemplateSpecs, err := c.accessor.ExtractPodTemplateSpec(ctx, c.definition)
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +343,7 @@ func (c *componentWrapper) GetPodSpec(ctx context.Context) (map[string]corev1.Po
 		return nil, err
 	}
 
-	podSpecs, err := c.extractor.ExtractPodSpec(ctx, c.definition)
+	podSpecs, err := c.accessor.ExtractPodSpec(ctx, c.definition)
 	if err != nil {
 		return nil, err
 	}
@@ -363,7 +363,7 @@ func (c *componentWrapper) GetPodMetadata(ctx context.Context) (map[string]metav
 		return nil, err
 	}
 
-	podMetadata, err := c.extractor.ExtractPodMetadata(ctx, c.definition)
+	podMetadata, err := c.accessor.ExtractPodMetadata(ctx, c.definition)
 	if err != nil {
 		return nil, err
 	}
@@ -383,7 +383,7 @@ func (c *componentWrapper) GetFragmentedPodSpec(ctx context.Context) (map[string
 		return nil, err
 	}
 
-	fragmentedSpecs, err := c.extractor.ExtractFragmentedPodSpec(ctx, c.definition)
+	fragmentedSpecs, err := c.accessor.ExtractFragmentedPodSpec(ctx, c.definition)
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +403,7 @@ func (c *componentWrapper) GetScale(ctx context.Context) (map[string]resource.Sc
 		return nil, err
 	}
 
-	scales, err := c.extractor.ExtractScale(ctx, c.definition)
+	scales, err := c.accessor.ExtractScale(ctx, c.definition)
 	if err != nil {
 		return nil, err
 	}
@@ -452,13 +452,13 @@ func getExampleWrapper(this js.Value, args []js.Value) interface{} {
 	if len(args) < 1 {
 		return errorResponse("Example name argument is required")
 	}
-	
+
 	name := args[0].String()
 	response, err := getExample(name)
 	if err != nil {
 		return errorResponse(err.Error())
 	}
-	
+
 	return jsValue(response)
 }
 
@@ -466,7 +466,7 @@ func getExampleWrapper(this js.Value, args []js.Value) interface{} {
 func getExample(name string) (*ExampleResponse, error) {
 	// Sanitize the name
 	name = strings.TrimSuffix(name, ".yaml")
-	
+
 	riContent, err := examplesFS.ReadFile(fmt.Sprintf("examples/%s.yaml", name))
 	if err != nil {
 		return nil, fmt.Errorf("example '%s' not found: %v", name, err)
@@ -487,7 +487,7 @@ func formatValidationErrors(err error) []string {
 	}
 
 	var errorMessages []string
-	
+
 	// Try to unwrap joined errors
 	var joinedErr interface{ Unwrap() []error }
 	if errors.As(err, &joinedErr) {
@@ -508,14 +508,14 @@ func formatDisplayName(name string) string {
 	// Convert kebab-case or snake_case to Title Case
 	name = strings.ReplaceAll(name, "-", " ")
 	name = strings.ReplaceAll(name, "_", " ")
-	
+
 	words := strings.Fields(name)
 	for i, word := range words {
 		if len(word) > 0 {
 			words[i] = strings.ToUpper(word[:1]) + word[1:]
 		}
 	}
-	
+
 	return strings.Join(words, " ")
 }
 
@@ -533,12 +533,12 @@ func jsValue(v interface{}) interface{} {
 	if err != nil {
 		return errorResponse(fmt.Sprintf("Failed to serialize response: %v", err))
 	}
-	
+
 	var result interface{}
 	if err := json.Unmarshal(jsonBytes, &result); err != nil {
 		return errorResponse(fmt.Sprintf("Failed to deserialize response: %v", err))
 	}
-	
+
 	return js.ValueOf(result)
 }
 
