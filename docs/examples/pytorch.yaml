@@ -1,88 +1,88 @@
 apiVersion: optimization.nvidia.com/v1alpha1
 kind: ResourceInterface
+metadata:
+  creationTimestamp: "2026-01-14T22:20:51Z"
+  finalizers:
+  - rid.kai.bolt/finalize
+  generation: 1
+  labels:
+    run.ai/resource-interface-group: kubeflow.org
+    run.ai/resource-interface-kind: PyTorchJob
+    run.ai/resource-interface-updated-at: 2026-01-14T22-16-01Z
+    run.ai/resource-interface-version: v1
+    run.ai/workload-type-id: 4940175a-de6e-4e92-b582-b616df0c639c
+  name: ri-v1-kubeflow-org-pytorchjob
+  resourceVersion: "10734"
+  uid: 0cd432a2-d6ce-43f3-9549-30940b7b1fb6
 spec:
-  structureDefinition:
-    rootComponent:
-      name: "pytorchjob"
-      # specPath omitted for root component (defaults to .spec)
-      kind:
-        group: "kubeflow.org"
-        version: "v1"
-        kind: "PyTorchJob"
-      statusDefinition:
-        conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
-        statusMappings:
-          initializing:
-          - byConditions:
-            - type: "Created"
-              status: "True"
-            - type: "Running"
-              status: "False"
-          running:
-          - byConditions:
-            - type: "Running"
-              status: "True"
-            - type: "Succeeded"
-              status: "False"
-            - type: "Failed"
-              status: "False"
-          completed:
-          - byConditions:
-            - type: "Succeeded"
-              status: "True"
-          failed:
-          - byConditions:
-            - type: "Failed"
-              status: "True"
-
-    childComponents:
-    - name: "master"
-      kind:
-        group: ""
-        version: "v1"
-        kind: "Pod"
-      ownerRef: "pytorchjob"
-      specDefinition:
-        podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Master.template"
-      scaleDefinition:
-        replicasPath: ".spec.pytorchReplicaSpecs.Master.replicas"
-      podSelector:
-        componentTypeSelector:
-          keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
-          value: "master"
-
-    - name: "worker"
-      kind:
-        group: ""
-        version: "v1"
-        kind: "Pod"
-      ownerRef: "pytorchjob"
-      specDefinition:
-        podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Worker.template"
-      scaleDefinition:
-        replicasPath: ".spec.pytorchReplicaSpecs.Worker.replicas"
-        minReplicasPath: ".spec.elasticPolicy.minReplicas"
-        maxReplicasPath: ".spec.elasticPolicy.maxReplicas"
-      podSelector:
-        componentTypeSelector:
-          keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
-          value: "worker"
-
-  # Optimization instructions
   optimizationInstructions:
-    # Gang scheduling for distributed training coordination
     gangScheduling:
       podGroups:
-      - name: "job"
-        members:
-        - componentName: "master"
-          groupByKeyPaths: 
-          - '.metadata.labels["training.kubeflow.org/job-name"]'
-        - componentName: "worker"
+      - members:
+        - componentName: Master
           groupByKeyPaths:
-          - '.metadata.labels["training.kubeflow.org/job-name"]'
-
- 
+          - .metadata.labels["training.kubeflow.org/job-name"]
+        - componentName: Worker
+          groupByKeyPaths:
+          - .metadata.labels["training.kubeflow.org/job-name"]
+        name: job
+  structureDefinition:
+    childComponents:
+    - kind:
+        group: ""
+        kind: Pod
+        version: v1
+      name: Master
+      ownerRef: pytorchjob
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["training.kubeflow.org/replica-type"]
+          value: Master
+      scaleDefinition:
+        replicasPath: .spec.pytorchReplicaSpecs.Master.replicas // 1
+      specDefinition:
+        podTemplateSpecPath: .spec.pytorchReplicaSpecs.Master.template
+    - kind:
+        group: ""
+        kind: Pod
+        version: v1
+      name: Worker
+      ownerRef: pytorchjob
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["training.kubeflow.org/replica-type"]
+          value: Worker
+      scaleDefinition:
+        replicasPath: .spec.pytorchReplicaSpecs.Worker.replicas // 1
+      specDefinition:
+        podTemplateSpecPath: .spec.pytorchReplicaSpecs.Worker.template
+    rootComponent:
+      kind:
+        group: kubeflow.org
+        kind: PyTorchJob
+        version: v1
+      name: pytorchjob
+      statusDefinition:
+        conditionsDefinition:
+          messageFieldName: message
+          path: .status.conditions
+          reasonFieldName: reason
+          statusFieldName: status
+          typeFieldName: type
+        statusMappings:
+          completed:
+          - byConditions:
+            - status: "True"
+              type: Succeeded
+          failed:
+          - byConditions:
+            - status: "True"
+              type: Failed
+          initializing:
+          - byConditions:
+            - status: "True"
+              type: Created
+          running:
+          - byConditions:
+            - status: "True"
+              type: Running

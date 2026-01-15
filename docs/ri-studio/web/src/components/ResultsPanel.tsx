@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ExtractResponse, ValidateResponse } from '../types';
 import { ComponentResult } from './ComponentResult';
 import { ErrorDisplay } from './ErrorDisplay';
@@ -18,13 +18,56 @@ export function ResultsPanel({
   onToggle 
 }: ResultsPanelProps) {
   const [activeTab, setActiveTab] = useState<'results' | 'hierarchy'>('results');
+  const [panelHeight, setPanelHeight] = useState(384); // 96 * 4 = 384px (h-96)
+  const [isResizing, setIsResizing] = useState(false);
   const hasResults = validationResult !== null || extractionResult !== null;
   const hasComponents = extractionResult?.components && extractionResult.components.length > 0;
 
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isResizing) return;
+    const newHeight = window.innerHeight - e.clientY;
+    // Min height: 150px, Max height: 80% of window
+    if (newHeight >= 150 && newHeight <= window.innerHeight * 0.8) {
+      setPanelHeight(newHeight);
+    }
+  }, [isResizing]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isResizing, handleMouseMove, handleMouseUp]);
+
   return (
-    <div className={`bg-gray-900 border-t border-gray-700 flex flex-col transition-all duration-300 ${
-      isCollapsed ? 'h-10' : 'h-96'
-    }`}>
+    <div 
+      className="bg-gray-900 border-t border-gray-700 flex flex-col transition-all duration-300"
+      style={{
+        height: isCollapsed ? '40px' : `${panelHeight}px`,
+        minHeight: isCollapsed ? '40px' : '150px'
+      }}
+    >
+      {/* Resize Handle */}
+      {!isCollapsed && (
+        <div
+          className="h-1 bg-gray-700 hover:bg-blue-500 cursor-ns-resize transition-colors"
+          onMouseDown={handleMouseDown}
+        />
+      )}
+      
       <div 
         className="bg-gray-800 px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-gray-750"
         onClick={onToggle}
@@ -36,7 +79,7 @@ export function ResultsPanel({
       </div>
 
       {!isCollapsed && (
-        <>
+        <div className="flex flex-col flex-1 min-h-0">
           {/* Tab Navigation */}
           {hasComponents && (
             <div className="bg-gray-800 border-b border-gray-700 px-4 py-2 flex gap-2">
@@ -64,7 +107,7 @@ export function ResultsPanel({
           )}
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto min-h-0">
             {activeTab === 'results' && (
               <div className="p-4">
                 {!hasResults && (
@@ -108,7 +151,7 @@ export function ResultsPanel({
               <HierarchyVisualization components={extractionResult.components} />
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
