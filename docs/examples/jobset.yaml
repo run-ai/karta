@@ -52,7 +52,6 @@ spec:
       podSelector:
         componentInstanceSelector:
           idPath: '.metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]'
-
   # Optimization instructions
   optimizationInstructions:
     # Gang scheduling for coordinated job execution

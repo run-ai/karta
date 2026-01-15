@@ -127,6 +127,24 @@ spec:
                   # Connects to the driver defined above
                   value: "pytorch-distributed-training-driver-0-0.pytorch-svc"
               restartPolicy: Never
+    - name: aggregators
+      replicas: 5
+      template:
+        spec:
+          parallelism: 1
+          completions: 1
+          backoffLimit: 0 
+          template:
+            spec:
+              containers:
+              - name: pytorch
+                image: pytorch/pytorch:latest
+                command: ["python", "train_script.py", "--role", "worker"]
+                env:
+                - name: MASTER_ADDR
+                  # Connects to the driver defined above
+                  value: "pytorch-distributed-training-driver-0-0.pytorch-svc"
+              restartPolicy: Never
 `;
 
 function App() {
