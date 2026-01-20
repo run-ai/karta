@@ -7,6 +7,10 @@ import (
 	"github.com/run-ai/kai-bolt/pkg/jq"
 )
 
+var emptyGroupKinds = map[string]bool{
+	"Pod": true,
+}
+
 type RIValidator struct {
 	ri            *ResourceInterface
 	rootComponent ComponentDefinition
@@ -100,7 +104,8 @@ func (v *RIValidator) validateRootComponent() []error {
 
 	// Has full gvk
 	if v.rootComponent.Kind == nil ||
-		v.rootComponent.Kind.Group == "" || v.rootComponent.Kind.Version == "" || v.rootComponent.Kind.Kind == "" {
+		v.rootComponent.Kind.Version == "" || v.rootComponent.Kind.Kind == "" ||
+		(v.rootComponent.Kind.Group == "" && !emptyGroupKinds[v.rootComponent.Kind.Kind]) {
 		errs = append(errs, fmt.Errorf("root component must have full kind (group, version, kind)"))
 	}
 
