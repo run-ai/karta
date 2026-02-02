@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - ron/ri-studio  # Add a staging branch for testing
     paths:
       - 'docs/ri-studio/**'
       - 'docs/examples/**'
@@ -38,7 +37,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: docs/ri-studio/web/package-lock.json
 
