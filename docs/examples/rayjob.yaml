@@ -1,32 +1,42 @@
 apiVersion: optimization.nvidia.com/v1alpha1
 kind: ResourceInterface
 metadata:
-  name: ray-io-raycluster-v1
+  name: ray-io-rayjob-v1
 spec:
   structureDefinition:
     rootComponent:
-      name: raycluster
+      name: rayjob
       kind:
         group: ray.io
         version: v1
-        kind: RayCluster
+        kind: RayJob
       statusDefinition:
         phaseDefinition:
-          path: .status.state
+          path: .status.jobStatus
+        conditionsDefinition:
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
+          reasonFieldName: null
         statusMappings:
+          initializing:
+          - byPhase: PENDING
           running:
-          - byPhase: ready
+          - byPhase: RUNNING
+          completed:
+          - byPhase: SUCCEEDED
           failed:
-          - byPhase: failed
+          - byPhase: FAILED
     childComponents:
       - name: head
         kind:
           group: ""
           version: v1
           kind: Pod
-        ownerRef: raycluster
+        ownerRef: rayjob
         specDefinition:
-          podTemplateSpecPath: .spec.headGroupSpec.template
+          podTemplateSpecPath: .spec.rayClusterSpec.headGroupSpec.template
         scaleDefinition:
           replicasPath: "1"
         podSelector:
@@ -38,13 +48,11 @@ spec:
           group: ""
           version: v1
           kind: Pod
-        ownerRef: raycluster
+        ownerRef: rayjob
         specDefinition:
-          podTemplateSpecPath: .spec.workerGroupSpecs[].template
+          podTemplateSpecPath: .spec.rayClusterSpec.workerGroupSpecs[].template
         scaleDefinition:
-          replicasPath: .spec.workerGroupSpecs[].replicas
-          minReplicasPath: .spec.workerGroupSpecs[].minReplicas
-          maxReplicasPath: .spec.workerGroupSpecs[].maxReplicas
+          replicasPath: .spec.rayClusterSpec.workerGroupSpecs[].replicas // 1
         instanceIdPath: .spec.workerGroupSpecs[].groupName
         podSelector:
           componentTypeSelector:
@@ -55,7 +63,7 @@ spec:
   optimizationInstructions:
     gangScheduling:
       podGroups:
-        - name: cluster
+        - name: job
           members:
             - componentName: head
               groupByKeyPaths:

@@ -1,65 +1,40 @@
 apiVersion: optimization.nvidia.com/v1alpha1
 kind: ResourceInterface
+metadata:
+  name: apps-nvidia-com-nimservice-v1alpha1
 spec:
   structureDefinition:
     rootComponent:
-      name: "nimservice"
-      # specPath omitted for root component (defaults to .spec)
+      name: nimservice
       kind:
-        group: "apps.nvidia.com"
-        version: "v1alpha1"
-        kind: "NIMService"
+        group: apps.nvidia.com
+        version: v1alpha1
+        kind: NIMService
       specDefinition:
         fragmentedPodSpecDefinition:
-          labelsPath: ".spec.labels"
-          annotationsPath: ".spec.annotations"
-          resourcesPath: ".spec.resources"
-          resourceClaimsPath: ".spec.draResources"
-          schedulerNamePath: ".spec.schedulerName"
-          podAffinityPath: ".spec.podAffinity"
-          imagePath: ".spec.image"
+          schedulerNamePath: .spec.schedulerName
+          labelsPath: .spec.labels
+          annotationsPath: .spec.annotations
+          resourcesPath: .spec.resources
+          podAffinityPath: .spec.affinity.podAffinity
+          nodeAffinityPath: .spec.affinity.nodeAffinity
       scaleDefinition:
-        replicasPath: ".spec.replicas"
+        replicasPath: .spec.replicas // 1
       statusDefinition:
+        phaseDefinition:
+          path: .status.state
         conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
         statusMappings:
           initializing:
-          - byConditions:
-            - type: "NIM_SERVICE_READY"
-              status: "False"
-            - type: "NIM_SERVICE_FAILED"
-              status: "False"
+          - byPhase: NotReady
           running:
-          - byConditions:
-            - type: "NIM_SERVICE_READY"
-              status: "True"
-            - type: "NIM_SERVICE_FAILED"
-              status: "False"
+          - byPhase: Ready
           failed:
-          - byConditions:
-            - type: "NIM_SERVICE_FAILED"
-              status: "True"
-            - type: "NIM_SERVICE_READY"
-              status: "False"
-    
-    # Child resources created but not represented as components
-    additionalChildKinds:
-    - group: apps
-      version: v1
-      kind: Deployment
-    - group: apps
-      version: v1
-      kind: StatefulSet
-    - group: leaderworkerset.x-k8s.io
-      version: v1
-      kind: LeaderWorkerSet
-    - group: serving.kserve.io
-      version: v1beta1
-      kind: InferenceService
-
+          - byPhase: Failed
   # Optimization instructions using new structure
   optimizationInstructions:
     # Gang scheduling for inference pipeline coordination (preferred for serving)
@@ -70,5 +45,3 @@ spec:
         - componentName: "nimservice"
           groupByKeyPaths:
           - '.metadata.labels["app.kubernetes.io/name"]'
-
- 

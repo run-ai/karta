@@ -1,88 +1,81 @@
 apiVersion: optimization.nvidia.com/v1alpha1
 kind: ResourceInterface
+metadata:
+  name: kubeflow-org-pytorchjob-v1
 spec:
   structureDefinition:
     rootComponent:
-      name: "pytorchjob"
-      # specPath omitted for root component (defaults to .spec)
+      name: pytorchjob
       kind:
-        group: "kubeflow.org"
-        version: "v1"
-        kind: "PyTorchJob"
+        group: kubeflow.org
+        version: v1
+        kind: PyTorchJob
       statusDefinition:
         conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
         statusMappings:
           initializing:
           - byConditions:
-            - type: "Created"
-              status: "True"
-            - type: "Running"
-              status: "False"
+              - type: Created
+                status: "True"
           running:
           - byConditions:
-            - type: "Running"
-              status: "True"
-            - type: "Succeeded"
-              status: "False"
-            - type: "Failed"
-              status: "False"
+              - type: Running
+                status: "True"
+              - type: "Succeeded"
+                status: "False"
+              - type: Failed
+                status: "False"
           completed:
           - byConditions:
-            - type: "Succeeded"
-              status: "True"
+              - type: Succeeded
+                status: "True"
           failed:
           - byConditions:
-            - type: "Failed"
-              status: "True"
-
+              - type: Failed
+                status: "True"
     childComponents:
-    - name: "master"
-      kind:
-        group: ""
-        version: "v1"
-        kind: "Pod"
-      ownerRef: "pytorchjob"
-      specDefinition:
-        podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Master.template"
-      scaleDefinition:
-        replicasPath: ".spec.pytorchReplicaSpecs.Master.replicas"
-      podSelector:
-        componentTypeSelector:
-          keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
-          value: "master"
-
-    - name: "worker"
-      kind:
-        group: ""
-        version: "v1"
-        kind: "Pod"
-      ownerRef: "pytorchjob"
-      specDefinition:
-        podTemplateSpecPath: ".spec.pytorchReplicaSpecs.Worker.template"
-      scaleDefinition:
-        replicasPath: ".spec.pytorchReplicaSpecs.Worker.replicas"
-        minReplicasPath: ".spec.elasticPolicy.minReplicas"
-        maxReplicasPath: ".spec.elasticPolicy.maxReplicas"
-      podSelector:
-        componentTypeSelector:
-          keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
-          value: "worker"
-
-  # Optimization instructions
+      - name: master
+        kind:
+          group: ""
+          version: v1
+          kind: Pod
+        ownerRef: pytorchjob
+        specDefinition:
+          podTemplateSpecPath: .spec.pytorchReplicaSpecs.Master.template
+        scaleDefinition:
+          replicasPath: .spec.pytorchReplicaSpecs.Master.replicas // 1
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["training.kubeflow.org/replica-type"]
+            value: master
+      - name: worker
+        kind:
+          group: ""
+          version: v1
+          kind: Pod
+        ownerRef: pytorchjob
+        specDefinition:
+          podTemplateSpecPath: .spec.pytorchReplicaSpecs.Worker.template
+        scaleDefinition:
+          replicasPath: .spec.pytorchReplicaSpecs.Worker.replicas // 1
+          minReplicasPath: .spec.elasticPolicy.minReplicas
+          maxReplicasPath: .spec.elasticPolicy.maxReplicas
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["training.kubeflow.org/replica-type"]
+            value: worker
   optimizationInstructions:
-    # Gang scheduling for distributed training coordination
     gangScheduling:
       podGroups:
-      - name: "job"
-        members:
-        - componentName: "master"
-          groupByKeyPaths: 
-          - '.metadata.labels["training.kubeflow.org/job-name"]'
-        - componentName: "worker"
-          groupByKeyPaths:
-          - '.metadata.labels["training.kubeflow.org/job-name"]'
-
- 
+        - name: job
+          members:
+            - componentName: master
+              groupByKeyPaths:
+                - .metadata.labels["training.kubeflow.org/job-name"]
+            - componentName: worker
+              groupByKeyPaths:
+                - .metadata.labels["training.kubeflow.org/job-name"]
