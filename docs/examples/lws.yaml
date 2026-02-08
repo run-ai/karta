@@ -1,93 +1,84 @@
 apiVersion: optimization.nvidia.com/v1alpha1
 kind: ResourceInterface
+metadata:
+  name: leaderworkerset-x-k8s-io-leaderworkerset-v1
 spec:
   structureDefinition:
     rootComponent:
-      name: "leaderworkerset"
-      # specPath omitted for root component (defaults to .spec)
+      name: leaderworkerset
       kind:
-        group: "leaderworkerset.x-k8s.io"
-        version: "v1"
-        kind: "LeaderWorkerSet"
-      scaleDefinition:
-        replicasPath: ".spec.replicas"
+        group: leaderworkerset.x-k8s.io
+        version: v1
+        kind: LeaderWorkerSet
       statusDefinition:
         conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
         statusMappings:
           initializing:
           - byConditions:
-            - type: "Available"
+            - type: Available
               status: "False"
-            - type: "Progressing"
+            - type: Progressing
               status: "False"
-            - type: "UpdateInProgress"
+            - type: UpdateInProgress
               status: "False"
           running:
           - byConditions:
-            - type: "Available"
-              status: "True"
-            - type: "Progressing"
-              status: "False"
-            - type: "UpdateInProgress"
-              status: "False"
+              - type: Available
+                status: "True"
+              - type: Progressing
+                status: "False"
+              - type: UpdateInProgress
+                status: "False"
           failed:
           - byConditions:
-            - type: "Available"
-              status: "False"
-            - type: "Progressing"
-              status: "False"
-            - type: "UpdateInProgress"
-              status: "False"
-
+              - type: Available
+                status: "False"
+              - type: Progressing
+                status: "False"
+              - type: UpdateInProgress
+                status: "False"
     childComponents:
-    - name: "group"
-      ownerRef: "leaderworkerset"
-      scaleDefinition:
-        replicasPath: ".spec.leaderWorkerTemplate.size"
-
-    # Leader - coordinates and manages worker nodes
-    - name: "leader"
-      kind:
-        group: "apps"
-        version: "v1"
-        kind: "StatefulSet"
-      ownerRef: "group"
-      specDefinition:
-        podTemplateSpecPath: ".spec.leaderWorkerTemplate.leaderTemplate.spec.template"
-      podSelector:
-        componentTypeSelector:
-          keyPath: '.metadata.labels["leaderworkerset.sigs.k8s.io/worker-index"]'
-          value: "0"
-
-    # Worker group - executes tasks under leader coordination
-    - name: "worker"
-      kind:
-        group: "apps"
-        version: "v1"
-        kind: "StatefulSet"
-      ownerRef: "group"
-      specDefinition:
-        podTemplateSpecPath: ".spec.leaderWorkerTemplate.workerTemplate.spec.template"
-      podSelector:
-        componentTypeSelector:
-          keyPath: '.metadata.annotations["leaderworkerset.sigs.k8s.io/leader-name"]'
-      
-
-  # Optimization instructions
+      - name: group
+        ownerRef: leaderworkerset
+        scaleDefinition:
+          replicasPath: .spec.leaderWorkerTemplate.size
+      - name: leader
+        kind:
+          group: apps
+          version: v1
+          kind: StatefulSet
+        ownerRef: group
+        specDefinition:
+          podTemplateSpecPath: .spec.leaderWorkerTemplate.leaderTemplate
+        scaleDefinition:
+          replicasPath: .spec.replicas // 1
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["leaderworkerset.sigs.k8s.io/worker-index"]
+            value: "0"
+      - name: worker
+        kind:
+          group: apps
+          version: v1
+          kind: StatefulSet
+        ownerRef: group
+        specDefinition:
+          podTemplateSpecPath: .spec.leaderWorkerTemplate.workerTemplate
+        scaleDefinition:
+          replicasPath: (.spec.replicas // 1) * ((.spec.leaderWorkerTemplate.size // 1) - 1)
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.annotations["leaderworkerset.sigs.k8s.io/leader-name"]
   optimizationInstructions:
-    # Gang scheduling for leader-worker coordination
-    # Multi-group pattern: podgroup-lws-{name}-group-{index}
-    # Uses default group-index "0" for single-replica LWS
     gangScheduling:
       podGroups:
-      - name: "group"
-        members:
-        - componentName: "group"
-          groupByKeyPaths:
-          - '.metadata.labels["leaderworkerset.sigs.k8s.io/name"]'
-          - '.metadata.labels["leaderworkerset.sigs.k8s.io/group-index"] // "0"'
-
- 
+        - name: group
+          members:
+            - componentName: group
+              groupByKeyPaths:
+                - .metadata.labels["leaderworkerset.sigs.k8s.io/name"]
+                - .metadata.labels["leaderworkerset.sigs.k8s.io/group-index"] // "0"
