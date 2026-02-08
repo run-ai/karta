@@ -40,8 +40,8 @@ spec:
     # Gang scheduling for inference pipeline coordination (preferred for serving)
     gangScheduling:
       podGroups:
-      - name: "service"
+      - name: service
         members:
-        - componentName: "nimservice"
+        - componentName: nimservice
           groupByKeyPaths:
-          - '.metadata.labels["app.kubernetes.io/name"]'
+          - .metadata.labels["app.kubernetes.io/name"]

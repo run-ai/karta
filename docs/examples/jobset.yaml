@@ -3,7 +3,7 @@ kind: ResourceInterface
 spec:
   structureDefinition:
     rootComponent:
-      name: "jobset"
+      name: jobset
       # specPath omitted for root component (defaults to .spec)
       kind:
         group: jobset.x-k8s.io
@@ -38,7 +38,7 @@ spec:
 
     childComponents:
     # ReplicatedJob - represents the actual Job resources created by JobSet
-    - name: "replicatedjob"
+    - name: replicatedjob
       kind:
         group: batch
         version: v1
@@ -51,15 +51,15 @@ spec:
       instanceIdPath: .spec.replicatedJobs[].name
       podSelector:
         componentInstanceSelector:
-          idPath: '.metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]'
+          idPath: .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]
 
   # Optimization instructions
   optimizationInstructions:
     # Gang scheduling for coordinated job execution
     gangScheduling:
       podGroups:
-      - name: "job"
+      - name: job
         members:
-        - componentName: "replicatedjob"
+        - componentName: replicatedjob
           groupByKeyPaths:
-          - '.metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]'
+          - .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]

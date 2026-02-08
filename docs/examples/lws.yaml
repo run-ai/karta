@@ -19,19 +19,19 @@ spec:
         statusMappings:
           initializing:
           - byConditions:
-            - type: "Available"
+            - type: Available
               status: "False"
-            - type: "Progressing"
+            - type: Progressing
               status: "False"
-            - type: "UpdateInProgress"
+            - type: UpdateInProgress
               status: "False"
           running:
           - byConditions:
-              - type: "Available"
+              - type: Available
                 status: "True"
-              - type: "Progressing"
+              - type: Progressing
                 status: "False"
-              - type: "UpdateInProgress"
+              - type: UpdateInProgress
                 status: "False"
           failed:
           - byConditions:
