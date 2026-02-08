@@ -1,86 +1,82 @@
 apiVersion: optimization.nvidia.com/v1alpha1
 kind: ResourceInterface
+metadata:
+  name: kubeflow-org-mpijob-v1
 spec:
   structureDefinition:
     rootComponent:
-      name: "mpijob"
-      # specPath omitted for root component (defaults to .spec)
+      name: mpijob
       kind:
-        group: "kubeflow.org"
-        version: "v1"
-        kind: "MPIJob"
+        group: kubeflow.org
+        version: v1
+        kind: MPIJob
       statusDefinition:
         conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
         statusMappings:
           initializing:
           - byConditions:
-            - type: "Created"
-              status: "True"
-            - type: "Running"
-              status: "False"
-          running:
+              - type: Created
+                status: "True"
+              - type: Running
+                status: "False"          running:
           - byConditions:
-            - type: "Running"
-              status: "True"
-            - type: "Succeeded"
-              status: "False"
-            - type: "Failed"
-              status: "False"
-          completed:
+              - type: Running
+                status: "True"
+              - type: Succeeded
+                status: "False"
+              - type: Failed
+                status: "False"          completed:
           - byConditions:
-            - type: "Succeeded"
-              status: "True"
+              - type: Succeeded
+                status: "True"
           failed:
           - byConditions:
-            - type: "Failed"
-              status: "True"
-
+              - type: Failed
+                status: "True"
     childComponents:
-    # Launcher node - orchestrates MPI job execution
-    - name: "launcher"
-      kind:
-        group: ""
-        version: "v1"
-        kind: "Pod"
-      ownerRef: "mpijob"
-      specDefinition:
-        podTemplateSpecPath: ".spec.mpiReplicaSpecs.Launcher.template"
-      scaleDefinition:
-        replicasPath: ".spec.mpiReplicaSpecs.Launcher.replicas"
-      podSelector:
-        componentTypeSelector:
-          keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
-          value: "launcher"
-
-    # Worker nodes - execute MPI tasks under launcher coordination
-    - name: "worker"
-      kind:
-        group: ""
-        version: "v1"
-        kind: "Pod"
-      ownerRef: "mpijob"
-      specDefinition:
-        podTemplateSpecPath: ".spec.mpiReplicaSpecs.Worker.template"
-      scaleDefinition:
-        replicasPath: ".spec.mpiReplicaSpecs.Worker.replicas"
-      podSelector:
-        componentTypeSelector:
-          keyPath: '.metadata.labels["training.kubeflow.org/replica-type"]'
-          value: "worker"
-
+      - name: launcher
+        kind:
+          group: ""
+          version: v1
+          kind: Pod
+        ownerRef: mpijob
+        specDefinition:
+          podTemplateSpecPath: .spec.mpiReplicaSpecs.Launcher.template
+        scaleDefinition:
+          replicasPath: .spec.mpiReplicaSpecs.Launcher.replicas // 1
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["training.kubeflow.org/replica-type"]
+            value: launcher
+      - name: worker
+        kind:
+          group: ""
+          version: v1
+          kind: Pod
+        ownerRef: mpijob
+        specDefinition:
+          podTemplateSpecPath: .spec.mpiReplicaSpecs.Worker.template
+        scaleDefinition:
+          replicasPath: .spec.mpiReplicaSpecs.Worker.replicas // 1
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["training.kubeflow.org/replica-type"]
+            value: worker
+  
   # Optimization instructions
   optimizationInstructions:
     # Gang scheduling for distributed training coordination
     gangScheduling:
       podGroups:
-      - name: "job"
-        members:
-        - componentName: "launcher"
-          groupByKeyPaths:
-          - '.metadata.labels["training.kubeflow.org/job-name"]'
-        - componentName: "worker"
-          groupByKeyPaths:
-          - '.metadata.labels["training.kubeflow.org/job-name"]'
+        - name: job
+          members:
+            - componentName: launcher
+              groupByKeyPaths:
+                - .metadata.labels["training.kubeflow.org/job-name"]
+            - componentName: worker
+              groupByKeyPaths:
+                - .metadata.labels["training.kubeflow.org/job-name"]

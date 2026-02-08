@@ -1,94 +1,86 @@
 apiVersion: optimization.nvidia.com/v1alpha1
 kind: ResourceInterface
+metadata:
+  name: serving-kserve-io-inferenceservice-v1beta1
 spec:
   structureDefinition:
     rootComponent:
-      name: "inferenceservice"
-      # specPath omitted for root component (defaults to .spec)
+      name: inferenceservice
       kind:
-        group: "serving.kserve.io"
-        version: "v1beta1"
-        kind: "InferenceService"
+        group: serving.kserve.io
+        version: v1beta1
+        kind: InferenceService
       statusDefinition:
         conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
         statusMappings:
-          initializing:
-          - byConditions:
-            - type: "PredictorConfigurationReady"
-              status: "False"
-            - type: "PredictorReady"
-              status: "False"
-            - type: "RoutesReady"
-              status: "False"
-            - type: "LatestDeploymentReady"
-              status: "False"
           running:
           - byConditions:
-            - type: "PredictorReady"
-              status: "True"
-            - type: "RoutesReady"
-              status: "True"
-            - type: "LatestDeploymentReady"
-              status: "True"
+              - type: PredictorReady
+                status: "True"
+              - type: RoutesReady
+                status: "True"
+              - type: LatestDeploymentReady
+                status: "True"
           failed:
           - byConditions:
-            - type: "PredictorReady"
-              status: "False"
-            - type: "PredictorConfigurationReady"
-              status: "False"
-            - type: "RoutesReady"
-              status: "False"
-
+              - type: PredictorReady
+                status: "False"
+              - type: PredictorConfigurationReady
+                status: "False"
+              - type: RoutesReady
+                status: "False"
     childComponents:
-    # Predictor - main inference endpoint
-    - name: "predictor"
-      kind:
-        group: "apps"
-        version: "v1"
-        kind: "Deployment"
-      ownerRef: "inferenceservice"
-      specDefinition:
-        podTemplateSpecPath: ".spec.predictor.template"
-      scaleDefinition:
-        minReplicasPath: ".spec.predictor.minReplicas"
-        maxReplicasPath: ".spec.predictor.maxReplicas"
-      podSelector:
-        componentTypeSelector:
-          keyPath: '.metadata.labels["component"]'
-          value: "predictor"
-
-    # Transformer - pre/post-processing pipeline
-    - name: "transformer"
-      kind:
-        group: "apps"
-        version: "v1"
-        kind: "Deployment"
-      ownerRef: "inferenceservice"
-      specDefinition:
-        podTemplateSpecPath: ".spec.transformer.template"
-      scaleDefinition:
-        minReplicasPath: ".spec.transformer.minReplicas"
-        maxReplicasPath: ".spec.transformer.maxReplicas"
-      podSelector:
-        componentTypeSelector:
-          keyPath: '.metadata.labels["component"]'
-          value: "transformer"
-
-  # Optimization instructions
+      - name: predictor
+        kind:
+          group: apps
+          version: v1
+          kind: Deployment
+        ownerRef: inferenceservice
+        specDefinition:
+          fragmentedPodSpecDefinition:
+            schedulerNamePath: .spec.predictor.schedulerName
+            labelsPath: .spec.predictor.labels
+            annotationsPath: .spec.predictor.annotations
+            podAffinityPath: .spec.predictor.affinity.podAffinity
+            nodeAffinityPath: .spec.predictor.affinity.nodeAffinity
+            containersPath: .spec.predictor.containers
+            containerPath: .spec.predictor | ( (.[]?  | select(type =="object" and .storageUri )))
+            priorityClassNamePath: .spec.predictor.priorityClassName
+        scaleDefinition:
+          minReplicasPath: .spec.predictor.minReplicas
+          maxReplicasPath: .spec.predictor.maxReplicas
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["component"]
+            value: predictor
+      - name: transformer
+        kind:
+          group: apps
+          version: v1
+          kind: Deployment
+        ownerRef: inferenceservice
+        specDefinition:
+          podSpecPath: .spec.transformer
+          metadataPath: .spec.transformer
+        scaleDefinition:
+          minReplicasPath: .spec.transformer.minReplicas
+          maxReplicasPath: .spec.transformer.maxReplicas
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["component"]
+            value: transformer
   optimizationInstructions:
-    # Gang scheduling for inference pipeline coordination
     gangScheduling:
       podGroups:
-      - name: "service"
-        members:
-        - componentName: "predictor"
-          groupByKeyPaths:
-          - '.metadata.labels["serving.kserve.io/inferenceservice"]'
-        - componentName: "transformer"
-          groupByKeyPaths:
-          - '.metadata.labels["serving.kserve.io/inferenceservice"]'
-
- 
+        - name: service
+          members:
+            - componentName: predictor
+              groupByKeyPaths:
+                - .metadata.labels["serving.kserve.io/inferenceservice"]
+            - componentName: transformer
+              groupByKeyPaths:
+                - .metadata.labels["serving.kserve.io/inferenceservice"]

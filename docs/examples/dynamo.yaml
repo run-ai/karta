@@ -1,68 +1,77 @@
 apiVersion: optimization.nvidia.com/v1alpha1
 kind: ResourceInterface
+metadata:
+  name: nvidia-com-dynamographdeployment-v1alpha1
 spec:
   structureDefinition:
     rootComponent:
-      name: "dynamographdeployment"
-      # specPath omitted for root component (defaults to .spec)
+      name: dynamographdeployment
       kind:
-        group: "nvidia.com"
-        version: "v1alpha1"
-        kind: "DynamoGraphDeployment"
+        group: nvidia.com
+        version: v1alpha1
+        kind: DynamoGraphDeployment
       statusDefinition:
         phaseDefinition:
-          path: ".status.state"
+          path: .status.state
         statusMappings:
           initializing:
-          - byPhase: "pending"
+          - byPhase: pending
           running:
-          - byPhase: "successful"
+          - byPhase: successful
           failed:
-          - byPhase: "failed"
-
+          - byPhase: failed
     childComponents:
-    - name: "service"
-      kind:
-        group: "nvidia.com"
-        version: "v1alpha1"
-        kind: "DynamoComponentDeployment"
-      ownerRef: "dynamographdeployment"
-      specDefinition:
-        fragmentedPodSpecDefinition:
-          labelsPath: ".spec.services | .[] | .labels"
-          annotationsPath: ".spec.services | .[] | .annotations"
-          resourcesPath: ".spec.services | .[] | .resources"
-          containersPath: ".spec.services | .[] | .extraPodSpec.containers"
-          schedulerNamePath: ".spec.services | .[] | .extraPodSpec.schedulerName"
-          nodeAffinityPath: ".spec.services | .[] | .extraPodSpec.affinity.nodeAffinity"
-          podAffinityPath: ".spec.services | .[] | .extraPodSpec.affinity.podAffinity"
-          priorityClassNamePath: ".spec.services | .[] | .extraPodSpec.priorityClassName"
-          imagePath: ".spec.services | .[] | .extraPodSpec.mainContainer.image"
-      scaleDefinition:
-        replicasPath: ".spec.services | .[] | .replicas"
-        minReplicasPath: ".spec.services | .[] | .autoscaling.minReplicas"
-        maxReplicasPath: ".spec.services | .[] | .autoscaling.maxReplicas"
-      instanceIdPath: ".spec.services | to_entries[] | .key"
-      podSelector:
-        componentInstanceSelector:
-          idPath: '.metadata.labels["nvidia.com/dynamo-component"]'
-    
-    # Child resources created but not represented as components
+      - name: service
+        kind:
+          group: nvidia.com
+          version: v1alpha1
+          kind: DynamoComponentDeployment
+        ownerRef: dynamographdeployment
+        specDefinition:
+          fragmentedPodSpecDefinition:
+            schedulerNamePath: .spec.services | .[] | .extraPodSpec.schedulerName
+            labelsPath: .spec.services | .[] | .labels
+            annotationsPath: .spec.services | .[] | .annotations
+            resourcesPath: .spec.services | .[] | .resources
+            resourceClaimsPath: .spec.services | .[] | .extraPodSpec.resourceClaims
+            podAffinityPath: .spec.services | .[] | .extraPodSpec.affinity.podAffinity
+            nodeAffinityPath: .spec.services | .[] | .extraPodSpec.affinity.nodeAffinity
+            containerPath: .spec.services | .[] | .extraPodSpec.mainContainer
+            priorityClassNamePath: .spec.services | .[] | .extraPodSpec.priorityClassName
+            imagePath: .spec.services | .[] | .extraPodSpec.mainContainer.image
+        scaleDefinition:
+          replicasPath: .spec.services[] | (.replicas // 1) * (.multinode.nodeCount // 1)
+          minReplicasPath: .spec.services | .[] | .autoscaling.minReplicas
+          maxReplicasPath: .spec.services | .[] | .autoscaling.maxReplicas
+        instanceIdPath: .spec.services | to_entries[] | .key
+        podSelector:
+          componentInstanceSelector:
+            idPath: .metadata.labels["nvidia.com/dynamo-component"]
     additionalChildKinds:
-    - group: apps
-      version: v1
-      kind: Deployment
-    - group: leaderworkerset.x-k8s.io
-      version: v1
-      kind: LeaderWorkerSet
-
-  # Optimization instructions
+      - group: nvidia.com
+        version: v1alpha1
+        kind: DynamoComponentDeployment
+      - group: leaderworkerset.x-k8s.io
+        version: v1
+        kind: LeaderWorkerSet
+      - group: scheduler.grove.io
+        version: v1alpha1
+        kind: PodGang
+      - group: grove.io
+        version: v1alpha1
+        kind: PodClique
+      - group: grove.io
+        version: v1alpha1
+        kind: PodCliqueSet
+      - group: grove.io
+        version: v1alpha1
+        kind: PodCliqueScalingGroup
   optimizationInstructions:
     # Gang scheduling for graph service coordination
     gangScheduling:
       podGroups:
-      - name: "service"
-        members:
-        - componentName: "service"
-          groupByKeyPaths:
-          - '.metadata.labels["nvidia.com/dynamo-component"]'
+        - name: service
+          members:
+            - componentName: service
+              groupByKeyPaths:
+                - .metadata.labels["nvidia.com/dynamo-component"]

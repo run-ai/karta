@@ -1,0 +1,73 @@
+apiVersion: optimization.nvidia.com/v1alpha1
+kind: ResourceInterface
+metadata:
+  name: ray-io-rayjob-v1
+spec:
+  structureDefinition:
+    rootComponent:
+      name: rayjob
+      kind:
+        group: ray.io
+        version: v1
+        kind: RayJob
+      statusDefinition:
+        phaseDefinition:
+          path: .status.jobStatus
+        conditionsDefinition:
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
+          reasonFieldName: null
+        statusMappings:
+          initializing:
+          - byPhase: PENDING
+          running:
+          - byPhase: RUNNING
+          completed:
+          - byPhase: SUCCEEDED
+          failed:
+          - byPhase: FAILED
+    childComponents:
+      - name: head
+        kind:
+          group: ""
+          version: v1
+          kind: Pod
+        ownerRef: rayjob
+        specDefinition:
+          podTemplateSpecPath: .spec.rayClusterSpec.headGroupSpec.template
+        scaleDefinition:
+          replicasPath: "1"
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["ray.io/node-type"]
+            value: head
+      - name: worker
+        kind:
+          group: ""
+          version: v1
+          kind: Pod
+        ownerRef: rayjob
+        specDefinition:
+          podTemplateSpecPath: .spec.rayClusterSpec.workerGroupSpecs[].template
+        scaleDefinition:
+          replicasPath: .spec.rayClusterSpec.workerGroupSpecs[].replicas // 1
+        instanceIdPath: .spec.workerGroupSpecs[].groupName
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["ray.io/node-type"]
+            value: worker
+          componentInstanceSelector:
+            idPath: .metadata.labels["ray.io/group"]
+  optimizationInstructions:
+    gangScheduling:
+      podGroups:
+        - name: job
+          members:
+            - componentName: head
+              groupByKeyPaths:
+                - .metadata.labels["ray.io/cluster"]
+            - componentName: worker
+              groupByKeyPaths:
+                - .metadata.labels["ray.io/cluster"]

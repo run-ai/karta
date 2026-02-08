@@ -3,63 +3,63 @@ kind: ResourceInterface
 spec:
   structureDefinition:
     rootComponent:
-      name: "jobset"
+      name: jobset
       # specPath omitted for root component (defaults to .spec)
       kind:
-        group: "jobset.x-k8s.io"
-        version: "v1alpha2"
-        kind: "JobSet"
+        group: jobset.x-k8s.io
+        version: v1alpha2
+        kind: JobSet
       statusDefinition:
         conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
         statusMappings:
           initializing:
           - byConditions:
-            - type: "StartupPolicyInProgress"
+            - type: StartupPolicyInProgress
               status: "True"
           running:
           - byConditions:
-            - type: "StartupPolicyCompleted"
+            - type: StartupPolicyCompleted
               status: "True"
-            - type: "Completed"
+            - type: Completed
               status: "False"
-            - type: "Failed"
+            - type: Failed
               status: "False"
           completed:
           - byConditions:
-            - type: "Completed"
+            - type: Completed
               status: "True"
           failed:
           - byConditions:
-            - type: "Failed"
+            - type: Failed
               status: "True"
 
     childComponents:
     # ReplicatedJob - represents the actual Job resources created by JobSet
-    - name: "replicatedjob"
+    - name: replicatedjob
       kind:
-        group: "batch"
-        version: "v1"
-        kind: "Job"
-      ownerRef: "jobset"
+        group: batch
+        version: v1
+        kind: Job
+      ownerRef: jobset
       specDefinition:
-        podTemplateSpecPath: ".spec.replicatedJobs[].template"
+        podTemplateSpecPath: .spec.replicatedJobs[].template.spec.template
       scaleDefinition:
-        replicasPath: ".spec.replicatedJobs[].replicas"
-      instanceIdPath: ".spec.replicatedJobs[].name"
+        replicasPath: .spec.replicatedJobs[].replicas
+      instanceIdPath: .spec.replicatedJobs[].name
       podSelector:
         componentInstanceSelector:
-          idPath: '.metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]'
+          idPath: .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]
 
   # Optimization instructions
   optimizationInstructions:
     # Gang scheduling for coordinated job execution
     gangScheduling:
       podGroups:
-      - name: "job"
+      - name: job
         members:
-        - componentName: "replicatedjob"
+        - componentName: replicatedjob
           groupByKeyPaths:
-          - '.metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]'
+          - .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]
