@@ -157,7 +157,7 @@ type PodSelector struct {
 	ComponentInstanceSelector *ComponentInstanceSelector `json:"componentInstanceSelector,omitempty"`
 
 	// ReplicaSelector identifies which replica index or group the pod belongs to.
-	// Use this to distinguish between multiple replicas of the same component
+	// Use this to distinguish between multiple replicas of the same component / component instance
 	// sub-structure (e.g., LWS Group 0 vs Group 1, where each group has identical
 	// leader/worker children). Child components automatically inherit the replica
 	// context from their parent, so ReplicaSelector should only be defined at
@@ -186,7 +186,8 @@ type ComponentInstanceSelector struct {
 
 // ReplicaSelector identifies the replica index/group a pod belongs to.
 type ReplicaSelector struct {
-	// KeyPath is the JQ path to the replica identifier on the pod
+	// KeyPath is the JQ path to the replica identifier on the pod.
+	// The evaluated result should be the replica index or group identifier (e.g., "0", "1").
 	// +kubebuilder:validation:Required
 	KeyPath string `json:"keyPath" jq:"validate"`
 }
