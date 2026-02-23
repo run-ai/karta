@@ -416,6 +416,78 @@ var _ = Describe("PodQuerier", func() {
 		})
 	})
 
+	Describe("ExtractReplicaKey", func() {
+		Context("when selector is nil", func() {
+			It("should return empty string", func() {
+				key, err := querier.ExtractReplicaKey(ctx, nil)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(key).To(Equal(""))
+			})
+		})
+
+		Context("with valid selector", func() {
+			It("should extract replica key from label", func() {
+				testPod.Labels["group-index"] = "2"
+				querier = NewPodQuerier(&testPod)
+
+				selector := &v1alpha1.ReplicaSelector{
+					KeyPath: `.metadata.labels["group-index"]`,
+				}
+
+				key, err := querier.ExtractReplicaKey(ctx, selector)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(key).To(Equal("2"))
+			})
+
+			It("should extract replica key from annotation", func() {
+				testPod.Annotations["replica-id"] = "group-0"
+				querier = NewPodQuerier(&testPod)
+
+				selector := &v1alpha1.ReplicaSelector{
+					KeyPath: `.metadata.annotations["replica-id"]`,
+				}
+
+				key, err := querier.ExtractReplicaKey(ctx, selector)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(key).To(Equal("group-0"))
+			})
+		})
+
+		Context("with invalid selector", func() {
+			It("should return error for non-existent path", func() {
+				selector := &v1alpha1.ReplicaSelector{
+					KeyPath: ".metadata.labels.nonexistent",
+				}
+
+				key, err := querier.ExtractReplicaKey(ctx, selector)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("query result is empty"))
+				Expect(key).To(Equal(""))
+			})
+
+			It("should return error for invalid JQ expression", func() {
+				selector := &v1alpha1.ReplicaSelector{
+					KeyPath: ".invalid[[[syntax",
+				}
+
+				key, err := querier.ExtractReplicaKey(ctx, selector)
+				Expect(err).To(HaveOccurred())
+				Expect(key).To(Equal(""))
+			})
+
+			It("should return error for path returning multiple values", func() {
+				selector := &v1alpha1.ReplicaSelector{
+					KeyPath: ".metadata.labels | to_entries | .[].value",
+				}
+
+				key, err := querier.ExtractReplicaKey(ctx, selector)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("expected single query result"))
+				Expect(key).To(Equal(""))
+			})
+		})
+	})
+
 	Describe("GetMatchingInstanceId", func() {
 		var pod *corev1.Pod
 

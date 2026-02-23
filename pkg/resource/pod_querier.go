@@ -88,6 +88,25 @@ func (pq *PodQuerier) checkKeyValue(ctx context.Context, keyPath, expectedValue 
 	return false, nil
 }
 
+// ExtractReplicaKey extracts the replica identifier from the pod using the given ReplicaSelector.
+// Returns the replica key as a string, or empty string if selector is nil.
+func (pq *PodQuerier) ExtractReplicaKey(ctx context.Context, selector *v1alpha1.ReplicaSelector) (string, error) {
+	if selector == nil || selector.KeyPath == "" {
+		return "", nil
+	}
+
+	results, err := pq.evaluator.Evaluate(ctx, selector.KeyPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to evaluate replica selector key path %q: %w", selector.KeyPath, err)
+	}
+
+	if err = validateSingleQueryResult(results); err != nil {
+		return "", fmt.Errorf("replica selector key path %q returned an invalid value %v: %w", selector.KeyPath, results, err)
+	}
+
+	return fmt.Sprintf("%v", results[0]), nil
+}
+
 // ExtractGroupKeys extracts grouping key values from the pod using the provided JQ paths
 func (pq *PodQuerier) ExtractGroupKeys(ctx context.Context, keyPaths []string) ([]string, error) {
 	if len(keyPaths) == 0 {
