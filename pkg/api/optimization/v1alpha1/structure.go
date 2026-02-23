@@ -144,6 +144,10 @@ type PodSelector struct {
 	// ComponentInstanceSelector identifies the component instance the pod matches, in case the component has multiple instances
 	// +kubebuilder:validation:Optional
 	ComponentInstanceSelector *ComponentInstanceSelector `json:"componentInstanceSelector,omitempty"`
+
+	// ReplicaSelector identifies the replica index/group the pod belongs to
+	// +kubebuilder:validation:Optional
+	ReplicaSelector *ReplicaSelector `json:"replicaSelector,omitempty"`
 }
 
 type ComponentTypeSelector struct {
@@ -162,6 +166,13 @@ type ComponentInstanceSelector struct {
 	// JQ path is evaluated against individual pod objects, not the root resource spec
 	// +kubebuilder:validation:Required
 	IdPath string `json:"idPath" jq:"validate"`
+}
+
+// ReplicaSelector identifies the replica index/group a pod belongs to.
+type ReplicaSelector struct {
+	// KeyPath is the JQ path to the replica identifier on the pod
+	// +kubebuilder:validation:Required
+	KeyPath string `json:"keyPath" jq:"validate"`
 }
 
 // ResourceStatus represents the high-level status of a component.

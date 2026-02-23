@@ -222,6 +222,17 @@ spec:
                               required:
                               - keyPath
                               type: object
+                            replicaSelector:
+                              description: ReplicaSelector identifies the replica
+                                index/group the pod belongs to
+                              properties:
+                                keyPath:
+                                  description: KeyPath is the JQ path to the replica
+                                    identifier on the pod
+                                  type: string
+                              required:
+                              - keyPath
+                              type: object
                           type: object
                         scaleDefinition:
                           description: ScaleDefinition defines how to extract scaling
@@ -678,6 +689,17 @@ spec:
                               value:
                                 description: Value is the expected value for the key
                                   (optional - if nil, only key existence is checked)
+                                type: string
+                            required:
+                            - keyPath
+                            type: object
+                          replicaSelector:
+                            description: ReplicaSelector identifies the replica index/group
+                              the pod belongs to
+                            properties:
+                              keyPath:
+                                description: KeyPath is the JQ path to the replica
+                                  identifier on the pod
                                 type: string
                             required:
                             - keyPath
