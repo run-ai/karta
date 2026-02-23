@@ -488,6 +488,87 @@ var _ = Describe("PodQuerier", func() {
 		})
 	})
 
+	Describe("ExtractInstanceId", func() {
+		Context("when selector is nil", func() {
+			It("should return empty string", func() {
+				id, err := querier.ExtractInstanceId(ctx, nil)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(id).To(Equal(""))
+			})
+		})
+
+		Context("when IdPath is empty", func() {
+			It("should return empty string", func() {
+				selector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: "",
+				}
+
+				id, err := querier.ExtractInstanceId(ctx, selector)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(id).To(Equal(""))
+			})
+		})
+
+		Context("with valid selector", func() {
+			It("should extract instance id from label", func() {
+				testPod.Labels["job-name"] = "indexer"
+				querier = NewPodQuerier(&testPod)
+
+				selector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: `.metadata.labels["job-name"]`,
+				}
+
+				id, err := querier.ExtractInstanceId(ctx, selector)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(id).To(Equal("indexer"))
+			})
+
+			It("should extract instance id from annotation", func() {
+				selector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".metadata.annotations.config",
+				}
+
+				id, err := querier.ExtractInstanceId(ctx, selector)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(id).To(Equal("high-memory"))
+			})
+		})
+
+		Context("with invalid selector", func() {
+			It("should return error for non-existent path", func() {
+				selector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".metadata.labels.nonexistent",
+				}
+
+				id, err := querier.ExtractInstanceId(ctx, selector)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("query result is empty"))
+				Expect(id).To(Equal(""))
+			})
+
+			It("should return error for invalid JQ expression", func() {
+				selector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".invalid[[[syntax",
+				}
+
+				id, err := querier.ExtractInstanceId(ctx, selector)
+				Expect(err).To(HaveOccurred())
+				Expect(id).To(Equal(""))
+			})
+
+			It("should return error for path returning multiple values", func() {
+				selector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".metadata.labels | to_entries | .[].value",
+				}
+
+				id, err := querier.ExtractInstanceId(ctx, selector)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("expected single query result"))
+				Expect(id).To(Equal(""))
+			})
+		})
+	})
+
 	Describe("GetMatchingInstanceId", func() {
 		var pod *corev1.Pod
 
