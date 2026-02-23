@@ -137,15 +137,31 @@ type ScaleDefinition struct {
 
 // PodSelector defines how to identify pods belonging to a specific component.
 type PodSelector struct {
-	// ComponentTypeSelector identifies whether the pod matches a specific component type
+	// ComponentTypeSelector determines whether a pod belongs to this component type
+	// by matching a pod label or annotation value via a JQ path.
+	// This is the primary mechanism for pod-to-component membership.
+	// For example, LWS "leader" uses worker-index="0" to identify leader pods,
+	// and LWS "worker" checks for the existence of the leader-name annotation.
 	// +kubebuilder:validation:Optional
 	ComponentTypeSelector *ComponentTypeSelector `json:"componentTypeSelector,omitempty"`
 
-	// ComponentInstanceSelector identifies the component instance the pod matches, in case the component has multiple instances
+	// ComponentInstanceSelector splits a single ComponentDefinition into multiple
+	// component instances, each identified by a unique value extracted from the pod.
+	// Use this when instances of the same component type represent fundamentally
+	// different roles or services (e.g., Dynamo "service" definition produces
+	// separate "Frontend", "PrefillWorker", "DecodeWorker" instances).
+	// This is distinct from ReplicaSelector: ComponentInstanceSelector creates
+	// instances with potentially different specs/behavior, while ReplicaSelector
+	// creates replicas of an identical sub-structure.
 	// +kubebuilder:validation:Optional
 	ComponentInstanceSelector *ComponentInstanceSelector `json:"componentInstanceSelector,omitempty"`
 
-	// ReplicaSelector identifies the replica index/group the pod belongs to
+	// ReplicaSelector identifies which replica index or group the pod belongs to.
+	// Use this to distinguish between multiple replicas of the same component
+	// sub-structure (e.g., LWS Group 0 vs Group 1, where each group has identical
+	// leader/worker children). Child components automatically inherit the replica
+	// context from their parent, so ReplicaSelector should only be defined at
+	// the level where replicas are created, not repeated in children.
 	// +kubebuilder:validation:Optional
 	ReplicaSelector *ReplicaSelector `json:"replicaSelector,omitempty"`
 }
