@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 // +kubebuilder:object:generate=true
 // +groupName=optimization.nvidia.com
 package v1alpha1

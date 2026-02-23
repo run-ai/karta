@@ -146,3 +146,24 @@ if err != nil {
 updatedObject, _ := factory.GetObject()
 // ... use dynamic client to Update/Patch the object in Kubernetes ...
 ```
+
+## License and Copyright
+
+This project is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for the full license text.
+
+Copyright (c) 2026 NVIDIA Corporation
+
+## Third-Party Software
+
+This project includes third-party software components. See the [NOTICE](NOTICE) file for attributions and the [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) file for detailed license information.
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project. All contributions must comply with the Developer Certificate of Origin (DCO).
+
+## Documentation
+
+- [LICENSE](LICENSE) - Apache 2.0 license
+- [NOTICE](NOTICE) - Copyright and third-party attributions
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines and DCO
+- [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) - Third-party dependency licenses

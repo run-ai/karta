@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 // Package v1alpha1 contains API Schema definitions for the optimization.nvidia.com v1alpha1 API group.
 //
 // Resource Interface provide a structured way to understand and optimize
