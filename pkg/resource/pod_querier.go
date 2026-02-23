@@ -121,7 +121,7 @@ func (pq *PodQuerier) ExtractGroupKeys(ctx context.Context, keyPaths []string) (
 			return nil, fmt.Errorf("failed to evaluate group key path %q: %w", keyPath, err)
 		}
 
-		if err := validateSingleQueryResult(results); err != nil {
+		if err = validateSingleQueryResult(results); err != nil {
 			return nil, fmt.Errorf("group key path %q returned an invalid value %v: %w", keyPath, results, err)
 		}
 
@@ -144,7 +144,7 @@ func (pq *PodQuerier) PassesFilters(ctx context.Context, filters []string) (bool
 			return false, fmt.Errorf("failed to evaluate filter %q: %w", filter, err)
 		}
 
-		if err := validateSingleQueryResult(results); err != nil {
+		if err = validateSingleQueryResult(results); err != nil {
 			return false, fmt.Errorf("filter %q returned an invalid value %v: %w", filter, results, err)
 		}
 
@@ -172,7 +172,7 @@ func (pq *PodQuerier) GetMatchingInstanceId(ctx context.Context, instanceSelecto
 		return "", fmt.Errorf("failed to evaluate instance id path %s: %w", instanceSelector.IdPath, err)
 	}
 
-	if err := validateSingleQueryResult(results); err != nil {
+	if err = validateSingleQueryResult(results); err != nil {
 		return "", fmt.Errorf("instance id path %q returned an invalid value %v: %w", instanceSelector.IdPath, results, err)
 	}
 
