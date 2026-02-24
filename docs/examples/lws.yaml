@@ -46,6 +46,9 @@ spec:
         ownerRef: leaderworkerset
         scaleDefinition:
           replicasPath: .spec.leaderWorkerTemplate.size
+        podSelector:
+          replicaSelector:
+            keyPath: .metadata.labels["leaderworkerset.sigs.k8s.io/group-index"]
       - name: leader
         kind:
           group: apps

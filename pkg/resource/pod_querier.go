@@ -89,31 +89,33 @@ func (pq *PodQuerier) checkKeyValue(ctx context.Context, keyPath, expectedValue 
 }
 
 // ExtractInstanceId extracts the component instance identifier from the pod using the given ComponentInstanceSelector.
-// Returns the instance id as a string, or empty string if selector is nil.
-func (pq *PodQuerier) ExtractInstanceId(ctx context.Context, instanceSelector *v1alpha1.ComponentInstanceSelector) (string, error) {
+// Returns the instance id as a string, a boolean indicating whether a value was found, and an error.
+// When the selector is nil or has an empty IdPath, found is false with no error.
+func (pq *PodQuerier) ExtractInstanceId(ctx context.Context, instanceSelector *v1alpha1.ComponentInstanceSelector) (string, bool, error) {
 	if instanceSelector == nil || instanceSelector.IdPath == "" {
-		return "", nil
+		return "", false, nil
 	}
 
 	value, err := pq.evaluateStringField(ctx, instanceSelector.IdPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to extract instance id from path %q: %w", instanceSelector.IdPath, err)
+		return "", false, fmt.Errorf("failed to extract instance id from path %q: %w", instanceSelector.IdPath, err)
 	}
-	return value, nil
+	return value, true, nil
 }
 
 // ExtractReplicaKey extracts the replica identifier from the pod using the given ReplicaSelector.
-// Returns the replica key as a string, or empty string if selector is nil.
-func (pq *PodQuerier) ExtractReplicaKey(ctx context.Context, selector *v1alpha1.ReplicaSelector) (string, error) {
+// Returns the replica key as a string, a boolean indicating whether a value was found, and an error.
+// When the selector is nil or has an empty KeyPath, found is false with no error.
+func (pq *PodQuerier) ExtractReplicaKey(ctx context.Context, selector *v1alpha1.ReplicaSelector) (string, bool, error) {
 	if selector == nil || selector.KeyPath == "" {
-		return "", nil
+		return "", false, nil
 	}
 
 	value, err := pq.evaluateStringField(ctx, selector.KeyPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to extract replica key from path %q: %w", selector.KeyPath, err)
+		return "", false, fmt.Errorf("failed to extract replica key from path %q: %w", selector.KeyPath, err)
 	}
-	return value, nil
+	return value, true, nil
 }
 
 // ExtractGroupKeys extracts grouping key values from the pod using the provided JQ paths
@@ -168,7 +170,7 @@ func (pq *PodQuerier) GetMatchingInstanceId(ctx context.Context, instanceSelecto
 		return "", fmt.Errorf("no instance selector provided but instance ids are not empty")
 	}
 
-	podInstanceId, err := pq.ExtractInstanceId(ctx, instanceSelector)
+	podInstanceId, _, err := pq.ExtractInstanceId(ctx, instanceSelector)
 	if err != nil {
 		return "", err
 	}

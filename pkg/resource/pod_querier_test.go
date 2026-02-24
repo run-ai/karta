@@ -418,9 +418,10 @@ var _ = Describe("PodQuerier", func() {
 
 	Describe("ExtractReplicaKey", func() {
 		Context("when selector is nil", func() {
-			It("should return empty string", func() {
-				key, err := querier.ExtractReplicaKey(ctx, nil)
+			It("should return empty string and found=false", func() {
+				key, found, err := querier.ExtractReplicaKey(ctx, nil)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeFalse())
 				Expect(key).To(Equal(""))
 			})
 		})
@@ -434,8 +435,9 @@ var _ = Describe("PodQuerier", func() {
 					KeyPath: `.metadata.labels["group-index"]`,
 				}
 
-				key, err := querier.ExtractReplicaKey(ctx, selector)
+				key, found, err := querier.ExtractReplicaKey(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeTrue())
 				Expect(key).To(Equal("2"))
 			})
 
@@ -447,8 +449,9 @@ var _ = Describe("PodQuerier", func() {
 					KeyPath: `.metadata.annotations["replica-id"]`,
 				}
 
-				key, err := querier.ExtractReplicaKey(ctx, selector)
+				key, found, err := querier.ExtractReplicaKey(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeTrue())
 				Expect(key).To(Equal("group-0"))
 			})
 		})
@@ -459,9 +462,10 @@ var _ = Describe("PodQuerier", func() {
 					KeyPath: ".metadata.labels.nonexistent",
 				}
 
-				key, err := querier.ExtractReplicaKey(ctx, selector)
+				key, found, err := querier.ExtractReplicaKey(ctx, selector)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("query result is empty"))
+				Expect(found).To(BeFalse())
 				Expect(key).To(Equal(""))
 			})
 
@@ -470,8 +474,9 @@ var _ = Describe("PodQuerier", func() {
 					KeyPath: ".invalid[[[syntax",
 				}
 
-				key, err := querier.ExtractReplicaKey(ctx, selector)
+				key, found, err := querier.ExtractReplicaKey(ctx, selector)
 				Expect(err).To(HaveOccurred())
+				Expect(found).To(BeFalse())
 				Expect(key).To(Equal(""))
 			})
 
@@ -480,9 +485,10 @@ var _ = Describe("PodQuerier", func() {
 					KeyPath: ".metadata.labels | to_entries | .[].value",
 				}
 
-				key, err := querier.ExtractReplicaKey(ctx, selector)
+				key, found, err := querier.ExtractReplicaKey(ctx, selector)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("expected single query result"))
+				Expect(found).To(BeFalse())
 				Expect(key).To(Equal(""))
 			})
 		})
@@ -490,21 +496,23 @@ var _ = Describe("PodQuerier", func() {
 
 	Describe("ExtractInstanceId", func() {
 		Context("when selector is nil", func() {
-			It("should return empty string", func() {
-				id, err := querier.ExtractInstanceId(ctx, nil)
+			It("should return empty string and found=false", func() {
+				id, found, err := querier.ExtractInstanceId(ctx, nil)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeFalse())
 				Expect(id).To(Equal(""))
 			})
 		})
 
 		Context("when IdPath is empty", func() {
-			It("should return empty string", func() {
+			It("should return empty string and found=false", func() {
 				selector := &v1alpha1.ComponentInstanceSelector{
 					IdPath: "",
 				}
 
-				id, err := querier.ExtractInstanceId(ctx, selector)
+				id, found, err := querier.ExtractInstanceId(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeFalse())
 				Expect(id).To(Equal(""))
 			})
 		})
@@ -518,8 +526,9 @@ var _ = Describe("PodQuerier", func() {
 					IdPath: `.metadata.labels["job-name"]`,
 				}
 
-				id, err := querier.ExtractInstanceId(ctx, selector)
+				id, found, err := querier.ExtractInstanceId(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeTrue())
 				Expect(id).To(Equal("indexer"))
 			})
 
@@ -528,8 +537,9 @@ var _ = Describe("PodQuerier", func() {
 					IdPath: ".metadata.annotations.config",
 				}
 
-				id, err := querier.ExtractInstanceId(ctx, selector)
+				id, found, err := querier.ExtractInstanceId(ctx, selector)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeTrue())
 				Expect(id).To(Equal("high-memory"))
 			})
 		})
@@ -540,9 +550,10 @@ var _ = Describe("PodQuerier", func() {
 					IdPath: ".metadata.labels.nonexistent",
 				}
 
-				id, err := querier.ExtractInstanceId(ctx, selector)
+				id, found, err := querier.ExtractInstanceId(ctx, selector)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("query result is empty"))
+				Expect(found).To(BeFalse())
 				Expect(id).To(Equal(""))
 			})
 
@@ -551,8 +562,9 @@ var _ = Describe("PodQuerier", func() {
 					IdPath: ".invalid[[[syntax",
 				}
 
-				id, err := querier.ExtractInstanceId(ctx, selector)
+				id, found, err := querier.ExtractInstanceId(ctx, selector)
 				Expect(err).To(HaveOccurred())
+				Expect(found).To(BeFalse())
 				Expect(id).To(Equal(""))
 			})
 
@@ -561,9 +573,10 @@ var _ = Describe("PodQuerier", func() {
 					IdPath: ".metadata.labels | to_entries | .[].value",
 				}
 
-				id, err := querier.ExtractInstanceId(ctx, selector)
+				id, found, err := querier.ExtractInstanceId(ctx, selector)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("expected single query result"))
+				Expect(found).To(BeFalse())
 				Expect(id).To(Equal(""))
 			})
 		})
