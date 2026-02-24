@@ -145,10 +145,10 @@ type PodSelector struct {
 	// +kubebuilder:validation:Optional
 	ComponentTypeSelector *ComponentTypeSelector `json:"componentTypeSelector,omitempty"`
 
-	// ComponentInstanceSelector splits a single ComponentDefinition template into
-	// multiple component instances, each identified by a unique value extracted from the pod.
+	// ComponentInstanceSelector splits a single ComponentDefinition into multiple
+	// component instances, each identified by a unique value extracted from the pod.
 	// Use this when instances of the same component type represent fundamentally
-	// different roles or services (e.g., Dynamo "service" definition template produces
+	// different roles or services (e.g., Dynamo "service" definition produces
 	// separate "Frontend", "PrefillWorker", "DecodeWorker" instances).
 	// This is distinct from ReplicaSelector: ComponentInstanceSelector creates
 	// instances with potentially different specs/behavior, while ReplicaSelector
