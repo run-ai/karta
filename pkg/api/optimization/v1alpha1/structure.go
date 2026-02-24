@@ -145,10 +145,10 @@ type PodSelector struct {
 	// +kubebuilder:validation:Optional
 	ComponentTypeSelector *ComponentTypeSelector `json:"componentTypeSelector,omitempty"`
 
-	// ComponentInstanceSelector splits a single ComponentDefinition into multiple
-	// component instances, each identified by a unique value extracted from the pod.
+	// ComponentInstanceSelector splits a single ComponentDefinition template into
+	// multiple component instances, each identified by a unique value extracted from the pod.
 	// Use this when instances of the same component type represent fundamentally
-	// different roles or services (e.g., Dynamo "service" definition produces
+	// different roles or services (e.g., Dynamo "service" definition template produces
 	// separate "Frontend", "PrefillWorker", "DecodeWorker" instances).
 	// This is distinct from ReplicaSelector: ComponentInstanceSelector creates
 	// instances with potentially different specs/behavior, while ReplicaSelector
@@ -159,9 +159,9 @@ type PodSelector struct {
 	// ReplicaSelector identifies which replica index or group the pod belongs to.
 	// Use this to distinguish between multiple replicas of the same component / component instance
 	// sub-structure (e.g., LWS Group 0 vs Group 1, where each group has identical
-	// leader/worker children). Child components automatically inherit the replica
-	// context from their parent, so ReplicaSelector should only be defined at
-	// the level where replicas are created, not repeated in children.
+	// leader/worker descendants). Descendant components automatically inherit the replica
+	// context from their ancestor (parent), so ReplicaSelector should only be defined at
+	// the level where replicas are created, not repeated in descendants.
 	// +kubebuilder:validation:Optional
 	ReplicaSelector *ReplicaSelector `json:"replicaSelector,omitempty"`
 }
