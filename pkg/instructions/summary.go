@@ -9,7 +9,7 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/karta/pkg/api/optimization/v1alpha1"
 )
 
 // StructureSummary provides a pre-computed summary of ResourceInterface structure
