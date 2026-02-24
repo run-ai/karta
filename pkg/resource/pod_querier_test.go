@@ -13,8 +13,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/jq/execution"
+	"github.com/run-ai/karta/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/karta/pkg/jq/execution"
 )
 
 var _ = Describe("PodQuerier", func() {

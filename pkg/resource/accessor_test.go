@@ -17,9 +17,9 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/jq/execution"
-	"github.com/run-ai/kai-bolt/test/types"
+	"github.com/run-ai/karta/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/karta/pkg/jq/execution"
+	"github.com/run-ai/karta/test/types"
 )
 
 const (

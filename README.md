@@ -88,7 +88,7 @@ spec:
 
 ### Basic Extraction
 ```go
-import "github.com/run-ai/kai-bolt/pkg/resource"
+import "github.com/run-ai/karta/pkg/resource"
 
 // Create a factory from your ResourceInterface and JobSet object
 factory := resource.NewComponentFactoryFromObject(resourceInterface, jobSetObject)

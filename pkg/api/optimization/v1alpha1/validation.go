@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/run-ai/kai-bolt/pkg/jq"
+	"github.com/run-ai/karta/pkg/jq"
 )
 
 var kindsWithoutGroup = map[string]bool{

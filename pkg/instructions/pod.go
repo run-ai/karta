@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/run-ai/kai-bolt/pkg/resource"
+	"github.com/run-ai/karta/pkg/resource"
 )
 
 // InferPodComponent infers the component name for the given pod based on component type selectors

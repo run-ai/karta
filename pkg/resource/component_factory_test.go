@@ -12,9 +12,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/test/types"
-	testutils "github.com/run-ai/kai-bolt/test/types/jsonutils"
+	"github.com/run-ai/karta/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/karta/test/types"
+	testutils "github.com/run-ai/karta/test/types/jsonutils"
 )
 
 var _ = Describe("ComponentFactory", func() {

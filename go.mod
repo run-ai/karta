@@ -1,9 +1,8 @@
-module github.com/run-ai/kai-bolt
+module github.com/run-ai/karta
 
 go 1.24.6
 
 require (
-	github.com/golang/mock v1.6.0
 	github.com/itchyny/gojq v0.12.17
 	github.com/onsi/ginkgo/v2 v2.22.0
 	github.com/onsi/gomega v1.36.1
@@ -13,7 +12,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.21.0
 )
 
-require go.uber.org/mock v0.6.0 // indirect
+require go.uber.org/mock v0.6.0
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
