@@ -20,6 +20,8 @@ You can sign off automatically by using the `-s` or `--signoff` flag when commit
 git commit -s -m "Your commit message"
 ```
 
+You must use your real name (sorry, no pseudonyms or anonymous contributions).
+
 ### DCO Text
 
 The full text of the DCO version 1.1 is as follows:
@@ -65,17 +67,16 @@ By making a contribution to this project, I certify that:
 
 For more information about the DCO, please visit: https://developercertificate.org/
 
-## IP Review Process
-
-All contributions, modifications, and third-party code submissions must go through NVIDIA's IP Review Process for ongoing project code modifications. Please ensure that any third-party contributions comply with this process.
-
 ## Contribution Guidelines
 
 ### Before You Start
 
 1. Check existing issues and pull requests to see if your contribution is already being addressed
-2. For major changes, please open an issue first to discuss the proposed changes
-3. Ensure your code follows the project's coding standards and conventions
+2. Ensure your code follows the project's coding standards and conventions
+3. Every pull request must reference at least one open GitHub issue in its description. This ensures that all changes are tracked and linked to project requirements or bug reports.
+4. For major changes, please open an issue first to discuss the proposed changes
+
+
 
 ### Making Changes
 
