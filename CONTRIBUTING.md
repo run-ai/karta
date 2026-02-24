@@ -10,7 +10,7 @@ All contributions to this project must comply with the Developer Certificate of 
 
 By contributing to this project, you agree to the DCO. You must sign off your commits to indicate that you agree to the DCO. You can do this by adding a `Signed-off-by` line to your commit messages:
 
-```
+```text
 Signed-off-by: Your Name <your.email@example.com>
 ```
 
@@ -26,7 +26,7 @@ You must use your real name (sorry, no pseudonyms or anonymous contributions).
 
 The full text of the DCO version 1.1 is as follows:
 
-```
+```text
 Developer Certificate of Origin
 Version 1.1
 
