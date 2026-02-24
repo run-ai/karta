@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 package v1alpha1
 
 // GroupVersionKind represents a Kubernetes API object's group, version, and kind.
