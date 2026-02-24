@@ -140,13 +140,33 @@ type ScaleDefinition struct {
 
 // PodSelector defines how to identify pods belonging to a specific component.
 type PodSelector struct {
-	// ComponentTypeSelector identifies whether the pod matches a specific component type
+	// ComponentTypeSelector determines whether a pod belongs to this component type
+	// by matching a pod label or annotation value via a JQ path.
+	// This is the primary mechanism for pod-to-component membership.
+	// For example, LWS "leader" uses worker-index="0" to identify leader pods,
+	// and LWS "worker" checks for the existence of the leader-name annotation.
 	// +kubebuilder:validation:Optional
 	ComponentTypeSelector *ComponentTypeSelector `json:"componentTypeSelector,omitempty"`
 
-	// ComponentInstanceSelector identifies the component instance the pod matches, in case the component has multiple instances
+	// ComponentInstanceSelector splits a single ComponentDefinition into multiple
+	// component instances, each identified by a unique value extracted from the pod.
+	// Use this when instances of the same component type represent fundamentally
+	// different roles or services (e.g., Dynamo "service" definition produces
+	// separate "Frontend", "PrefillWorker", "DecodeWorker" instances).
+	// This is distinct from ReplicaSelector: ComponentInstanceSelector creates
+	// instances with potentially different specs/behavior, while ReplicaSelector
+	// creates replicas of an identical sub-structure.
 	// +kubebuilder:validation:Optional
 	ComponentInstanceSelector *ComponentInstanceSelector `json:"componentInstanceSelector,omitempty"`
+
+	// ReplicaSelector identifies which replica index or group the pod belongs to.
+	// Use this to distinguish between multiple replicas of the same component / component instance
+	// sub-structure (e.g., LWS Group 0 vs Group 1, where each group has identical
+	// leader/worker descendants). Descendant components automatically inherit the replica
+	// context from their ancestor (parent), so ReplicaSelector should only be defined at
+	// the level where replicas are created, not repeated in descendants.
+	// +kubebuilder:validation:Optional
+	ReplicaSelector *ReplicaSelector `json:"replicaSelector,omitempty"`
 }
 
 type ComponentTypeSelector struct {
@@ -165,6 +185,14 @@ type ComponentInstanceSelector struct {
 	// JQ path is evaluated against individual pod objects, not the root resource spec
 	// +kubebuilder:validation:Required
 	IdPath string `json:"idPath" jq:"validate"`
+}
+
+// ReplicaSelector identifies the replica index/group a pod belongs to.
+type ReplicaSelector struct {
+	// KeyPath is the JQ path to the replica identifier on the pod.
+	// The evaluated result should be the replica index or group identifier (e.g., "0", "1").
+	// +kubebuilder:validation:Required
+	KeyPath string `json:"keyPath" jq:"validate"`
 }
 
 // ResourceStatus represents the high-level status of a component.

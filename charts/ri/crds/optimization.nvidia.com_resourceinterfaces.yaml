@@ -193,9 +193,15 @@ spec:
                             to this component
                           properties:
                             componentInstanceSelector:
-                              description: ComponentInstanceSelector identifies the
-                                component instance the pod matches, in case the component
-                                has multiple instances
+                              description: |-
+                                ComponentInstanceSelector splits a single ComponentDefinition into multiple
+                                component instances, each identified by a unique value extracted from the pod.
+                                Use this when instances of the same component type represent fundamentally
+                                different roles or services (e.g., Dynamo "service" definition produces
+                                separate "Frontend", "PrefillWorker", "DecodeWorker" instances).
+                                This is distinct from ReplicaSelector: ComponentInstanceSelector creates
+                                instances with potentially different specs/behavior, while ReplicaSelector
+                                creates replicas of an identical sub-structure.
                               properties:
                                 idPath:
                                   description: |-
@@ -206,8 +212,12 @@ spec:
                               - idPath
                               type: object
                             componentTypeSelector:
-                              description: ComponentTypeSelector identifies whether
-                                the pod matches a specific component type
+                              description: |-
+                                ComponentTypeSelector determines whether a pod belongs to this component type
+                                by matching a pod label or annotation value via a JQ path.
+                                This is the primary mechanism for pod-to-component membership.
+                                For example, LWS "leader" uses worker-index="0" to identify leader pods,
+                                and LWS "worker" checks for the existence of the leader-name annotation.
                               properties:
                                 keyPath:
                                   description: |-
@@ -218,6 +228,23 @@ spec:
                                   description: Value is the expected value for the
                                     key (optional - if nil, only key existence is
                                     checked)
+                                  type: string
+                              required:
+                              - keyPath
+                              type: object
+                            replicaSelector:
+                              description: |-
+                                ReplicaSelector identifies which replica index or group the pod belongs to.
+                                Use this to distinguish between multiple replicas of the same component / component instance
+                                sub-structure (e.g., LWS Group 0 vs Group 1, where each group has identical
+                                leader/worker descendants). Descendant components automatically inherit the replica
+                                context from their ancestor (parent), so ReplicaSelector should only be defined at
+                                the level where replicas are created, not repeated in descendants.
+                              properties:
+                                keyPath:
+                                  description: |-
+                                    KeyPath is the JQ path to the replica identifier on the pod.
+                                    The evaluated result should be the replica index or group identifier (e.g., "0", "1").
                                   type: string
                               required:
                               - keyPath
@@ -654,9 +681,15 @@ spec:
                           to this component
                         properties:
                           componentInstanceSelector:
-                            description: ComponentInstanceSelector identifies the
-                              component instance the pod matches, in case the component
-                              has multiple instances
+                            description: |-
+                              ComponentInstanceSelector splits a single ComponentDefinition into multiple
+                              component instances, each identified by a unique value extracted from the pod.
+                              Use this when instances of the same component type represent fundamentally
+                              different roles or services (e.g., Dynamo "service" definition produces
+                              separate "Frontend", "PrefillWorker", "DecodeWorker" instances).
+                              This is distinct from ReplicaSelector: ComponentInstanceSelector creates
+                              instances with potentially different specs/behavior, while ReplicaSelector
+                              creates replicas of an identical sub-structure.
                             properties:
                               idPath:
                                 description: |-
@@ -667,8 +700,12 @@ spec:
                             - idPath
                             type: object
                           componentTypeSelector:
-                            description: ComponentTypeSelector identifies whether
-                              the pod matches a specific component type
+                            description: |-
+                              ComponentTypeSelector determines whether a pod belongs to this component type
+                              by matching a pod label or annotation value via a JQ path.
+                              This is the primary mechanism for pod-to-component membership.
+                              For example, LWS "leader" uses worker-index="0" to identify leader pods,
+                              and LWS "worker" checks for the existence of the leader-name annotation.
                             properties:
                               keyPath:
                                 description: |-
@@ -678,6 +715,23 @@ spec:
                               value:
                                 description: Value is the expected value for the key
                                   (optional - if nil, only key existence is checked)
+                                type: string
+                            required:
+                            - keyPath
+                            type: object
+                          replicaSelector:
+                            description: |-
+                              ReplicaSelector identifies which replica index or group the pod belongs to.
+                              Use this to distinguish between multiple replicas of the same component / component instance
+                              sub-structure (e.g., LWS Group 0 vs Group 1, where each group has identical
+                              leader/worker descendants). Descendant components automatically inherit the replica
+                              context from their ancestor (parent), so ReplicaSelector should only be defined at
+                              the level where replicas are created, not repeated in descendants.
+                            properties:
+                              keyPath:
+                                description: |-
+                                  KeyPath is the JQ path to the replica identifier on the pod.
+                                  The evaluated result should be the replica index or group identifier (e.g., "0", "1").
                                 type: string
                             required:
                             - keyPath

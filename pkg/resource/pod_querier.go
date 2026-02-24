@@ -91,6 +91,36 @@ func (pq *PodQuerier) checkKeyValue(ctx context.Context, keyPath, expectedValue 
 	return false, nil
 }
 
+// ExtractInstanceId extracts the component instance identifier from the pod using the given ComponentInstanceSelector.
+// Returns the instance id as a string, a boolean indicating whether a value was found, and an error.
+// When the selector is nil or has an empty IdPath, found is false with no error.
+func (pq *PodQuerier) ExtractInstanceId(ctx context.Context, instanceSelector *v1alpha1.ComponentInstanceSelector) (string, bool, error) {
+	if instanceSelector == nil || instanceSelector.IdPath == "" {
+		return "", false, nil
+	}
+
+	value, err := pq.evaluateStringField(ctx, instanceSelector.IdPath)
+	if err != nil {
+		return "", false, fmt.Errorf("failed to extract instance id from path %q: %w", instanceSelector.IdPath, err)
+	}
+	return value, true, nil
+}
+
+// ExtractReplicaKey extracts the replica identifier from the pod using the given ReplicaSelector.
+// Returns the replica key as a string, a boolean indicating whether a value was found, and an error.
+// When the selector is nil or has an empty KeyPath, found is false with no error.
+func (pq *PodQuerier) ExtractReplicaKey(ctx context.Context, selector *v1alpha1.ReplicaSelector) (string, bool, error) {
+	if selector == nil || selector.KeyPath == "" {
+		return "", false, nil
+	}
+
+	value, err := pq.evaluateStringField(ctx, selector.KeyPath)
+	if err != nil {
+		return "", false, fmt.Errorf("failed to extract replica key from path %q: %w", selector.KeyPath, err)
+	}
+	return value, true, nil
+}
+
 // ExtractGroupKeys extracts grouping key values from the pod using the provided JQ paths
 func (pq *PodQuerier) ExtractGroupKeys(ctx context.Context, keyPaths []string) ([]string, error) {
 	if len(keyPaths) == 0 {
@@ -100,16 +130,12 @@ func (pq *PodQuerier) ExtractGroupKeys(ctx context.Context, keyPaths []string) (
 	groupKeys := make([]string, 0, len(keyPaths))
 
 	for _, keyPath := range keyPaths {
-		results, err := pq.evaluator.Evaluate(ctx, keyPath)
+		value, err := pq.evaluateStringField(ctx, keyPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to evaluate group key path %q: %w", keyPath, err)
+			return nil, fmt.Errorf("failed to extract group key from path %q: %w", keyPath, err)
 		}
 
-		if err := validateSingleQueryResult(results); err != nil {
-			return nil, fmt.Errorf("group key path %q returned an invalid value %v: %w", keyPath, results, err)
-		}
-
-		groupKeys = append(groupKeys, fmt.Sprintf("%v", results[0]))
+		groupKeys = append(groupKeys, value)
 	}
 
 	return groupKeys, nil
@@ -123,16 +149,12 @@ func (pq *PodQuerier) PassesFilters(ctx context.Context, filters []string) (bool
 	}
 
 	for _, filter := range filters {
-		results, err := pq.evaluator.Evaluate(ctx, filter)
+		result, err := pq.evaluateSingleResult(ctx, filter)
 		if err != nil {
 			return false, fmt.Errorf("failed to evaluate filter %q: %w", filter, err)
 		}
 
-		if err := validateSingleQueryResult(results); err != nil {
-			return false, fmt.Errorf("filter %q returned an invalid value %v: %w", filter, results, err)
-		}
-
-		if results[0] != true {
+		if result != true {
 			return false, nil
 		}
 	}
@@ -151,16 +173,10 @@ func (pq *PodQuerier) GetMatchingInstanceId(ctx context.Context, instanceSelecto
 		return "", fmt.Errorf("no instance selector provided but instance ids are not empty")
 	}
 
-	results, err := pq.evaluator.Evaluate(ctx, instanceSelector.IdPath)
+	podInstanceId, _, err := pq.ExtractInstanceId(ctx, instanceSelector)
 	if err != nil {
-		return "", fmt.Errorf("failed to evaluate instance id path %s: %w", instanceSelector.IdPath, err)
+		return "", err
 	}
-
-	if err := validateSingleQueryResult(results); err != nil {
-		return "", fmt.Errorf("instance id path %q returned an invalid value %v: %w", instanceSelector.IdPath, results, err)
-	}
-
-	podInstanceId := fmt.Sprintf("%v", results[0])
 
 	// Check if pod's instance id matches any of the existing instance ids
 	for _, id := range instanceIds {
@@ -170,6 +186,27 @@ func (pq *PodQuerier) GetMatchingInstanceId(ctx context.Context, instanceSelecto
 	}
 
 	return "", InstanceNotFoundError(fmt.Sprintf("could not match instance id %q. existing instance ids %v", podInstanceId, instanceIds))
+}
+
+// evaluateStringField evaluates a JQ expression and returns the single result as a string.
+func (pq *PodQuerier) evaluateStringField(ctx context.Context, jqPath string) (string, error) {
+	result, err := pq.evaluateSingleResult(ctx, jqPath)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%v", result), nil
+}
+
+// evaluateSingleResult evaluates a JQ expression and validates it returns exactly one non-empty result.
+func (pq *PodQuerier) evaluateSingleResult(ctx context.Context, jqPath string) (any, error) {
+	results, err := pq.evaluator.Evaluate(ctx, jqPath)
+	if err != nil {
+		return nil, err
+	}
+	if err = validateSingleQueryResult(results); err != nil {
+		return nil, err
+	}
+	return results[0], nil
 }
 
 func validateSingleQueryResult(results []any) error {
