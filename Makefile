@@ -59,7 +59,7 @@ lint: fmt-go vet-go lint-go
 .PHONY: lint
 
 .PHONY: validate
-validate: generate manifests generate-mocks update-licenses
+validate: generate manifests generate-mocks generate-licenses
 	@git diff --exit-code 
 
 .PHONY: install-crd
@@ -106,10 +106,10 @@ $(GO_LICENSES): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/google/go-licenses/v2@$(GO_LICENSES_VERSION) ;\
 	}
 
-.PHONY: update-licenses
-update-licenses: go-licenses download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
+.PHONY: generate-licenses
+generate-licenses: go-licenses download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
 	echo "Updating NOTICE and THIRD_PARTY_LICENSES"
-	rm -f NOTICE THIRD_PARTY_LICENSES NOTICE
+	rm -f NOTICE THIRD_PARTY_LICENSES
 	GOROOT=$(GOROOT) go-licenses report ./... --ignore github.com/run-ai/karta --template=hack/licenses/notice.tpl > NOTICE
 	GOROOT=$(GOROOT) go-licenses report ./... --ignore github.com/run-ai/karta --template=hack/licenses/third_party_licenses.tpl > THIRD_PARTY_LICENSES
 
