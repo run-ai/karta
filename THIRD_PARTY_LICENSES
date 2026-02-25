@@ -5,258 +5,324 @@ This file contains license information for third-party software components used 
 For complete license texts, please refer to the source repositories or the LICENSE files in the respective dependency packages.
 
 ## Direct Dependencies
-
-### github.com/golang/mock v1.6.0
-- License: Apache-2.0
-- Repository: https://github.com/golang/mock
-- Copyright: Copyright 2010-2014 Google. All rights reserved.
-
-### github.com/itchyny/gojq v0.12.17
-- License: MIT
-- Repository: https://github.com/itchyny/gojq
-- Copyright: Copyright (c) 2019-2024 itchyny
-
-### github.com/itchyny/timefmt-go v0.1.6
-- License: MIT
-- Repository: https://github.com/itchyny/timefmt-go
-- Copyright: Copyright (c) 2020-2024 itchyny
-
-### github.com/onsi/ginkgo/v2 v2.22.0
-- License: MIT
-- Repository: https://github.com/onsi/ginkgo
-- Copyright: Copyright (c) 2013-2024 Onsi Fakhouri
-
-### github.com/onsi/gomega v1.36.1
-- License: MIT
-- Repository: https://github.com/onsi/gomega
-- Copyright: Copyright (c) 2013-2024 Onsi Fakhouri
-
-### github.com/samber/lo v1.51.0
-- License: MIT
-- Repository: https://github.com/samber/lo
-- Copyright: Copyright (c) 2022 Samuel Berthe
-
-### k8s.io/api v0.33.0
-- License: Apache-2.0
-- Repository: https://github.com/kubernetes/api
-- Copyright: Copyright 2014 The Kubernetes Authors.
-
-### k8s.io/apimachinery v0.33.4
-- License: Apache-2.0
-- Repository: https://github.com/kubernetes/apimachinery
-- Copyright: Copyright 2014 The Kubernetes Authors.
-
-### k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
-- License: Apache-2.0
-- Repository: https://github.com/kubernetes/utils
-- Copyright: Copyright 2014 The Kubernetes Authors.
-
-### sigs.k8s.io/controller-runtime v0.21.0
-- License: Apache-2.0
-- Repository: https://github.com/kubernetes-sigs/controller-runtime
-- Copyright: Copyright 2018 The Kubernetes Authors.
-
-## Indirect Dependencies
-
-### github.com/davecgh/go-spew v1.1.1
+ 
+### github.com/davecgh/go-spew/spew
+- Name: github.com/davecgh/go-spew/spew
+- Version: v1.1.1
 - License: ISC
-- Repository: https://github.com/davecgh/go-spew
-- Copyright: Copyright (c) 2012-2016 Dave Collins
-
-### github.com/emicklei/go-restful/v3 v3.11.0
+- Repository: https://github.com/davecgh/go-spew/blob/v1.1.1/LICENSE
+ 
+### github.com/emicklei/go-restful/v3
+- Name: github.com/emicklei/go-restful/v3
+- Version: v3.11.0
 - License: MIT
-- Repository: https://github.com/emicklei/go-restful
-- Copyright: Copyright 2012-2018 Ernest Micklei
-
-### github.com/evanphx/json-patch/v5 v5.9.11
+- Repository: https://github.com/emicklei/go-restful/blob/v3.11.0/LICENSE
+ 
+### github.com/evanphx/json-patch/v5
+- Name: github.com/evanphx/json-patch/v5
+- Version: v5.9.11
 - License: BSD-3-Clause
-- Repository: https://github.com/evanphx/json-patch
-- Copyright: Copyright (c) 2014, Evan Phoenix
-
-### github.com/fxamacker/cbor/v2 v2.7.0
+- Repository: https://github.com/evanphx/json-patch/blob/v5.9.11/v5/LICENSE
+ 
+### github.com/fxamacker/cbor/v2
+- Name: github.com/fxamacker/cbor/v2
+- Version: v2.7.0
 - License: MIT
-- Repository: https://github.com/fxamacker/cbor
-- Copyright: Copyright (c) 2019-2024 Faye Amacker
-
-### github.com/go-logr/logr v1.4.2
+- Repository: https://github.com/fxamacker/cbor/blob/v2.7.0/LICENSE
+ 
+### github.com/go-logr/logr
+- Name: github.com/go-logr/logr
+- Version: v1.4.2
 - License: Apache-2.0
-- Repository: https://github.com/go-logr/logr
-- Copyright: Copyright 2019 The logr Authors.
-
-### github.com/go-openapi/jsonpointer v0.21.0
+- Repository: https://github.com/go-logr/logr/blob/v1.4.2/LICENSE
+ 
+### github.com/go-openapi/jsonpointer
+- Name: github.com/go-openapi/jsonpointer
+- Version: v0.21.0
 - License: Apache-2.0
-- Repository: https://github.com/go-openapi/jsonpointer
-- Copyright: Copyright 2015-2021 go-swagger maintainers
-
-### github.com/go-openapi/jsonreference v0.20.2
+- Repository: https://github.com/go-openapi/jsonpointer/blob/v0.21.0/LICENSE
+ 
+### github.com/go-openapi/jsonreference
+- Name: github.com/go-openapi/jsonreference
+- Version: v0.20.2
 - License: Apache-2.0
-- Repository: https://github.com/go-openapi/jsonreference
-- Copyright: Copyright 2015-2021 go-swagger maintainers
-
-### github.com/go-openapi/swag v0.23.0
+- Repository: https://github.com/go-openapi/jsonreference/blob/v0.20.2/LICENSE
+ 
+### github.com/go-openapi/swag
+- Name: github.com/go-openapi/swag
+- Version: v0.23.0
 - License: Apache-2.0
-- Repository: https://github.com/go-openapi/swag
-- Copyright: Copyright 2015-2021 go-swagger maintainers
-
-### github.com/go-task/slim-sprig/v3 v3.0.0
+- Repository: https://github.com/go-openapi/swag/blob/v0.23.0/LICENSE
+ 
+### github.com/gogo/protobuf
+- Name: github.com/gogo/protobuf
+- Version: v1.3.2
+- License: BSD-3-Clause
+- Repository: https://github.com/gogo/protobuf/blob/v1.3.2/LICENSE
+ 
+### github.com/google/gnostic-models
+- Name: github.com/google/gnostic-models
+- Version: v0.6.9
+- License: Apache-2.0
+- Repository: https://github.com/google/gnostic-models/blob/v0.6.9/LICENSE
+ 
+### github.com/google/go-cmp/cmp
+- Name: github.com/google/go-cmp/cmp
+- Version: v0.7.0
+- License: BSD-3-Clause
+- Repository: https://github.com/google/go-cmp/blob/v0.7.0/LICENSE
+ 
+### github.com/google/uuid
+- Name: github.com/google/uuid
+- Version: v1.6.0
+- License: BSD-3-Clause
+- Repository: https://github.com/google/uuid/blob/v1.6.0/LICENSE
+ 
+### github.com/itchyny/gojq
+- Name: github.com/itchyny/gojq
+- Version: v0.12.17
 - License: MIT
-- Repository: https://github.com/go-task/slim-sprig
-- Copyright: Copyright (c) 2013-2024 Onsi Fakhouri
-
-### github.com/gogo/protobuf v1.3.2
-- License: BSD-3-Clause
-- Repository: https://github.com/gogo/protobuf
-- Copyright: Copyright 2010 The Go Authors. All rights reserved.
-
-### github.com/google/gnostic-models v0.6.9
-- License: Apache-2.0
-- Repository: https://github.com/google/gnostic-models
-- Copyright: Copyright 2021 Google LLC
-
-### github.com/google/go-cmp v0.7.0
-- License: BSD-3-Clause
-- Repository: https://github.com/google/go-cmp
-- Copyright: Copyright (c) 2017 The Go Authors. All rights reserved.
-
-### github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db
-- License: Apache-2.0
-- Repository: https://github.com/google/pprof
-- Copyright: Copyright 2017 The pprof Authors. All rights reserved.
-
-### github.com/google/uuid v1.6.0
-- License: BSD-3-Clause
-- Repository: https://github.com/google/uuid
-- Copyright: Copyright (c) 2009,2014 Google Inc. All rights reserved.
-
-### github.com/josharian/intern v1.0.0
+- Repository: https://github.com/itchyny/gojq/blob/v0.12.17/LICENSE
+ 
+### github.com/itchyny/timefmt-go
+- Name: github.com/itchyny/timefmt-go
+- Version: v0.1.6
 - License: MIT
-- Repository: https://github.com/josharian/intern
-- Copyright: Copyright (c) 2020 Josh Bleecher Snyder
-
-### github.com/json-iterator/go v1.1.12
+- Repository: https://github.com/itchyny/timefmt-go/blob/v0.1.6/LICENSE
+ 
+### github.com/josharian/intern
+- Name: github.com/josharian/intern
+- Version: v1.0.0
 - License: MIT
-- Repository: https://github.com/json-iterator/go
-- Copyright: Copyright (c) 2016 json-iterator
-
-### github.com/mailru/easyjson v0.7.7
+- Repository: https://github.com/josharian/intern/blob/v1.0.0/license.md
+ 
+### github.com/json-iterator/go
+- Name: github.com/json-iterator/go
+- Version: v1.1.12
 - License: MIT
-- Repository: https://github.com/mailru/easyjson
-- Copyright: Copyright (c) 2016 Mail.Ru Group
-
-### github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
-- License: Apache-2.0
-- Repository: https://github.com/modern-go/concurrent
-- Copyright: Copyright 2018 modern-go authors
-
-### github.com/modern-go/reflect2 v1.0.2
-- License: Apache-2.0
-- Repository: https://github.com/modern-go/reflect2
-- Copyright: Copyright 2017 modern-go authors
-
-### github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
-- License: BSD-3-Clause
-- Repository: https://github.com/munnerz/goautoneg
-- Copyright: Copyright 2011, Google Inc.
-
-### github.com/x448/float16 v0.8.4
+- Repository: https://github.com/json-iterator/go/blob/v1.1.12/LICENSE
+ 
+### github.com/mailru/easyjson
+- Name: github.com/mailru/easyjson
+- Version: v0.7.7
 - License: MIT
-- Repository: https://github.com/x448/float16
-- Copyright: Copyright (c) 2017-2024 x448
-
-### golang.org/x/net v0.38.0
+- Repository: https://github.com/mailru/easyjson/blob/v0.7.7/LICENSE
+ 
+### github.com/modern-go/concurrent
+- Name: github.com/modern-go/concurrent
+- Version: v0.0.0-20180306012644-bacd9c7ef1dd
+- License: Apache-2.0
+- Repository: https://github.com/modern-go/concurrent/blob/bacd9c7ef1dd/LICENSE
+ 
+### github.com/modern-go/reflect2
+- Name: github.com/modern-go/reflect2
+- Version: v1.0.2
+- License: Apache-2.0
+- Repository: https://github.com/modern-go/reflect2/blob/v1.0.2/LICENSE
+ 
+### github.com/munnerz/goautoneg
+- Name: github.com/munnerz/goautoneg
+- Version: v0.0.0-20191010083416-a7dc8b61c822
 - License: BSD-3-Clause
-- Repository: https://go.googlesource.com/net
-- Copyright: Copyright (c) 2009 The Go Authors. All rights reserved.
-
-### golang.org/x/oauth2 v0.27.0
-- License: BSD-3-Clause
-- Repository: https://go.googlesource.com/oauth2
-- Copyright: Copyright (c) 2012 The Go Authors. All rights reserved.
-
-### golang.org/x/sys v0.31.0
-- License: BSD-3-Clause
-- Repository: https://go.googlesource.com/sys
-- Copyright: Copyright (c) 2009 The Go Authors. All rights reserved.
-
-### golang.org/x/term v0.30.0
-- License: BSD-3-Clause
-- Repository: https://go.googlesource.com/term
-- Copyright: Copyright (c) 2009 The Go Authors. All rights reserved.
-
-### golang.org/x/text v0.23.0
-- License: Unicode-DFS
-- Repository: https://go.googlesource.com/text
-- Copyright: Copyright (c) 2009 The Go Authors. All rights reserved.
-
-### golang.org/x/time v0.9.0
-- License: BSD-3-Clause
-- Repository: https://go.googlesource.com/time
-- Copyright: Copyright (c) 2009 The Go Authors. All rights reserved.
-
-### golang.org/x/tools v0.26.0
-- License: BSD-3-Clause
-- Repository: https://go.googlesource.com/tools
-- Copyright: Copyright (c) 2009 The Go Authors. All rights reserved.
-
-### google.golang.org/protobuf v1.36.5
-- License: BSD-3-Clause
-- Repository: https://github.com/protocolbuffers/protobuf-go
-- Copyright: Copyright 2018 The Go Authors. All rights reserved.
-
-### gopkg.in/inf.v0 v0.9.1
-- License: BSD-3-Clause
-- Repository: https://github.com/go-inf/inf
-- Copyright: Copyright 2012 The Go Authors. All rights reserved.
-
-### gopkg.in/yaml.v3 v3.0.1
+- Repository: https://github.com/munnerz/goautoneg/blob/a7dc8b61c822/LICENSE
+ 
+### github.com/onsi/gomega
+- Name: github.com/onsi/gomega
+- Version: v1.36.1
 - License: MIT
-- Repository: https://github.com/go-yaml/yaml
-- Copyright: Copyright (c) 2006-2011 Kirill Simonov
-
-### k8s.io/client-go v0.33.0
+- Repository: https://github.com/onsi/gomega/blob/v1.36.1/LICENSE
+ 
+### github.com/samber/lo
+- Name: github.com/samber/lo
+- Version: v1.51.0
+- License: MIT
+- Repository: https://github.com/samber/lo/blob/v1.51.0/LICENSE
+ 
+### github.com/x448/float16
+- Name: github.com/x448/float16
+- Version: v0.8.4
+- License: MIT
+- Repository: https://github.com/x448/float16/blob/v0.8.4/LICENSE
+ 
+### go.uber.org/mock/gomock
+- Name: go.uber.org/mock/gomock
+- Version: v0.6.0
 - License: Apache-2.0
-- Repository: https://github.com/kubernetes/client-go
-- Copyright: Copyright 2014 The Kubernetes Authors.
-
-### k8s.io/klog/v2 v2.130.1
+- Repository: https://github.com/uber/mock/blob/v0.6.0/LICENSE
+ 
+### golang.org/x/net
+- Name: golang.org/x/net
+- Version: v0.43.0
+- License: BSD-3-Clause
+- Repository: https://cs.opensource.google/go/x/net/+/v0.43.0:LICENSE
+ 
+### golang.org/x/oauth2
+- Name: golang.org/x/oauth2
+- Version: v0.27.0
+- License: BSD-3-Clause
+- Repository: https://cs.opensource.google/go/x/oauth2/+/v0.27.0:LICENSE
+ 
+### golang.org/x/sys/unix
+- Name: golang.org/x/sys/unix
+- Version: v0.35.0
+- License: BSD-3-Clause
+- Repository: https://cs.opensource.google/go/x/sys/+/v0.35.0:LICENSE
+ 
+### golang.org/x/term
+- Name: golang.org/x/term
+- Version: v0.34.0
+- License: BSD-3-Clause
+- Repository: https://cs.opensource.google/go/x/term/+/v0.34.0:LICENSE
+ 
+### golang.org/x/text
+- Name: golang.org/x/text
+- Version: v0.28.0
+- License: BSD-3-Clause
+- Repository: https://cs.opensource.google/go/x/text/+/v0.28.0:LICENSE
+ 
+### golang.org/x/time/rate
+- Name: golang.org/x/time/rate
+- Version: v0.9.0
+- License: BSD-3-Clause
+- Repository: https://cs.opensource.google/go/x/time/+/v0.9.0:LICENSE
+ 
+### google.golang.org/protobuf
+- Name: google.golang.org/protobuf
+- Version: v1.36.5
+- License: BSD-3-Clause
+- Repository: https://github.com/protocolbuffers/protobuf-go/blob/v1.36.5/LICENSE
+ 
+### gopkg.in/inf.v0
+- Name: gopkg.in/inf.v0
+- Version: v0.9.1
+- License: BSD-3-Clause
+- Repository: https://github.com/go-inf/inf/blob/v0.9.1/LICENSE
+ 
+### gopkg.in/yaml.v3
+- Name: gopkg.in/yaml.v3
+- Version: v3.0.1
+- License: MIT
+- Repository: https://github.com/go-yaml/yaml/blob/v3.0.1/LICENSE
+ 
+### k8s.io/api
+- Name: k8s.io/api
+- Version: v0.33.0
 - License: Apache-2.0
-- Repository: https://github.com/kubernetes/klog
-- Copyright: Copyright 2019 The Kubernetes Authors.
-
-### k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
+- Repository: https://github.com/kubernetes/api/blob/v0.33.0/LICENSE
+ 
+### k8s.io/apimachinery/pkg
+- Name: k8s.io/apimachinery/pkg
+- Version: v0.33.4
 - License: Apache-2.0
-- Repository: https://github.com/kubernetes/kube-openapi
-- Copyright: Copyright 2014 The Kubernetes Authors.
-
-### sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3
+- Repository: https://github.com/kubernetes/apimachinery/blob/v0.33.4/LICENSE
+ 
+### k8s.io/apimachinery/third_party/forked/golang
+- Name: k8s.io/apimachinery/third_party/forked/golang
+- Version: v0.33.4
+- License: BSD-3-Clause
+- Repository: https://github.com/kubernetes/apimachinery/blob/v0.33.4/third_party/forked/golang/LICENSE
+ 
+### k8s.io/client-go
+- Name: k8s.io/client-go
+- Version: v0.33.0
 - License: Apache-2.0
-- Repository: https://github.com/kubernetes-sigs/json
-- Copyright: Copyright 2020 The Kubernetes Authors.
-
-### sigs.k8s.io/randfill v1.0.0
+- Repository: https://github.com/kubernetes/client-go/blob/v0.33.0/LICENSE
+ 
+### k8s.io/klog/v2
+- Name: k8s.io/klog/v2
+- Version: v2.130.1
 - License: Apache-2.0
-- Repository: https://github.com/kubernetes-sigs/randfill
-- Copyright: Copyright 2023 The Kubernetes Authors.
-
-### sigs.k8s.io/structured-merge-diff/v4 v4.6.0
+- Repository: https://github.com/kubernetes/klog/blob/v2.130.1/LICENSE
+ 
+### k8s.io/kube-openapi/pkg
+- Name: k8s.io/kube-openapi/pkg
+- Version: v0.0.0-20250318190949-c8a335a9a2ff
 - License: Apache-2.0
-- Repository: https://github.com/kubernetes-sigs/structured-merge-diff
-- Copyright: Copyright 2018 The Kubernetes Authors.
-
-### sigs.k8s.io/yaml v1.4.0
+- Repository: https://github.com/kubernetes/kube-openapi/blob/c8a335a9a2ff/LICENSE
+ 
+### k8s.io/kube-openapi/pkg/internal/third_party/go-json-experiment/json
+- Name: k8s.io/kube-openapi/pkg/internal/third_party/go-json-experiment/json
+- Version: v0.0.0-20250318190949-c8a335a9a2ff
+- License: BSD-3-Clause
+- Repository: https://github.com/kubernetes/kube-openapi/blob/c8a335a9a2ff/pkg/internal/third_party/go-json-experiment/json/LICENSE
+ 
+### k8s.io/kube-openapi/pkg/validation/spec
+- Name: k8s.io/kube-openapi/pkg/validation/spec
+- Version: v0.0.0-20250318190949-c8a335a9a2ff
 - License: Apache-2.0
-- Repository: https://github.com/kubernetes-sigs/yaml
-- Copyright: Copyright 2014 The Kubernetes Authors.
+- Repository: https://github.com/kubernetes/kube-openapi/blob/c8a335a9a2ff/pkg/validation/spec/LICENSE
+ 
+### k8s.io/utils
+- Name: k8s.io/utils
+- Version: v0.0.0-20241104100929-3ea5e8cea738
+- License: Apache-2.0
+- Repository: https://github.com/kubernetes/utils/blob/3ea5e8cea738/LICENSE
+ 
+### k8s.io/utils/internal/third_party/forked/golang/net
+- Name: k8s.io/utils/internal/third_party/forked/golang/net
+- Version: v0.0.0-20241104100929-3ea5e8cea738
+- License: BSD-3-Clause
+- Repository: https://github.com/kubernetes/utils/blob/3ea5e8cea738/internal/third_party/forked/golang/LICENSE
+ 
+### sigs.k8s.io/controller-runtime/pkg
+- Name: sigs.k8s.io/controller-runtime/pkg
+- Version: v0.21.0
+- License: Apache-2.0
+- Repository: https://github.com/kubernetes-sigs/controller-runtime/blob/v0.21.0/LICENSE
+ 
+### sigs.k8s.io/json
+- Name: sigs.k8s.io/json
+- Version: v0.0.0-20241010143419-9aa6b5e7a4b3
+- License: Apache-2.0
+- Repository: https://github.com/kubernetes-sigs/json/blob/9aa6b5e7a4b3/LICENSE
+ 
+### sigs.k8s.io/json
+- Name: sigs.k8s.io/json
+- Version: v0.0.0-20241010143419-9aa6b5e7a4b3
+- License: BSD-3-Clause
+- Repository: https://github.com/kubernetes-sigs/json/blob/9aa6b5e7a4b3/LICENSE
+ 
+### sigs.k8s.io/randfill
+- Name: sigs.k8s.io/randfill
+- Version: v1.0.0
+- License: Apache-2.0
+- Repository: https://github.com/kubernetes-sigs/randfill/blob/v1.0.0/LICENSE
+ 
+### sigs.k8s.io/structured-merge-diff/v4
+- Name: sigs.k8s.io/structured-merge-diff/v4
+- Version: v4.6.0
+- License: Apache-2.0
+- Repository: https://github.com/kubernetes-sigs/structured-merge-diff/blob/v4.6.0/LICENSE
+ 
+### sigs.k8s.io/yaml
+- Name: sigs.k8s.io/yaml
+- Version: v1.4.0
+- License: MIT
+- Repository: https://github.com/kubernetes-sigs/yaml/blob/v1.4.0/LICENSE
+ 
+### sigs.k8s.io/yaml
+- Name: sigs.k8s.io/yaml
+- Version: v1.4.0
+- License: Apache-2.0
+- Repository: https://github.com/kubernetes-sigs/yaml/blob/v1.4.0/LICENSE
+ 
+### sigs.k8s.io/yaml
+- Name: sigs.k8s.io/yaml
+- Version: v1.4.0
+- License: BSD-3-Clause
+- Repository: https://github.com/kubernetes-sigs/yaml/blob/v1.4.0/LICENSE
+ 
+### sigs.k8s.io/yaml/goyaml.v2
+- Name: sigs.k8s.io/yaml/goyaml.v2
+- Version: v1.4.0
+- License: Apache-2.0
+- Repository: https://github.com/kubernetes-sigs/yaml/blob/v1.4.0/goyaml.v2/LICENSE
+
 
 ## License Texts
 
 Full license texts for the above dependencies can be found in their respective source repositories or in the vendor directory if vendoring is used. The most common licenses used are:
 
-- Apache-2.0: See LICENSE file in this repository for the full Apache License 2.0 text
-- MIT: See individual dependency repositories for MIT license text
-- BSD-3-Clause: See individual dependency repositories for BSD 3-Clause license text
-- ISC: See individual dependency repositories for ISC license text
-- Unicode-DFS: See individual dependency repositories for Unicode License Agreement text
 
 For detailed license information, please refer to:
 - The LICENSE files in each dependency's source repository
