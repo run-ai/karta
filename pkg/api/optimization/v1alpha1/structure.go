@@ -292,6 +292,12 @@ type StatusMappings struct {
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	Failed []StatusMatcher `json:"failed,omitempty"`
+
+	// Degraded defines matchers for the Degraded status.
+	// Multiple matchers are OR'd together.
+	// +kubebuilder:validation:Optional
+	// +listType=atomic
+	Degraded []StatusMatcher `json:"degraded,omitempty"`
 }
 
 // StatusMatcher defines criteria for matching a specific status.
