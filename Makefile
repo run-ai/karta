@@ -17,10 +17,13 @@ RI_CRDS_DIR := $(RI_CHART_DIR)/crds
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 MOCKGEN ?= $(LOCALBIN)/mockgen
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
+GO_LICENSES ?= $(LOCALBIN)/go-licenses
+GOROOT ?= $(shell go env GOROOT)
 # Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
 GOMOCK_VERSION ?= v0.6.0
 GOLANGCI_LINT_VERSION ?= v2.5.0
+GO_LICENSES_VERSION ?= v2.0.1
 PATH := $(abspath $(LOCALBIN)):$(PATH)
 
 .PHONY: manifests
@@ -56,7 +59,7 @@ lint: fmt-go vet-go lint-go
 .PHONY: lint
 
 .PHONY: validate
-validate: generate manifests generate-mocks 
+validate: generate manifests generate-mocks generate-licenses
 	@git diff --exit-code 
 
 .PHONY: install-crd
@@ -93,6 +96,26 @@ $(GOLANGCI_LINT): $(LOCALBIN)
 	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)" ;\
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
 	}
+
+.PHONY: go-licenses
+go-licenses: $(GO_LICENSES) ## Download go-licenses locally if necessary.
+$(GO_LICENSES): $(LOCALBIN)
+	@[ -f "$(GO_LICENSES)" ] || { \
+	set -e; \
+	echo "Downloading go-licenses@$(GO_LICENSES_VERSION)" ;\
+	GOBIN=$(LOCALBIN) go install github.com/google/go-licenses/v2@$(GO_LICENSES_VERSION) ;\
+	}
+
+.PHONY: generate-licenses
+generate-licenses: go-licenses download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
+	echo "Updating NOTICE and THIRD_PARTY_LICENSES"
+	`@set` -e; \
+	tmp_notice=$$(mktemp); \
+	tmp_third=$$(mktemp); \
+	GOROOT=$(GOROOT) $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/notice.tpl > $$tmp_notice; \
+	GOROOT=$(GOROOT) $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/third_party_licenses.tpl > $$tmp_third; \
+	mv $$tmp_notice NOTICE; \
+	mv $$tmp_third THIRD_PARTY_LICENSES
 
 .PHONY: download-dependencies
 download-dependencies:
