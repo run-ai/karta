@@ -196,7 +196,7 @@ type ReplicaSelector struct {
 }
 
 // ResourceStatus represents the high-level status of a component.
-// +kubebuilder:validation:Enum=Initializing;Running;Completed;Failed;Undefined
+// +kubebuilder:validation:Enum=Initializing;Running;Completed;Failed;Degraded;Undefined
 type ResourceStatus string
 
 const (
@@ -211,6 +211,9 @@ const (
 
 	// FailedStatus indicates the component has failed
 	FailedStatus ResourceStatus = "Failed"
+
+	// DegradedStatus indicates the component is running but in a degraded state
+	DegradedStatus ResourceStatus = "Degraded"
 
 	// UndefinedStatus is used when status was not defined or cannot be determined
 	UndefinedStatus ResourceStatus = "Undefined"

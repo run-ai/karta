@@ -589,6 +589,14 @@ func matchStatus(ctx context.Context, jqRunner execution.Runner, phase *string, 
 		matchedStatuses = append(matchedStatuses, v1alpha1.InitializingStatus)
 	}
 
+	matched, err = evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Degraded)
+	if err != nil {
+		return nil, err
+	}
+	if matched {
+		matchedStatuses = append(matchedStatuses, v1alpha1.DegradedStatus)
+	}
+
 	if len(matchedStatuses) == 0 {
 		return []v1alpha1.ResourceStatus{v1alpha1.UndefinedStatus}, nil
 	}
