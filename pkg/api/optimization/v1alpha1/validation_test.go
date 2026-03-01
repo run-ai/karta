@@ -492,6 +492,46 @@ var _ = Describe("RIValidator", func() {
 		})
 	})
 
+	Describe("StatusMappings.Entries", func() {
+		It("should return all status-to-matchers pairs", func() {
+			mappings := StatusMappings{
+				Running:      []StatusMatcher{{ByPhase: "Running"}},
+				Failed:       []StatusMatcher{{ByPhase: "Failed"}},
+				Completed:    []StatusMatcher{{ByPhase: "Completed"}},
+				Initializing: []StatusMatcher{{ByPhase: "Initializing"}},
+				Degraded:     []StatusMatcher{{ByPhase: "Degraded"}},
+			}
+
+			entries := mappings.Entries()
+			Expect(entries).To(HaveLen(5))
+
+			statusToMatchers := make(map[ResourceStatus][]StatusMatcher)
+			for _, entry := range entries {
+				statusToMatchers[entry.Status] = entry.Matchers
+			}
+
+			Expect(statusToMatchers).To(HaveKey(RunningStatus))
+			Expect(statusToMatchers[RunningStatus]).To(Equal(mappings.Running))
+			Expect(statusToMatchers).To(HaveKey(FailedStatus))
+			Expect(statusToMatchers[FailedStatus]).To(Equal(mappings.Failed))
+			Expect(statusToMatchers).To(HaveKey(CompletedStatus))
+			Expect(statusToMatchers[CompletedStatus]).To(Equal(mappings.Completed))
+			Expect(statusToMatchers).To(HaveKey(InitializingStatus))
+			Expect(statusToMatchers[InitializingStatus]).To(Equal(mappings.Initializing))
+			Expect(statusToMatchers).To(HaveKey(DegradedStatus))
+			Expect(statusToMatchers[DegradedStatus]).To(Equal(mappings.Degraded))
+		})
+
+		It("should return entries with nil matchers for empty mappings", func() {
+			mappings := StatusMappings{}
+			entries := mappings.Entries()
+			Expect(entries).To(HaveLen(5))
+			for _, entry := range entries {
+				Expect(entry.Matchers).To(BeNil())
+			}
+		})
+	})
+
 	Describe("short circuit on errors", func() {
 		It("should stop validation if has init errors", func() {
 			baseRI.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{

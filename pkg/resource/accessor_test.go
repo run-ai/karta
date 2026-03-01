@@ -826,6 +826,26 @@ var _ = Describe("Accessor", func() {
 				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.CompletedStatus))
 			})
 
+			It("should match Degraded status", func() {
+				reactorRI := types.ReactorRI()
+				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Degraded: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "degraded",
+						},
+					},
+				}
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "degraded"
+				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.DegradedStatus))
+			})
+
 			It("should return UndefinedStatus when phase does not match", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "unknown"

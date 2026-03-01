@@ -196,7 +196,7 @@ type ReplicaSelector struct {
 }
 
 // ResourceStatus represents the high-level status of a component.
-// +kubebuilder:validation:Enum=Initializing;Running;Completed;Failed;Undefined
+// +kubebuilder:validation:Enum=Initializing;Running;Completed;Failed;Degraded;Undefined
 type ResourceStatus string
 
 const (
@@ -211,6 +211,9 @@ const (
 
 	// FailedStatus indicates the component has failed
 	FailedStatus ResourceStatus = "Failed"
+
+	// DegradedStatus indicates the component is running but in a degraded state
+	DegradedStatus ResourceStatus = "Degraded"
 
 	// UndefinedStatus is used when status was not defined or cannot be determined
 	UndefinedStatus ResourceStatus = "Undefined"
@@ -292,6 +295,30 @@ type StatusMappings struct {
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	Failed []StatusMatcher `json:"failed,omitempty"`
+
+	// Degraded defines matchers for the Degraded status.
+	// Multiple matchers are OR'd together.
+	// +kubebuilder:validation:Optional
+	// +listType=atomic
+	Degraded []StatusMatcher `json:"degraded,omitempty"`
+}
+
+// StatusMatchEntry pairs a ResourceStatus with its matchers.
+type StatusMatchEntry struct {
+	Status   ResourceStatus
+	Matchers []StatusMatcher
+}
+
+// Entries returns all status-to-matchers pairs defined in the mappings.
+// When adding a new ResourceStatus, add a corresponding entry here.
+func (m StatusMappings) Entries() []StatusMatchEntry {
+	return []StatusMatchEntry{
+		{RunningStatus, m.Running},
+		{FailedStatus, m.Failed},
+		{CompletedStatus, m.Completed},
+		{InitializingStatus, m.Initializing},
+		{DegradedStatus, m.Degraded},
+	}
 }
 
 // StatusMatcher defines criteria for matching a specific status.
