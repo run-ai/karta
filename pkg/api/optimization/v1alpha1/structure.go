@@ -303,6 +303,24 @@ type StatusMappings struct {
 	Degraded []StatusMatcher `json:"degraded,omitempty"`
 }
 
+// StatusMatchEntry pairs a ResourceStatus with its matchers.
+type StatusMatchEntry struct {
+	Status   ResourceStatus
+	Matchers []StatusMatcher
+}
+
+// Entries returns all status-to-matchers pairs defined in the mappings.
+// When adding a new ResourceStatus, add a corresponding entry here.
+func (m StatusMappings) Entries() []StatusMatchEntry {
+	return []StatusMatchEntry{
+		{RunningStatus, m.Running},
+		{FailedStatus, m.Failed},
+		{CompletedStatus, m.Completed},
+		{InitializingStatus, m.Initializing},
+		{DegradedStatus, m.Degraded},
+	}
+}
+
 // StatusMatcher defines criteria for matching a specific status.
 // If both ByPhase and ByConditions are provided, ALL must match (AND logic).
 type StatusMatcher struct {

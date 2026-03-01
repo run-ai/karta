@@ -557,44 +557,14 @@ func matchStatus(ctx context.Context, jqRunner execution.Runner, phase *string, 
 	}
 
 	matchedStatuses := make([]v1alpha1.ResourceStatus, 0)
-	matched, err := evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Running)
-	if err != nil {
-		return nil, err
-	}
-	if matched {
-		matchedStatuses = append(matchedStatuses, v1alpha1.RunningStatus)
-	}
-
-	matched, err = evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Failed)
-	if err != nil {
-		return nil, err
-	}
-	if matched {
-		matchedStatuses = append(matchedStatuses, v1alpha1.FailedStatus)
-	}
-
-	matched, err = evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Completed)
-	if err != nil {
-		return nil, err
-	}
-	if matched {
-		matchedStatuses = append(matchedStatuses, v1alpha1.CompletedStatus)
-	}
-
-	matched, err = evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Initializing)
-	if err != nil {
-		return nil, err
-	}
-	if matched {
-		matchedStatuses = append(matchedStatuses, v1alpha1.InitializingStatus)
-	}
-
-	matched, err = evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Degraded)
-	if err != nil {
-		return nil, err
-	}
-	if matched {
-		matchedStatuses = append(matchedStatuses, v1alpha1.DegradedStatus)
+	for _, entry := range mappings.Entries() {
+		matched, err := evaluateMatchers(ctx, jqRunner, phase, conditionsMap, entry.Matchers)
+		if err != nil {
+			return nil, err
+		}
+		if matched {
+			matchedStatuses = append(matchedStatuses, entry.Status)
+		}
 	}
 
 	if len(matchedStatuses) == 0 {
