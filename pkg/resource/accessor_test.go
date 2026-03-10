@@ -5,6 +5,7 @@ package resource
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 
@@ -1567,6 +1568,68 @@ var _ = Describe("Accessor", func() {
 			err := accessor.UpdateFragmentedPodSpec(ctx, masterComp.definition, fragmentedSpecs)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring(noFragmentedSpecError))
+		})
+
+		// Reproduces the Dynamo bug: services without labels/annotations/resources get null after mutation.
+		// K8s rejects: "spec.services.VllmDecodeWorker.labels: Invalid value: "null": must be of type object"
+		//
+		// The Reactor RI defines jq paths for labels, annotations, and resources
+		// (via FragmentedPodSpecDefinition). When the source object doesn't have these
+		// fields, jq evaluates them to null. After extract → update round-trip,
+		// these nulls get written back into the object JSON, which K8s rejects.
+		It("should not produce null values for nil fields after extract-update round-trip", func() {
+			// Both services intentionally omit labels, annotations, and resources.
+			// The RI has labelsPath, annotationsPath, and resourcesPath defined,
+			// so the round-trip will attempt to write nil values back for these fields.
+			reactorObject := &types.Reactor{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "jobs.example.com/v1", Kind: "Reactor"},
+				ObjectMeta: metav1.ObjectMeta{Name: "test-nil-fields", Namespace: "default"},
+				Spec: types.ReactorSpec{
+					Services: map[string]types.ServiceSpec{
+						"frontend": {
+							// No labels, annotations, or resources
+							Containers:    []corev1.Container{{Name: "frontend", Image: "frontend:latest"}},
+							MainContainer: corev1.Container{Name: "frontend-main", Image: "frontend:latest"},
+							Replicas:      1,
+						},
+						"worker": {
+							// No labels, annotations, or resources
+							Containers:    []corev1.Container{{Name: "worker", Image: "worker:latest"}},
+							MainContainer: corev1.Container{Name: "worker-main", Image: "worker:latest"},
+							Replicas:      1,
+						},
+					},
+				},
+			}
+
+			reactorRI := types.ReactorRI()
+			accessor, serviceComp := accessorForObject(reactorRI, reactorObject, "service")
+
+			specs, err := accessor.ExtractFragmentedPodSpec(ctx, serviceComp.definition)
+			Expect(err).NotTo(HaveOccurred())
+			err = accessor.UpdateFragmentedPodSpec(ctx, serviceComp.definition, specs)
+			Expect(err).NotTo(HaveOccurred())
+
+			updatedObject, err := accessor.GetObject()
+			Expect(err).NotTo(HaveOccurred())
+			jsonBytes, err := json.Marshal(updatedObject)
+			Expect(err).NotTo(HaveOccurred())
+
+			var result map[string]interface{}
+			Expect(json.Unmarshal(jsonBytes, &result)).To(Succeed())
+
+			services := result["spec"].(map[string]interface{})["services"].(map[string]interface{})
+			for serviceName, svcRaw := range services {
+				service := svcRaw.(map[string]interface{})
+				for _, field := range []string{"labels", "annotations", "resources"} {
+					val, present := service[field]
+					if present {
+						Expect(val).NotTo(BeNil(),
+							"service %s: %s is null after round-trip (K8s rejects null for object-type fields)",
+							serviceName, field)
+					}
+				}
+			}
 		})
 	})
 
