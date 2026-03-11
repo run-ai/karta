@@ -437,6 +437,18 @@ func (a *Accessor) UpdateFragmentedPodSpec(ctx context.Context, definition v1alp
 
 func (a *Accessor) updateField(ctx context.Context, def v1alpha1.ComponentDefinition, path *string, values []any, isEmpty func(any) bool) error {
 	if path != nil {
+		// Skip assignment if all values are empty/nil to avoid writing null
+		// into the JSON.
+		allEmpty := true
+		for _, v := range values {
+			if !isEmpty(v) {
+				allEmpty = false
+				break
+			}
+		}
+		if allEmpty {
+			return nil
+		}
 		return a.assign(ctx, def, *path, values)
 	}
 	for _, v := range values {
