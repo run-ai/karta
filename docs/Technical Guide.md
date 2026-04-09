@@ -1,6 +1,3 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
-<!-- Copyright (c) 2026 NVIDIA Corporation -->
-
 # RI Anatomy
 ## Root Component
 Every RI must define a root component:

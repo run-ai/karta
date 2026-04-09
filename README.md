@@ -1,6 +1,3 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
-<!-- Copyright (c) 2026 NVIDIA Corporation -->
-
 # Karta
 
 **A standard way to describe the structure of any Kubernetes workload type.**

@@ -1,6 +1,3 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
-<!-- Copyright (c) 2026 NVIDIA Corporation -->
-
 # Contributing to karta
 
 Thank you for your interest in contributing to karta! This document provides guidelines and instructions for contributing to this project.

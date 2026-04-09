@@ -1,6 +1,3 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
-<!-- Copyright (c) 2026 NVIDIA Corporation -->
-
 ## What does this PR do?
 
 <!-- Brief description of the change -->

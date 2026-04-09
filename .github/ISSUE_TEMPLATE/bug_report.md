@@ -1,34 +1,29 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
-<!-- Copyright (c) 2026 NVIDIA Corporation -->
+---
+name: Bug report
+about: Create a bug report to help us improve Karta
+title: "[BUG]"
+labels: "? - Needs Triage, bug"
+assignees: ''
 
 ---
-name: Bug Report
-about: Report a bug in Karta
-labels: bug
----
 
-## Describe the bug
+**Describe the bug**
+A clear and concise description of what the bug is.
 
-A clear description of what the bug is.
+**Steps/Code to reproduce bug**
+Follow [this guide](http://matthewrocklin.com/blog/work/2018/02/28/minimal-bug-reports) to craft a minimal bug report. This helps us reproduce the issue you're having and resolve the issue more quickly.
 
-## To Reproduce
+**Expected behavior**
+A clear and concise description of what you expected to happen.
 
-Steps to reproduce the behavior:
-1. Apply ResourceInterface '...'
-2. Create workload '...'
-3. Run '...'
-4. See error
+**Environment details (please complete the following information):**
+ - Karta version:
+ - Kubernetes version:
+ - Helm chart version (if applicable):
+ - Environment location: [Bare-metal, Docker, Cloud(specify cloud provider)]
 
-## Expected behavior
+**Additional context**
+Add any other context about the problem here.
 
-What you expected to happen.
-
-## Environment
-
-- Karta version:
-- Kubernetes version:
-- Helm chart version (if applicable):
-
-## Additional context
-
-Any other context, logs, or screenshots.
+-----
+By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/run-ai/karta/blob/main/CODE_OF_CONDUCT.md) and our [Contributing Guidelines](https://github.com/run-ai/karta/blob/main/CONTRIBUTING.md).

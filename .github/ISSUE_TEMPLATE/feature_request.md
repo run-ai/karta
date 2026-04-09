@@ -1,24 +1,23 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
-<!-- Copyright (c) 2026 NVIDIA Corporation -->
+---
+name: Feature request
+about: Suggest an idea for Karta
+title: "[FEA]"
+labels: "? - Needs Triage, feature request"
+assignees: ''
 
 ---
-name: Feature Request
-about: Suggest a feature or improvement for Karta
-labels: enhancement
----
 
-## Problem
+**Is your feature request related to a problem? Please describe.**
+A clear and concise description of what the problem is. Ex. I wish I could use Karta to do [...]
 
-What problem does this feature solve? What use case is not supported today?
+**Describe the solution you'd like**
+A clear and concise description of what you want to happen.
 
-## Proposed solution
+**Describe alternatives you've considered**
+A clear and concise description of any alternative solutions or features you've considered.
 
-Describe the solution you'd like.
+**Additional context**
+Add any other context, code examples, or references to existing implementations about the feature request here.
 
-## Alternatives considered
-
-Any alternative solutions or workarounds you've considered.
-
-## Additional context
-
-Any other context, examples, or references.
+-----
+By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/run-ai/karta/blob/main/CODE_OF_CONDUCT.md) and our [Contributing Guidelines](https://github.com/run-ai/karta/blob/main/CONTRIBUTING.md).

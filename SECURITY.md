@@ -1,6 +1,3 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
-<!-- Copyright (c) 2026 NVIDIA Corporation -->
-
 # Security Policy
 
 The Karta maintainers take security seriously. We appreciate your efforts to
