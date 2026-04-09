@@ -16,13 +16,7 @@ Every Kubernetes workload type (Job, Deployment, RayCluster, PyTorchJob, KServe 
 - Which status conditions mean "running" vs "failed"?
 - How do I modify the pod spec without breaking the workload?
 
-This doesn't scale. Every new workload type means new code, and the ecosystem is feeling it:
-
-- [Kueue](https://github.com/kubernetes-sigs/kueue) maintains 10-12 separate per-CRD integrations (~200-500 lines each), each implementing the same `GenericJob` interface. IBM built [AppWrapper](https://github.com/project-codeflare/appwrapper) specifically to escape this burden.
-- [Kubeflow](https://github.com/kubeflow/trainer) originally shipped separate operators per ML framework (tf-operator, pytorch-operator, mpi-operator, ...) and spent years migrating to a unified TrainJob v2 — but that only covers training, not inference, serving, or custom CRDs.
-- [Volcano](https://github.com/volcano-sh/volcano) and [KAI Scheduler](https://github.com/NVIDIA/KAI-Scheduler) each maintain their own per-framework scheduling integrations.
-
-The Kubernetes [Workload API (KEP-4671)](https://github.com/kubernetes/enhancements/issues/4671) addresses gang scheduling but requires every workload controller to explicitly create `Workload` objects — a high adoption barrier that doesn't help existing workloads already running in clusters.
+This doesn't scale. Every new workload type means new integration code — schedulers, controllers, and platforms all end up maintaining per-CRD adapters that implement the same patterns over and over.
 
 ## The Solution
 
@@ -192,6 +186,16 @@ Karta was created at [Run:ai](https://run.ai) (NVIDIA) to power workload managem
 - [Examples](docs/examples/) — Real-world RI definitions for common workload types
 - [API Reference](https://pkg.go.dev/github.com/run-ai/karta) — Go package documentation
 - [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute (DCO required)
+
+## Related Projects
+
+Karta is designed to complement the Kubernetes AI/ML ecosystem, not replace any part of it:
+
+- [Kueue](https://github.com/kubernetes-sigs/kueue) — Job queueing and resource management. Karta can provide the workload structure that Kueue integrations need.
+- [Kubeflow Training Operator](https://github.com/kubeflow/trainer) — ML training orchestration. Karta ships RI definitions for Kubeflow workload types.
+- [KServe](https://github.com/kserve/kserve) — Model inference serving. Karta includes an RI for InferenceService.
+- [Volcano](https://github.com/volcano-sh/volcano) / [KAI Scheduler](https://github.com/NVIDIA/KAI-Scheduler) — Batch and gang scheduling. Karta's gang scheduling instructions work alongside these schedulers.
+- [Workload API (KEP-4671)](https://github.com/kubernetes/enhancements/issues/4671) — Upstream Kubernetes workload abstraction. Karta takes a complementary approach by describing existing workloads declaratively, without requiring controller changes.
 
 ## Status
 
