@@ -6,7 +6,9 @@ Karta lets you define a portable, declarative blueprint for any Kubernetes workl
 
 ## The Problem
 
-Every Kubernetes workload type (Job, Deployment, RayCluster, PyTorchJob, KServe InferenceService, ...) has a different structure. If you're building a controller, scheduler, or platform that needs to work with multiple workload types, you end up writing bespoke logic for each one:
+In Kubernetes, and especially in AI systems, a workload is not a standalone execution unit such as a single Pod. Instead, it is composed of multiple components organized in a complex hierarchy of resources, often exposed via custom resource definitions (CRDs) — for example: PyTorchJob, RayCluster, and MPIJob. Each of these CRDs structures the workload configuration differently, but they all share the same conceptual building blocks: pod specifications, scaling parameters, and status definitions.
+
+If you're building a controller, scheduler, or platform that needs to work with multiple workload types, you end up writing bespoke logic for each one:
 
 - Where is the pod template?
 - How do I find the replica count?
@@ -17,11 +19,13 @@ This doesn't scale. Every new workload type means new integration code — sched
 
 ## The Solution
 
-Karta introduces the **Resource Interface (RI)** — a CRD that maps the structure of any workload type into a standard schema. Define it once, and any controller can use it to:
+Karta (*a map to navigate resources*) introduces the **Resource Interface (RI)** — a CRD that maps the structure of any workload type into a standard schema. Using JQ-based path expressions, an RI declaratively defines how to locate pod specifications, scaling parameters, and status fields within any workload hierarchy. Define it once, and any controller can use it to:
 
 - **Extract** pod templates, replica counts, status, and metadata
 - **Update** pod specs, labels, and annotations across all instances
 - **Understand** workload hierarchy (e.g., a JobSet with master + worker groups)
+
+In addition to the CRD, Karta provides a **Go package** that performs the core processing logic: query evaluation to dynamically interpret custom resource schemas, resource extraction that traverses workload hierarchies to identify and group pods, and optimization instruction processors that apply strategies such as gang scheduling to ensure coordinated placement of pods for distributed workloads.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -175,7 +179,7 @@ The [Dynamo RI](docs/examples/dynamo.yaml) shows Karta handling a real-world mul
 
 ## Who Uses Karta?
 
-Karta was created at [Run:ai](https://run.ai) (NVIDIA) to power workload management across diverse Kubernetes workload types. It is used internally by multiple services including the workload controller, scheduler integrations, and platform components.
+Karta was created at [Run:ai](https://run.ai) (NVIDIA) to power workload management across diverse Kubernetes workload types. It is used internally by multiple services including the workload controllers, scheduler integrations, and platform components.
 
 ## Documentation
 
@@ -198,8 +202,12 @@ Karta is designed to complement the Kubernetes AI/ML ecosystem, not replace any 
 
 Karta is in active development (pre-1.0). The API may change between minor versions. We welcome feedback and contributions — please open an issue or start a discussion.
 
+## Third-Party Software
+
+This project includes third-party software components. See the [NOTICE](NOTICE) file for attributions and the [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) file for detailed license information.
+
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE) for the full text.
 
-Copyright (c) 2026 NVIDIA Corporation. See [NOTICE](NOTICE) for third-party attributions.
+Copyright (c) 2026 NVIDIA Corporation.

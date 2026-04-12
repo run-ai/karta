@@ -10,7 +10,6 @@ Fixes #
 ## Checklist
 
 - [ ] All commits are signed off with DCO (`git commit -s`)
-- [ ] All commits are GPG signed (`git commit -S`)
 - [ ] New/modified files have SPDX license and copyright headers
 - [ ] Documentation updated (if applicable)
 - [ ] Tests pass (`make check`)
