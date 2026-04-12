@@ -14,6 +14,8 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 KRT_CHART_DIR := $(PROJECT_DIR)/charts/krt
 KRT_CRDS_DIR := $(KRT_CHART_DIR)/crds
 
+HELM_CHART_VERSION ?= 0.0.1
+
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 MOCKGEN ?= $(LOCALBIN)/mockgen
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
@@ -123,3 +125,17 @@ download-dependencies:
 
 .PHONY: check
 check: download-dependencies validate test lint
+
+##@ Helm
+
+.PHONY: helm-build
+helm-build: ## Build the helm chart
+	helm package $(KRT_CHART_DIR) --version $(HELM_CHART_VERSION) --app-version $(HELM_CHART_VERSION)
+
+.PHONY: helm-lint
+helm-lint: ## Lint the helm chart
+	helm lint $(KRT_CHART_DIR)
+
+.PHONY: helm-validate
+helm-validate: ## Validate the helm chart renders
+	helm template $(KRT_CHART_DIR)

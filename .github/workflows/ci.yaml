@@ -31,3 +31,8 @@ jobs:
       - name: Run checks
         run: make check
 
+      - name: Lint helm chart
+        run: make helm-lint
+
+      - name: Validate helm chart renders
+        run: make helm-validate

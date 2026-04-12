@@ -1,0 +1,54 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+name: Karta - Upload artifacts to GitHub Container Registry
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  HELM_REGISTRY: "ghcr.io/run-ai/karta"
+
+jobs:
+  build-and-push:
+    name: Build & Push Helm Chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Extract package version from tag
+        run: |
+          PACKAGE_VERSION=${GITHUB_REF_NAME#v}
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo $PACKAGE_VERSION
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lint helm chart
+        run: helm lint ./charts/krt
+
+      - name: Build helm chart
+        run: |
+          helm package ./charts/krt -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
+
+      - name: Push Helm Chart
+        run: |
+          helm push ./charts/krt-$PACKAGE_VERSION.tgz oci://${{ env.HELM_REGISTRY }}
+
+      - name: Upload chart as release asset
+        uses: softprops/action-gh-release@v3
+        with:
+          files: charts/krt-${{ env.PACKAGE_VERSION }}.tgz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
