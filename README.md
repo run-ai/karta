@@ -28,16 +28,16 @@ Karta (*a map to navigate resources*) introduces the **Resource Interface (RI)**
 In addition to the CRD, Karta provides a **Go package** that performs the core processing logic: query evaluation to dynamically interpret custom resource schemas, resource extraction that traverses workload hierarchies to identify and group pods, and optimization instruction processors that apply strategies such as gang scheduling to ensure coordinated placement of pods for distributed workloads.
 
 ```
-┌─────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────┐
 │                   Your Platform                  │
 │  (scheduler, controller, dashboard, CLI, etc.)   │
-├─────────────────────────────────────────────────┤
+├──────────────────────────────────────────────────┤
 │              Karta Component API                 │
 │    Extract pods · Update specs · Read status     │
-├──────────┬──────────┬──────────┬────────────────┤
-│ RI:      │ RI:      │ RI:      │ RI:            │
-│ JobSet   │ RayCluster│PyTorchJob│ YourCustomCRD │
-└──────────┴──────────┴──────────┴────────────────┘
+├────────────┬────────────┬────────────┬───────────┤
+│ RI:        │ RI:        │ RI:        │ RI:       │
+│ JobSet     │ RayCluster │ PyTorchJob │ YourCRD   │
+└────────────┴────────────┴────────────┴───────────┘
 ```
 
 ## Quick Start
@@ -153,9 +153,9 @@ err := component.UpdateFragmentedPodSpec(ctx, updates)
 updatedObject, _ := factory.GetObject()
 ```
 
-## Supported Workload Types
+## Pre-built Resource Interfaces
 
-Karta ships with RI definitions for 11+ workload types, with more being added:
+Karta supports any workload type. The following are pre-built and tested RI definitions that ship with the project:
 
 | Workload Type | Framework |
 |---|---|
@@ -187,16 +187,6 @@ Karta was created at [Run:ai](https://run.ai) (NVIDIA) to power workload managem
 - [Examples](docs/examples/) — Real-world RI definitions for common workload types
 - [API Reference](https://pkg.go.dev/github.com/run-ai/karta) — Go package documentation
 - [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute (DCO required)
-
-## Related Projects
-
-Karta is designed to complement the Kubernetes AI/ML ecosystem, not replace any part of it:
-
-- [Kueue](https://github.com/kubernetes-sigs/kueue) — Job queueing and resource management. Karta can provide the workload structure that Kueue integrations need.
-- [Kubeflow Training Operator](https://github.com/kubeflow/trainer) — ML training orchestration. Karta ships RI definitions for Kubeflow workload types.
-- [KServe](https://github.com/kserve/kserve) — Model inference serving. Karta includes an RI for InferenceService.
-- [Volcano](https://github.com/volcano-sh/volcano) / [KAI Scheduler](https://github.com/NVIDIA/KAI-Scheduler) — Batch and gang scheduling. Karta's gang scheduling instructions work alongside these schedulers.
-- [Workload API (KEP-4671)](https://github.com/kubernetes/enhancements/issues/4671) — Upstream Kubernetes workload abstraction. Karta takes a complementary approach by describing existing workloads declaratively, without requiring controller changes.
 
 ## Status
 
