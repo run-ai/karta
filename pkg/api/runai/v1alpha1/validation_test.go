@@ -10,19 +10,19 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-var _ = Describe("RIValidator", func() {
+var _ = Describe("KartaValidator", func() {
 	var (
-		validator *RIValidator
-		baseRI    *ResourceInterface
+		validator *KartaValidator
+		baseKarta    *Karta
 	)
 
 	BeforeEach(func() {
-		// Base valid RI that can be modified for specific tests
-		baseRI = &ResourceInterface{
+		// Base valid Karta that can be modified for specific tests
+		baseKarta = &Karta{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-ri",
+				Name: "test-karta",
 			},
-			Spec: ResourceInterfaceSpec{
+			Spec: KartaSpec{
 				StructureDefinition: StructureDefinition{
 					RootComponent: ComponentDefinition{
 						Name: "root",
@@ -70,20 +70,20 @@ var _ = Describe("RIValidator", func() {
 			},
 		}
 
-		validator = NewRIValidator(baseRI)
+		validator = NewKartaValidator(baseKarta)
 	})
 
 	Describe("Validate", func() {
-		Context("when RI is nil", func() {
+		Context("when Karta is nil", func() {
 			It("should return error", func() {
-				validator = NewRIValidator(nil)
+				validator = NewKartaValidator(nil)
 				err := validator.Validate()
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("resource interface is nil"))
+				Expect(err.Error()).To(ContainSubstring("karta is nil"))
 			})
 		})
 
-		Context("with valid RI", func() {
+		Context("with valid Karta", func() {
 			It("should pass validation", func() {
 				err := validator.Validate()
 				Expect(err).ToNot(HaveOccurred())
@@ -92,10 +92,10 @@ var _ = Describe("RIValidator", func() {
 
 		Context("with multiple validation errors", func() {
 			It("should aggregate all errors", func() {
-				// Create RI with multiple issues
-				baseRI.Spec.StructureDefinition.RootComponent.Kind = nil
-				baseRI.Spec.StructureDefinition.ChildComponents[0].OwnerRef = nil
-				baseRI.Spec.Instructions.GangScheduling.PodGroups[0].Members[0].ComponentName = "nonexistent"
+				// Create Karta with multiple issues
+				baseKarta.Spec.StructureDefinition.RootComponent.Kind = nil
+				baseKarta.Spec.StructureDefinition.ChildComponents[0].OwnerRef = nil
+				baseKarta.Spec.Instructions.GangScheduling.PodGroups[0].Members[0].ComponentName = "nonexistent"
 
 				err := validator.Validate()
 				Expect(err).To(HaveOccurred())
@@ -110,8 +110,8 @@ var _ = Describe("RIValidator", func() {
 	Describe("initialize", func() {
 		Context("with duplicate component names", func() {
 			It("should return error", func() {
-				baseRI.Spec.StructureDefinition.ChildComponents = append(
-					baseRI.Spec.StructureDefinition.ChildComponents,
+				baseKarta.Spec.StructureDefinition.ChildComponents = append(
+					baseKarta.Spec.StructureDefinition.ChildComponents,
 					ComponentDefinition{Name: "root", OwnerRef: ptr.To("root")},
 				)
 
@@ -126,8 +126,8 @@ var _ = Describe("RIValidator", func() {
 				errs := validator.initialize()
 				Expect(errs).To(BeEmpty())
 				Expect(validator.allComponents).To(HaveLen(2))
-				Expect(validator.allComponents["root"]).To(Equal(baseRI.Spec.StructureDefinition.RootComponent))
-				Expect(validator.allComponents["worker"]).To(Equal(baseRI.Spec.StructureDefinition.ChildComponents[0]))
+				Expect(validator.allComponents["root"]).To(Equal(baseKarta.Spec.StructureDefinition.RootComponent))
+				Expect(validator.allComponents["worker"]).To(Equal(baseKarta.Spec.StructureDefinition.ChildComponents[0]))
 			})
 		})
 	})
@@ -135,7 +135,7 @@ var _ = Describe("RIValidator", func() {
 	Describe("validateStructureDefinition", func() {
 		Context("root component validation", func() {
 			It("should fail when root has no GVK", func() {
-				baseRI.Spec.StructureDefinition.RootComponent.Kind = nil
+				baseKarta.Spec.StructureDefinition.RootComponent.Kind = nil
 				validator.initialize()
 
 				errs := validator.validateStructureDefinition()
@@ -144,7 +144,7 @@ var _ = Describe("RIValidator", func() {
 			})
 
 			It("should fail when root has incomplete GVK", func() {
-				baseRI.Spec.StructureDefinition.RootComponent.Kind.Group = ""
+				baseKarta.Spec.StructureDefinition.RootComponent.Kind.Group = ""
 				validator.initialize()
 
 				errs := validator.validateStructureDefinition()
@@ -153,7 +153,7 @@ var _ = Describe("RIValidator", func() {
 			})
 
 			It("should fail when root has owner ref", func() {
-				baseRI.Spec.StructureDefinition.RootComponent.OwnerRef = ptr.To("someone")
+				baseKarta.Spec.StructureDefinition.RootComponent.OwnerRef = ptr.To("someone")
 				validator.initialize()
 
 				errs := validator.validateStructureDefinition()
@@ -162,7 +162,7 @@ var _ = Describe("RIValidator", func() {
 			})
 
 			It("should fail when root has no status definition", func() {
-				baseRI.Spec.StructureDefinition.RootComponent.StatusDefinition = nil
+				baseKarta.Spec.StructureDefinition.RootComponent.StatusDefinition = nil
 				validator.initialize()
 
 				errs := validator.validateStructureDefinition()
@@ -173,7 +173,7 @@ var _ = Describe("RIValidator", func() {
 
 		Context("child component validation", func() {
 			It("should fail when child has no owner ref", func() {
-				baseRI.Spec.StructureDefinition.ChildComponents[0].OwnerRef = nil
+				baseKarta.Spec.StructureDefinition.ChildComponents[0].OwnerRef = nil
 				validator.initialize()
 
 				errs := validator.validateStructureDefinition()
@@ -182,7 +182,7 @@ var _ = Describe("RIValidator", func() {
 			})
 
 			It("should fail when child has empty owner ref", func() {
-				baseRI.Spec.StructureDefinition.ChildComponents[0].OwnerRef = ptr.To("")
+				baseKarta.Spec.StructureDefinition.ChildComponents[0].OwnerRef = ptr.To("")
 				validator.initialize()
 
 				errs := validator.validateStructureDefinition()
@@ -191,7 +191,7 @@ var _ = Describe("RIValidator", func() {
 			})
 
 			It("should fail when owner ref points to nonexistent component", func() {
-				baseRI.Spec.StructureDefinition.ChildComponents[0].OwnerRef = ptr.To("nonexistent")
+				baseKarta.Spec.StructureDefinition.ChildComponents[0].OwnerRef = ptr.To("nonexistent")
 				validator.initialize()
 
 				errs := validator.validateStructureDefinition()
@@ -203,7 +203,7 @@ var _ = Describe("RIValidator", func() {
 		Context("ownership cycles", func() {
 			It("should detect simple cycle", func() {
 				// Create A -> B -> A cycle
-				baseRI.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
+				baseKarta.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
 					{Name: "A", OwnerRef: ptr.To("B")},
 					{Name: "B", OwnerRef: ptr.To("A")},
 				}
@@ -216,7 +216,7 @@ var _ = Describe("RIValidator", func() {
 
 			It("should detect complex cycle", func() {
 				// Create A -> B -> C -> A cycle
-				baseRI.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
+				baseKarta.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
 					{Name: "A", OwnerRef: ptr.To("B")},
 					{Name: "B", OwnerRef: ptr.To("C")},
 					{Name: "C", OwnerRef: ptr.To("A")},
@@ -230,7 +230,7 @@ var _ = Describe("RIValidator", func() {
 
 			It("should pass with valid hierarchy", func() {
 				// Create root -> A -> B (no cycle)
-				baseRI.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
+				baseKarta.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
 					{Name: "A", OwnerRef: ptr.To("root")},
 					{Name: "B", OwnerRef: ptr.To("A")},
 				}
@@ -338,7 +338,7 @@ var _ = Describe("RIValidator", func() {
 	Describe("validateInstructions", func() {
 		Context("gang scheduling validation", func() {
 			It("should pass when gang scheduling is nil", func() {
-				baseRI.Spec.Instructions.GangScheduling = nil
+				baseKarta.Spec.Instructions.GangScheduling = nil
 				validator.initialize()
 
 				errs := validator.validateInstructions()
@@ -346,7 +346,7 @@ var _ = Describe("RIValidator", func() {
 			})
 
 			It("should fail when member component doesn't exist", func() {
-				baseRI.Spec.Instructions.GangScheduling.PodGroups[0].Members[0].ComponentName = "nonexistent"
+				baseKarta.Spec.Instructions.GangScheduling.PodGroups[0].Members[0].ComponentName = "nonexistent"
 				validator.initialize()
 
 				errs := validator.validateInstructions()
@@ -364,12 +364,12 @@ var _ = Describe("RIValidator", func() {
 	})
 
 	Describe("JQ expressions validation is called", func() {
-		var riWithJQPaths *ResourceInterface
+		var kartaWithJQPaths *Karta
 
 		BeforeEach(func() {
-			riWithJQPaths = &ResourceInterface{
+			kartaWithJQPaths = &Karta{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-jq"},
-				Spec: ResourceInterfaceSpec{
+				Spec: KartaSpec{
 					StructureDefinition: StructureDefinition{
 						RootComponent: ComponentDefinition{
 							Name:             "root",
@@ -388,15 +388,15 @@ var _ = Describe("RIValidator", func() {
 		})
 
 		It("should pass with valid JQ expressions", func() {
-			validator = NewRIValidator(riWithJQPaths)
+			validator = NewKartaValidator(kartaWithJQPaths)
 
 			err := validator.Validate()
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should fail with dangerous JQ expressions", func() {
-			riWithJQPaths.Spec.StructureDefinition.RootComponent.SpecDefinition.PodTemplateSpecPath = ptr.To("del(.spec.template)")
-			validator = NewRIValidator(riWithJQPaths)
+			kartaWithJQPaths.Spec.StructureDefinition.RootComponent.SpecDefinition.PodTemplateSpecPath = ptr.To("del(.spec.template)")
+			validator = NewKartaValidator(kartaWithJQPaths)
 
 			err := validator.Validate()
 			Expect(err).To(HaveOccurred())
@@ -405,7 +405,7 @@ var _ = Describe("RIValidator", func() {
 
 		Context("ByExpression validation", func() {
 			It("should pass with valid ByExpression", func() {
-				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
+				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
 					{
 						ByExpression: &ExpressionMatcher{
 							Expression:     ".status.phase == \"Running\"",
@@ -413,14 +413,14 @@ var _ = Describe("RIValidator", func() {
 						},
 					},
 				}
-				validator = NewRIValidator(riWithJQPaths)
+				validator = NewKartaValidator(kartaWithJQPaths)
 
 				err := validator.Validate()
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should fail with dangerous ByExpression using del", func() {
-				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
+				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
 					{
 						ByExpression: &ExpressionMatcher{
 							Expression:     "del(.status)",
@@ -428,7 +428,7 @@ var _ = Describe("RIValidator", func() {
 						},
 					},
 				}
-				validator = NewRIValidator(riWithJQPaths)
+				validator = NewKartaValidator(kartaWithJQPaths)
 
 				err := validator.Validate()
 				Expect(err).To(HaveOccurred())
@@ -436,7 +436,7 @@ var _ = Describe("RIValidator", func() {
 			})
 
 			It("should fail with invalid ByExpression syntax", func() {
-				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
+				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
 					{
 						ByExpression: &ExpressionMatcher{
 							Expression:     ".status.phase == ",
@@ -444,14 +444,14 @@ var _ = Describe("RIValidator", func() {
 						},
 					},
 				}
-				validator = NewRIValidator(riWithJQPaths)
+				validator = NewKartaValidator(kartaWithJQPaths)
 
 				err := validator.Validate()
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("should validate ByExpression in multiple status matchers", func() {
-				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = StatusMappings{
+				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = StatusMappings{
 					Initializing: []StatusMatcher{
 						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Pending\"", ExpectedResult: "true"}},
 					},
@@ -465,14 +465,14 @@ var _ = Describe("RIValidator", func() {
 						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Failed\"", ExpectedResult: "true"}},
 					},
 				}
-				validator = NewRIValidator(riWithJQPaths)
+				validator = NewKartaValidator(kartaWithJQPaths)
 
 				err := validator.Validate()
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should fail when one ByExpression in multiple matchers is invalid", func() {
-				riWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = StatusMappings{
+				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = StatusMappings{
 					Initializing: []StatusMatcher{
 						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Pending\"", ExpectedResult: "true"}},
 					},
@@ -483,7 +483,7 @@ var _ = Describe("RIValidator", func() {
 						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Succeeded\"", ExpectedResult: "true"}},
 					},
 				}
-				validator = NewRIValidator(riWithJQPaths)
+				validator = NewKartaValidator(kartaWithJQPaths)
 
 				err := validator.Validate()
 				Expect(err).To(HaveOccurred())
@@ -534,7 +534,7 @@ var _ = Describe("RIValidator", func() {
 
 	Describe("short circuit on errors", func() {
 		It("should stop validation if has init errors", func() {
-			baseRI.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
+			baseKarta.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
 				{Name: "A", OwnerRef: ptr.To("B")},
 				{Name: "B", OwnerRef: ptr.To("A")},
 				{Name: "C", OwnerRef: ptr.To("D")}, // Invalid owner ref
@@ -549,7 +549,7 @@ var _ = Describe("RIValidator", func() {
 		})
 
 		It("should stop structure validation if definition is invalid", func() {
-			baseRI.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
+			baseKarta.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
 				{Name: "A", OwnerRef: ptr.To("B")},
 				{Name: "B", OwnerRef: ptr.To("A")},
 				{Name: "C", OwnerRef: ptr.To("D")}, // Invalid owner ref

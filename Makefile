@@ -11,8 +11,8 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-RI_CHART_DIR := $(PROJECT_DIR)/charts/ri
-RI_CRDS_DIR := $(RI_CHART_DIR)/crds
+KRT_CHART_DIR := $(PROJECT_DIR)/charts/krt
+KRT_CRDS_DIR := $(KRT_CHART_DIR)/crds
 
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 MOCKGEN ?= $(LOCALBIN)/mockgen
@@ -28,7 +28,7 @@ PATH := $(abspath $(LOCALBIN)):$(PATH)
 
 .PHONY: manifests
 manifests: controller-gen ## Generate CRD manifests
-	$(CONTROLLER_GEN) crd paths="./pkg/..." output:crd:artifacts:config=$(RI_CRDS_DIR)
+	$(CONTROLLER_GEN) crd paths="./pkg/..." output:crd:artifacts:config=$(KRT_CRDS_DIR)
 
 .PHONY: generate
 generate: controller-gen ## Generate DeepCopy methods
@@ -64,11 +64,11 @@ validate: generate manifests generate-mocks generate-licenses
 
 .PHONY: install-crd
 install-crd: manifests ## Install CRDs into the cluster
-	kubectl apply --server-side -f $(RI_CRDS_DIR)
+	kubectl apply --server-side -f $(KRT_CRDS_DIR)
 
 .PHONY: uninstall-crd
 uninstall-crd: ## Uninstall CRDs from the cluster
-	kubectl delete -f $(RI_CRDS_DIR) --ignore-not-found
+	kubectl delete -f $(KRT_CRDS_DIR) --ignore-not-found
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.

@@ -18,7 +18,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/run-ai/karta/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/jq/execution"
 	"github.com/run-ai/karta/test/types"
 )
@@ -65,12 +65,12 @@ const (
 )
 
 func accessorForObject(
-	ri *v1alpha1.ResourceInterface,
+	karta *v1alpha1.Karta,
 	object client.Object,
 	componentName string,
 ) (*Accessor, *Component) {
 	accessor := NewAccessor(execution.NewDefaultRunner(object))
-	factory := NewComponentFactoryFromObject(ri, object)
+	factory := NewComponentFactoryFromObject(karta, object)
 	comp, err := factory.GetComponent(componentName)
 	Expect(err).NotTo(HaveOccurred())
 	return accessor, comp
@@ -80,9 +80,9 @@ var _ = Describe("Accessor", func() {
 	var (
 		ctx context.Context
 
-		pyflowRI   *v1alpha1.ResourceInterface
-		jobgroupRI *v1alpha1.ResourceInterface
-		reactorRI  *v1alpha1.ResourceInterface
+		pyflowRI   *v1alpha1.Karta
+		jobgroupRI *v1alpha1.Karta
+		reactorRI  *v1alpha1.Karta
 
 		pyflowFactory   *ComponentFactory
 		jobgroupFactory *ComponentFactory
@@ -96,9 +96,9 @@ var _ = Describe("Accessor", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 
-		pyflowRI = types.PyFlowRI()
-		jobgroupRI = types.JobGroupRI()
-		reactorRI = types.ReactorRI()
+		pyflowRI = types.PyFlowKarta()
+		jobgroupRI = types.JobGroupKarta()
+		reactorRI = types.ReactorKarta()
 
 		// Create test objects
 		pyflowObject := types.NewPyFlowObject()
@@ -653,7 +653,7 @@ var _ = Describe("Accessor", func() {
 						Message: "Pod failed due to OOMKilled",
 					},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
 				accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "reactor")
 
@@ -709,7 +709,7 @@ var _ = Describe("Accessor", func() {
 			It("should match when ANY matcher succeeds with OR logic", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "active"
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{ByPhase: "running"},
@@ -744,7 +744,7 @@ var _ = Describe("Accessor", func() {
 			})
 
 			It("should match Initializing status", func() {
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Initializing: []v1alpha1.StatusMatcher{
 						{
@@ -768,7 +768,7 @@ var _ = Describe("Accessor", func() {
 			})
 
 			It("should match Running status", func() {
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
@@ -788,7 +788,7 @@ var _ = Describe("Accessor", func() {
 			})
 
 			It("should match Failed status", func() {
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Failed: []v1alpha1.StatusMatcher{
 						{
@@ -808,7 +808,7 @@ var _ = Describe("Accessor", func() {
 			})
 
 			It("should match Completed status", func() {
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Completed: []v1alpha1.StatusMatcher{
 						{
@@ -828,7 +828,7 @@ var _ = Describe("Accessor", func() {
 			})
 
 			It("should match Degraded status", func() {
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Degraded: []v1alpha1.StatusMatcher{
 						{
@@ -867,7 +867,7 @@ var _ = Describe("Accessor", func() {
 					{Type: "Ready", Status: metav1.ConditionTrue},
 					{Type: "Available", Status: metav1.ConditionFalse},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
@@ -894,7 +894,7 @@ var _ = Describe("Accessor", func() {
 				reactorObject.Status.Conditions = []metav1.Condition{
 					{Type: "Ready", Status: metav1.ConditionFalse},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
@@ -920,7 +920,7 @@ var _ = Describe("Accessor", func() {
 				reactorObject.Status.Conditions = []metav1.Condition{
 					{Type: "Ready", Status: metav1.ConditionTrue},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
@@ -950,7 +950,7 @@ var _ = Describe("Accessor", func() {
 				reactorObject.Status.Conditions = []metav1.Condition{
 					{Type: "Ready", Status: metav1.ConditionTrue},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
@@ -976,7 +976,7 @@ var _ = Describe("Accessor", func() {
 				reactorObject.Status.Conditions = []metav1.Condition{
 					{Type: "Failed", Status: metav1.ConditionTrue, Reason: "OOMKilled"},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Failed: []v1alpha1.StatusMatcher{
@@ -1001,7 +1001,7 @@ var _ = Describe("Accessor", func() {
 				reactorObject.Status.Conditions = []metav1.Condition{
 					{Type: "Failed", Status: metav1.ConditionTrue, Reason: "CrashLoopBackOff"},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Failed: []v1alpha1.StatusMatcher{
@@ -1026,7 +1026,7 @@ var _ = Describe("Accessor", func() {
 				reactorObject.Status.Conditions = []metav1.Condition{
 					{Type: "Failed", Status: metav1.ConditionTrue},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Failed: []v1alpha1.StatusMatcher{
@@ -1051,7 +1051,7 @@ var _ = Describe("Accessor", func() {
 				reactorObject.Status.Conditions = []metav1.Condition{
 					{Type: "Failed", Status: metav1.ConditionTrue, Reason: "OOMKilled"},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Failed: []v1alpha1.StatusMatcher{
@@ -1077,7 +1077,7 @@ var _ = Describe("Accessor", func() {
 					{Type: "Ready", Status: metav1.ConditionFalse},
 					{Type: "Failed", Status: metav1.ConditionTrue, Reason: "OOMKilled"},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.ConditionsDefinition.ReasonFieldName = ptr.To("reason")
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Failed: []v1alpha1.StatusMatcher{
@@ -1101,7 +1101,7 @@ var _ = Describe("Accessor", func() {
 			It("should match status with ByExpression returning string 'running'", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "running"
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
@@ -1124,7 +1124,7 @@ var _ = Describe("Accessor", func() {
 			It("should not match when ByExpression returns false", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "running"
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Failed: []v1alpha1.StatusMatcher{
 						{
@@ -1150,7 +1150,7 @@ var _ = Describe("Accessor", func() {
 				reactorObject.Status.Conditions = []metav1.Condition{
 					{Type: "Ready", Status: metav1.ConditionTrue},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
@@ -1176,7 +1176,7 @@ var _ = Describe("Accessor", func() {
 				reactorObject.Status.Conditions = []metav1.Condition{
 					{Type: "Ready", Status: metav1.ConditionTrue},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
@@ -1201,7 +1201,7 @@ var _ = Describe("Accessor", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "running"
 				reactorObject.Status.Conditions = []metav1.Condition{}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
@@ -1228,7 +1228,7 @@ var _ = Describe("Accessor", func() {
 				reactorObject.Status.Conditions = []metav1.Condition{
 					{Type: "Ready", Status: metav1.ConditionTrue},
 				}
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
@@ -1255,7 +1255,7 @@ var _ = Describe("Accessor", func() {
 			It("should not match when ByExpression returns null", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "running"
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
@@ -1278,7 +1278,7 @@ var _ = Describe("Accessor", func() {
 			It("should return error when ByExpression is invalid", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "running"
-				reactorRI := types.ReactorRI()
+				reactorRI := types.ReactorKarta()
 				reactorRI.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
 					Running: []v1alpha1.StatusMatcher{
 						{
@@ -1408,10 +1408,10 @@ var _ = Describe("Accessor", func() {
 		})
 	})
 	Describe("UpdatePodSpec", func() {
-		// JobGroup RI has PodSpecPath
+		// JobGroup Karta has PodSpecPath
 		It("should update pod spec with instance Ids", func() {
 			jobgroupObject := types.NewJobGroupObject()
-			jobgroupRI := types.JobGroupRI()
+			jobgroupRI := types.JobGroupKarta()
 			accessor, jobgroupComp := accessorForObject(jobgroupRI, jobgroupObject, "job")
 			currentPodSpecs, err := accessor.ExtractPodSpec(ctx, jobgroupComp.definition)
 			Expect(err).NotTo(HaveOccurred())
@@ -1441,7 +1441,7 @@ var _ = Describe("Accessor", func() {
 		})
 		It("should remove fields that are not present in the updated pod specs", func() {
 			jobgroupObject := types.NewJobGroupObject()
-			jobgroupRI := types.JobGroupRI()
+			jobgroupRI := types.JobGroupKarta()
 			accessor, jobgroupComp := accessorForObject(jobgroupRI, jobgroupObject, "job")
 			currentPodSpecs, err := accessor.ExtractPodSpec(ctx, jobgroupComp.definition)
 			Expect(err).NotTo(HaveOccurred())
@@ -1462,10 +1462,10 @@ var _ = Describe("Accessor", func() {
 
 		})
 
-		It("should return error for RI without PodSpecPath", func() {
+		It("should return error for Karta without PodSpecPath", func() {
 			pyflowObject := types.NewPyFlowObject()
 			// PyFlow does not have PodSpecPath
-			pyflowRI := types.PyFlowRI()
+			pyflowRI := types.PyFlowKarta()
 			accessor, masterComp := accessorForObject(pyflowRI, pyflowObject, "master")
 
 			podSpecs := []corev1.PodSpec{{
@@ -1479,10 +1479,10 @@ var _ = Describe("Accessor", func() {
 	})
 
 	Describe("UpdateFragmentedPodSpec", func() {
-		// Reactor RI has FragmentedPodSpecDefinition
+		// Reactor Karta has FragmentedPodSpecDefinition
 		It("should update pod spec with fragmented pod spec", func() {
 			reactorObject := types.NewReactorObject()
-			reactorRI := types.ReactorRI()
+			reactorRI := types.ReactorKarta()
 			accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "service")
 			currentFragmentedPodSpecs, err := accessor.ExtractFragmentedPodSpec(ctx, reactorComp.definition)
 			Expect(err).NotTo(HaveOccurred())
@@ -1515,7 +1515,7 @@ var _ = Describe("Accessor", func() {
 
 		It("should update containers and verify other fields remain unchanged", func() {
 			reactorObject := types.NewReactorObject()
-			reactorRI := types.ReactorRI()
+			reactorRI := types.ReactorKarta()
 			reactorObject.Labels = map[string]string{"updated": "true"}
 			accessor, reactorComp := accessorForObject(reactorRI, reactorObject, "service")
 			currentFragmentedPodSpecs, err := accessor.ExtractFragmentedPodSpec(ctx, reactorComp.definition)
@@ -1556,9 +1556,9 @@ var _ = Describe("Accessor", func() {
 			}
 		})
 
-		It("should return error for RI without FragmentedPodSpecDefinition", func() {
+		It("should return error for Karta without FragmentedPodSpecDefinition", func() {
 			pyflowObject := types.NewPyFlowObject()
-			pyflowRI := types.PyFlowRI()
+			pyflowRI := types.PyFlowKarta()
 			accessor, masterComp := accessorForObject(pyflowRI, pyflowObject, "master")
 
 			fragmentedSpecs := []FragmentedPodSpec{{
@@ -1573,13 +1573,13 @@ var _ = Describe("Accessor", func() {
 		// Reproduces the Dynamo bug: services without labels/annotations/resources get null after mutation.
 		// K8s rejects: "spec.services.VllmDecodeWorker.labels: Invalid value: "null": must be of type object"
 		//
-		// The Reactor RI defines jq paths for labels, annotations, and resources
+		// The Reactor Karta defines jq paths for labels, annotations, and resources
 		// (via FragmentedPodSpecDefinition). When the source object doesn't have these
 		// fields, jq evaluates them to null. After extract → update round-trip,
 		// these nulls get written back into the object JSON, which K8s rejects.
 		It("should not produce null values for nil fields after extract-update round-trip", func() {
 			// Both services intentionally omit labels, annotations, and resources.
-			// The RI has labelsPath, annotationsPath, and resourcesPath defined,
+			// The Karta has labelsPath, annotationsPath, and resourcesPath defined,
 			// so the round-trip will attempt to write nil values back for these fields.
 			reactorObject := &types.Reactor{
 				TypeMeta:   metav1.TypeMeta{APIVersion: "jobs.example.com/v1", Kind: "Reactor"},
@@ -1602,7 +1602,7 @@ var _ = Describe("Accessor", func() {
 				},
 			}
 
-			reactorRI := types.ReactorRI()
+			reactorRI := types.ReactorKarta()
 			accessor, serviceComp := accessorForObject(reactorRI, reactorObject, "service")
 
 			specs, err := accessor.ExtractFragmentedPodSpec(ctx, serviceComp.definition)
@@ -1634,10 +1634,10 @@ var _ = Describe("Accessor", func() {
 	})
 
 	Describe("UpdatePodTemplateSpec", func() {
-		// PyFlow RI has PodTemplateSpecPath
+		// PyFlow Karta has PodTemplateSpecPath
 		It("should update master pod template spec with resource claims", func() {
 			pyflowObject := types.NewPyFlowObject()
-			pyflowRI := types.PyFlowRI()
+			pyflowRI := types.PyFlowKarta()
 			accessor, masterComp := accessorForObject(pyflowRI, pyflowObject, "master")
 
 			currentPodTemplateSpecs, err := accessor.ExtractPodTemplateSpec(ctx, masterComp.definition)
@@ -1665,7 +1665,7 @@ var _ = Describe("Accessor", func() {
 
 		It("should update worker pod template spec", func() {
 			pyflowObject := types.NewPyFlowObject()
-			pyflowRI := types.PyFlowRI()
+			pyflowRI := types.PyFlowKarta()
 			accessor, workerComp := accessorForObject(pyflowRI, pyflowObject, "worker")
 
 			currentPodTemplateSpecs, err := accessor.ExtractPodTemplateSpec(ctx, workerComp.definition)
@@ -1697,7 +1697,7 @@ var _ = Describe("Accessor", func() {
 		It("should return error for workloads without PodTemplateSpecPath", func() {
 			jobgroupObject := types.NewJobGroupObject()
 			// JobGroup does not have PodTemplateSpecPath
-			jobgroupRI := types.JobGroupRI()
+			jobgroupRI := types.JobGroupKarta()
 			accessor, jobComp := accessorForObject(jobgroupRI, jobgroupObject, "job")
 
 			podTemplateSpecs := []corev1.PodTemplateSpec{{
@@ -1713,10 +1713,10 @@ var _ = Describe("Accessor", func() {
 	})
 
 	Describe("UpdatePodMetadata", func() {
-		// JobGroup RI has MetadataPath
+		// JobGroup Karta has MetadataPath
 		It("should update pod metadata with instance Ids", func() {
 			jobgroupObject := types.NewJobGroupObject()
-			jobgroupRI := types.JobGroupRI()
+			jobgroupRI := types.JobGroupKarta()
 			jobgroupObject.Spec.ReplicatedJobs[0].Metadata.Labels = map[string]string{"current": "true"}
 			jobgroupObject.Spec.ReplicatedJobs[1].Metadata.Labels = map[string]string{"current": "true"}
 			accessor, jobgroupComp := accessorForObject(jobgroupRI, jobgroupObject, "job")
@@ -1758,7 +1758,7 @@ var _ = Describe("Accessor", func() {
 		It("should return error for workloads without MetadataPath", func() {
 			pyflowObject := types.NewPyFlowObject()
 			// PyFlow does not have MetadataPath
-			pyflowRI := types.PyFlowRI()
+			pyflowRI := types.PyFlowKarta()
 			accessor, masterComp := accessorForObject(pyflowRI, pyflowObject, "master")
 
 			podMetadata := []metav1.ObjectMeta{{

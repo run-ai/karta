@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 apiVersion: v2
-name: ri
-description: A Helm chart for deploying Resource Interfaces (RI) by NVIDIA.
+name: krt
+description: A Helm chart for deploying Karta (Krt) by NVIDIA.
 type: application
 version: 0.0.1
 appVersion: "0.0.0"

@@ -24,7 +24,7 @@ type PodGroupDefinition struct {
 
 // PodGroupMemberDefinition defines how to select and filter components for grouping instructions.
 type PodGroupMemberDefinition struct {
-	// ComponentName references a component defined in the RI's structureDefinition
+	// ComponentName references a component defined in the Karta's structureDefinition
 	// +kubebuilder:validation:Required
 	ComponentName string `json:"componentName"`
 

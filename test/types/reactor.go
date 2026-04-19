@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/run-ai/karta/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
 	"k8s.io/utils/ptr"
 )
@@ -60,14 +60,14 @@ type ReactorStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// ReactorRI returns a ResourceInterface for Reactor
+// ReactorKarta returns a Karta for Reactor
 // Models DynamO-like structure: map components, fragmented pod spec extraction
-func ReactorRI() *v1alpha1.ResourceInterface {
-	return &v1alpha1.ResourceInterface{
+func ReactorKarta() *v1alpha1.Karta {
+	return &v1alpha1.Karta{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "reactor",
 		},
-		Spec: v1alpha1.ResourceInterfaceSpec{
+		Spec: v1alpha1.KartaSpec{
 			StructureDefinition: v1alpha1.StructureDefinition{
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "reactor",

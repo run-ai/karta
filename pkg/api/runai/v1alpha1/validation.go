@@ -14,19 +14,19 @@ var kindsWithoutGroup = map[string]bool{
 	"Pod": true,
 }
 
-type RIValidator struct {
-	ri            *ResourceInterface
+type KartaValidator struct {
+	karta           *Karta
 	rootComponent ComponentDefinition
 	allComponents map[string]ComponentDefinition
 }
 
-func NewRIValidator(ri *ResourceInterface) *RIValidator {
-	return &RIValidator{ri: ri}
+func NewKartaValidator(karta *Karta) *KartaValidator {
+	return &KartaValidator{karta: karta}
 }
 
-func (v *RIValidator) Validate() error {
-	if v.ri == nil {
-		return errors.New("resource interface is nil")
+func (v *KartaValidator) Validate() error {
+	if v.karta == nil {
+		return errors.New("karta is nil")
 	}
 
 	var errs []error
@@ -44,20 +44,20 @@ func (v *RIValidator) Validate() error {
 		errs = append(errs, instructionErrs...)
 	}
 
-	if jqErrs := jq.ValidateJQExpressions(v.ri); jqErrs != nil {
+	if jqErrs := jq.ValidateJQExpressions(v.karta); jqErrs != nil {
 		errs = append(errs, jqErrs...)
 	}
 
 	return errors.Join(errs...)
 }
 
-func (v *RIValidator) initialize() []error {
+func (v *KartaValidator) initialize() []error {
 	var errs []error
 
-	v.rootComponent = v.ri.Spec.StructureDefinition.RootComponent
+	v.rootComponent = v.karta.Spec.StructureDefinition.RootComponent
 
 	v.allComponents = make(map[string]ComponentDefinition)
-	for _, component := range append(v.ri.Spec.StructureDefinition.ChildComponents, v.ri.Spec.StructureDefinition.RootComponent) {
+	for _, component := range append(v.karta.Spec.StructureDefinition.ChildComponents, v.karta.Spec.StructureDefinition.RootComponent) {
 		if _, ok := v.allComponents[component.Name]; ok {
 			errs = append(errs, fmt.Errorf("component name %s is not unique", component.Name))
 		}
@@ -67,14 +67,14 @@ func (v *RIValidator) initialize() []error {
 	return errs
 }
 
-func (v *RIValidator) validateStructureDefinition() []error {
+func (v *KartaValidator) validateStructureDefinition() []error {
 	var errs []error
 
 	// Root component validation
 	errs = append(errs, v.validateRootComponent()...)
 
 	// Child components validation
-	for _, component := range v.ri.Spec.StructureDefinition.ChildComponents {
+	for _, component := range v.karta.Spec.StructureDefinition.ChildComponents {
 		// Must have non-empty owner ref
 		if component.OwnerRef == nil || *component.OwnerRef == "" {
 			errs = append(errs, fmt.Errorf("child component '%s' has no owner ref", component.Name))
@@ -102,7 +102,7 @@ func (v *RIValidator) validateStructureDefinition() []error {
 	return errs
 }
 
-func (v *RIValidator) validateRootComponent() []error {
+func (v *KartaValidator) validateRootComponent() []error {
 	var errs []error
 
 	// Has full gvk
@@ -128,7 +128,7 @@ func (v *RIValidator) validateRootComponent() []error {
 	return errs
 }
 
-func (v *RIValidator) validateComponent(component ComponentDefinition) []error {
+func (v *KartaValidator) validateComponent(component ComponentDefinition) []error {
 	var errs []error
 
 	// Non-empty name
@@ -178,11 +178,11 @@ func validateMultiInstanceComponent(component ComponentDefinition) error {
 }
 
 // validateNoOwnershipCycles detects circular dependencies by following owner ref chains
-func (v *RIValidator) validateNoOwnershipCycles() error {
+func (v *KartaValidator) validateNoOwnershipCycles() error {
 	validated := make(map[string]bool)
 
 	// For each child component, follow its parent chain to ensure it reaches root
-	for _, child := range v.ri.Spec.StructureDefinition.ChildComponents {
+	for _, child := range v.karta.Spec.StructureDefinition.ChildComponents {
 		if err := v.checkPathToRoot(child, &validated); err != nil {
 			return err
 		}
@@ -192,7 +192,7 @@ func (v *RIValidator) validateNoOwnershipCycles() error {
 
 // checkPathToRoot follows owner ref chain from a component to ensure it reaches root without cycles
 // assumes that owner refs were already validated to be existing components
-func (v *RIValidator) checkPathToRoot(component ComponentDefinition, validatedComponents *map[string]bool) error {
+func (v *KartaValidator) checkPathToRoot(component ComponentDefinition, validatedComponents *map[string]bool) error {
 	visited := make(map[string]bool)
 	current := component.Name
 	alreadyValidated := false
@@ -218,18 +218,18 @@ func (v *RIValidator) checkPathToRoot(component ComponentDefinition, validatedCo
 	return nil
 }
 
-func (v *RIValidator) validateInstructions() []error {
+func (v *KartaValidator) validateInstructions() []error {
 	return v.validateGangScheduling()
 }
 
-func (v *RIValidator) validateGangScheduling() []error {
-	if v.ri.Spec.Instructions.GangScheduling == nil {
+func (v *KartaValidator) validateGangScheduling() []error {
+	if v.karta.Spec.Instructions.GangScheduling == nil {
 		return nil
 	}
 
 	// All member components are defined
 	var errs []error
-	for _, group := range v.ri.Spec.Instructions.GangScheduling.PodGroups {
+	for _, group := range v.karta.Spec.Instructions.GangScheduling.PodGroups {
 		for _, member := range group.Members {
 			if _, ok := v.allComponents[member.ComponentName]; !ok {
 				errs = append(errs, fmt.Errorf("pod-group member component '%s' is not defined (should be a root or child component)", member.ComponentName))

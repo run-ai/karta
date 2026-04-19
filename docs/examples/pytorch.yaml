@@ -1,5 +1,5 @@
 apiVersion: optimization.nvidia.com/v1alpha1
-kind: ResourceInterface
+kind: Karta
 metadata:
   name: kubeflow-org-pytorchjob-v1
 spec:

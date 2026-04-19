@@ -4,16 +4,16 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
-  name: resourceinterfaces.optimization.nvidia.com
+  name: kartas.run.ai
 spec:
-  group: optimization.nvidia.com
+  group: run.ai
   names:
-    kind: ResourceInterface
-    listKind: ResourceInterfaceList
-    plural: resourceinterfaces
+    kind: Karta
+    listKind: KartaList
+    plural: kartas
     shortNames:
-    - ri
-    singular: resourceinterface
+    - krt
+    singular: karta
   scope: Cluster
   versions:
   - additionalPrinterColumns:
@@ -31,7 +31,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ResourceInterface
+        description: Karta
         properties:
           apiVersion:
             description: |-
@@ -74,7 +74,7 @@ spec:
                                 properties:
                                   componentName:
                                     description: ComponentName references a component
-                                      defined in the RI's structureDefinition
+                                      defined in the Karta's structureDefinition
                                     type: string
                                   filters:
                                     description: |-
@@ -182,7 +182,7 @@ spec:
                           type: object
                         name:
                           description: Name is the unique identifier for this component
-                            within the RI
+                            within the Karta
                           type: string
                         ownerRef:
                           description: OwnerRef references the parent component in
@@ -731,7 +731,7 @@ spec:
                         type: object
                       name:
                         description: Name is the unique identifier for this component
-                          within the RI
+                          within the Karta
                         type: string
                       ownerRef:
                         description: OwnerRef references the parent component in the

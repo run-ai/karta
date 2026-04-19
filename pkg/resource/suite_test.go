@@ -12,5 +12,5 @@ import (
 
 func TestRid(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ResourceInterface Suite")
+	RunSpecs(t, "Karta Suite")
 }

@@ -12,7 +12,7 @@ import (
 
 	"k8s.io/utils/ptr"
 
-	"github.com/run-ai/karta/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
 // JobGroup represents a JobSet-like job with array of replicated jobs
@@ -49,14 +49,14 @@ type JobGroupStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// JobGroupRI returns a ResourceInterface for JobGroup
+// JobGroupKarta returns a Karta for JobGroup
 // Models JobSet-like structure: array components, separate pod spec + metadata extraction
-func JobGroupRI() *v1alpha1.ResourceInterface {
-	return &v1alpha1.ResourceInterface{
+func JobGroupKarta() *v1alpha1.Karta {
+	return &v1alpha1.Karta{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "jobgroup",
 		},
-		Spec: v1alpha1.ResourceInterfaceSpec{
+		Spec: v1alpha1.KartaSpec{
 			StructureDefinition: v1alpha1.StructureDefinition{
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "jobgroup",
