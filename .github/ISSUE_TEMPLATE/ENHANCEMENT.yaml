@@ -10,8 +10,8 @@ body:
     id: feature
     attributes:
       label: What you would like to be added?
-    description: |
-      A clear and concise description of what you want to add to Karta
+      description: |
+        A clear and concise description of what you want to add to Karta
     validations:
       required: true
   - type: textarea
