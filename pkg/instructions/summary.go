@@ -15,7 +15,7 @@ import (
 // StructureSummary provides a pre-computed summary of Karta structure
 // for efficient navigation and lookup operations
 type StructureSummary struct {
-	karta                        *v1alpha1.Karta
+	karta                      *v1alpha1.Karta
 	parentMap                  map[string]string                        // child component name -> parent component name
 	childrenMap                map[string][]string                      // parent component name -> list of child component names
 	componentDefinitionsByName map[string]*v1alpha1.ComponentDefinition // component name -> component definition
@@ -43,7 +43,7 @@ func NewStructureSummary(karta *v1alpha1.Karta) (*StructureSummary, error) {
 	}
 
 	summary := &StructureSummary{
-		karta:                        karta,
+		karta:                      karta,
 		parentMap:                  make(map[string]string),
 		childrenMap:                make(map[string][]string),
 		componentDefinitionsByName: make(map[string]*v1alpha1.ComponentDefinition),

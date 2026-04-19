@@ -15,7 +15,7 @@ var kindsWithoutGroup = map[string]bool{
 }
 
 type KartaValidator struct {
-	karta           *Karta
+	karta         *Karta
 	rootComponent ComponentDefinition
 	allComponents map[string]ComponentDefinition
 }
