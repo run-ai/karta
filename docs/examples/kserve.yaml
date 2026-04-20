@@ -1,4 +1,4 @@
-apiVersion: optimization.nvidia.com/v1alpha1
+apiVersion: run.ai/v1alpha1
 kind: Karta
 metadata:
   name: serving-kserve-io-inferenceservice-v1beta1

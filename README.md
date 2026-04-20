@@ -45,7 +45,7 @@ In addition to the CRD, Karta provides a **Go package** that performs the core p
 ### Install the CRD
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/run-ai/karta/main/charts/krt/crds/optimization.nvidia.com_kartas.yaml
+kubectl apply -f https://raw.githubusercontent.com/run-ai/karta/main/charts/krt/crds/run.ai_kartas.yaml
 ```
 
 ### Use the Go library
@@ -59,7 +59,7 @@ go get github.com/run-ai/karta@latest
 Here's a Karta for a JobSet — a distributed training workload with master and worker groups:
 
 ```yaml
-apiVersion: optimization.nvidia.com/v1alpha1
+apiVersion: run.ai/v1alpha1
 kind: Karta
 spec:
   structureDefinition:
