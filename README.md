@@ -19,7 +19,7 @@ This doesn't scale. Every new workload type means new integration code — sched
 
 ## The Solution
 
-Karta (*a map to navigate resources*) introduces the **Resource Interface (RI)** — a CRD that maps the structure of any workload type into a standard schema. Using JQ-based path expressions, an RI declaratively defines how to locate pod specifications, scaling parameters, and status fields within any workload hierarchy. Define it once, and any controller can use it to:
+Karta (*a map to navigate resources*) introduces a CRD that maps the structure of any workload type into a standard schema. Using JQ-based path expressions, a Karta declaratively defines how to locate pod specifications, scaling parameters, and status fields within any workload hierarchy. Define it once, and any controller can use it to:
 
 - **Extract** pod templates, replica counts, status, and metadata
 - **Update** pod specs, labels, and annotations across all instances
@@ -35,7 +35,7 @@ In addition to the CRD, Karta provides a **Go package** that performs the core p
 │              Karta Component API                 │
 │    Extract pods · Update specs · Read status     │
 ├────────────┬────────────┬────────────┬───────────┤
-│ RI:        │ RI:        │ RI:        │ RI:       │
+│ Karta:     │ Karta:     │ Karta:     │ Karta:    │
 │ JobSet     │ RayCluster │ PyTorchJob │ YourCRD   │
 └────────────┴────────────┴────────────┴───────────┘
 ```
@@ -45,7 +45,7 @@ In addition to the CRD, Karta provides a **Go package** that performs the core p
 ### Install the CRD
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/run-ai/karta/main/charts/ri/crds/optimization.nvidia.com_resourceinterfaces.yaml
+kubectl apply -f https://raw.githubusercontent.com/run-ai/karta/main/charts/krt/crds/run.ai_kartas.yaml
 ```
 
 ### Use the Go library
@@ -54,13 +54,13 @@ kubectl apply -f https://raw.githubusercontent.com/run-ai/karta/main/charts/ri/c
 go get github.com/run-ai/karta@latest
 ```
 
-### Define a Resource Interface
+### Define a Karta
 
-Here's an RI for a JobSet — a distributed training workload with master and worker groups:
+Here's a Karta for a JobSet — a distributed training workload with master and worker groups:
 
 ```yaml
-apiVersion: optimization.nvidia.com/v1alpha1
-kind: ResourceInterface
+apiVersion: run.ai/v1alpha1
+kind: Karta
 spec:
   structureDefinition:
     rootComponent:
@@ -107,8 +107,8 @@ spec:
 ```go
 import "github.com/run-ai/karta/pkg/resource"
 
-// Create a factory from your ResourceInterface and workload object
-factory := resource.NewComponentFactoryFromObject(resourceInterface, jobSetObject)
+// Create a factory from your Karta and workload object
+factory := resource.NewComponentFactoryFromObject(karta, jobSetObject)
 
 // Get the child component which has the per-instance data
 component, _ := factory.GetComponent("replicatedjob")
@@ -153,9 +153,9 @@ err := component.UpdateFragmentedPodSpec(ctx, updates)
 updatedObject, _ := factory.GetObject()
 ```
 
-## Pre-built Resource Interfaces
+## Pre-built Karta Definitions
 
-Karta supports any workload type. The following are pre-built and tested RI definitions that ship with the project:
+Karta supports any workload type. The following are pre-built and tested Karta definitions that ship with the project:
 
 | Workload Type | Framework |
 |---|---|
@@ -171,11 +171,11 @@ Karta supports any workload type. The following are pre-built and tested RI defi
 | Milvus | Milvus |
 | DynamoGraphDeployment | NVIDIA Dynamo |
 
-See [`docs/examples/`](docs/examples/) for the full RI definitions.
+See [`docs/examples/`](docs/examples/) for the full Karta definitions.
 
 ### Complex example: NVIDIA Dynamo
 
-The [Dynamo RI](docs/examples/dynamo.yaml) shows Karta handling a real-world multi-service inference graph — fragmented pod specs across services, autoscaling with min/max replicas, replica selectors for multi-node workers, gang scheduling, and 6 additional child resource types (DynamoComponentDeployment, LeaderWorkerSet, PodGang, PodClique, PodCliqueSet, PodCliqueScalingGroup). A single RI definition replaces what would otherwise require hundreds of lines of per-type controller logic.
+The [Dynamo Karta](docs/examples/dynamo.yaml) shows Karta handling a real-world multi-service inference graph - fragmented pod specs across services, autoscaling with min/max replicas, replica selectors for multi-node workers, gang scheduling, and 6 additional child resource types (DynamoComponentDeployment, LeaderWorkerSet, PodGang, PodClique, PodCliqueSet, PodCliqueScalingGroup). A single Karta definition replaces what would otherwise require hundreds of lines of per-type controller logic.
 
 ## Who Uses Karta?
 
@@ -183,8 +183,8 @@ Karta was created at [Run:ai](https://run.ai) (NVIDIA) to power workload managem
 
 ## Documentation
 
-- [Technical Guide](docs/Technical%20Guide.md) — Full RI spec, path syntax (jq), validation rules
-- [Examples](docs/examples/) — Real-world RI definitions for common workload types
+- [Technical Guide](docs/Technical%20Guide.md) - Full Karta spec, path syntax (jq), validation rules
+- [Examples](docs/examples/) - Real-world Karta definitions for common workload types
 - [API Reference](https://pkg.go.dev/github.com/run-ai/karta) — Go package documentation
 - [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute (DCO required)
 

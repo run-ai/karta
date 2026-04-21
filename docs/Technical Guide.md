@@ -1,6 +1,6 @@
-# RI Anatomy
+# Karta Anatomy
 ## Root Component
-Every RI must define a root component:
+Every Karta must define a root component:
 - Must use full Kubernetes GVK (Group, Version, Kind)
 - Must include a `statusDefinition`
 
@@ -38,7 +38,7 @@ childComponents:
 ```
 
 ## Paths
-All paths provided in a RI are written in [jq](https://jqlang.org/) syntax. The jq query language provides both path navigation and various query capabilities, and is widely used in the k8s ecosystem. 
+All paths provided in a Karta are written in [jq](https://jqlang.org/) syntax. The jq query language provides both path navigation and various query capabilities, and is widely used in the k8s ecosystem. 
 Make sure to provide a matching jq query type for every property (path/query), and to provide default values where necessary.
 
 
@@ -105,7 +105,7 @@ podSelector:
 ```
 
 ## Status Definitions
-- Mapping the described CRD’s conditions or phases to the RI generic statuses. Must be based on the actual conditions/phases used by the described CRD.
+- Mapping the described CRD’s conditions or phases to the Karta generic statuses. Must be based on the actual conditions/phases used by the described CRD.
 - For each generic status, the user can provide a definition based on conditions or phases. If both are provided, both are validated when evaluating the status.
 - If using definition by conditions/phase, you first must include `conditionsDefinition` / `phaseDefinition`
 - Multiple, separate, definitions can be provided for each generic status.
@@ -553,9 +553,9 @@ referencedComponents:
           status: "True"
 ```
 
-## Minimum requirements for defining RI
+## Minimum requirements for defining a Karta
 
-The minimal RI must contain a rootComponent with name, full GVK (group, version, kind) and statusDefinition. 
+The minimal Karta must contain a rootComponent with name, full GVK (group, version, kind) and statusDefinition. 
 
 For example:
 ```YAML
@@ -564,7 +564,7 @@ rootComponent:
   kind:
     group: "minimal.org"
     version: "v1"
-    kind: "minimalRI"
+    kind: "Minimal"
   statusDefinition:
     statusMappings:
       running:

@@ -7,24 +7,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ResourceInterface
+// Karta
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster,shortName={ri}
+// +kubebuilder:resource:scope=Cluster,shortName={krt}
 // +kubebuilder:printcolumn:name="Framework",type="string",JSONPath=".spec.structureDefinition.rootComponent.kind.kind",description="Target framework kind"
 // +kubebuilder:printcolumn:name="Root Component",type="string",JSONPath=".spec.structureDefinition.rootComponent.name",description="Root component name"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-type ResourceInterface struct {
+type Karta struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ResourceInterfaceSpec   `json:"spec,omitempty"`
-	Status ResourceInterfaceStatus `json:"status,omitempty"`
+	Spec   KartaSpec   `json:"spec,omitempty"`
+	Status KartaStatus `json:"status,omitempty"`
 }
 
-type ResourceInterfaceSpec struct {
+type KartaSpec struct {
 	// StructureDefinition defines the compute hierarchy and component relationships
 	// +kubebuilder:validation:Required
 	StructureDefinition StructureDefinition `json:"structureDefinition"`
@@ -61,7 +61,7 @@ type OptimizationInstructions struct {
 	GangScheduling *GangSchedulingInstruction `json:"gangScheduling,omitempty"`
 }
 
-type ResourceInterfaceStatus struct {
+type KartaStatus struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=type
@@ -70,15 +70,15 @@ type ResourceInterfaceStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
-// ResourceInterfaceList
+// KartaList
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
-type ResourceInterfaceList struct {
+type KartaList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ResourceInterface `json:"items"`
+	Items           []Karta `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ResourceInterface{}, &ResourceInterfaceList{})
+	SchemeBuilder.Register(&Karta{}, &KartaList{})
 }

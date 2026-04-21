@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestRid(t *testing.T) {
+func TestKarta(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ResourceInterface Suite")
+	RunSpecs(t, "Karta Suite")
 }

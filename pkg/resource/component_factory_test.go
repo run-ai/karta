@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	"github.com/run-ai/karta/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/test/types"
 	testutils "github.com/run-ai/karta/test/types/jsonutils"
 )
@@ -21,15 +21,15 @@ var _ = Describe("ComponentFactory", func() {
 	var (
 		ctrl         *gomock.Controller
 		mockAccessor *MockComponentAccessor
-		ri           *v1alpha1.ResourceInterface
+		karta          *v1alpha1.Karta
 		factory      *ComponentFactory
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		mockAccessor = NewMockComponentAccessor(ctrl)
-		ri = types.PyFlowRI()
-		factory = NewComponentFactory(ri, mockAccessor)
+		karta = types.PyFlowKarta()
+		factory = NewComponentFactory(karta, mockAccessor)
 	})
 
 	AfterEach(func() {
@@ -61,14 +61,14 @@ var _ = Describe("ComponentFactory", func() {
 			Expect(err.Error()).To(ContainSubstring("component non-existent not found"))
 		})
 
-		It("should return error when ResourceInterface is nil", func() {
-			// Note: NewComponentFactory panics with nil RI (by design)
-			// Testing GetRootComponent with nil RI after factory creation
-			factory.ri = nil // Simulate nil RI scenario
+		It("should return error when Karta is nil", func() {
+			// Note: NewComponentFactory panics with nil Karta (by design)
+			// Testing GetRootComponent with nil Karta after factory creation
+			factory.karta = nil // Simulate nil Karta scenario
 			component, err := factory.GetRootComponent()
 			Expect(err).To(HaveOccurred())
 			Expect(component).To(BeNil())
-			Expect(err.Error()).To(ContainSubstring("resource interface is nil"))
+			Expect(err.Error()).To(ContainSubstring("karta is nil"))
 		})
 	})
 
@@ -95,12 +95,12 @@ var _ = Describe("ComponentFactory", func() {
 			Expect([]string{components[0].name, components[1].name}).To(ConsistOf("master", "worker"))
 		})
 
-		It("should return error when ResourceInterface is nil", func() {
-			factory.ri = nil
+		It("should return error when Karta is nil", func() {
+			factory.karta = nil
 			components, err := factory.GetChildComponents()
 			Expect(err).To(HaveOccurred())
 			Expect(components).To(BeNil())
-			Expect(err.Error()).To(ContainSubstring("resource interface is nil"))
+			Expect(err.Error()).To(ContainSubstring("karta is nil"))
 		})
 	})
 
@@ -151,16 +151,16 @@ var _ = Describe("ComponentFactory", func() {
 	Context("IsContainSpecDefinition", func() {
 		Context("components with spec definitions", func() {
 			It("should return true when child components have PodTemplateSpecPath", func() {
-				// PyFlowRI has master/worker with PodTemplateSpecPath
+				// PyFlowKarta has master/worker with PodTemplateSpecPath
 				result, err := factory.IsContainSpecDefinition()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(BeTrue())
 			})
 
 			It("should return true when child components have PodSpecPath", func() {
-				// JobGroupRI has job component with PodSpecPath
-				factory.ri = types.JobGroupRI()
-				factory = NewComponentFactory(factory.ri, mockAccessor)
+				// JobGroupKarta has job component with PodSpecPath
+				factory.karta = types.JobGroupKarta()
+				factory = NewComponentFactory(factory.karta, mockAccessor)
 
 				result, err := factory.IsContainSpecDefinition()
 				Expect(err).NotTo(HaveOccurred())
@@ -168,9 +168,9 @@ var _ = Describe("ComponentFactory", func() {
 			})
 
 			It("should return true when child components have FragmentedPodSpecDefinition", func() {
-				// ReactorRI has service component with FragmentedPodSpecDefinition
-				factory.ri = types.ReactorRI()
-				factory = NewComponentFactory(factory.ri, mockAccessor)
+				// ReactorKarta has service component with FragmentedPodSpecDefinition
+				factory.karta = types.ReactorKarta()
+				factory = NewComponentFactory(factory.karta, mockAccessor)
 
 				result, err := factory.IsContainSpecDefinition()
 				Expect(err).NotTo(HaveOccurred())
@@ -178,8 +178,8 @@ var _ = Describe("ComponentFactory", func() {
 			})
 
 			It("should return true when root component has spec definition", func() {
-				factory.ri = riWithRootSpecOnly()
-				factory = NewComponentFactory(factory.ri, mockAccessor)
+				factory.karta = kartaWithRootSpecOnly()
+				factory = NewComponentFactory(factory.karta, mockAccessor)
 
 				result, err := factory.IsContainSpecDefinition()
 				Expect(err).NotTo(HaveOccurred())
@@ -189,8 +189,8 @@ var _ = Describe("ComponentFactory", func() {
 
 		Context("components without spec definitions", func() {
 			It("should return false when all components have nil SpecDefinition", func() {
-				factory.ri = riWithNoSpecs()
-				factory = NewComponentFactory(factory.ri, mockAccessor)
+				factory.karta = kartaWithNoSpecs()
+				factory = NewComponentFactory(factory.karta, mockAccessor)
 
 				result, err := factory.IsContainSpecDefinition()
 				Expect(err).NotTo(HaveOccurred())
@@ -198,8 +198,8 @@ var _ = Describe("ComponentFactory", func() {
 			})
 
 			It("should return false when all components have empty SpecDefinition", func() {
-				factory.ri = riWithEmptySpecs()
-				factory = NewComponentFactory(factory.ri, mockAccessor)
+				factory.karta = kartaWithEmptySpecs()
+				factory = NewComponentFactory(factory.karta, mockAccessor)
 
 				result, err := factory.IsContainSpecDefinition()
 				Expect(err).NotTo(HaveOccurred())
@@ -209,15 +209,15 @@ var _ = Describe("ComponentFactory", func() {
 	})
 })
 
-// Helper functions for test ResourceInterface instances
+// Helper functions for test Karta instances
 
-// riWithNoSpecs creates a ResourceInterface where all components have nil SpecDefinition
-func riWithNoSpecs() *v1alpha1.ResourceInterface {
-	return &v1alpha1.ResourceInterface{
+// kartaWithNoSpecs creates a Karta where all components have nil SpecDefinition
+func kartaWithNoSpecs() *v1alpha1.Karta {
+	return &v1alpha1.Karta{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "no-specs",
 		},
-		Spec: v1alpha1.ResourceInterfaceSpec{
+		Spec: v1alpha1.KartaSpec{
 			StructureDefinition: v1alpha1.StructureDefinition{
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "root",
@@ -245,13 +245,13 @@ func riWithNoSpecs() *v1alpha1.ResourceInterface {
 	}
 }
 
-// riWithEmptySpecs creates a ResourceInterface where all components have empty SpecDefinition
-func riWithEmptySpecs() *v1alpha1.ResourceInterface {
-	return &v1alpha1.ResourceInterface{
+// kartaWithEmptySpecs creates a Karta where all components have empty SpecDefinition
+func kartaWithEmptySpecs() *v1alpha1.Karta {
+	return &v1alpha1.Karta{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "empty-specs",
 		},
-		Spec: v1alpha1.ResourceInterfaceSpec{
+		Spec: v1alpha1.KartaSpec{
 			StructureDefinition: v1alpha1.StructureDefinition{
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "root",
@@ -285,13 +285,13 @@ func riWithEmptySpecs() *v1alpha1.ResourceInterface {
 	}
 }
 
-// riWithRootSpecOnly creates a ResourceInterface where only root has spec definition
-func riWithRootSpecOnly() *v1alpha1.ResourceInterface {
-	return &v1alpha1.ResourceInterface{
+// kartaWithRootSpecOnly creates a Karta where only root has spec definition
+func kartaWithRootSpecOnly() *v1alpha1.Karta {
+	return &v1alpha1.Karta{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "root-spec-only",
 		},
-		Spec: v1alpha1.ResourceInterfaceSpec{
+		Spec: v1alpha1.KartaSpec{
 			StructureDefinition: v1alpha1.StructureDefinition{
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "root",

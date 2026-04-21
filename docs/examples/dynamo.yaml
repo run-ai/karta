@@ -1,5 +1,5 @@
-apiVersion: optimization.nvidia.com/v1alpha1
-kind: ResourceInterface
+apiVersion: run.ai/v1alpha1
+kind: Karta
 metadata:
   name: nvidia-com-dynamographdeployment-v1alpha1
 spec:

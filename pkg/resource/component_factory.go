@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/run-ai/karta/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/jq/execution"
 )
 
@@ -41,34 +41,34 @@ type ComponentAccessor interface {
 }
 
 type ComponentFactory struct {
-	ri       *v1alpha1.ResourceInterface
+	karta      *v1alpha1.Karta
 	accessor ComponentAccessor
 
 	componentDefinitionsByName map[string]v1alpha1.ComponentDefinition
 }
 
-// NewComponentFactory creates a new ResourceInterface-based component factory
-func NewComponentFactory(ri *v1alpha1.ResourceInterface, accessor ComponentAccessor) *ComponentFactory {
+// NewComponentFactory creates a new Karta-based component factory
+func NewComponentFactory(karta *v1alpha1.Karta, accessor ComponentAccessor) *ComponentFactory {
 	definitionsByName := make(map[string]v1alpha1.ComponentDefinition)
 
 	// Create single slice with all components (root + children)
-	allDefinitions := append(ri.Spec.StructureDefinition.ChildComponents, ri.Spec.StructureDefinition.RootComponent)
+	allDefinitions := append(karta.Spec.StructureDefinition.ChildComponents, karta.Spec.StructureDefinition.RootComponent)
 	for _, componentDefinition := range allDefinitions {
 		definitionsByName[componentDefinition.Name] = componentDefinition
 	}
 
 	return &ComponentFactory{
-		ri:                         ri,
+		karta:                        karta,
 		accessor:                   accessor,
 		componentDefinitionsByName: definitionsByName,
 	}
 }
 
-// NewComponentFactoryFromObject creates a new ResourceInterface-based component factory from a Kubernetes object
-func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object client.Object) *ComponentFactory {
+// NewComponentFactoryFromObject creates a new Karta-based component factory from a Kubernetes object
+func NewComponentFactoryFromObject(karta *v1alpha1.Karta, object client.Object) *ComponentFactory {
 	jqRunner := execution.NewDefaultRunner(object)
 	accessor := NewAccessor(jqRunner)
-	return NewComponentFactory(ri, accessor)
+	return NewComponentFactory(karta, accessor)
 }
 
 // GetComponent retrieves a component by name
@@ -87,21 +87,21 @@ func (f *ComponentFactory) GetComponent(name string) (*Component, error) {
 
 // GetRootComponent retrieves the root component
 func (f *ComponentFactory) GetRootComponent() (*Component, error) {
-	if f.ri == nil {
-		return nil, fmt.Errorf("resource interface is nil")
+	if f.karta == nil {
+		return nil, fmt.Errorf("karta is nil")
 	}
 
-	return f.GetComponent(f.ri.Spec.StructureDefinition.RootComponent.Name)
+	return f.GetComponent(f.karta.Spec.StructureDefinition.RootComponent.Name)
 }
 
 // GetChildComponents retrieves all child components
 func (f *ComponentFactory) GetChildComponents() ([]*Component, error) {
-	if f.ri == nil {
-		return nil, fmt.Errorf("resource interface is nil")
+	if f.karta == nil {
+		return nil, fmt.Errorf("karta is nil")
 	}
 
-	childComponents := make([]*Component, 0, len(f.ri.Spec.StructureDefinition.ChildComponents))
-	for _, childDefinition := range f.ri.Spec.StructureDefinition.ChildComponents {
+	childComponents := make([]*Component, 0, len(f.karta.Spec.StructureDefinition.ChildComponents))
+	for _, childDefinition := range f.karta.Spec.StructureDefinition.ChildComponents {
 		component, err := f.GetComponent(childDefinition.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get child component %s: %w", childDefinition.Name, err)

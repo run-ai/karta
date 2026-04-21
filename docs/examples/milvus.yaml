@@ -1,5 +1,5 @@
-apiVersion: optimization.nvidia.com/v1alpha1
-kind: ResourceInterface
+apiVersion: run.ai/v1alpha1
+kind: Karta
 spec:
   structureDefinition:
     rootComponent:

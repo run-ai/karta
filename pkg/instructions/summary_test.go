@@ -8,24 +8,24 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
-	"github.com/run-ai/karta/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
 var _ = Describe("StructureSummary", func() {
 	Describe("NewStructureSummary", func() {
-		Context("when RI is nil", func() {
+		Context("when Karta is nil", func() {
 			It("should return error", func() {
 				summary, err := NewStructureSummary(nil)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("resource interface cannot be nil"))
+				Expect(err.Error()).To(ContainSubstring("karta cannot be nil"))
 				Expect(summary).To(BeNil())
 			})
 		})
 
-		Context("with simple root-only RI", func() {
+		Context("with simple root-only Karta", func() {
 			It("should build summary correctly", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "simple-job",
@@ -38,10 +38,10 @@ var _ = Describe("StructureSummary", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(summary).NotTo(BeNil())
-				Expect(summary.GetRI()).To(Equal(ri))
+				Expect(summary.GetKarta()).To(Equal(karta))
 
 				// Should identify root as leaf component
 				Expect(summary.leafComponents).To(HaveLen(1))
@@ -62,8 +62,8 @@ var _ = Describe("StructureSummary", func() {
 
 		Context("with two-level hierarchy", func() {
 			It("should build parent-child relationships correctly", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "pytorch-job",
@@ -88,7 +88,7 @@ var _ = Describe("StructureSummary", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Parent-child relationships
@@ -109,8 +109,8 @@ var _ = Describe("StructureSummary", func() {
 
 		Context("with three-level hierarchy", func() {
 			It("should handle deep hierarchies correctly", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "cluster",
@@ -141,7 +141,7 @@ var _ = Describe("StructureSummary", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Parent-child relationships
@@ -159,8 +159,8 @@ var _ = Describe("StructureSummary", func() {
 
 		Context("with gang scheduling instructions", func() {
 			It("should build gang scheduling summary correctly", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "pytorch-job",
@@ -198,7 +198,7 @@ var _ = Describe("StructureSummary", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Gang scheduling summary should be built
@@ -226,8 +226,8 @@ var _ = Describe("StructureSummary", func() {
 
 		Context("with multiple pod groups", func() {
 			It("should build candidates for all groups correctly", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "cluster",
@@ -270,7 +270,7 @@ var _ = Describe("StructureSummary", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should have both pod groups
@@ -288,8 +288,8 @@ var _ = Describe("StructureSummary", func() {
 
 		Context("with component hierarchy and gang scheduling", func() {
 			It("should sort candidates by priority correctly", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "pytorch-job",
@@ -344,7 +344,7 @@ var _ = Describe("StructureSummary", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Worker should have candidates from both groups, but direct mention should come first
@@ -367,8 +367,8 @@ var _ = Describe("StructureSummary", func() {
 
 		Context("with no gang scheduling instructions", func() {
 			It("should have nil gang scheduling summary", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "simple-job",
@@ -383,7 +383,7 @@ var _ = Describe("StructureSummary", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(summary.gangSchedulingSummary).To(BeNil())
 			})
@@ -394,15 +394,15 @@ var _ = Describe("StructureSummary", func() {
 		var summary *StructureSummary
 
 		BeforeEach(func() {
-			ri := &v1alpha1.ResourceInterface{
-				Spec: v1alpha1.ResourceInterfaceSpec{
+			karta := &v1alpha1.Karta{
+				Spec: v1alpha1.KartaSpec{
 					StructureDefinition: v1alpha1.StructureDefinition{
 						RootComponent: v1alpha1.ComponentDefinition{Name: "root"},
 					},
 				},
 			}
 			var err error
-			summary, err = NewStructureSummary(ri)
+			summary, err = NewStructureSummary(karta)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -450,8 +450,8 @@ var _ = Describe("StructureSummary", func() {
 
 	Describe("hasScaleDefinition field", func() {
 		It("should be true when any component has scale definition", func() {
-			ri := &v1alpha1.ResourceInterface{
-				Spec: v1alpha1.ResourceInterfaceSpec{
+			karta := &v1alpha1.Karta{
+				Spec: v1alpha1.KartaSpec{
 					StructureDefinition: v1alpha1.StructureDefinition{
 						RootComponent: v1alpha1.ComponentDefinition{
 							Name: "job",
@@ -469,14 +469,14 @@ var _ = Describe("StructureSummary", func() {
 				},
 			}
 
-			summary, err := NewStructureSummary(ri)
+			summary, err := NewStructureSummary(karta)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(summary.hasScaleDefinition).To(BeTrue())
 		})
 
 		It("should be false when no component has scale definition", func() {
-			ri := &v1alpha1.ResourceInterface{
-				Spec: v1alpha1.ResourceInterfaceSpec{
+			karta := &v1alpha1.Karta{
+				Spec: v1alpha1.KartaSpec{
 					StructureDefinition: v1alpha1.StructureDefinition{
 						RootComponent: v1alpha1.ComponentDefinition{Name: "job"},
 						ChildComponents: []v1alpha1.ComponentDefinition{
@@ -487,16 +487,16 @@ var _ = Describe("StructureSummary", func() {
 				},
 			}
 
-			summary, err := NewStructureSummary(ri)
+			summary, err := NewStructureSummary(karta)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(summary.hasScaleDefinition).To(BeFalse())
 		})
 	})
 
-	Describe("GetRI", func() {
-		It("should return the original RI", func() {
-			ri := &v1alpha1.ResourceInterface{
-				Spec: v1alpha1.ResourceInterfaceSpec{
+	Describe("GetKarta", func() {
+		It("should return the original Karta", func() {
+			karta := &v1alpha1.Karta{
+				Spec: v1alpha1.KartaSpec{
 					StructureDefinition: v1alpha1.StructureDefinition{
 						RootComponent: v1alpha1.ComponentDefinition{
 							Name: "test-job",
@@ -505,9 +505,9 @@ var _ = Describe("StructureSummary", func() {
 				},
 			}
 
-			summary, err := NewStructureSummary(ri)
+			summary, err := NewStructureSummary(karta)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(summary.GetRI()).To(BeIdenticalTo(ri))
+			Expect(summary.GetKarta()).To(BeIdenticalTo(karta))
 		})
 	})
 })
