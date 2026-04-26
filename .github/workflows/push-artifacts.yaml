@@ -1,0 +1,73 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+name: Upload artifacts to GitHub Container Registry
+on:
+  push:
+    tags:
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  HELM_REGISTRY: "ghcr.io/run-ai/karta"
+
+jobs:
+  build-and-push:
+    name: Build & Push Helm Chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install helm
+        uses: azure/setup-helm@v5
+
+      - name: Extract package version from tag
+        run: |
+          PACKAGE_VERSION=${GITHUB_REF_NAME#v}
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo "$PACKAGE_VERSION"
+
+      - name: Verify Chart.yaml version matches tag
+        run: |
+          chart_version=$(yq '.version' charts/krt/Chart.yaml)
+          if [[ "$chart_version" != "$PACKAGE_VERSION" ]]; then
+            echo "Chart.yaml version ($chart_version) does not match git tag ($PACKAGE_VERSION). Bump charts/krt/Chart.yaml before tagging." >&2
+            exit 1
+          fi
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify version not already published
+        run: |
+          if helm show chart oci://${{ env.HELM_REGISTRY }}/krt --version "$PACKAGE_VERSION" >/dev/null 2>&1; then
+            echo "Version $PACKAGE_VERSION already published to ${{ env.HELM_REGISTRY }}/krt. Bump charts/krt/Chart.yaml and re-tag." >&2
+            exit 1
+          fi
+
+      - name: Lint and validate helm chart
+        run: make helm-lint helm-validate
+
+      - name: Build helm chart
+        run: |
+          helm package ./charts/krt -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
+
+      - name: Push Helm Chart
+        run: |
+          helm push ./charts/krt-$PACKAGE_VERSION.tgz oci://${{ env.HELM_REGISTRY }}
+
+      - name: Upload chart as release asset
+        uses: softprops/action-gh-release@v3
+        with:
+          files: charts/krt-${{ env.PACKAGE_VERSION }}.tgz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
