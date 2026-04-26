@@ -178,8 +178,8 @@ For complete license texts, please refer to the source repositories or the LICEN
  
 ### golang.org/x/net
 - Name: golang.org/x/net
-- Version: v0.50.0
-- License: [BSD-3-Clause](https://cs.opensource.google/go/x/net/+/v0.50.0:LICENSE)
+- Version: v0.51.0
+- License: [BSD-3-Clause](https://cs.opensource.google/go/x/net/+/v0.51.0:LICENSE)
  
 ### golang.org/x/oauth2
 - Name: golang.org/x/oauth2
