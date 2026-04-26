@@ -1,7 +1,7 @@
 # Copyright 2025 NVIDIA CORPORATION
 # SPDX-License-Identifier: Apache-2.0
 
-name: Karta - Upload artifacts to GitHub Container Registry
+name: Upload artifacts to GitHub Container Registry
 on:
   push:
     tags:
@@ -49,7 +49,7 @@ jobs:
 
       - name: Verify version not already published
         run: |
-          if helm pull oci://${{ env.HELM_REGISTRY }}/krt --version "$PACKAGE_VERSION" -d /tmp 2>/dev/null; then
+          if helm show chart oci://${{ env.HELM_REGISTRY }}/krt --version "$PACKAGE_VERSION" >/dev/null 2>&1; then
             echo "Version $PACKAGE_VERSION already published to ${{ env.HELM_REGISTRY }}/krt. Bump charts/krt/Chart.yaml and re-tag." >&2
             exit 1
           fi
