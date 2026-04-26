@@ -5,7 +5,8 @@ name: Karta - Upload artifacts to GitHub Container Registry
 on:
   push:
     tags:
-      - '*.*.*'
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+      - '[0-9]+.[0-9]+.[0-9]+'
 
 permissions:
   contents: write
@@ -22,11 +23,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Install helm
+        uses: azure/setup-helm@v5
+
       - name: Extract package version from tag
         run: |
           PACKAGE_VERSION=${GITHUB_REF_NAME#v}
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
-          echo $PACKAGE_VERSION
+          echo "$PACKAGE_VERSION"
+
+      - name: Verify Chart.yaml version matches tag
+        run: |
+          chart_version=$(yq '.version' charts/krt/Chart.yaml)
+          if [[ "$chart_version" != "$PACKAGE_VERSION" ]]; then
+            echo "Chart.yaml version ($chart_version) does not match git tag ($PACKAGE_VERSION). Bump charts/krt/Chart.yaml before tagging." >&2
+            exit 1
+          fi
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
@@ -35,8 +47,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Lint helm chart
-        run: helm lint ./charts/krt
+      - name: Verify version not already published
+        run: |
+          if helm pull oci://${{ env.HELM_REGISTRY }}/krt --version "$PACKAGE_VERSION" -d /tmp 2>/dev/null; then
+            echo "Version $PACKAGE_VERSION already published to ${{ env.HELM_REGISTRY }}/krt. Bump charts/krt/Chart.yaml and re-tag." >&2
+            exit 1
+          fi
+
+      - name: Lint and validate helm chart
+        run: make helm-lint helm-validate
 
       - name: Build helm chart
         run: |
