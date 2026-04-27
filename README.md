@@ -45,7 +45,7 @@ In addition to the CRD, Karta provides a **Go package** that performs the core p
 ### Install the CRD
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/run-ai/karta/main/charts/krt/crds/run.ai_kartas.yaml
+kubectl apply -f https://raw.githubusercontent.com/run-ai/karta/main/charts/karta/crds/run.ai_kartas.yaml
 ```
 
 ### Use the Go library

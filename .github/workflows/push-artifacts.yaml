@@ -34,9 +34,9 @@ jobs:
 
       - name: Verify Chart.yaml version matches tag
         run: |
-          chart_version=$(yq '.version' charts/krt/Chart.yaml)
+          chart_version=$(yq '.version' charts/karta/Chart.yaml)
           if [[ "$chart_version" != "$PACKAGE_VERSION" ]]; then
-            echo "Chart.yaml version ($chart_version) does not match git tag ($PACKAGE_VERSION). Bump charts/krt/Chart.yaml before tagging." >&2
+            echo "Chart.yaml version ($chart_version) does not match git tag ($PACKAGE_VERSION). Bump charts/karta/Chart.yaml before tagging." >&2
             exit 1
           fi
 
@@ -49,8 +49,8 @@ jobs:
 
       - name: Verify version not already published
         run: |
-          if helm show chart oci://${{ env.HELM_REGISTRY }}/krt --version "$PACKAGE_VERSION" >/dev/null 2>&1; then
-            echo "Version $PACKAGE_VERSION already published to ${{ env.HELM_REGISTRY }}/krt. Bump charts/krt/Chart.yaml and re-tag." >&2
+          if helm show chart oci://${{ env.HELM_REGISTRY }}/karta --version "$PACKAGE_VERSION" >/dev/null 2>&1; then
+            echo "Version $PACKAGE_VERSION already published to ${{ env.HELM_REGISTRY }}/karta. Bump charts/karta/Chart.yaml and re-tag." >&2
             exit 1
           fi
 
@@ -59,15 +59,15 @@ jobs:
 
       - name: Build helm chart
         run: |
-          helm package ./charts/krt -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
+          helm package ./charts/karta -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
 
       - name: Push Helm Chart
         run: |
-          helm push ./charts/krt-$PACKAGE_VERSION.tgz oci://${{ env.HELM_REGISTRY }}
+          helm push ./charts/karta-$PACKAGE_VERSION.tgz oci://${{ env.HELM_REGISTRY }}
 
       - name: Upload chart as release asset
         uses: softprops/action-gh-release@v3
         with:
-          files: charts/krt-${{ env.PACKAGE_VERSION }}.tgz
+          files: charts/karta-${{ env.PACKAGE_VERSION }}.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

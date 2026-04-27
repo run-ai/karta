@@ -11,8 +11,8 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-KRT_CHART_DIR := $(PROJECT_DIR)/charts/krt
-KRT_CRDS_DIR := $(KRT_CHART_DIR)/crds
+KARTA_CHART_DIR := $(PROJECT_DIR)/charts/karta
+KARTA_CRDS_DIR := $(KARTA_CHART_DIR)/crds
 
 HELM_CHART_VERSION ?= 0.0.1
 
@@ -30,7 +30,7 @@ PATH := $(abspath $(LOCALBIN)):$(PATH)
 
 .PHONY: manifests
 manifests: controller-gen ## Generate CRD manifests
-	$(CONTROLLER_GEN) crd paths="./pkg/..." output:crd:artifacts:config=$(KRT_CRDS_DIR)
+	$(CONTROLLER_GEN) crd paths="./pkg/..." output:crd:artifacts:config=$(KARTA_CRDS_DIR)
 
 .PHONY: generate
 generate: controller-gen ## Generate DeepCopy methods
@@ -66,11 +66,11 @@ validate: generate manifests generate-mocks generate-licenses
 
 .PHONY: install-crd
 install-crd: manifests ## Install CRDs into the cluster
-	kubectl apply --server-side -f $(KRT_CRDS_DIR)
+	kubectl apply --server-side -f $(KARTA_CRDS_DIR)
 
 .PHONY: uninstall-crd
 uninstall-crd: ## Uninstall CRDs from the cluster
-	kubectl delete -f $(KRT_CRDS_DIR) --ignore-not-found
+	kubectl delete -f $(KARTA_CRDS_DIR) --ignore-not-found
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
@@ -130,12 +130,12 @@ check: download-dependencies validate test lint
 
 .PHONY: helm-build
 helm-build: ## Build the helm chart
-	helm package $(KRT_CHART_DIR) --version $(HELM_CHART_VERSION) --app-version $(HELM_CHART_VERSION)
+	helm package $(KARTA_CHART_DIR) --version $(HELM_CHART_VERSION) --app-version $(HELM_CHART_VERSION)
 
 .PHONY: helm-lint
 helm-lint: ## Lint the helm chart
-	helm lint $(KRT_CHART_DIR)
+	helm lint $(KARTA_CHART_DIR)
 
 .PHONY: helm-validate
 helm-validate: ## Validate the helm chart renders
-	helm template $(KRT_CHART_DIR)
+	helm template $(KARTA_CHART_DIR)
