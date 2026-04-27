@@ -100,6 +100,57 @@ For more information about the DCO, please visit: https://developercertificate.o
 3. Address any feedback or requested changes
 4. Once approved, your changes will be merged
 
+## Versioning
+
+`charts/krt/Chart.yaml` carries two version fields. Each tracks a different concern and is bumped at a different point in the workflow.
+
+| Field | Tracks | When to bump |
+|---|---|---|
+| `version` | Chart semver (RBAC, templates, values defaults, README) | every PR that changes files under `charts/krt/` (excluding `Chart.yaml` itself) |
+| `appVersion` | Controller/CRD release (the code we ship) | as part of the release prep before tagging |
+
+Both follow [semver](https://semver.org/). Pick the bump level (patch / minor / major) using the same rules you would for any semver release.
+
+This convention follows the pattern used by [prometheus-community/helm-charts](https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/Chart.yaml), [argoproj/argo-helm](https://github.com/argoproj/argo-helm/blob/main/charts/argo-cd/Chart.yaml), and [kubernetes/ingress-nginx](https://github.com/kubernetes/ingress-nginx/blob/main/charts/ingress-nginx/Chart.yaml).
+
+### Day-to-day: chart changes bump `version`
+
+Any PR that touches a file under `charts/krt/` (other than `Chart.yaml`) must bump `version` in `charts/krt/Chart.yaml`. Edit the file directly:
+
+```yaml
+# charts/krt/Chart.yaml
+version: 0.1.1   # was 0.1.0
+```
+
+The [chart-lint workflow](.github/workflows/chart-lint.yaml) runs [`ct lint`](https://github.com/helm/chart-testing) (the official helm chart-testing tool) on every PR. With its default `--check-version-increment=true`, it fails the PR if a modified chart's `version` was not bumped. Same enforcement [prometheus-community/helm-charts](https://github.com/prometheus-community/helm-charts/blob/main/.github/workflows/lint-test.yaml) and [argoproj/argo-helm](https://github.com/argoproj/argo-helm/blob/main/.github/workflows/lint-and-test.yml) use.
+
+### Code changes don't bump on every PR
+
+PRs that change `pkg/` (or anything else outside `charts/krt/`) don't need to bump `version` or `appVersion`. The CI doesn't enforce one. `appVersion` stays at the last released value while code accumulates on main.
+
+### Release prep: bump `appVersion` to match the next tag
+
+When ready to release a new controller version (for example, `v1.2.3`):
+
+1. Open a release-prep PR that bumps `appVersion` (and usually `version` too) in `charts/krt/Chart.yaml`:
+
+   ```yaml
+   version: 0.5.0
+   appVersion: "1.2.3"
+   ```
+
+2. Merge the PR.
+3. Tag the merge commit:
+
+   ```bash
+   git tag v1.2.3
+   git push origin v1.2.3
+   ```
+
+4. The [push-artifacts workflow](.github/workflows/push-artifacts.yaml) validates `tag == appVersion` and publishes the chart. If the tag doesn't match `appVersion`, it fails loudly.
+
+This is the same release-prep flow used by [openbao-operator](https://github.com/dc-tec/openbao-operator/blob/main/.github/workflows/release.yml) and [ingress-nginx](https://github.com/kubernetes/ingress-nginx).
+
 ## Code of Conduct
 
 Please be respectful and professional in all interactions. We are committed to providing a welcoming and inclusive environment for all contributors.
