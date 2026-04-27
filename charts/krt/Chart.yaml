@@ -7,3 +7,6 @@ description: A Helm chart for deploying Karta (Krt) by NVIDIA.
 type: application
 version: 0.0.1
 appVersion: "0.0.0"
+annotations:
+  org.opencontainers.image.source: https://github.com/run-ai/karta
+  org.opencontainers.image.licenses: Apache-2.0
