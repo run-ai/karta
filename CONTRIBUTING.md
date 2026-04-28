@@ -102,54 +102,27 @@ For more information about the DCO, please visit: https://developercertificate.o
 
 ## Versioning
 
-`charts/karta/Chart.yaml` carries two version fields. Each tracks a different concern and is bumped at a different point in the workflow.
+`charts/karta/Chart.yaml` keeps `version` and `appVersion` as placeholders (`0.0.0`). The values that actually get published are computed by the [push-artifacts workflow](.github/workflows/push-artifacts.yaml) and overridden at `helm package` time:
 
-| Field | Tracks | When to bump |
-|---|---|---|
-| `version` | Chart semver (RBAC, templates, values defaults, README) | every PR that changes files under `charts/karta/` (excluding `Chart.yaml` itself) |
-| `appVersion` | Controller/CRD release (the code we ship) | as part of the release prep before tagging |
+| Trigger | Published `version` and `appVersion` |
+|---|---|
+| Push to `main` (dev build) | `0.0.0-main-<short-sha>` |
+| Tag push (release) | the tag (e.g. tag `v1.2.3` → `1.2.3`) |
 
-Both follow [semver](https://semver.org/). Pick the bump level (patch / minor / major) using the same rules you would for any semver release.
+Consumers pin a specific release by chart `version` (which equals the tag), e.g. `version: 1.2.3` in the consumer's `Chart.yaml` dependency entry.
 
-This convention follows the pattern used by [prometheus-community/helm-charts](https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/Chart.yaml), [argoproj/argo-helm](https://github.com/argoproj/argo-helm/blob/main/charts/argo-cd/Chart.yaml), and [kubernetes/ingress-nginx](https://github.com/kubernetes/ingress-nginx/blob/main/charts/ingress-nginx/Chart.yaml).
+This is the same model used by [ai-dynamo/grove](https://github.com/ai-dynamo/grove/blob/main/.github/workflows/push-artifacts.yaml), [NVIDIA/KAI-Scheduler](https://github.com/kai-scheduler/KAI-Scheduler/blob/main/.github/workflows/push-artifacts.yaml), [istio/istio](https://github.com/istio/istio), and [NVIDIA/gpu-operator](https://github.com/NVIDIA/gpu-operator).
 
-### Day-to-day: chart changes bump `version`
+### Releasing
 
-Any PR that touches a file under `charts/karta/` (other than `Chart.yaml`) must bump `version` in `charts/karta/Chart.yaml`. Edit the file directly:
-
-```yaml
-# charts/karta/Chart.yaml
-version: 0.1.1   # was 0.1.0
+```bash
+git tag v1.2.3
+git push origin v1.2.3
 ```
 
-The [chart-lint workflow](.github/workflows/chart-lint.yaml) runs [`ct lint`](https://github.com/helm/chart-testing) (the official helm chart-testing tool) on every PR. With its default `--check-version-increment=true`, it fails the PR if a modified chart's `version` was not bumped. Same enforcement [prometheus-community/helm-charts](https://github.com/prometheus-community/helm-charts/blob/main/.github/workflows/lint-test.yaml) and [argoproj/argo-helm](https://github.com/argoproj/argo-helm/blob/main/.github/workflows/lint-and-test.yml) use.
+Pushing the tag triggers `push-artifacts.yaml`, which publishes `oci://ghcr.io/run-ai/karta/karta:1.2.3` with both `version` and `appVersion` set to `1.2.3`, and creates a corresponding GitHub release.
 
-### Code changes don't bump on every PR
-
-PRs that change `pkg/` (or anything else outside `charts/karta/`) don't need to bump `version` or `appVersion`. The CI doesn't enforce one. `appVersion` stays at the last released value while code accumulates on main.
-
-### Release prep: bump `appVersion` to match the next tag
-
-When ready to release a new controller version (for example, `v1.2.3`):
-
-1. Open a release-prep PR that bumps `appVersion` (and usually `version` too) in `charts/karta/Chart.yaml`:
-
-   ```yaml
-   version: 0.5.0
-   appVersion: "1.2.3"
-   ```
-
-2. Merge the PR.
-3. Tag the merge commit:
-
-   ```bash
-   git tag v1.2.3
-   git push origin v1.2.3
-   ```
-
-4. The [push-artifacts workflow](.github/workflows/push-artifacts.yaml) validates `tag == appVersion` and publishes the chart. If the tag doesn't match `appVersion`, it fails loudly.
-
-This is the same release-prep flow used by [openbao-operator](https://github.com/dc-tec/openbao-operator/blob/main/.github/workflows/release.yml) and [ingress-nginx](https://github.com/kubernetes/ingress-nginx).
+No release-prep PR or `Chart.yaml` bump is needed - the tag is the source of truth.
 
 ## Code of Conduct
 

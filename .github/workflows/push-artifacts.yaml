@@ -4,6 +4,7 @@
 name: Upload artifacts to GitHub Container Registry
 on:
   push:
+    branches: [ main ]
     tags:
       - 'v[0-9]*.[0-9]*.[0-9]*'
       - '[0-9]+.[0-9]+.[0-9]+'
@@ -26,19 +27,17 @@ jobs:
       - name: Install helm
         uses: azure/setup-helm@v5
 
-      - name: Extract package version from tag
+      - name: Set package version
         run: |
-          PACKAGE_VERSION=${GITHUB_REF_NAME#v}
-          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
-          echo "$PACKAGE_VERSION"
-
-      - name: Verify Chart.yaml version matches tag
-        run: |
-          chart_version=$(yq '.version' charts/karta/Chart.yaml)
-          if [[ "$chart_version" != "$PACKAGE_VERSION" ]]; then
-            echo "Chart.yaml version ($chart_version) does not match git tag ($PACKAGE_VERSION). Bump charts/karta/Chart.yaml before tagging." >&2
-            exit 1
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            echo "Tag release: using the tag as the version (strip leading 'v' if present)"
+            PACKAGE_VERSION=${GITHUB_REF_NAME#v}
+          else
+            echo "Push to main: dev build keyed off the commit sha"
+            PACKAGE_VERSION=0.0.0-main-$(git rev-parse --short HEAD)
           fi
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
@@ -50,7 +49,7 @@ jobs:
       - name: Verify version not already published
         run: |
           if helm show chart oci://${{ env.HELM_REGISTRY }}/karta --version "$PACKAGE_VERSION" >/dev/null 2>&1; then
-            echo "Version $PACKAGE_VERSION already published to ${{ env.HELM_REGISTRY }}/karta. Bump charts/karta/Chart.yaml and re-tag." >&2
+            echo "Version $PACKAGE_VERSION already published to ${{ env.HELM_REGISTRY }}/karta." >&2
             exit 1
           fi
 
@@ -59,13 +58,16 @@ jobs:
 
       - name: Build helm chart
         run: |
-          helm package ./charts/karta -d ./charts --app-version $PACKAGE_VERSION --version $PACKAGE_VERSION
+          helm package ./charts/karta -d ./charts \
+            --version "$PACKAGE_VERSION" \
+            --app-version "$PACKAGE_VERSION"
 
       - name: Push Helm Chart
         run: |
           helm push ./charts/karta-$PACKAGE_VERSION.tgz oci://${{ env.HELM_REGISTRY }}
 
       - name: Upload chart as release asset
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v3
         with:
           files: charts/karta-${{ env.PACKAGE_VERSION }}.tgz

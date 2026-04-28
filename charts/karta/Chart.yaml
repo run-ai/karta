@@ -5,7 +5,7 @@ apiVersion: v2
 name: karta
 description: A Helm chart for deploying Karta by NVIDIA.
 type: application
-version: 0.0.1
+version: 0.0.0
 appVersion: "0.0.0"
 annotations:
   org.opencontainers.image.source: https://github.com/run-ai/karta
