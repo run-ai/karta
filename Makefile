@@ -28,36 +28,77 @@ GOLANGCI_LINT_VERSION ?= v2.5.0
 GO_LICENSES_VERSION ?= v2.0.1
 PATH := $(abspath $(LOCALBIN)):$(PATH)
 
+# --- Multi-module discovery ------------------------------------------------
+# Every Go module in this repo (sorted, vendor/bin/.git excluded). The repo
+# is split across sub-modules so consumers can pull a minimal dep surface;
+# tools that operate on "this module" (go test, golangci-lint, go mod tidy,
+# controller-gen, go generate) must therefore be run once per module — `./...`
+# stops at module boundaries and does not cross go.mod files.
+GO_MOD_DIRS := $(shell find . \( -path ./vendor -o -path ./bin -o -path ./.git \) -prune -false -o -name go.mod -exec dirname {} \; | sort)
+
+# Modules that ship Kubernetes CRD types (have +kubebuilder markers). Listed
+# explicitly because controller-gen output paths are deliberate (boilerplate
+# header, CRD output dir). Append the dir here if you add a new CRD-bearing
+# module.
+CRD_MODULE_DIRS := pkg/api/runai/v1alpha1
+
 .PHONY: manifests
-manifests: controller-gen ## Generate CRD manifests
-	$(CONTROLLER_GEN) crd paths="./pkg/..." output:crd:artifacts:config=$(KARTA_CRDS_DIR)
+manifests: controller-gen ## Generate CRD manifests across every CRD-bearing sub-module
+	@for dir in $(CRD_MODULE_DIRS); do \
+	  echo ">> manifests in $$dir"; \
+	  (cd $$dir && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=$(KARTA_CRDS_DIR)) || exit 1; \
+	done
 
 .PHONY: generate
-generate: controller-gen ## Generate DeepCopy methods
-	$(CONTROLLER_GEN) object paths="./..."
+generate: controller-gen ## Regenerate zz_generated.deepcopy.go in every CRD-bearing sub-module
+	@for dir in $(CRD_MODULE_DIRS); do \
+	  echo ">> deepcopy in $$dir"; \
+	  (cd $$dir && $(CONTROLLER_GEN) object paths="./...") || exit 1; \
+	done
 
 .PHONY: generate-mocks
-generate-mocks: mockgen ## Generate mocks using go generate
-	go generate ./pkg/...
+generate-mocks: mockgen ## Run go generate (mockgen) across every sub-module
+	@for dir in $(GO_MOD_DIRS); do \
+	  echo ">> go generate in $$dir"; \
+	  (cd $$dir && go generate ./...) || exit 1; \
+	done
 
 .PHONY: test
-test: generate-mocks ## Run tests with mock generation
-	go test ./...
+test: generate-mocks ## Run tests across every sub-module
+	@for dir in $(GO_MOD_DIRS); do \
+	  echo ">> go test in $$dir"; \
+	  (cd $$dir && go test ./...) || exit 1; \
+	done
+
+.PHONY: tidy
+tidy: ## go mod tidy across every sub-module
+	@for dir in $(GO_MOD_DIRS); do \
+	  echo ">> go mod tidy in $$dir"; \
+	  (cd $$dir && go mod tidy) || exit 1; \
+	done
 
 lint-go: golangci-lint
-	echo "Running golangci linter"
-	$(GOLANGCI_LINT) run -v -c .golangci.yml
+	@for dir in $(GO_MOD_DIRS); do \
+	  echo ">> golangci-lint in $$dir"; \
+	  (cd $$dir && $(GOLANGCI_LINT) run -v -c $(PROJECT_DIR)/.golangci.yml) || exit 1; \
+	done
 .PHONY: lint-go
 
 fmt-go:
-	go fmt ./...
+	@for dir in $(GO_MOD_DIRS); do \
+	  echo ">> go fmt in $$dir"; \
+	  (cd $$dir && go fmt ./...) || exit 1; \
+	done
 .PHONY: fmt-go
 
 vet-go:
-	go vet ./...
+	@for dir in $(GO_MOD_DIRS); do \
+	  echo ">> go vet in $$dir"; \
+	  (cd $$dir && go vet ./...) || exit 1; \
+	done
 .PHONY: vet-go
 
-lint: fmt-go vet-go lint-go 
+lint: fmt-go vet-go lint-go
 .PHONY: lint
 
 .PHONY: validate
