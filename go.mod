@@ -11,7 +11,7 @@ require (
 	k8s.io/api v0.35.1
 	k8s.io/apimachinery v0.35.1
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
-	sigs.k8s.io/controller-runtime v0.23.1
+	sigs.k8s.io/controller-runtime v0.23.1 // indirect
 )
 
 require (
@@ -47,6 +47,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
+	github.com/run-ai/karta/pkg/jq/execution v0.0.0-00010101000000-000000000000 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
@@ -75,3 +76,9 @@ require (
 require github.com/run-ai/karta/pkg/api/runai/v1alpha1 v0.0.0-00010101000000-000000000000
 
 replace github.com/run-ai/karta/pkg/api/runai/v1alpha1 => ./pkg/api/runai/v1alpha1
+
+require github.com/run-ai/karta/pkg/resource v0.0.0-00010101000000-000000000000
+
+replace github.com/run-ai/karta/pkg/jq/execution => ./pkg/jq/execution
+
+replace github.com/run-ai/karta/pkg/resource => ./pkg/resource
