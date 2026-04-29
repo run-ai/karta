@@ -148,8 +148,8 @@ For complete license texts, please refer to the source repositories or the LICEN
  
 ### github.com/onsi/gomega
 - Name: github.com/onsi/gomega
-- Version: v1.39.1
-- License: [MIT](https://github.com/onsi/gomega/blob/v1.39.1/LICENSE)
+- Version: v1.40.0
+- License: [MIT](https://github.com/onsi/gomega/blob/v1.40.0/LICENSE)
  
 ### github.com/samber/lo
 - Name: github.com/samber/lo
@@ -178,8 +178,8 @@ For complete license texts, please refer to the source repositories or the LICEN
  
 ### golang.org/x/net
 - Name: golang.org/x/net
-- Version: v0.51.0
-- License: [BSD-3-Clause](https://cs.opensource.google/go/x/net/+/v0.51.0:LICENSE)
+- Version: v0.53.0
+- License: [BSD-3-Clause](https://cs.opensource.google/go/x/net/+/v0.53.0:LICENSE)
  
 ### golang.org/x/oauth2
 - Name: golang.org/x/oauth2
@@ -188,18 +188,18 @@ For complete license texts, please refer to the source repositories or the LICEN
  
 ### golang.org/x/sys/unix
 - Name: golang.org/x/sys/unix
-- Version: v0.41.0
-- License: [BSD-3-Clause](https://cs.opensource.google/go/x/sys/+/v0.41.0:LICENSE)
+- Version: v0.43.0
+- License: [BSD-3-Clause](https://cs.opensource.google/go/x/sys/+/v0.43.0:LICENSE)
  
 ### golang.org/x/term
 - Name: golang.org/x/term
-- Version: v0.40.0
-- License: [BSD-3-Clause](https://cs.opensource.google/go/x/term/+/v0.40.0:LICENSE)
+- Version: v0.42.0
+- License: [BSD-3-Clause](https://cs.opensource.google/go/x/term/+/v0.42.0:LICENSE)
  
 ### golang.org/x/text
 - Name: golang.org/x/text
-- Version: v0.34.0
-- License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.34.0:LICENSE)
+- Version: v0.36.0
+- License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.36.0:LICENSE)
  
 ### golang.org/x/time/rate
 - Name: golang.org/x/time/rate
