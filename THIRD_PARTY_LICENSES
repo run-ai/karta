@@ -106,11 +106,6 @@ For complete license texts, please refer to the source repositories or the LICEN
 - Version: v0.7.1
 - License: [Apache-2.0](https://github.com/google/gnostic-models/blob/v0.7.1/LICENSE)
  
-### github.com/google/go-cmp/cmp
-- Name: github.com/google/go-cmp/cmp
-- Version: v0.7.0
-- License: [BSD-3-Clause](https://github.com/google/go-cmp/blob/v0.7.0/LICENSE)
- 
 ### github.com/google/uuid
 - Name: github.com/google/uuid
 - Version: v1.6.0
@@ -145,11 +140,6 @@ For complete license texts, please refer to the source repositories or the LICEN
 - Name: github.com/munnerz/goautoneg
 - Version: v0.0.0-20191010083416-a7dc8b61c822
 - License: [BSD-3-Clause](https://github.com/munnerz/goautoneg/blob/a7dc8b61c822/LICENSE)
- 
-### github.com/onsi/gomega
-- Name: github.com/onsi/gomega
-- Version: v1.40.0
-- License: [MIT](https://github.com/onsi/gomega/blob/v1.40.0/LICENSE)
  
 ### github.com/samber/lo
 - Name: github.com/samber/lo
