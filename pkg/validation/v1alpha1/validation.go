@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	karta "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/jq"
 )
 
@@ -15,13 +16,13 @@ var kindsWithoutGroup = map[string]bool{
 }
 
 type KartaValidator struct {
-	karta         *Karta
-	rootComponent ComponentDefinition
-	allComponents map[string]ComponentDefinition
+	karta         *karta.Karta
+	rootComponent karta.ComponentDefinition
+	allComponents map[string]karta.ComponentDefinition
 }
 
-func NewKartaValidator(karta *Karta) *KartaValidator {
-	return &KartaValidator{karta: karta}
+func NewKartaValidator(k *karta.Karta) *KartaValidator {
+	return &KartaValidator{karta: k}
 }
 
 func (v *KartaValidator) Validate() error {
@@ -56,7 +57,7 @@ func (v *KartaValidator) initialize() []error {
 
 	v.rootComponent = v.karta.Spec.StructureDefinition.RootComponent
 
-	v.allComponents = make(map[string]ComponentDefinition)
+	v.allComponents = make(map[string]karta.ComponentDefinition)
 	for _, component := range append(v.karta.Spec.StructureDefinition.ChildComponents, v.karta.Spec.StructureDefinition.RootComponent) {
 		if _, ok := v.allComponents[component.Name]; ok {
 			errs = append(errs, fmt.Errorf("component name %s is not unique", component.Name))
@@ -128,7 +129,7 @@ func (v *KartaValidator) validateRootComponent() []error {
 	return errs
 }
 
-func (v *KartaValidator) validateComponent(component ComponentDefinition) []error {
+func (v *KartaValidator) validateComponent(component karta.ComponentDefinition) []error {
 	var errs []error
 
 	// Non-empty name
@@ -163,7 +164,7 @@ func (v *KartaValidator) validateComponent(component ComponentDefinition) []erro
 	return errs
 }
 
-func validateMultiInstanceComponent(component ComponentDefinition) error {
+func validateMultiInstanceComponent(component karta.ComponentDefinition) error {
 	if component.InstanceIdPath != nil &&
 		(component.PodSelector == nil || component.PodSelector.ComponentInstanceSelector == nil) {
 		return fmt.Errorf("component '%s' has instance id path but no pod component instance selector", component.Name)
@@ -192,7 +193,7 @@ func (v *KartaValidator) validateNoOwnershipCycles() error {
 
 // checkPathToRoot follows owner ref chain from a component to ensure it reaches root without cycles
 // assumes that owner refs were already validated to be existing components
-func (v *KartaValidator) checkPathToRoot(component ComponentDefinition, validatedComponents *map[string]bool) error {
+func (v *KartaValidator) checkPathToRoot(component karta.ComponentDefinition, validatedComponents *map[string]bool) error {
 	visited := make(map[string]bool)
 	current := component.Name
 	alreadyValidated := false

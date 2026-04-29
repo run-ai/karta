@@ -71,3 +71,7 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+require github.com/run-ai/karta/pkg/api/runai/v1alpha1 v0.0.0-00010101000000-000000000000
+
+replace github.com/run-ai/karta/pkg/api/runai/v1alpha1 => ./pkg/api/runai/v1alpha1

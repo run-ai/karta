@@ -8,58 +8,60 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+
+	karta "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
 var _ = Describe("KartaValidator", func() {
 	var (
 		validator *KartaValidator
-		baseKarta    *Karta
+		baseKarta    *karta.Karta
 	)
 
 	BeforeEach(func() {
-		// Base valid Karta that can be modified for specific tests
-		baseKarta = &Karta{
+		// Base valid karta.Karta that can be modified for specific tests
+		baseKarta = &karta.Karta{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-karta",
 			},
-			Spec: KartaSpec{
-				StructureDefinition: StructureDefinition{
-					RootComponent: ComponentDefinition{
+			Spec: karta.KartaSpec{
+				StructureDefinition: karta.StructureDefinition{
+					RootComponent: karta.ComponentDefinition{
 						Name: "root",
-						Kind: &GroupVersionKind{
+						Kind: &karta.GroupVersionKind{
 							Group:   "apps",
 							Version: "v1",
 							Kind:    "Deployment",
 						},
-						StatusDefinition: &StatusDefinition{
-							StatusMappings: StatusMappings{},
+						StatusDefinition: &karta.StatusDefinition{
+							StatusMappings: karta.StatusMappings{},
 						},
-						SpecDefinition: &SpecDefinition{
+						SpecDefinition: &karta.SpecDefinition{
 							PodTemplateSpecPath: ptr.To(".spec.template"),
 						},
-						ScaleDefinition: &ScaleDefinition{
+						ScaleDefinition: &karta.ScaleDefinition{
 							ReplicasPath: ptr.To(".spec.replicas"),
 						},
 					},
-					ChildComponents: []ComponentDefinition{
+					ChildComponents: []karta.ComponentDefinition{
 						{
 							Name:     "worker",
 							OwnerRef: ptr.To("root"),
-							SpecDefinition: &SpecDefinition{
+							SpecDefinition: &karta.SpecDefinition{
 								PodSpecPath: ptr.To(".spec.template.spec"),
 							},
-							ScaleDefinition: &ScaleDefinition{
+							ScaleDefinition: &karta.ScaleDefinition{
 								ReplicasPath: ptr.To(".spec.replicas"),
 							},
 						},
 					},
 				},
-				Instructions: OptimizationInstructions{
-					GangScheduling: &GangSchedulingInstruction{
-						PodGroups: []PodGroupDefinition{
+				Instructions: karta.OptimizationInstructions{
+					GangScheduling: &karta.GangSchedulingInstruction{
+						PodGroups: []karta.PodGroupDefinition{
 							{
 								Name: "main-group",
-								Members: []PodGroupMemberDefinition{
+								Members: []karta.PodGroupMemberDefinition{
 									{ComponentName: "root"},
 									{ComponentName: "worker"},
 								},
@@ -74,7 +76,7 @@ var _ = Describe("KartaValidator", func() {
 	})
 
 	Describe("Validate", func() {
-		Context("when Karta is nil", func() {
+		Context("when karta.Karta is nil", func() {
 			It("should return error", func() {
 				validator = NewKartaValidator(nil)
 				err := validator.Validate()
@@ -83,7 +85,7 @@ var _ = Describe("KartaValidator", func() {
 			})
 		})
 
-		Context("with valid Karta", func() {
+		Context("with valid karta.Karta", func() {
 			It("should pass validation", func() {
 				err := validator.Validate()
 				Expect(err).ToNot(HaveOccurred())
@@ -92,7 +94,7 @@ var _ = Describe("KartaValidator", func() {
 
 		Context("with multiple validation errors", func() {
 			It("should aggregate all errors", func() {
-				// Create Karta with multiple issues
+				// Create karta.Karta with multiple issues
 				baseKarta.Spec.StructureDefinition.RootComponent.Kind = nil
 				baseKarta.Spec.StructureDefinition.ChildComponents[0].OwnerRef = nil
 				baseKarta.Spec.Instructions.GangScheduling.PodGroups[0].Members[0].ComponentName = "nonexistent"
@@ -112,7 +114,7 @@ var _ = Describe("KartaValidator", func() {
 			It("should return error", func() {
 				baseKarta.Spec.StructureDefinition.ChildComponents = append(
 					baseKarta.Spec.StructureDefinition.ChildComponents,
-					ComponentDefinition{Name: "root", OwnerRef: ptr.To("root")},
+					karta.ComponentDefinition{Name: "root", OwnerRef: ptr.To("root")},
 				)
 
 				errs := validator.initialize()
@@ -203,7 +205,7 @@ var _ = Describe("KartaValidator", func() {
 		Context("ownership cycles", func() {
 			It("should detect simple cycle", func() {
 				// Create A -> B -> A cycle
-				baseKarta.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
+				baseKarta.Spec.StructureDefinition.ChildComponents = []karta.ComponentDefinition{
 					{Name: "A", OwnerRef: ptr.To("B")},
 					{Name: "B", OwnerRef: ptr.To("A")},
 				}
@@ -216,7 +218,7 @@ var _ = Describe("KartaValidator", func() {
 
 			It("should detect complex cycle", func() {
 				// Create A -> B -> C -> A cycle
-				baseKarta.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
+				baseKarta.Spec.StructureDefinition.ChildComponents = []karta.ComponentDefinition{
 					{Name: "A", OwnerRef: ptr.To("B")},
 					{Name: "B", OwnerRef: ptr.To("C")},
 					{Name: "C", OwnerRef: ptr.To("A")},
@@ -230,7 +232,7 @@ var _ = Describe("KartaValidator", func() {
 
 			It("should pass with valid hierarchy", func() {
 				// Create root -> A -> B (no cycle)
-				baseKarta.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
+				baseKarta.Spec.StructureDefinition.ChildComponents = []karta.ComponentDefinition{
 					{Name: "A", OwnerRef: ptr.To("root")},
 					{Name: "B", OwnerRef: ptr.To("A")},
 				}
@@ -245,7 +247,7 @@ var _ = Describe("KartaValidator", func() {
 	Describe("validateComponent", func() {
 		Context("empty component name", func() {
 			It("should return error", func() {
-				component := ComponentDefinition{Name: ""}
+				component := karta.ComponentDefinition{Name: ""}
 				validator.initialize()
 
 				errs := validator.validateComponent(component)
@@ -255,10 +257,10 @@ var _ = Describe("KartaValidator", func() {
 		})
 
 		DescribeTable("multiple pod spec definitions",
-			func(podTemplateSpecPath, podSpecPath *string, fragmentedPodSpec *FragmentedPodSpecDefinition) {
-				component := ComponentDefinition{
+			func(podTemplateSpecPath, podSpecPath *string, fragmentedPodSpec *karta.FragmentedPodSpecDefinition) {
+				component := karta.ComponentDefinition{
 					Name: "test",
-					SpecDefinition: &SpecDefinition{
+					SpecDefinition: &karta.SpecDefinition{
 						PodTemplateSpecPath:         podTemplateSpecPath,
 						PodSpecPath:                 podSpecPath,
 						FragmentedPodSpecDefinition: fragmentedPodSpec,
@@ -277,20 +279,20 @@ var _ = Describe("KartaValidator", func() {
 			Entry("PodTemplateSpecPath + FragmentedPodSpec",
 				ptr.To(".spec.template"),
 				nil,
-				&FragmentedPodSpecDefinition{ContainersPath: ptr.To(".spec.containers")}),
+				&karta.FragmentedPodSpecDefinition{ContainersPath: ptr.To(".spec.containers")}),
 			Entry("PodSpecPath + FragmentedPodSpec",
 				nil,
 				ptr.To(".spec.template.spec"),
-				&FragmentedPodSpecDefinition{ContainersPath: ptr.To(".spec.containers")}),
+				&karta.FragmentedPodSpecDefinition{ContainersPath: ptr.To(".spec.containers")}),
 			Entry("All three pod spec definitions",
 				ptr.To(".spec.template"),
 				ptr.To(".spec.template.spec"),
-				&FragmentedPodSpecDefinition{ContainersPath: ptr.To(".spec.containers")}),
+				&karta.FragmentedPodSpecDefinition{ContainersPath: ptr.To(".spec.containers")}),
 		)
 
 		Context("multi-instance component validation", func() {
 			It("should fail when has instance id path but no instance selector", func() {
-				component := ComponentDefinition{
+				component := karta.ComponentDefinition{
 					Name:           "test",
 					InstanceIdPath: ptr.To(".metadata.name"),
 				}
@@ -302,10 +304,10 @@ var _ = Describe("KartaValidator", func() {
 			})
 
 			It("should fail when has instance selector but no instance id path", func() {
-				component := ComponentDefinition{
+				component := karta.ComponentDefinition{
 					Name: "test",
-					PodSelector: &PodSelector{
-						ComponentInstanceSelector: &ComponentInstanceSelector{
+					PodSelector: &karta.PodSelector{
+						ComponentInstanceSelector: &karta.ComponentInstanceSelector{
 							IdPath: ".metadata.labels[\"instance-id\"]",
 						},
 					},
@@ -318,11 +320,11 @@ var _ = Describe("KartaValidator", func() {
 			})
 
 			It("should pass when both instance id path and selector are present", func() {
-				component := ComponentDefinition{
+				component := karta.ComponentDefinition{
 					Name:           "test",
 					InstanceIdPath: ptr.To(".metadata.name"),
-					PodSelector: &PodSelector{
-						ComponentInstanceSelector: &ComponentInstanceSelector{
+					PodSelector: &karta.PodSelector{
+						ComponentInstanceSelector: &karta.ComponentInstanceSelector{
 							IdPath: ".metadata.labels[\"instance-id\"]",
 						},
 					},
@@ -364,21 +366,21 @@ var _ = Describe("KartaValidator", func() {
 	})
 
 	Describe("JQ expressions validation is called", func() {
-		var kartaWithJQPaths *Karta
+		var kartaWithJQPaths *karta.Karta
 
 		BeforeEach(func() {
-			kartaWithJQPaths = &Karta{
+			kartaWithJQPaths = &karta.Karta{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-jq"},
-				Spec: KartaSpec{
-					StructureDefinition: StructureDefinition{
-						RootComponent: ComponentDefinition{
+				Spec: karta.KartaSpec{
+					StructureDefinition: karta.StructureDefinition{
+						RootComponent: karta.ComponentDefinition{
 							Name:             "root",
-							Kind:             &GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"},
-							StatusDefinition: &StatusDefinition{StatusMappings: StatusMappings{}},
-							SpecDefinition: &SpecDefinition{
+							Kind:             &karta.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"},
+							StatusDefinition: &karta.StatusDefinition{StatusMappings: karta.StatusMappings{}},
+							SpecDefinition: &karta.SpecDefinition{
 								PodTemplateSpecPath: ptr.To(".spec.template"), // Valid JQ
 							},
-							ScaleDefinition: &ScaleDefinition{
+							ScaleDefinition: &karta.ScaleDefinition{
 								ReplicasPath: ptr.To(".spec.replicas"), // Valid JQ
 							},
 						},
@@ -405,9 +407,9 @@ var _ = Describe("KartaValidator", func() {
 
 		Context("ByExpression validation", func() {
 			It("should pass with valid ByExpression", func() {
-				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
+				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []karta.StatusMatcher{
 					{
-						ByExpression: &ExpressionMatcher{
+						ByExpression: &karta.ExpressionMatcher{
 							Expression:     ".status.phase == \"Running\"",
 							ExpectedResult: "true",
 						},
@@ -420,9 +422,9 @@ var _ = Describe("KartaValidator", func() {
 			})
 
 			It("should fail with dangerous ByExpression using del", func() {
-				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
+				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []karta.StatusMatcher{
 					{
-						ByExpression: &ExpressionMatcher{
+						ByExpression: &karta.ExpressionMatcher{
 							Expression:     "del(.status)",
 							ExpectedResult: "true",
 						},
@@ -436,9 +438,9 @@ var _ = Describe("KartaValidator", func() {
 			})
 
 			It("should fail with invalid ByExpression syntax", func() {
-				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []StatusMatcher{
+				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings.Running = []karta.StatusMatcher{
 					{
-						ByExpression: &ExpressionMatcher{
+						ByExpression: &karta.ExpressionMatcher{
 							Expression:     ".status.phase == ",
 							ExpectedResult: "true",
 						},
@@ -451,18 +453,18 @@ var _ = Describe("KartaValidator", func() {
 			})
 
 			It("should validate ByExpression in multiple status matchers", func() {
-				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = StatusMappings{
-					Initializing: []StatusMatcher{
-						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Pending\"", ExpectedResult: "true"}},
+				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = karta.StatusMappings{
+					Initializing: []karta.StatusMatcher{
+						{ByExpression: &karta.ExpressionMatcher{Expression: ".status.phase == \"Pending\"", ExpectedResult: "true"}},
 					},
-					Running: []StatusMatcher{
-						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Running\"", ExpectedResult: "true"}},
+					Running: []karta.StatusMatcher{
+						{ByExpression: &karta.ExpressionMatcher{Expression: ".status.phase == \"Running\"", ExpectedResult: "true"}},
 					},
-					Completed: []StatusMatcher{
-						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Succeeded\"", ExpectedResult: "true"}},
+					Completed: []karta.StatusMatcher{
+						{ByExpression: &karta.ExpressionMatcher{Expression: ".status.phase == \"Succeeded\"", ExpectedResult: "true"}},
 					},
-					Failed: []StatusMatcher{
-						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Failed\"", ExpectedResult: "true"}},
+					Failed: []karta.StatusMatcher{
+						{ByExpression: &karta.ExpressionMatcher{Expression: ".status.phase == \"Failed\"", ExpectedResult: "true"}},
 					},
 				}
 				validator = NewKartaValidator(kartaWithJQPaths)
@@ -472,15 +474,15 @@ var _ = Describe("KartaValidator", func() {
 			})
 
 			It("should fail when one ByExpression in multiple matchers is invalid", func() {
-				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = StatusMappings{
-					Initializing: []StatusMatcher{
-						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Pending\"", ExpectedResult: "true"}},
+				kartaWithJQPaths.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = karta.StatusMappings{
+					Initializing: []karta.StatusMatcher{
+						{ByExpression: &karta.ExpressionMatcher{Expression: ".status.phase == \"Pending\"", ExpectedResult: "true"}},
 					},
-					Running: []StatusMatcher{
-						{ByExpression: &ExpressionMatcher{Expression: "del(.status)", ExpectedResult: "true"}},
+					Running: []karta.StatusMatcher{
+						{ByExpression: &karta.ExpressionMatcher{Expression: "del(.status)", ExpectedResult: "true"}},
 					},
-					Completed: []StatusMatcher{
-						{ByExpression: &ExpressionMatcher{Expression: ".status.phase == \"Succeeded\"", ExpectedResult: "true"}},
+					Completed: []karta.StatusMatcher{
+						{ByExpression: &karta.ExpressionMatcher{Expression: ".status.phase == \"Succeeded\"", ExpectedResult: "true"}},
 					},
 				}
 				validator = NewKartaValidator(kartaWithJQPaths)
@@ -492,38 +494,38 @@ var _ = Describe("KartaValidator", func() {
 		})
 	})
 
-	Describe("StatusMappings.Entries", func() {
+	Describe("karta.StatusMappings.Entries", func() {
 		It("should return all status-to-matchers pairs", func() {
-			mappings := StatusMappings{
-				Running:      []StatusMatcher{{ByPhase: "Running"}},
-				Failed:       []StatusMatcher{{ByPhase: "Failed"}},
-				Completed:    []StatusMatcher{{ByPhase: "Completed"}},
-				Initializing: []StatusMatcher{{ByPhase: "Initializing"}},
-				Degraded:     []StatusMatcher{{ByPhase: "Degraded"}},
+			mappings := karta.StatusMappings{
+				Running:      []karta.StatusMatcher{{ByPhase: "Running"}},
+				Failed:       []karta.StatusMatcher{{ByPhase: "Failed"}},
+				Completed:    []karta.StatusMatcher{{ByPhase: "Completed"}},
+				Initializing: []karta.StatusMatcher{{ByPhase: "Initializing"}},
+				Degraded:     []karta.StatusMatcher{{ByPhase: "Degraded"}},
 			}
 
 			entries := mappings.Entries()
 			Expect(entries).To(HaveLen(5))
 
-			statusToMatchers := make(map[ResourceStatus][]StatusMatcher)
+			statusToMatchers := make(map[karta.ResourceStatus][]karta.StatusMatcher)
 			for _, entry := range entries {
 				statusToMatchers[entry.Status] = entry.Matchers
 			}
 
-			Expect(statusToMatchers).To(HaveKey(RunningStatus))
-			Expect(statusToMatchers[RunningStatus]).To(Equal(mappings.Running))
-			Expect(statusToMatchers).To(HaveKey(FailedStatus))
-			Expect(statusToMatchers[FailedStatus]).To(Equal(mappings.Failed))
-			Expect(statusToMatchers).To(HaveKey(CompletedStatus))
-			Expect(statusToMatchers[CompletedStatus]).To(Equal(mappings.Completed))
-			Expect(statusToMatchers).To(HaveKey(InitializingStatus))
-			Expect(statusToMatchers[InitializingStatus]).To(Equal(mappings.Initializing))
-			Expect(statusToMatchers).To(HaveKey(DegradedStatus))
-			Expect(statusToMatchers[DegradedStatus]).To(Equal(mappings.Degraded))
+			Expect(statusToMatchers).To(HaveKey(karta.RunningStatus))
+			Expect(statusToMatchers[karta.RunningStatus]).To(Equal(mappings.Running))
+			Expect(statusToMatchers).To(HaveKey(karta.FailedStatus))
+			Expect(statusToMatchers[karta.FailedStatus]).To(Equal(mappings.Failed))
+			Expect(statusToMatchers).To(HaveKey(karta.CompletedStatus))
+			Expect(statusToMatchers[karta.CompletedStatus]).To(Equal(mappings.Completed))
+			Expect(statusToMatchers).To(HaveKey(karta.InitializingStatus))
+			Expect(statusToMatchers[karta.InitializingStatus]).To(Equal(mappings.Initializing))
+			Expect(statusToMatchers).To(HaveKey(karta.DegradedStatus))
+			Expect(statusToMatchers[karta.DegradedStatus]).To(Equal(mappings.Degraded))
 		})
 
 		It("should return entries with nil matchers for empty mappings", func() {
-			mappings := StatusMappings{}
+			mappings := karta.StatusMappings{}
 			entries := mappings.Entries()
 			Expect(entries).To(HaveLen(5))
 			for _, entry := range entries {
@@ -534,7 +536,7 @@ var _ = Describe("KartaValidator", func() {
 
 	Describe("short circuit on errors", func() {
 		It("should stop validation if has init errors", func() {
-			baseKarta.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
+			baseKarta.Spec.StructureDefinition.ChildComponents = []karta.ComponentDefinition{
 				{Name: "A", OwnerRef: ptr.To("B")},
 				{Name: "B", OwnerRef: ptr.To("A")},
 				{Name: "C", OwnerRef: ptr.To("D")}, // Invalid owner ref
@@ -549,7 +551,7 @@ var _ = Describe("KartaValidator", func() {
 		})
 
 		It("should stop structure validation if definition is invalid", func() {
-			baseKarta.Spec.StructureDefinition.ChildComponents = []ComponentDefinition{
+			baseKarta.Spec.StructureDefinition.ChildComponents = []karta.ComponentDefinition{
 				{Name: "A", OwnerRef: ptr.To("B")},
 				{Name: "B", OwnerRef: ptr.To("A")},
 				{Name: "C", OwnerRef: ptr.To("D")}, // Invalid owner ref
