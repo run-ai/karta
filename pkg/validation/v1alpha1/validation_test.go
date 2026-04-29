@@ -15,7 +15,7 @@ import (
 var _ = Describe("KartaValidator", func() {
 	var (
 		validator *KartaValidator
-		baseKarta    *karta.Karta
+		baseKarta *karta.Karta
 	)
 
 	BeforeEach(func() {
