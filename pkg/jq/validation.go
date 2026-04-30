@@ -145,7 +145,7 @@ func validateStringField(field reflect.Value, fieldPath string) error {
 		return fmt.Errorf("failed to parse JQ expression '%s' at '%s': %w", jqExpression, fieldPath, err)
 	}
 
-	err = validatedParsedJQ(parsed)
+	err = ValidateParsedJQ(parsed)
 	if err != nil {
 		return fmt.Errorf("JQ expression '%s' at '%s' failed validation: %w", jqExpression, fieldPath, err)
 	}
@@ -153,8 +153,8 @@ func validateStringField(field reflect.Value, fieldPath string) error {
 	return nil
 }
 
-// validatedParsedJQ checks if a gojq query is read-only and safe
-func validatedParsedJQ(q *gojq.Query) error {
+// ValidateParsedJQ checks if a gojq query is read-only and safe
+func ValidateParsedJQ(q *gojq.Query) error {
 	if q == nil {
 		return nil
 	}
@@ -172,7 +172,7 @@ func validatedParsedJQ(q *gojq.Query) error {
 			}
 
 			for _, arg := range f.Args {
-				err := validatedParsedJQ(arg)
+				err := ValidateParsedJQ(arg)
 				if err != nil {
 					return err
 				}
@@ -191,12 +191,12 @@ func validatedParsedJQ(q *gojq.Query) error {
 			return fmt.Errorf("modifying operator '%s' is not allowed", q.Op)
 		}
 
-		err := validatedParsedJQ(q.Left)
+		err := ValidateParsedJQ(q.Left)
 		if err != nil {
 			return err
 		}
 
-		err = validatedParsedJQ(q.Right)
+		err = ValidateParsedJQ(q.Right)
 		if err != nil {
 			return err
 		}
