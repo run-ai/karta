@@ -8,6 +8,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/itchyny/gojq"
 )
 
 type TestStruct struct {
@@ -413,6 +415,84 @@ var _ = Describe("JQ Validation", func() {
 				Expect(errs).To(HaveLen(1))
 				Expect(errs[0].Error()).To(ContainSubstring("del(.invalid)' at 'TaggedPath'"))
 				Expect(errs[0].Error()).To(ContainSubstring("del function is not allowed"))
+			})
+		})
+	})
+
+	Describe("ValidateParsedJQ", func() {
+		It("returns nil for a nil query", func() {
+			Expect(ValidateParsedJQ(nil)).To(Succeed())
+		})
+
+		Context("safe queries", func() {
+			DescribeTable("accepts read-only expressions",
+				func(expr string) {
+					q, err := gojq.Parse(expr)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(ValidateParsedJQ(q)).To(Succeed())
+				},
+				Entry("simple field access", ".spec.replicas"),
+				Entry("pipe with select and map", ".spec.containers | map(select(.name == \"main\")) | .[0]"),
+				Entry("equality comparison", ".status.phase == \"Running\""),
+				Entry("array index", ".spec.containers[0].image"),
+				Entry("length builtin", ".spec.containers | length"),
+			)
+		})
+
+		Context("dangerous queries rejected at the top level", func() {
+			DescribeTable("rejects mutating or unbounded expressions",
+				func(expr, expectedSubstring string) {
+					q, err := gojq.Parse(expr)
+					Expect(err).ToNot(HaveOccurred())
+
+					err = ValidateParsedJQ(q)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring(expectedSubstring))
+				},
+				Entry("del function", "del(.spec)", "del function is not allowed"),
+				Entry("recurse function", "recurse", "function 'recurse'"),
+				Entry("walk function", "walk(.)", "function 'walk'"),
+				Entry("paths function", "paths", "function 'paths'"),
+				Entry("range function", "range(10)", "function 'range'"),
+				Entry("repeat function", "repeat(.)", "function 'repeat'"),
+				Entry("recursive descent operator", ".. | .name", "recursive descent operator"),
+				Entry("assignment operator", ".x = 1", "modifying operator"),
+				Entry("modify operator", ".x |= . + 1", "modifying operator"),
+				Entry("update-add operator", ".x += 1", "modifying operator"),
+				Entry("update-sub operator", ".x -= 1", "modifying operator"),
+				Entry("update-mul operator", ".x *= 2", "modifying operator"),
+				Entry("update-div operator", ".x /= 2", "modifying operator"),
+				Entry("update-mod operator", ".x %= 3", "modifying operator"),
+				Entry("update-alt operator", ".x //= 1", "modifying operator"),
+			)
+		})
+
+		Context("dangerous queries nested inside other expressions", func() {
+			It("rejects a dangerous function inside an allowed function's args", func() {
+				q, err := gojq.Parse("select(del(.x))")
+				Expect(err).ToNot(HaveOccurred())
+
+				err = ValidateParsedJQ(q)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("del function is not allowed"))
+			})
+
+			It("rejects a dangerous function on the right side of a pipe", func() {
+				q, err := gojq.Parse(".spec | recurse | .name")
+				Expect(err).ToNot(HaveOccurred())
+
+				err = ValidateParsedJQ(q)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("function 'recurse'"))
+			})
+
+			It("rejects an assignment on the right side of a pipe", func() {
+				q, err := gojq.Parse(".spec.containers[0] | .image = \"new\"")
+				Expect(err).ToNot(HaveOccurred())
+
+				err = ValidateParsedJQ(q)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("modifying operator"))
 			})
 		})
 	})
