@@ -59,6 +59,7 @@ generate: controller-gen ## Regenerate zz_generated.deepcopy.go in every CRD-bea
 .PHONY: generate-mocks
 generate-mocks: mockgen ## Run go generate (mockgen) across every sub-module
 	@for dir in $(GO_MOD_DIRS); do \
+	  if [ -z "$$(cd $$dir && go list ./... 2>/dev/null)" ]; then echo ">> go generate in $$dir (no packages, skipping)"; continue; fi; \
 	  echo ">> go generate in $$dir"; \
 	  (cd $$dir && go generate ./...) || exit 1; \
 	done
@@ -66,6 +67,7 @@ generate-mocks: mockgen ## Run go generate (mockgen) across every sub-module
 .PHONY: test
 test: generate-mocks ## Run tests across every sub-module
 	@for dir in $(GO_MOD_DIRS); do \
+	  if [ -z "$$(cd $$dir && go list ./... 2>/dev/null)" ]; then echo ">> go test in $$dir (no packages, skipping)"; continue; fi; \
 	  echo ">> go test in $$dir"; \
 	  (cd $$dir && go test ./...) || exit 1; \
 	done
@@ -79,6 +81,7 @@ tidy: ## go mod tidy across every sub-module
 
 lint-go: golangci-lint
 	@for dir in $(GO_MOD_DIRS); do \
+	  if [ -z "$$(cd $$dir && go list ./... 2>/dev/null)" ]; then echo ">> golangci-lint in $$dir (no packages, skipping)"; continue; fi; \
 	  echo ">> golangci-lint in $$dir"; \
 	  (cd $$dir && $(GOLANGCI_LINT) run -v -c $(PROJECT_DIR)/.golangci.yml) || exit 1; \
 	done
@@ -86,6 +89,7 @@ lint-go: golangci-lint
 
 fmt-go:
 	@for dir in $(GO_MOD_DIRS); do \
+	  if [ -z "$$(cd $$dir && go list ./... 2>/dev/null)" ]; then echo ">> go fmt in $$dir (no packages, skipping)"; continue; fi; \
 	  echo ">> go fmt in $$dir"; \
 	  (cd $$dir && go fmt ./...) || exit 1; \
 	done
@@ -93,6 +97,7 @@ fmt-go:
 
 vet-go:
 	@for dir in $(GO_MOD_DIRS); do \
+	  if [ -z "$$(cd $$dir && go list ./... 2>/dev/null)" ]; then echo ">> go vet in $$dir (no packages, skipping)"; continue; fi; \
 	  echo ">> go vet in $$dir"; \
 	  (cd $$dir && go vet ./...) || exit 1; \
 	done

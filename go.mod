@@ -86,3 +86,5 @@ replace github.com/run-ai/karta/pkg/resource => ./pkg/resource
 replace github.com/run-ai/karta/pkg/jq => ./pkg/jq
 
 replace github.com/run-ai/karta/pkg/validation/v1alpha1 => ./pkg/validation/v1alpha1
+
+replace github.com/run-ai/karta/pkg/instructions => ./pkg/instructions
