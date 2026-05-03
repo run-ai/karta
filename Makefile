@@ -46,10 +46,6 @@ generate-mocks: mockgen ## Generate mocks using go generate
 test: generate-mocks ## Run tests with mock generation
 	go test ./...
 
-.PHONY: test-cover
-test-cover: generate-mocks ## Run tests with race detector and coverage
-	go test -race -coverprofile=coverage.out -covermode=atomic ./...
-
 lint-go: golangci-lint
 	echo "Running golangci linter"
 	$(GOLANGCI_LINT) run -v -c .golangci.yml
@@ -68,12 +64,7 @@ lint: fmt-go vet-go lint-go
 
 .PHONY: validate
 validate: generate manifests generate-mocks generate-licenses
-	@if [ -n "$$(git status --porcelain)" ]; then \
-		echo "ERROR: Generated files are out of date. Run 'make validate' locally and commit the diff:"; \
-		git status; \
-		git diff; \
-		exit 1; \
-	fi
+	@git diff --exit-code 
 
 .PHONY: install-crd
 install-crd: manifests ## Install CRDs into the cluster

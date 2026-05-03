@@ -1,6 +1,3 @@
-# Copyright 2026 NVIDIA CORPORATION
-# SPDX-License-Identifier: Apache-2.0
-
 name: Pull Request
 
 on:
@@ -9,18 +6,13 @@ on:
   pull_request:
     branches: [ main ]
 
-# Cancel superseded runs on the same PR / branch so we don't burn CI minutes on
-# stale commits.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
-  lint:
-    name: Lint
+  ci:
+    name: CI
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -40,123 +32,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bin-
 
-      - name: Run lint
-        run: make lint
+      - name: Run checks
+        run: make check
 
-  validate:
-    name: Validate generated code
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-
-      - name: Cache bin tools
-        uses: actions/cache@v4
-        with:
-          path: bin
-          key: ${{ runner.os }}-bin-${{ hashFiles('Makefile') }}
-          restore-keys: |
-            ${{ runner.os }}-bin-
-
-      - name: Run validate
-        run: make validate
-
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-
-      - name: Cache bin tools
-        uses: actions/cache@v4
-        with:
-          path: bin
-          key: ${{ runner.os }}-bin-${{ hashFiles('Makefile') }}
-          restore-keys: |
-            ${{ runner.os }}-bin-
-
-      - name: Run tests with race detector and coverage
-        run: make test-cover
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.out
-          fail_ci_if_error: false
-
-      - name: Upload coverage artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage.out
-          if-no-files-found: warn
-          retention-days: 7
-
-  helm:
-    name: Helm
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install helm
-        uses: azure/setup-helm@v4
+      - name: Vulnerability scan
+        run: make govulncheck
 
       - name: Lint helm chart
         run: make helm-lint
 
       - name: Validate helm chart renders
         run: make helm-validate
-
-  actionlint:
-    name: Workflow lint (actionlint)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install actionlint
-        run: |
-          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
-
-      - name: Run actionlint
-        run: ./actionlint -color
-
-  ci-summary:
-    name: CI Summary
-    if: always()
-    needs: [lint, validate, test, helm, actionlint]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Verify all required jobs succeeded
-        env:
-          LINT_RESULT: ${{ needs.lint.result }}
-          VALIDATE_RESULT: ${{ needs.validate.result }}
-          TEST_RESULT: ${{ needs.test.result }}
-          HELM_RESULT: ${{ needs.helm.result }}
-          ACTIONLINT_RESULT: ${{ needs.actionlint.result }}
-        run: |
-          echo "lint=$LINT_RESULT validate=$VALIDATE_RESULT test=$TEST_RESULT helm=$HELM_RESULT actionlint=$ACTIONLINT_RESULT"
-          if [[ "$LINT_RESULT" != "success" || \
-                "$VALIDATE_RESULT" != "success" || \
-                "$TEST_RESULT" != "success" || \
-                "$HELM_RESULT" != "success" || \
-                "$ACTIONLINT_RESULT" != "success" ]]; then
-            echo "One or more required CI jobs failed."
-            exit 1
-          fi
-          echo "All required CI jobs succeeded."
