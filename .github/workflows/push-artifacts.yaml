@@ -36,7 +36,7 @@ jobs:
             echo "Push to main: dev build keyed off the commit sha"
             PACKAGE_VERSION=0.0.0-main-$(git rev-parse --short HEAD)
           fi
-          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> "$GITHUB_ENV"
           echo "PACKAGE_VERSION=$PACKAGE_VERSION"
 
       - name: Log in to GitHub Container Registry
@@ -64,7 +64,7 @@ jobs:
 
       - name: Push Helm Chart
         run: |
-          helm push ./charts/karta-$PACKAGE_VERSION.tgz oci://${{ env.HELM_REGISTRY }}
+          helm push "./charts/karta-${PACKAGE_VERSION}.tgz" oci://${{ env.HELM_REGISTRY }}
 
       - name: Upload chart as release asset
         if: github.ref_type == 'tag'
