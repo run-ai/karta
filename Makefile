@@ -20,12 +20,14 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 MOCKGEN ?= $(LOCALBIN)/mockgen
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
 GO_LICENSES ?= $(LOCALBIN)/go-licenses
+GOVULNCHECK ?= $(LOCALBIN)/govulncheck
 GOROOT ?= $(shell go env GOROOT)
 # Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
 GOMOCK_VERSION ?= v0.6.0
 GOLANGCI_LINT_VERSION ?= v2.5.0
 GO_LICENSES_VERSION ?= v2.0.1
+GOVULNCHECK_VERSION ?= v1.1.4
 PATH := $(abspath $(LOCALBIN)):$(PATH)
 
 .PHONY: manifests
@@ -43,6 +45,10 @@ generate-mocks: mockgen ## Generate mocks using go generate
 .PHONY: test
 test: generate-mocks ## Run tests with mock generation
 	go test ./...
+
+.PHONY: test-cover
+test-cover: generate-mocks ## Run tests with race detector and coverage
+	go test -race -coverprofile=coverage.out -covermode=atomic ./...
 
 lint-go: golangci-lint
 	echo "Running golangci linter"
@@ -62,7 +68,12 @@ lint: fmt-go vet-go lint-go
 
 .PHONY: validate
 validate: generate manifests generate-mocks generate-licenses
-	@git diff --exit-code 
+	@if [ -n "$$(git status --porcelain)" ]; then \
+		echo "ERROR: Generated files are out of date. Run 'make validate' locally and commit the diff:"; \
+		git status; \
+		git diff; \
+		exit 1; \
+	fi
 
 .PHONY: install-crd
 install-crd: manifests ## Install CRDs into the cluster
@@ -107,6 +118,19 @@ $(GO_LICENSES): $(LOCALBIN)
 	echo "Downloading go-licenses@$(GO_LICENSES_VERSION)" ;\
 	GOBIN=$(LOCALBIN) go install github.com/google/go-licenses/v2@$(GO_LICENSES_VERSION) ;\
 	}
+
+.PHONY: govulncheck-bin
+govulncheck-bin: $(GOVULNCHECK) ## Download govulncheck locally if necessary.
+$(GOVULNCHECK): $(LOCALBIN)
+	@[ -f "$(GOVULNCHECK)" ] || { \
+	set -e; \
+	echo "Downloading govulncheck@$(GOVULNCHECK_VERSION)" ;\
+	GOBIN=$(LOCALBIN) go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ;\
+	}
+
+.PHONY: govulncheck
+govulncheck: govulncheck-bin ## Scan dependencies for known vulnerabilities
+	$(GOVULNCHECK) ./...
 
 .PHONY: generate-licenses
 generate-licenses: go-licenses download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
