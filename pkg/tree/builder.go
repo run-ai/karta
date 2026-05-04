@@ -6,6 +6,7 @@ package tree
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -126,9 +127,21 @@ func buildComponentNode(ctx context.Context, factory *resource.ComponentFactory,
 		return node, nil
 	}
 
-	// PoC simplification: collapse all extracted instances into one
-	// InstanceNode and attach all matched pods + recursed children to it.
-	// Splitting via ComponentInstanceSelector is the follow-up step.
+	// Multi-instance components (Dynamo's `service` split into Frontend /
+	// PrefillWorker / DecodeWorker via componentInstanceSelector) get one
+	// InstanceNode per extracted instance. Pods route to the right instance
+	// by evaluating the selector's idPath against the pod and matching to
+	// the instance key.
+	if instSel := componentInstanceSelector(def); instSel != nil && len(instances) > 1 {
+		node.Instances, err = buildMultiInstance(ctx, instances, matched, instSel)
+		if err != nil {
+			return ComponentNode{}, err
+		}
+		return node, nil
+	}
+
+	// Single-instance fallthrough: attach all matched pods + recursed
+	// children to the one extracted instance.
 	first := pickFirstInstance(instances)
 	scaleCopy := first.Scale
 	instCopy := first
@@ -140,6 +153,53 @@ func buildComponentNode(ctx context.Context, factory *resource.ComponentFactory,
 	}}
 
 	return node, nil
+}
+
+// componentInstanceSelector returns the selector responsible for splitting
+// pods across instances of a single component, when the definition declares
+// one.
+func componentInstanceSelector(def v1alpha1.ComponentDefinition) *v1alpha1.ComponentInstanceSelector {
+	if def.PodSelector == nil {
+		return nil
+	}
+	return def.PodSelector.ComponentInstanceSelector
+}
+
+// buildMultiInstance produces one InstanceNode per extracted instance,
+// routing pods by the result of the ComponentInstanceSelector. Pods whose
+// instance ID doesn't match any extracted instance are dropped silently —
+// they belong to a deleted or transitioning instance.
+func buildMultiInstance(ctx context.Context, instances map[string]resource.ExtractedInstance, pods []*corev1.Pod, instSel *v1alpha1.ComponentInstanceSelector) ([]InstanceNode, error) {
+	podsByID := make(map[string][]*corev1.Pod, len(instances))
+	for _, p := range pods {
+		id, found, err := resource.NewPodQuerier(p).ExtractInstanceId(ctx, instSel)
+		if err != nil || !found {
+			// Pods that don't carry the instance-id label belong to no
+			// extracted instance: skip silently.
+			continue
+		}
+		podsByID[id] = append(podsByID[id], p)
+	}
+
+	keys := make([]string, 0, len(instances))
+	for k := range instances {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	out := make([]InstanceNode, 0, len(keys))
+	for _, k := range keys {
+		inst := instances[k]
+		instCopy := inst
+		keyCopy := k
+		out = append(out, InstanceNode{
+			InstanceKey:       &keyCopy,
+			Scale:             inst.Scale,
+			ExtractedInstance: &instCopy,
+			Pods:              podsByID[k],
+		})
+	}
+	return out, nil
 }
 
 // buildChildren recurses into the child definitions of a component, narrowing

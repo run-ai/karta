@@ -35,9 +35,33 @@ type PodMatcher interface {
 type JQMatcher struct{}
 
 // Matches implements PodMatcher.
+//
+// Resolution order:
+//   1. ComponentTypeSelector — explicit pod-type discriminator wins.
+//   2. ComponentInstanceSelector — when present, a pod matches if the
+//      idPath returns a non-empty value (the multi-instance components, like
+//      Dynamo's `service`, identify their pods by the label the selector
+//      points at; absence of the label means the pod doesn't belong here).
+//   3. Permissive fallback — return true. Logical groupings without any
+//      selector get pre-filtered later in the builder via the descendant
+//      union, so this fallback only over-claims at leaves with no
+//      discriminator at all (rare, and surfaces as a Karta-def issue).
 func (JQMatcher) Matches(ctx context.Context, pod *corev1.Pod, component *v1alpha1.ComponentDefinition) (bool, error) {
-	if component == nil || component.PodSelector == nil || component.PodSelector.ComponentTypeSelector == nil {
+	if component == nil || component.PodSelector == nil {
 		return true, nil
 	}
-	return resource.NewPodQuerier(pod).MatchesComponentType(ctx, component.PodSelector.ComponentTypeSelector)
+	sel := component.PodSelector
+	if sel.ComponentTypeSelector != nil {
+		return resource.NewPodQuerier(pod).MatchesComponentType(ctx, sel.ComponentTypeSelector)
+	}
+	if sel.ComponentInstanceSelector != nil {
+		_, found, err := resource.NewPodQuerier(pod).ExtractInstanceId(ctx, sel.ComponentInstanceSelector)
+		if err != nil {
+			// Empty-result errors here mean "this pod doesn't carry the
+			// instance-id label" — that's a non-match, not a failure.
+			return false, nil
+		}
+		return found, nil
+	}
+	return true, nil
 }

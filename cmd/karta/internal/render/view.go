@@ -64,6 +64,14 @@ func Build(t *tree.WorkloadTree, kind, name, namespace string) WorkloadView {
 }
 
 func buildComponent(c tree.ComponentNode) ComponentView {
+	// Multi-instance components (Dynamo's "service" split into Frontend /
+	// PrefillWorker / DecodeWorker) render as a parent with one synthetic
+	// child per instance, so each instance gets its own replica count, GPU
+	// roll-up, and pod list — matching the HLD's example output.
+	if isMultiInstance(c) {
+		return buildMultiInstanceComponent(c)
+	}
+
 	cv := ComponentView{Name: c.Name}
 	nodeSet := map[string]struct{}{}
 
@@ -107,6 +115,73 @@ func buildComponent(c tree.ComponentNode) ComponentView {
 	}
 
 	return cv
+}
+
+// isMultiInstance reports whether a ComponentNode carries the multi-instance
+// shape: more than one InstanceNode, with at least one InstanceKey set.
+func isMultiInstance(c tree.ComponentNode) bool {
+	if len(c.Instances) <= 1 {
+		return false
+	}
+	for _, inst := range c.Instances {
+		if inst.InstanceKey != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// buildMultiInstanceComponent flattens the InstanceNodes of a multi-instance
+// component into per-instance ComponentViews, each rendered as if it were
+// its own component. Replica counts, GPU sums, and node lists roll up to
+// the parent so the table view sees an aggregate.
+func buildMultiInstanceComponent(c tree.ComponentNode) ComponentView {
+	parent := ComponentView{Name: c.Name}
+	parentNodes := map[string]struct{}{}
+
+	for _, inst := range c.Instances {
+		if inst.InstanceKey == nil {
+			continue
+		}
+		child := ComponentView{Name: *inst.InstanceKey}
+		childNodes := map[string]struct{}{}
+
+		if inst.Scale != nil && inst.Scale.Replicas != nil {
+			child.DesiredReplicas = *inst.Scale.Replicas
+		}
+		for _, p := range inst.Pods {
+			child.CurrentReplicas++
+			pv := podView(p)
+			child.GPUs += pv.GPUs
+			if pv.Ready {
+				child.ReadyCount++
+			}
+			if pv.Node != "" {
+				childNodes[pv.Node] = struct{}{}
+				parentNodes[pv.Node] = struct{}{}
+			}
+			child.Pods = append(child.Pods, pv)
+		}
+		if child.DesiredReplicas == 0 {
+			child.DesiredReplicas = child.CurrentReplicas
+		}
+		for n := range childNodes {
+			child.Nodes = append(child.Nodes, n)
+		}
+		sort.Strings(child.Nodes)
+		sort.SliceStable(child.Pods, func(i, j int) bool { return child.Pods[i].Name < child.Pods[j].Name })
+
+		parent.CurrentReplicas += child.CurrentReplicas
+		parent.DesiredReplicas += child.DesiredReplicas
+		parent.ReadyCount += child.ReadyCount
+		parent.GPUs += child.GPUs
+		parent.Children = append(parent.Children, child)
+	}
+	for n := range parentNodes {
+		parent.Nodes = append(parent.Nodes, n)
+	}
+	sort.Strings(parent.Nodes)
+	return parent
 }
 
 func podView(p *corev1.Pod) PodView {
