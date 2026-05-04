@@ -36,7 +36,7 @@ func TestListRendering(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := List(&buf, rows); err != nil {
+	if err := List(&buf, rows, PlainStyle()); err != nil {
 		t.Fatalf("List render: %v", err)
 	}
 	got := buf.String()

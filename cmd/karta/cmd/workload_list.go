@@ -58,7 +58,7 @@ func newWorkloadListCmd(opts *rootOptions) *cobra.Command {
 			}
 
 			sort.SliceStable(rows, func(i, j int) bool { return rows[i].Name < rows[j].Name })
-			return render.List(c.OutOrStdout(), rows)
+			return render.List(c.OutOrStdout(), rows, opts.styleFor(c.OutOrStdout()))
 		},
 	}
 }

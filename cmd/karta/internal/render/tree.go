@@ -8,41 +8,38 @@ import (
 	"io"
 )
 
-// Tree writes an ASCII workload tree to w. Output mirrors the HLD example:
-//
-//	PyTorchJob/llama-finetune [Running]
-//	├── master   (1/1 replicas)   1/1 ready   gpu: 1    nodes: node-01
-//	│   └── Pod/llama-finetune-master-0    Running   gpu: 1   node-01
-//	└── worker   (4/4 replicas)   3/4 ready   gpu: 32   nodes: node-02,03,04
-func Tree(w io.Writer, view WorkloadView) error {
-	fmt.Fprintf(w, "%s/%s [%s]\n", view.Kind, view.Name, PhasesString(view.Phases))
+// Tree writes a styled ASCII workload tree to w. Pass PlainStyle() (or use
+// AutoStyle on os.Stdout) to control whether ANSI color is emitted.
+func Tree(w io.Writer, view WorkloadView, s Style) error {
+	header := fmt.Sprintf("%s/%s", view.Kind, view.Name)
+	fmt.Fprintf(w, "%s [%s]\n", s.Header(header), s.Phases(view.Phases))
 	for i, c := range view.Components {
 		isLast := i == len(view.Components)-1
-		writeComponent(w, c, isLast)
+		writeComponentAt(w, c, "", isLast, s)
 	}
 	return nil
 }
 
-func writeComponent(w io.Writer, c ComponentView, isLast bool) {
-	writeComponentAt(w, c, "", isLast)
-}
-
-func writeComponentAt(w io.Writer, c ComponentView, parentPrefix string, isLast bool) {
+func writeComponentAt(w io.Writer, c ComponentView, parentPrefix string, isLast bool, s Style) {
 	branch := "├──"
 	childPrefix := parentPrefix + "│   "
 	if isLast {
 		branch = "└──"
 		childPrefix = parentPrefix + "    "
 	}
-	fmt.Fprintf(w, "%s%s %s   (%d/%d replicas)   %d/%d ready   gpu: %d   nodes: %s\n",
-		parentPrefix, branch, c.Name,
-		c.CurrentReplicas, c.DesiredReplicas,
-		c.ReadyCount, c.CurrentReplicas,
-		c.GPUs,
-		FormatNodes(c.Nodes),
+
+	fmt.Fprintf(w, "%s%s %s   %s   %s   %s   %s\n",
+		s.Dim(parentPrefix),
+		s.Dim(branch),
+		s.Bold(s.Cyan(c.Name)),
+		"("+s.Ratio(c.CurrentReplicas, c.DesiredReplicas, "replicas")+")",
+		s.Ratio(c.ReadyCount, c.CurrentReplicas, "ready"),
+		gpuLabel(c.GPUs, s),
+		s.Dim("nodes: ")+nodeListColored(c.Nodes, s),
 	)
+
 	for j, child := range c.Children {
-		writeComponentAt(w, child, childPrefix, j == len(c.Children)-1)
+		writeComponentAt(w, child, childPrefix, j == len(c.Children)-1, s)
 	}
 	for j, p := range c.Pods {
 		podBranch := "├──"
@@ -51,11 +48,38 @@ func writeComponentAt(w io.Writer, c ComponentView, parentPrefix string, isLast 
 		}
 		node := p.Node
 		if node == "" {
-			node = "<none>"
+			node = s.Dim("<none>")
+		} else {
+			node = s.Dim(node)
 		}
-		fmt.Fprintf(w, "%s%s Pod/%s    %s   gpu: %d   %s\n",
-			childPrefix, podBranch,
-			p.Name, p.Phase, p.GPUs, node,
+		fmt.Fprintf(w, "%s%s %s    %s   %s   %s\n",
+			s.Dim(childPrefix),
+			s.Dim(podBranch),
+			s.Dim("Pod/")+p.Name,
+			s.Phase(p.Phase),
+			gpuLabel(p.GPUs, s),
+			node,
 		)
 	}
+}
+
+func gpuLabel(n int64, s Style) string {
+	if n == 0 {
+		return s.Dim("gpu: 0")
+	}
+	return s.Dim("gpu: ") + s.Bold(s.Magenta(itoa(int(n))))
+}
+
+func nodeListColored(ns []string, s Style) string {
+	if len(ns) == 0 {
+		return s.Dim("<none>")
+	}
+	out := ""
+	for i, n := range ns {
+		if i > 0 {
+			out += s.Dim(",")
+		}
+		out += n
+	}
+	return out
 }

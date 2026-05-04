@@ -4,12 +4,30 @@
 package cmd
 
 import (
+	"io"
+
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+
+	"github.com/run-ai/karta/cmd/karta/internal/render"
 )
+
+// styleFor resolves the active render.Style based on --color and the
+// writer's TTY status.
+func (o *rootOptions) styleFor(w io.Writer) render.Style {
+	switch o.colorMode {
+	case "always":
+		return render.ForceStyle()
+	case "never":
+		return render.PlainStyle()
+	default:
+		return render.AutoStyle(w)
+	}
+}
 
 type rootOptions struct {
 	configFlags *genericclioptions.ConfigFlags
+	colorMode   string
 }
 
 func NewRootCmd() *cobra.Command {
@@ -30,6 +48,7 @@ Same output shape regardless of the underlying CRD.`,
 	}
 
 	opts.configFlags.AddFlags(root.PersistentFlags())
+	root.PersistentFlags().StringVar(&opts.colorMode, "color", "auto", "Colorize output: auto, always, never")
 
 	root.AddCommand(newWorkloadCmd(opts))
 

@@ -45,7 +45,7 @@ func newWorkloadTreeCmd(opts *rootOptions) *cobra.Command {
 			}
 
 			view := render.Build(wt, res.Workload.GetKind(), res.Workload.GetName(), res.Workload.GetNamespace())
-			return render.Tree(c.OutOrStdout(), view)
+			return render.Tree(c.OutOrStdout(), view, opts.styleFor(c.OutOrStdout()))
 		},
 	}
 }

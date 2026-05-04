@@ -44,7 +44,7 @@ func TestTreeRendering(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := Tree(&buf, view); err != nil {
+	if err := Tree(&buf, view, PlainStyle()); err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	got := buf.String()
