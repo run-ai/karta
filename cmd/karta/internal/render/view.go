@@ -144,13 +144,27 @@ func buildMultiInstanceComponent(c tree.ComponentNode) ComponentView {
 	parent := ComponentView{Name: c.Name}
 	parentNodes := map[string]struct{}{}
 
+	// Count how many replica wrappers we have; descendants' Karta-extracted
+	// DesiredReplicas counts are workload-global (`.spec.replicas // 1`
+	// returns LWS-level replicas, not per-replica), so we divide each
+	// grand-child's DesiredReplicas by this count when rendering inside a
+	// replica wrapper.
+	replicaCount := int32(0)
+	for _, inst := range c.Instances {
+		if inst.ReplicaKey != nil {
+			replicaCount++
+		}
+	}
+
 	for _, inst := range c.Instances {
 		var label string
+		isReplica := false
 		switch {
 		case inst.InstanceKey != nil:
 			label = *inst.InstanceKey
 		case inst.ReplicaKey != nil:
 			label = c.Name + "[" + *inst.ReplicaKey + "]"
+			isReplica = true
 		default:
 			continue
 		}
@@ -160,7 +174,11 @@ func buildMultiInstanceComponent(c tree.ComponentNode) ComponentView {
 
 		// Recurse into nested children (e.g. leader/worker under each LWS replica).
 		for _, gc := range inst.Children {
-			child.Children = append(child.Children, buildComponent(gc))
+			gcView := buildComponent(gc)
+			if isReplica && replicaCount > 0 {
+				gcView.DesiredReplicas = perReplicaDesired(gcView.DesiredReplicas, replicaCount)
+			}
+			child.Children = append(child.Children, gcView)
 		}
 
 		// Counting: when this instance has children, the children own the
@@ -277,6 +295,22 @@ func FormatNodes(ns []string) string {
 // nolint:unused // helper retained for future use when rendering rolls up
 // per-instance pod details
 func formatNumber(n int64) string { return fmt.Sprintf("%d", n) }
+
+// perReplicaDesired divides a workload-global desired count by the replica
+// count so each replica wrapper shows its own slice. The Karta library
+// can't currently scope JQ extraction per-replica, so we adjust at render
+// time. We only divide when the global count is cleanly divisible — if
+// it isn't, we keep the original value rather than round (better to
+// over-display than to lie).
+func perReplicaDesired(global, replicas int32) int32 {
+	if replicas <= 0 || global == 0 {
+		return global
+	}
+	if global%replicas != 0 {
+		return global
+	}
+	return global / replicas
+}
 
 // SummarizeComponents flattens a WorkloadView's component tree to its
 // leaf components — the ones that actually carry pods — and returns one
