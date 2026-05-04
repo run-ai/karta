@@ -105,6 +105,14 @@ func buildComponentNode(ctx context.Context, factory *resource.ComponentFactory,
 		return ComponentNode{}, err
 	}
 
+	// For non-leaf components with no componentTypeSelector, the matcher's
+	// permissive fallback would over-claim pods that belong to unrelated
+	// workloads sharing the same namespace. Re-narrow to the union of pods
+	// any descendant claimed: a parent only owns what its children own.
+	if len(children) > 0 && !hasComponentTypeSelector(def) {
+		matched = collectDescendantPods(children)
+	}
+
 	instances, err := extractedInstancesOrEmpty(ctx, comp)
 	if err != nil {
 		return ComponentNode{}, err
@@ -190,6 +198,38 @@ func pickFirstInstance(instances map[string]resource.ExtractedInstance) resource
 		return v
 	}
 	return resource.ExtractedInstance{}
+}
+
+// hasComponentTypeSelector reports whether the definition has an explicit
+// pod-level discriminator. Components without one are treated as logical
+// groupings whose pod set is the union of their descendants'.
+func hasComponentTypeSelector(def v1alpha1.ComponentDefinition) bool {
+	return def.PodSelector != nil && def.PodSelector.ComponentTypeSelector != nil
+}
+
+// collectDescendantPods returns every pod claimed anywhere in the subtree,
+// deduplicated by pointer identity so a pod claimed by multiple descendants
+// is counted once.
+func collectDescendantPods(nodes []ComponentNode) []*corev1.Pod {
+	seen := make(map[*corev1.Pod]struct{})
+	var out []*corev1.Pod
+	var walk func([]ComponentNode)
+	walk = func(ns []ComponentNode) {
+		for _, n := range ns {
+			for _, inst := range n.Instances {
+				for _, p := range inst.Pods {
+					if _, ok := seen[p]; ok {
+						continue
+					}
+					seen[p] = struct{}{}
+					out = append(out, p)
+				}
+				walk(inst.Children)
+			}
+		}
+	}
+	walk(nodes)
+	return out
 }
 
 func workloadStatusFromResource(s *resource.Status) WorkloadStatus {
