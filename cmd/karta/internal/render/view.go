@@ -117,51 +117,89 @@ func buildComponent(c tree.ComponentNode) ComponentView {
 	return cv
 }
 
-// isMultiInstance reports whether a ComponentNode carries the multi-instance
-// shape: more than one InstanceNode, with at least one InstanceKey set.
+// isMultiInstance reports whether a ComponentNode carries the split shape:
+// more than one InstanceNode, with at least one InstanceKey or ReplicaKey
+// set. Both shapes render as a parent + per-key sub-components.
 func isMultiInstance(c tree.ComponentNode) bool {
 	if len(c.Instances) <= 1 {
 		return false
 	}
 	for _, inst := range c.Instances {
-		if inst.InstanceKey != nil {
+		if inst.InstanceKey != nil || inst.ReplicaKey != nil {
 			return true
 		}
 	}
 	return false
 }
 
-// buildMultiInstanceComponent flattens the InstanceNodes of a multi-instance
-// component into per-instance ComponentViews, each rendered as if it were
-// its own component. Replica counts, GPU sums, and node lists roll up to
-// the parent so the table view sees an aggregate.
+// buildMultiInstanceComponent flattens the InstanceNodes of a split
+// component into per-key ComponentViews, each rendered as if it were its
+// own component. Counts, GPU sums, and node lists roll up to the parent
+// so the table view sees an aggregate.
+//
+// Naming convention: instance-keyed splits (Dynamo Frontend / PrefillWorker)
+// use the bare instance name; replica-keyed splits (LWS group-0 / group-1)
+// use "<component>[<replica>]" so the wrapper is obvious.
 func buildMultiInstanceComponent(c tree.ComponentNode) ComponentView {
 	parent := ComponentView{Name: c.Name}
 	parentNodes := map[string]struct{}{}
 
 	for _, inst := range c.Instances {
-		if inst.InstanceKey == nil {
+		var label string
+		switch {
+		case inst.InstanceKey != nil:
+			label = *inst.InstanceKey
+		case inst.ReplicaKey != nil:
+			label = c.Name + "[" + *inst.ReplicaKey + "]"
+		default:
 			continue
 		}
-		child := ComponentView{Name: *inst.InstanceKey}
+
+		child := ComponentView{Name: label}
 		childNodes := map[string]struct{}{}
 
-		if inst.Scale != nil && inst.Scale.Replicas != nil {
-			child.DesiredReplicas = *inst.Scale.Replicas
+		// Recurse into nested children (e.g. leader/worker under each LWS replica).
+		for _, gc := range inst.Children {
+			child.Children = append(child.Children, buildComponent(gc))
 		}
-		for _, p := range inst.Pods {
-			child.CurrentReplicas++
-			pv := podView(p)
-			child.GPUs += pv.GPUs
-			if pv.Ready {
-				child.ReadyCount++
+
+		// Counting: when this instance has children, the children own the
+		// pod ledger (their CurrentReplicas already covers every pod in the
+		// subtree). Counting inst.Pods on top would double-count, since
+		// inst.Pods carries the same set after the descendant-narrowing fix.
+		// Only when there are no children do we count inst.Pods directly.
+		if len(child.Children) == 0 {
+			if inst.Scale != nil && inst.Scale.Replicas != nil {
+				child.DesiredReplicas = *inst.Scale.Replicas
 			}
-			if pv.Node != "" {
-				childNodes[pv.Node] = struct{}{}
-				parentNodes[pv.Node] = struct{}{}
+			for _, p := range inst.Pods {
+				child.CurrentReplicas++
+				pv := podView(p)
+				child.GPUs += pv.GPUs
+				if pv.Ready {
+					child.ReadyCount++
+				}
+				if pv.Node != "" {
+					childNodes[pv.Node] = struct{}{}
+					parentNodes[pv.Node] = struct{}{}
+				}
+				child.Pods = append(child.Pods, pv)
 			}
-			child.Pods = append(child.Pods, pv)
+		} else {
+			for _, gc := range child.Children {
+				child.GPUs += gc.GPUs
+				child.ReadyCount += gc.ReadyCount
+				child.CurrentReplicas += gc.CurrentReplicas
+				child.DesiredReplicas += gc.DesiredReplicas
+				for _, n := range gc.Nodes {
+					if _, seen := childNodes[n]; !seen {
+						childNodes[n] = struct{}{}
+						parentNodes[n] = struct{}{}
+					}
+				}
+			}
 		}
+
 		if child.DesiredReplicas == 0 {
 			child.DesiredReplicas = child.CurrentReplicas
 		}
@@ -242,25 +280,37 @@ func formatNumber(n int64) string { return fmt.Sprintf("%d", n) }
 
 // SummarizeComponents flattens a WorkloadView's component tree to its
 // leaf components — the ones that actually carry pods — and returns one
-// ComponentSummary per leaf in declaration order. This is what the list
-// view's COMPONENTS column displays. Logical grouping components (with
-// children but no pods of their own) are skipped.
+// ComponentSummary per distinct leaf name, summing CurrentReplicas across
+// replicas that share that name (LWS group-0's leader and group-1's leader
+// roll up to a single `leader(2)` entry). Logical grouping components are
+// skipped; declaration order is preserved on first appearance.
 func SummarizeComponents(view WorkloadView) []ComponentSummary {
-	var out []ComponentSummary
+	type idx struct {
+		pos int
+	}
+	order := []string{}
+	totals := map[string]int32{}
+	var walk func(c ComponentView)
+	walk = func(c ComponentView) {
+		if len(c.Children) > 0 {
+			for _, ch := range c.Children {
+				walk(ch)
+			}
+			return
+		}
+		if _, seen := totals[c.Name]; !seen {
+			order = append(order, c.Name)
+		}
+		totals[c.Name] += c.CurrentReplicas
+	}
 	for _, c := range view.Components {
-		appendLeafSummaries(c, &out)
+		walk(c)
+	}
+	out := make([]ComponentSummary, 0, len(order))
+	for _, name := range order {
+		out = append(out, ComponentSummary{Name: name, CurrentReplicas: totals[name]})
 	}
 	return out
-}
-
-func appendLeafSummaries(c ComponentView, out *[]ComponentSummary) {
-	if len(c.Children) > 0 {
-		for _, ch := range c.Children {
-			appendLeafSummaries(ch, out)
-		}
-		return
-	}
-	*out = append(*out, ComponentSummary{Name: c.Name, CurrentReplicas: c.CurrentReplicas})
 }
 
 // TotalGPUs returns the sum of GPUs across the leaf components of a

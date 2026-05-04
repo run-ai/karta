@@ -79,6 +79,16 @@ func Build(ctx context.Context, karta *v1alpha1.Karta, workload client.Object, p
 // definition, attaching its extracted instances, claiming pods the matcher
 // associates with this component, and recursing into any child components
 // the Karta definition declares under this component.
+//
+// Three instance-shaping paths exist, evaluated in order:
+//
+//  1. ReplicaSelector — split pods into one InstanceNode per replica index
+//     and recurse children per-replica so descendants stay replica-scoped
+//     (LWS `group` does this).
+//  2. ComponentInstanceSelector — one InstanceNode per extracted instance,
+//     routing pods by the selector's idPath (Dynamo `service` does this).
+//  3. Single instance — attach every matched pod and the (shared) recursed
+//     children to one InstanceNode.
 func buildComponentNode(ctx context.Context, factory *resource.ComponentFactory, karta *v1alpha1.Karta, comp *resource.Component, def v1alpha1.ComponentDefinition, pods []corev1.Pod, matcher PodMatcher) (ComponentNode, error) {
 	node := ComponentNode{
 		Name: def.Name,
@@ -101,6 +111,26 @@ func buildComponentNode(ctx context.Context, factory *resource.ComponentFactory,
 		return ComponentNode{}, err
 	}
 
+	instances, err := extractedInstancesOrEmpty(ctx, comp)
+	if err != nil {
+		return ComponentNode{}, err
+	}
+
+	// Path 1: ReplicaSelector splits the component into per-replica subtrees.
+	// Each replica's children are rebuilt against only that replica's pods,
+	// keeping leaf attribution scoped (LWS group-0's leader doesn't see
+	// group-1's pods). When componentInstanceSelector is also present (the
+	// Dynamo case where replicaSelector is wired through grove for future
+	// use), we prefer the instance split — replica-within-instance is a
+	// follow-up.
+	if repSel := replicaSelector(def); repSel != nil && componentInstanceSelector(def) == nil {
+		node.Instances, err = buildReplicaScoped(ctx, factory, karta, def, matched, childDefs, instances, repSel, matcher)
+		if err != nil {
+			return ComponentNode{}, err
+		}
+		return node, nil
+	}
+
 	children, err := buildChildren(ctx, factory, karta, childDefs, matched, matcher)
 	if err != nil {
 		return ComponentNode{}, err
@@ -114,24 +144,13 @@ func buildComponentNode(ctx context.Context, factory *resource.ComponentFactory,
 		matched = collectDescendantPods(children)
 	}
 
-	instances, err := extractedInstancesOrEmpty(ctx, comp)
-	if err != nil {
-		return ComponentNode{}, err
-	}
-
 	if len(instances) == 0 {
-		// Components with no extracted instances (logical groupings, or
-		// components without a SpecDefinition) still get a single instance
-		// node so callers can attach matched pods and child components.
 		node.Instances = []InstanceNode{{Pods: matched, Children: children}}
 		return node, nil
 	}
 
-	// Multi-instance components (Dynamo's `service` split into Frontend /
-	// PrefillWorker / DecodeWorker via componentInstanceSelector) get one
-	// InstanceNode per extracted instance. Pods route to the right instance
-	// by evaluating the selector's idPath against the pod and matching to
-	// the instance key.
+	// Path 2: ComponentInstanceSelector — one InstanceNode per extracted
+	// instance, routed by the selector's idPath.
 	if instSel := componentInstanceSelector(def); instSel != nil && len(instances) > 1 {
 		node.Instances, err = buildMultiInstance(ctx, instances, matched, instSel)
 		if err != nil {
@@ -140,8 +159,7 @@ func buildComponentNode(ctx context.Context, factory *resource.ComponentFactory,
 		return node, nil
 	}
 
-	// Single-instance fallthrough: attach all matched pods + recursed
-	// children to the one extracted instance.
+	// Path 3: Single instance.
 	first := pickFirstInstance(instances)
 	scaleCopy := first.Scale
 	instCopy := first
@@ -153,6 +171,83 @@ func buildComponentNode(ctx context.Context, factory *resource.ComponentFactory,
 	}}
 
 	return node, nil
+}
+
+// replicaSelector returns the selector responsible for splitting pods across
+// replicas of a component, when the definition declares one.
+func replicaSelector(def v1alpha1.ComponentDefinition) *v1alpha1.ReplicaSelector {
+	if def.PodSelector == nil {
+		return nil
+	}
+	return def.PodSelector.ReplicaSelector
+}
+
+// buildReplicaScoped groups the parent's matched pods by replica key and
+// rebuilds the children subtree per replica, so descendant pod-attribution
+// stays scoped within each replica. The result is one InstanceNode per
+// replica with ReplicaKey set, its own children, and any pods that didn't
+// fall into a child.
+func buildReplicaScoped(ctx context.Context, factory *resource.ComponentFactory, karta *v1alpha1.Karta, def v1alpha1.ComponentDefinition, matched []*corev1.Pod, childDefs []v1alpha1.ComponentDefinition, instances map[string]resource.ExtractedInstance, repSel *v1alpha1.ReplicaSelector, matcher PodMatcher) ([]InstanceNode, error) {
+	podsByReplica := make(map[string][]*corev1.Pod)
+	for _, p := range matched {
+		key, found, err := resource.NewPodQuerier(p).ExtractReplicaKey(ctx, repSel)
+		if err != nil || !found {
+			// Pods missing the replica-key label belong to no replica; skip.
+			continue
+		}
+		podsByReplica[key] = append(podsByReplica[key], p)
+	}
+
+	keys := make([]string, 0, len(podsByReplica))
+	for k := range podsByReplica {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// Pick a single shared template instance (LWS group has one template
+	// regardless of replica count). When the Karta definition exposes
+	// per-replica instances by key, prefer those.
+	var sharedInst *resource.ExtractedInstance
+	if len(instances) == 1 {
+		for _, v := range instances {
+			vCopy := v
+			sharedInst = &vCopy
+			break
+		}
+	}
+
+	out := make([]InstanceNode, 0, len(keys))
+	for _, k := range keys {
+		replicaPods := podsByReplica[k]
+		children, err := buildChildren(ctx, factory, karta, childDefs, replicaPods, matcher)
+		if err != nil {
+			return nil, err
+		}
+		if len(children) > 0 && !hasComponentTypeSelector(def) {
+			replicaPods = collectDescendantPods(children)
+		}
+
+		var inst *resource.ExtractedInstance
+		var scale *resource.Scale
+		if perKey, ok := instances[k]; ok {
+			perKeyCopy := perKey
+			inst = &perKeyCopy
+			scale = perKey.Scale
+		} else if sharedInst != nil {
+			inst = sharedInst
+			scale = sharedInst.Scale
+		}
+
+		keyCopy := k
+		out = append(out, InstanceNode{
+			ReplicaKey:        &keyCopy,
+			Scale:             scale,
+			ExtractedInstance: inst,
+			Pods:              replicaPods,
+			Children:          children,
+		})
+	}
+	return out, nil
 }
 
 // componentInstanceSelector returns the selector responsible for splitting
