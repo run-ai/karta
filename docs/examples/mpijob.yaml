@@ -22,14 +22,16 @@ spec:
               - type: Created
                 status: "True"
               - type: Running
-                status: "False"          running:
+                status: "False"
+          running:
           - byConditions:
               - type: Running
                 status: "True"
               - type: Succeeded
                 status: "False"
               - type: Failed
-                status: "False"          completed:
+                status: "False"
+          completed:
           - byConditions:
               - type: Succeeded
                 status: "True"
