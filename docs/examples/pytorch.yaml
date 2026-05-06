@@ -25,10 +25,6 @@ spec:
           - byConditions:
               - type: Running
                 status: "True"
-              - type: "Succeeded"
-                status: "False"
-              - type: Failed
-                status: "False"
           completed:
           - byConditions:
               - type: Succeeded
