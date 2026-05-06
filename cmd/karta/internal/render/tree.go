@@ -17,11 +17,13 @@ const columnGap = "  "
 // Tree writes a styled ASCII workload tree to w. Pass PlainStyle() (or use
 // AutoStyle on os.Stdout) to control whether ANSI color is emitted.
 //
-// Columns within each sibling group are pre-measured and padded so that
-// component/pod rows under the same parent line up regardless of name
-// length. Padding is computed from plain-text widths and applied as
-// trailing spaces, so ANSI escape sequences inside styled segments don't
-// affect the alignment math.
+// Within each sibling group, columns are pre-measured and padded so that
+// rows under the same parent line up. Indentation uses the kubectl-tree
+// style (2-char indent + 2-char branch glyph) for tighter horizontal use.
+//
+// Padding is computed from plain-text widths and applied as trailing
+// spaces, so ANSI escape sequences inside styled segments don't affect
+// the alignment math.
 func Tree(w io.Writer, view WorkloadView, s Style) error {
 	header := fmt.Sprintf("%s/%s", view.Kind, view.Name)
 	fmt.Fprintf(w, "%s [%s]\n", s.Header(header), s.Phases(view.Phases))
@@ -46,11 +48,11 @@ type podColWidths struct {
 }
 
 func writeComponentAt(w io.Writer, c ComponentView, parentPrefix string, isLast bool, widths componentColWidths, s Style) {
-	branch := "├──"
-	childPrefix := parentPrefix + "│   "
+	branch := "├─"
+	childPrefix := parentPrefix + "│ "
 	if isLast {
-		branch = "└──"
-		childPrefix = parentPrefix + "    "
+		branch = "└─"
+		childPrefix = parentPrefix + "  "
 	}
 
 	namePlain, repPlain, readyPlain, gpuPlain := componentFields(c)
@@ -85,9 +87,9 @@ func writeComponentAt(w io.Writer, c ComponentView, parentPrefix string, isLast 
 }
 
 func writePod(w io.Writer, p PodView, parentPrefix string, isLast bool, widths podColWidths, s Style) {
-	branch := "├──"
+	branch := "├─"
 	if isLast {
-		branch = "└──"
+		branch = "└─"
 	}
 	namePlain, phasePlain, gpuPlain := podFields(p)
 	nameStyled := padTo(s.Dim("Pod/")+p.Name, len(namePlain), widths.name)
