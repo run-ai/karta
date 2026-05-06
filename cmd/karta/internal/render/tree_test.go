@@ -51,10 +51,13 @@ func TestTreeRendering(t *testing.T) {
 
 	wants := []string{
 		"PyTorchJob/demo [Running]",
-		"├── master   (1/1 replicas)   1/1 ready   gpu: 1   nodes: node-01",
-		"│   └── Pod/demo-master-0    Running   gpu: 1   node-01",
-		"└── worker   (4/4 replicas)   3/4 ready   gpu: 32   nodes: node-02,node-03,node-04",
-		"    └── Pod/demo-worker-3    Pending   gpu: 8   <none>",
+		// master/worker share name width (6); gpu column aligns to "gpu: 32" (width 7)
+		"├── master  (1/1 replicas)  1/1 ready  gpu: 1   nodes: node-01",
+		"└── worker  (4/4 replicas)  3/4 ready  gpu: 32  nodes: node-02,node-03,node-04",
+		// pods within master: single row, no padding pressure
+		"│   └── Pod/demo-master-0  Running  gpu: 1  node-01",
+		// pods within worker: all 17 chars wide, aligned
+		"    └── Pod/demo-worker-3  Pending  gpu: 8  <none>",
 	}
 	for _, w := range wants {
 		if !strings.Contains(got, w) {
