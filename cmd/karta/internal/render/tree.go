@@ -159,7 +159,7 @@ func writeComponentAt(w io.Writer, c ComponentView, parentPrefix string, isLast 
 		readyStyled,
 		strings.Repeat(" ", leadingPad)+columnGap,
 		gpuStyled, columnGap,
-		s.Dim("nodes: ")+nodeListColored(c.Nodes, s),
+		nodeListDim(c.Nodes, s),
 	)
 
 	if len(c.Children) > 0 {
@@ -187,12 +187,11 @@ func writePod(w io.Writer, p PodView, parentPrefix string, isLast bool, widths p
 	phaseStyled := padTo(s.Phase(p.Phase), len(phasePlain), widths.phase)
 	gpuStyled := padTo(gpuLabel(p.GPUs, s), len(gpuPlain), layout.maxGPU)
 
-	nodeStyled := s.Dim("nodes: ")
-	if p.Node == "" {
-		nodeStyled += s.Dim("<none>")
-	} else {
-		nodeStyled += p.Node
+	node := p.Node
+	if node == "" {
+		node = "<none>"
 	}
+	nodeStyled := s.Dim(node)
 
 	leadingPlain := visibleLen(parentPrefix) + visibleLen(branch) + 1 +
 		widths.name + visibleLen(columnGap) + widths.phase
@@ -273,16 +272,9 @@ func gpuLabel(n int64, s Style) string {
 	return s.Dim("gpu: ") + s.Bold(s.Magenta(itoa(int(n))))
 }
 
-func nodeListColored(ns []string, s Style) string {
+func nodeListDim(ns []string, s Style) string {
 	if len(ns) == 0 {
 		return s.Dim("<none>")
 	}
-	out := ""
-	for i, n := range ns {
-		if i > 0 {
-			out += s.Dim(",")
-		}
-		out += n
-	}
-	return out
+	return s.Dim(strings.Join(ns, ","))
 }
