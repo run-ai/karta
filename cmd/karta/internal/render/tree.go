@@ -187,9 +187,11 @@ func writePod(w io.Writer, p PodView, parentPrefix string, isLast bool, widths p
 	phaseStyled := padTo(s.Phase(p.Phase), len(phasePlain), widths.phase)
 	gpuStyled := padTo(gpuLabel(p.GPUs, s), len(gpuPlain), layout.maxGPU)
 
-	node := p.Node
-	if node == "" {
-		node = "<none>"
+	nodeStyled := s.Dim("nodes: ")
+	if p.Node == "" {
+		nodeStyled += s.Dim("<none>")
+	} else {
+		nodeStyled += p.Node
 	}
 
 	leadingPlain := visibleLen(parentPrefix) + visibleLen(branch) + 1 +
@@ -206,7 +208,7 @@ func writePod(w io.Writer, p PodView, parentPrefix string, isLast bool, widths p
 		phaseStyled,
 		strings.Repeat(" ", leadingPad)+columnGap,
 		gpuStyled, columnGap,
-		s.Dim(node),
+		nodeStyled,
 	)
 }
 

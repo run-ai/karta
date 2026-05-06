@@ -54,9 +54,10 @@ func TestTreeRendering(t *testing.T) {
 		// Component rows: gpu col padded to max gpu width = "gpu: 32" (7 chars)
 		"├─ master  (1/1 replicas)  1/1 ready  gpu: 1   nodes: node-01",
 		"└─ worker  (4/4 replicas)  3/4 ready  gpu: 32  nodes: node-02,node-03,node-04",
-		// Pod rows: padded so gpu lands at same X as component gpu column
-		"│ └─ Pod/demo-master-0  Running       gpu: 1   node-01",
-		"  └─ Pod/demo-worker-3  Pending       gpu: 8   <none>",
+		// Pod rows: padded so gpu lands at same X as component gpu column;
+		// nodes prefix mirrors the component-row style.
+		"│ └─ Pod/demo-master-0  Running       gpu: 1   nodes: node-01",
+		"  └─ Pod/demo-worker-3  Pending       gpu: 8   nodes: <none>",
 	}
 	for _, w := range wants {
 		if !strings.Contains(got, w) {
