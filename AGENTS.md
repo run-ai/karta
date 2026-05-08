@@ -16,6 +16,7 @@ If you are an AI coding agent (Cursor, Codex, Claude Code, Aider, Continue, Copi
 - Use Conventional Commits: `feat(scope):`, `fix(scope):`, `refactor(scope):`. Match an existing scope from `git log` when possible.
 - Reference an open GitHub issue in the PR.
 - Regenerate manifests after changing API types: `make generate && make manifests`.
+- Use `git mv` when moving files so history is preserved.
 
 **Discuss in the PR description:**
 - Adding a new third-party Go module (license, alternatives considered).
@@ -67,14 +68,68 @@ If a directory has its own `AGENTS.md`, prefer that for subtree-specific rules.
 
 Tools install into `./bin/` on first use. Versions are pinned in the Makefile.
 
+### Running a single test
+
+```bash
+go test ./pkg/resource/                          # one package
+go test ./pkg/resource/ -run TestComponentFactory # one test function
+go test ./pkg/resource/ -run TestComponentFactory -v -count=1
+```
+
+`make test` regenerates mocks first (`go generate ./pkg/...`); `go test` directly does not. If you change interfaces being mocked, run `make generate-mocks` before iterating.
+
 ## Code Style
 
-- **Go formatting**: `go fmt` and `goimports` clean. `make fmt-go` runs locally.
-- **Linter**: `golangci-lint` with `.golangci.yml`. Do not disable rules; fix the issue or discuss in the PR.
-- **Naming and structure**: match the existing package layout and controller-runtime conventions.
-- **Error handling**: wrap with `%w`. Do not log and return the same error.
-- **Comments**: write self-documenting code. Add a comment only when the *why* is non-obvious.
-- **Markdown**: short sentences, no markdown bold for emphasis, no emojis, no em-dash (U+2014), ASCII only.
+### Imports
+
+Three groups, separated by blank lines (enforced by `goimports` with `local-prefixes: github.com/run-ai/karta`):
+
+```go
+import (
+    // 1. Standard library
+    "context"
+    "fmt"
+
+    // 2. External dependencies
+    corev1 "k8s.io/api/core/v1"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+    // 3. Internal packages
+    "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+)
+```
+
+### Naming
+
+| Element | Convention | Example |
+|---------|-----------|---------|
+| Files | `snake_case.go` | `component_factory.go` |
+| Types | `PascalCase` | `ComponentAccessor` |
+| Interfaces | `-er` suffix or `Interface` | `Accessor`, `PodQuerier` |
+| Functions | `PascalCase` exported, `camelCase` unexported | `GetInstanceIDs`, `getPodSpec` |
+| Boolean predicates | `is`/`has`/`should` prefix | `isReady`, `hasOwner` |
+| Constants | `PascalCase` exported, `camelCase` unexported | `DefaultTimeout` |
+
+### Go patterns
+
+- `context.Context` is the first parameter when present.
+- Pointer receivers for methods that mutate state; value receivers otherwise.
+- Constructors return interface types when an interface is defined for the type.
+- Error wrapping with `%w`; do not log and return the same error.
+- Use `defer` for cleanup and state restoration.
+- Test files live next to the code (`*_test.go` in the same package).
+
+### Linter
+
+`golangci-lint v2` with `.golangci.yml`. Active checks (formatters and presets): `gofmt`, `goimports`, `errcheck`, `govet`, `unused`, plus the standard `comments`, `common-false-positives`, `legacy`, and `std-error-handling` presets. `errcheck` is relaxed for `*_test.go` and generated files (`zz_generated.*`) are skipped.
+
+Do not disable a rule to silence a warning; fix the underlying issue or raise it in the PR.
+
+### Comments and Markdown
+
+- Write self-documenting code. Add a comment only when the *why* is non-obvious. Do not narrate the *what*.
+- In comments, do not use first-person pronouns (`I`, `we`).
+- Markdown: short sentences, no bold for emphasis, no emojis, no em-dash (U+2014), ASCII only.
 
 ## Commits and Pull Requests
 
