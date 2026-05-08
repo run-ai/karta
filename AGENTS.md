@@ -186,6 +186,15 @@ Allowed licenses: MIT, BSD-2/3, Apache 2.0, ISC. Disallowed: GPL, LGPL, AGPL, an
 
 For feature discussion or bug reports, open a GitHub issue using the templates under `.github/ISSUE_TEMPLATE/`.
 
+## Skills
+
+Repeatable workflows are codified as agent skills under `.agents/skills/`, following the [agent-skills spec](https://agents.md). Skills are user-invocable: an agent applies them when a task matches the skill description.
+
+| Skill | What it does |
+|-------|--------------|
+| `add-workload-example` | Walks through adding a new pre-built Karta example under `docs/examples/`. |
+| `file-bug` | Files a structured GitHub bug report against `run-ai/karta` with auto-collected environment info. |
+
 ## Subtree AGENTS.md Files
 
 When a subtree (for example `pkg/jq/`, `docs/ri-studio/`, `charts/karta/`) has non-obvious local conventions, add a nested `AGENTS.md`. Keep each under 200 lines.
