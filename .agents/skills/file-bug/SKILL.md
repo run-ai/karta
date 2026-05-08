@@ -30,17 +30,27 @@ uname -s -m
 # Go version (if a developer build)
 go version 2>/dev/null
 
-# K8s server version (if connected to a cluster)
-kubectl version --output=json 2>/dev/null | jq -r '.serverVersion.gitVersion'
+# Karta git ref (if running from a checkout — works from anywhere inside the repo)
+git rev-parse --short HEAD 2>/dev/null
 
-# Karta CRD installed version
-kubectl get crd kartas.optimization.nvidia.com -o jsonpath='{.metadata.annotations.helm\.sh/chart}' 2>/dev/null
+# Cluster reachability gate — keeps the cluster-dependent checks below from hanging
+if kubectl cluster-info --request-timeout=3s >/dev/null 2>&1; then
+    # K8s server version
+    kubectl version --output=json --request-timeout=5s 2>/dev/null \
+        | jq -r '.serverVersion.gitVersion // "N/A"'
 
-# Karta Helm release (if installed via Helm)
-helm list -A -o json 2>/dev/null | jq -r '.[] | select(.chart | startswith("karta")) | "\(.chart) (\(.namespace))"'
+    # Karta CRD installed version
+    kubectl get crd kartas.optimization.nvidia.com --request-timeout=5s \
+        -o jsonpath='{.metadata.annotations.helm\.sh/chart}' 2>/dev/null \
+        || echo "N/A"
 
-# Karta git ref (if working from a checkout)
-cd ~/Karta/karta 2>/dev/null && git rev-parse --short HEAD
+    # Karta Helm release (if installed via Helm)
+    helm list -A -o json 2>/dev/null \
+        | jq -r '.[] | select(.chart | startswith("karta")) | "\(.chart) (\(.namespace))"' \
+        || echo "N/A"
+else
+    echo "Cluster not reachable; K8s / Karta CRD / Helm release fields = N/A"
+fi
 ```
 
 ### 3. Identify the affected component
@@ -58,6 +68,17 @@ Karta has several distinct surfaces. Match the error to one before drafting:
 | CLI output broken / format issue | CLI (`cmd/`) |
 
 If the symptom does not match any of these, default to "unknown" and explain in the description.
+
+After identifying the component, propose one or two likely root causes in the description's "Additional Context" section. Common patterns:
+
+| Component | Likely cause to check |
+|-----------|------------------------|
+| Status mapping | Whether the upstream controller emits the condition `type` and `status` values the example file matches against. Verify with `kubectl get <kind> <name> -o jsonpath='{.status.conditions}'`. |
+| Resource extraction | Whether `podSelector.componentTypeSelector.keyPath` matches the label the controller actually sets on pods. |
+| JQ engine | Whether the path uses operators (`//`, `|`, `select(...)`) the engine version supports; fall back to a simpler path to bisect. |
+| Chart | Whether values overrides, namespace, or RBAC differ from the chart defaults. |
+
+The goal is to give the maintainer a concrete starting hypothesis, not to diagnose the bug fully.
 
 ### 4. Draft the issue
 
