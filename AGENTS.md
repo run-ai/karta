@@ -26,8 +26,9 @@ If you are an AI coding agent (Cursor, Codex, Claude Code, Aider, Continue, Copi
 **Never do:**
 - Hand-edit `charts/karta/crds/` — these are generated. Edit `pkg/api/optimization/v1alpha1/` and run `make manifests` instead.
 - Disable a `golangci-lint` rule to silence a warning. Fix the underlying issue.
-- Include internal NVIDIA URLs (Confluence, Jira, internal wikis) or unannounced product features in commits, code, or docs.
-- Use customer or partner names without explicit written permission.
+- Include URLs to private or login-gated resources (e.g., company Confluence, Jira, or wikis) in commits, code, or docs.
+- Reference unannounced or non-public product features.
+- Reference customer or partner names without their explicit permission.
 - Push speculative commits to debug CI.
 
 ## Repo Layout
