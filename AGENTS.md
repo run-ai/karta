@@ -195,6 +195,8 @@ Repeatable workflows are codified as agent skills under `.agents/skills/`, follo
 | `add-workload-example` | Walks through adding a new pre-built Karta example under `docs/examples/`. |
 | `file-bug` | Files a structured GitHub bug report against `run-ai/karta` with auto-collected environment info. |
 
+For cross-tool discovery, `.cursor/skills/`, `.codex/skills/`, and `.claude/skills/` contain symlinks back into `.agents/skills/` so Cursor, Codex, and Claude Code all find the same content.
+
 ## Subtree AGENTS.md Files
 
 When a subtree (for example `pkg/jq/`, `docs/ri-studio/`, `charts/karta/`) has non-obvious local conventions, add a nested `AGENTS.md`. Keep each under 200 lines.
