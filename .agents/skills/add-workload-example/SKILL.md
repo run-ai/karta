@@ -40,6 +40,7 @@ Choose the closest existing example as a starting template. Common starting poin
 | A multi-replica-spec layout (head + worker groups) | `raycluster.yaml` |
 | A serving stack with multiple sub-resources | `kserve.yaml` or `nimservice.yaml` |
 | Sub-jobs / nested CRDs (job + pods) | `jobset.yaml` or `rayjob.yaml` |
+| Array of named tasks/replicas (Volcano `spec.tasks`, JobSet `replicatedJobs`) | `pytorch.yaml` shape with `select(.name == "...")` JQ filters per child component |
 
 Copy the chosen template to `docs/examples/<workload-name>.yaml`.
 
@@ -73,7 +74,7 @@ Required fields:
 - `statusDefinition.conditionsDefinition.path`: JQ path to the conditions array. Adjust if the CRD uses a non-standard layout.
 - `statusMappings`: map each Karta phase (`initializing`, `running`, `completed`, `failed`) to one or more `byConditions` rules.
 
-If the workload does not expose conditions, use `statusMappings.byJQ` with a JQ expression that returns the phase string. See `dynamo.yaml` for an example.
+If the workload exposes a phase string (e.g. `.status.state.phase`) instead of `status.conditions[]`, replace `conditionsDefinition` with `phaseDefinition` and map values via `byPhase`. See `dynamo.yaml` and `raycluster.yaml`. For more complex status logic that neither pattern handles, fall back to `statusMappings.byJQ` with a JQ expression that returns the phase string.
 
 ### 4. Define child components
 
