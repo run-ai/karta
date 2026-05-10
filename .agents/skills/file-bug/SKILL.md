@@ -40,7 +40,7 @@ if kubectl cluster-info --request-timeout=3s >/dev/null 2>&1; then
         | jq -r '.serverVersion.gitVersion // "N/A"'
 
     # Karta CRD installed version
-    kubectl get crd kartas.optimization.nvidia.com --request-timeout=5s \
+    kubectl get crd kartas.run.ai --request-timeout=5s \
         -o jsonpath='{.metadata.annotations.helm\.sh/chart}' 2>/dev/null \
         || echo "N/A"
 
@@ -59,7 +59,7 @@ Karta has several distinct surfaces. Match the error to one before drafting:
 
 | Symptom | Likely component |
 |---------|------------------|
-| Karta CR rejected at apply / validation error | CRD schema (`pkg/api/optimization/v1alpha1/`) |
+| Karta CR rejected at apply / validation error | CRD schema (`pkg/api/runai/v1alpha1/`) |
 | Wrong replica count, missing pods in tree | Resource extraction (`pkg/resource/`) |
 | Status not updating / stuck phase | Status mapping in the example file or `pkg/resource/` |
 | JQ path returns null or wrong shape | JQ engine (`pkg/jq/`) |
