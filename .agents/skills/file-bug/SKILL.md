@@ -78,7 +78,7 @@ After identifying the component, propose one or two likely root causes in the de
 |-----------|------------------------|
 | Status mapping | Whether the upstream controller emits the condition `type` and `status` values the example file matches against. Verify with `kubectl get <kind> <name> -o jsonpath='{.status.conditions}'`. |
 | Resource extraction | Whether `podSelector.componentTypeSelector.keyPath` matches the label the controller actually sets on pods. |
-| JQ engine | Whether the path uses operators (`//`, `|`, `select(...)`) the engine version supports; fall back to a simpler path to bisect. |
+| JQ engine | Whether the path uses operators (`//`, `\|`, `select(...)`) the engine version supports; fall back to a simpler path to bisect. |
 | Chart | Whether values overrides, namespace, or RBAC differ from the chart defaults. |
 
 The goal is to give the maintainer a concrete starting hypothesis, not to diagnose the bug fully.
