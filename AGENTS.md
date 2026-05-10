@@ -3,7 +3,7 @@
 
 # AGENTS.md - Guide for AI Coding Agents
 
-You are contributing to **Karta**, an Apache 2.0 open-source Kubernetes project. Stack: Go 1.26, controller-runtime, Helm. Goal: a CRD that lets controllers and platforms inspect, modify, and manage workloads of any type without per-CRD adapters.
+You are contributing to **Karta**, an Apache 2.0 open-source Kubernetes project. Stack: Go 1.25, controller-runtime, Helm. Goal: a CRD that lets controllers and platforms inspect, modify, and manage workloads of any type without per-CRD adapters.
 
 If you are an AI coding agent (Cursor, Codex, Claude Code, Aider, Continue, Copilot, etc.) opening this repo for the first time, read this file end to end before making changes. For Claude Code, the sibling `CLAUDE.md` imports this file via `@AGENTS.md`.
 
@@ -25,7 +25,7 @@ If you are an AI coding agent (Cursor, Codex, Claude Code, Aider, Continue, Copi
 - Changes to `.github/workflows/`.
 
 **Never do:**
-- Hand-edit `charts/karta/crds/` — these are generated. Edit `pkg/api/optimization/v1alpha1/` and run `make manifests` instead.
+- Hand-edit `charts/karta/crds/` — these are generated. Edit `pkg/api/runai/v1alpha1/` and run `make manifests` instead.
 - Disable a `golangci-lint` rule to silence a warning. Fix the underlying issue.
 - Include URLs to private or login-gated resources (e.g., company Confluence, Jira, or wikis) in commits, code, or docs.
 - Reference unannounced or non-public product features.
@@ -36,9 +36,8 @@ If you are an AI coding agent (Cursor, Codex, Claude Code, Aider, Continue, Copi
 
 ```
 karta/
-  cmd/                  Binaries (CLI entry points)
   pkg/                  Go library source
-    api/                CRD types (optimization.nvidia.com/v1alpha1)
+    api/runai/v1alpha1/ CRD types (group: run.ai)
     resource/           Component extraction and update logic
     instructions/       Gang scheduling and pod manipulation
     jq/                 JQ path engine for spec/status traversal
@@ -179,6 +178,7 @@ Allowed licenses: MIT, BSD-2/3, Apache 2.0, ISC. Disallowed: GPL, LGPL, AGPL, an
 
 ## Where to Ask
 
+- Contributing process: `CONTRIBUTING.md` (DCO text, PR flow).
 - Project owners: `OWNERS`, `MAINTAINERS.md`.
 - Code-area owners: `.github/CODEOWNERS`.
 - Security disclosures: `SECURITY.md`.
