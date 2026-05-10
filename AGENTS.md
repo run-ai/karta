@@ -3,7 +3,7 @@
 
 # AGENTS.md - Guide for AI Coding Agents
 
-You are contributing to **Karta**, an Apache 2.0 open-source Kubernetes project. Stack: Go 1.25, controller-runtime, Helm. Goal: a CRD that lets controllers and platforms inspect, modify, and manage workloads of any type without per-CRD adapters.
+You are contributing to Karta, an Apache 2.0 open-source Kubernetes project. Stack: Go 1.25, controller-runtime, Helm. Goal: a CRD that lets controllers and platforms inspect, modify, and manage workloads of any type without per-CRD adapters.
 
 If you are an AI coding agent (Cursor, Codex, Claude Code, Aider, Continue, Copilot, etc.) opening this repo for the first time, read this file end to end before making changes. For Claude Code, the sibling `CLAUDE.md` imports this file via `@AGENTS.md`.
 
@@ -34,7 +34,7 @@ If you are an AI coding agent (Cursor, Codex, Claude Code, Aider, Continue, Copi
 
 ## Repo Layout
 
-```
+```text
 karta/
   pkg/                  Go library source
     api/runai/v1alpha1/ CRD types (group: run.ai)
@@ -117,7 +117,7 @@ import (
 
 Conventional Commits v1.0.0:
 
-```
+```text
 <type>(<scope>): <short description>
 
 [optional body]

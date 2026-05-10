@@ -9,6 +9,9 @@ description: >-
 user-invocable: true
 ---
 
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Copyright (c) 2026 NVIDIA Corporation -->
+
 # Add a Karta Workload Example
 
 Use this skill when a contributor wants to publish a Karta definition for a workload type that does not yet have one under `docs/examples/`. The output is a new YAML file that maps the workload's structure (root + child components, replica paths, status mappings, pod selectors) into the Karta CRD.

@@ -9,6 +9,9 @@ description: >-
 user-invocable: true
 ---
 
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Copyright (c) 2026 NVIDIA Corporation -->
+
 # File a Karta Bug Report
 
 Use the current conversation context to file a structured bug report against `run-ai/karta` via the `gh` CLI.
@@ -84,7 +87,7 @@ The goal is to give the maintainer a concrete starting hypothesis, not to diagno
 
 Present this template to the user for review before filing:
 
-```
+```markdown
 **Describe the Bug**
 <clear, concise description in one paragraph>
 
