@@ -156,6 +156,6 @@ Mark the PR as draft if validation against a real cluster has not yet been done.
 ## Reference
 
 - Existing examples: `docs/examples/`
-- Karta CRD schema: `pkg/api/optimization/v1alpha1/`
+- Karta CRD schema: `pkg/api/runai/v1alpha1/`
 - JQ path engine: `pkg/jq/`
 - Technical Guide: `docs/Technical Guide.md`
