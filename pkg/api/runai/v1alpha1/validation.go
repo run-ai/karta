@@ -44,6 +44,10 @@ func (v *KartaValidator) Validate() error {
 		errs = append(errs, instructionErrs...)
 	}
 
+	if suspendErrs := v.validateSuspendDefinitions(); suspendErrs != nil {
+		errs = append(errs, suspendErrs...)
+	}
+
 	if jqErrs := jq.ValidateJQExpressions(v.karta); jqErrs != nil {
 		errs = append(errs, jqErrs...)
 	}
@@ -221,7 +225,6 @@ func (v *KartaValidator) checkPathToRoot(component ComponentDefinition, validate
 func (v *KartaValidator) validateInstructions() []error {
 	return v.validateGangScheduling()
 }
-
 func (v *KartaValidator) validateGangScheduling() []error {
 	if v.karta.Spec.Instructions.GangScheduling == nil {
 		return nil
@@ -236,5 +239,35 @@ func (v *KartaValidator) validateGangScheduling() []error {
 			}
 		}
 	}
+	return errs
+}
+
+// validateSuspendDefinitions validates the JQ action expressions in every component's
+// SuspendDefinition using ValidateActionExpression, which permits mutation operators
+// but rejects dangerous recursive/unbounded operations.
+func (v *KartaValidator) validateSuspendDefinitions() []error {
+	var errs []error
+
+	allComponents := append(v.karta.Spec.StructureDefinition.ChildComponents, v.karta.Spec.StructureDefinition.RootComponent)
+	for _, component := range allComponents {
+		if component.SuspendDefinition == nil {
+			continue
+		}
+
+		sd := component.SuspendDefinition
+
+		for i, expr := range sd.SuspendActions {
+			if err := jq.ValidateActionExpression(expr); err != nil {
+				errs = append(errs, fmt.Errorf("component '%s' suspendDefinition.suspendActions[%d]: %w", component.Name, i, err))
+			}
+		}
+
+		for i, expr := range sd.ResumeActions {
+			if err := jq.ValidateActionExpression(expr); err != nil {
+				errs = append(errs, fmt.Errorf("component '%s' suspendDefinition.resumeActions[%d]: %w", component.Name, i, err))
+			}
+		}
+	}
+
 	return errs
 }

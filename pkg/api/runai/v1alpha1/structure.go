@@ -43,6 +43,12 @@ type ComponentDefinition struct {
 	// +kubebuilder:validation:Optional
 	StatusDefinition *StatusDefinition `json:"statusDefinition,omitempty"`
 
+	// SuspendDefinition defines the JQ expressions used to suspend and resume this component.
+	// Only set on components whose underlying framework has a native, first-class suspend primitive
+	// (e.g. spec.suspend for batch/v1 Job or Kubeflow training jobs).
+	// +kubebuilder:validation:Optional
+	SuspendDefinition *SuspendDefinition `json:"suspendDefinition,omitempty"`
+
 	// InstanceIdPath is the JQ path to the instance id, for components that hold multiple pod definitions (in array or map)
 	// +kubebuilder:validation:Optional
 	InstanceIdPath *string `json:"instanceIdPath,omitempty" jq:"validate"`
@@ -50,6 +56,25 @@ type ComponentDefinition struct {
 	// PodSelector defines how to identify pods belonging to this component
 	// +kubebuilder:validation:Optional
 	PodSelector *PodSelector `json:"podSelector,omitempty"`
+}
+
+// SuspendDefinition defines the JQ mutation expressions applied to a manifest when
+// suspending or resuming a workload. Expressions must use mutation-safe JQ (assignment
+// operators are allowed; dangerous recursive operations are not).
+type SuspendDefinition struct {
+	// SuspendActions is an ordered array of JQ expressions applied to the manifest on suspend.
+	// Each expression receives the output of the previous one, allowing multi-field patches.
+	// Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
+	// +kubebuilder:validation:Required
+	// +listType=atomic
+	SuspendActions []string `json:"suspendActions"`
+
+	// ResumeActions is an ordered array of JQ expressions applied to the manifest on resume.
+	// Each expression receives the output of the previous one, allowing multi-field patches.
+	// Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
+	// +kubebuilder:validation:Required
+	// +listType=atomic
+	ResumeActions []string `json:"resumeActions"`
 }
 
 // SpecDefinition defines how to extract pod specifications from a component.
@@ -196,7 +221,7 @@ type ReplicaSelector struct {
 }
 
 // ResourceStatus represents the high-level status of a component.
-// +kubebuilder:validation:Enum=Initializing;Running;Completed;Failed;Degraded;Undefined
+// +kubebuilder:validation:Enum=Initializing;Running;Completed;Failed;Degraded;Undefined;Suspended;Suspending;Resuming
 type ResourceStatus string
 
 const (
@@ -217,6 +242,15 @@ const (
 
 	// UndefinedStatus is used when status was not defined or cannot be determined
 	UndefinedStatus ResourceStatus = "Undefined"
+
+	// SuspendedStatus indicates the component is fully suspended
+	SuspendedStatus ResourceStatus = "Suspended"
+
+	// SuspendingStatus indicates the component is in the process of being suspended (draining pods)
+	SuspendingStatus ResourceStatus = "Suspending"
+
+	// ResumingStatus indicates a resume has been issued but the component has not yet left the suspended state
+	ResumingStatus ResourceStatus = "Resuming"
 )
 
 // StatusDefinition defines how to interpret the status of a component.
@@ -301,6 +335,27 @@ type StatusMappings struct {
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	Degraded []StatusMatcher `json:"degraded,omitempty"`
+
+	// Suspended defines matchers for the Suspended status (workload fully stopped by suspend).
+	// A resource matches when the framework emits a Suspended condition with status True.
+	// Multiple matchers are OR'd together.
+	// +kubebuilder:validation:Optional
+	// +listType=atomic
+	Suspended []StatusMatcher `json:"suspended,omitempty"`
+
+	// Suspending defines matchers for the Suspending status (pods draining after suspend request).
+	// A resource matches when spec.suspend==true but pods are still running.
+	// Multiple matchers are OR'd together.
+	// +kubebuilder:validation:Optional
+	// +listType=atomic
+	Suspending []StatusMatcher `json:"suspending,omitempty"`
+
+	// Resuming defines matchers for the Resuming status (resume issued but pods not yet recovered).
+	// A resource matches when spec.suspend==false but the Suspended condition is still True.
+	// Multiple matchers are OR'd together.
+	// +kubebuilder:validation:Optional
+	// +listType=atomic
+	Resuming []StatusMatcher `json:"resuming,omitempty"`
 }
 
 // StatusMatchEntry pairs a ResourceStatus with its matchers.
@@ -309,10 +364,14 @@ type StatusMatchEntry struct {
 	Matchers []StatusMatcher
 }
 
-// Entries returns all status-to-matchers pairs defined in the mappings.
+// Entries returns all status-to-matchers pairs defined in the mappings in priority order
+// (first match wins). Suspend-related statuses take precedence over operational statuses.
 // When adding a new ResourceStatus, add a corresponding entry here.
 func (m StatusMappings) Entries() []StatusMatchEntry {
 	return []StatusMatchEntry{
+		{ResumingStatus, m.Resuming},
+		{SuspendingStatus, m.Suspending},
+		{SuspendedStatus, m.Suspended},
 		{RunningStatus, m.Running},
 		{FailedStatus, m.Failed},
 		{CompletedStatus, m.Completed},

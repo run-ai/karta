@@ -422,3 +422,57 @@ var _ = Describe("JQ Validation", func() {
 func stringPtr(s string) *string {
 	return &s
 }
+
+var _ = Describe("ValidateActionExpression", func() {
+	Context("valid mutation expressions", func() {
+		DescribeTable("should accept assignment and update operators",
+			func(expr string) {
+				err := ValidateActionExpression(expr)
+				Expect(err).NotTo(HaveOccurred())
+			},
+			Entry("simple assignment", ".spec.suspend = true"),
+			Entry("update-add operator", ".spec.replicas += 1"),
+			Entry("update-sub operator", ".spec.replicas -= 1"),
+			Entry("update-mul operator", ".spec.replicas *= 2"),
+			Entry("update-div operator", ".spec.replicas /= 2"),
+			Entry("update-mod operator", ".spec.replicas %= 3"),
+			Entry("update-alt operator", ".spec.field //= null"),
+			Entry("modify operator", ".spec.suspend |= not"),
+			Entry("piped assignment", ".spec | .suspend = true"),
+			Entry("nested field assignment", ".spec.runPolicy.suspend = true"),
+		)
+
+		It("should accept empty expression", func() {
+			err := ValidateActionExpression("")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should accept a simple read-only path expression", func() {
+			err := ValidateActionExpression(".spec.suspend")
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("invalid expressions — dangerous built-ins still rejected", func() {
+		DescribeTable("should reject dangerous recursive/unbounded operations",
+			func(expr, expectedSubstring string) {
+				err := ValidateActionExpression(expr)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
+			},
+			Entry("del function", "del(.spec.suspend)", "del function is not allowed"),
+			Entry("recurse function", "recurse(.children[])", "function 'recurse'"),
+			Entry("walk function", "walk(if type == \"object\" then . else empty end)", "function 'walk'"),
+			Entry("paths function", "paths", "function 'paths'"),
+			Entry("range function", "range(1000000)", "function 'range'"),
+			Entry("repeat function", "repeat(.)", "function 'repeat'"),
+			Entry("recursive descent operator", ".. | .name", "recursive descent operator"),
+		)
+
+		It("should reject malformed JQ syntax", func() {
+			err := ValidateActionExpression(".spec.suspend = [")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed to parse JQ expression"))
+		})
+	})
+})

@@ -847,6 +847,66 @@ var _ = Describe("Accessor", func() {
 				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.DegradedStatus))
 			})
 
+			It("should match Suspended status", func() {
+				reactorKarta := types.ReactorKarta()
+				reactorKarta.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Suspended: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "suspended",
+						},
+					},
+				}
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "suspended"
+				accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.SuspendedStatus))
+			})
+
+			It("should match Suspending status", func() {
+				reactorKarta := types.ReactorKarta()
+				reactorKarta.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Suspending: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "suspending",
+						},
+					},
+				}
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "suspending"
+				accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.SuspendingStatus))
+			})
+
+			It("should match Resuming status", func() {
+				reactorKarta := types.ReactorKarta()
+				reactorKarta.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Resuming: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "resuming",
+						},
+					},
+				}
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "resuming"
+				accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.ResumingStatus))
+			})
+
 			It("should return UndefinedStatus when phase does not match", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "unknown"

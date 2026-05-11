@@ -212,3 +212,62 @@ func buildFieldPath(basePath, fieldName string) string {
 	}
 	return fmt.Sprintf("%s.%s", basePath, fieldName)
 }
+
+// ValidateActionExpression validates a mutation-safe JQ expression intended for manifest
+// patching (e.g. suspendActions/resumeActions in a SuspendDefinition). Unlike ValidateParsedJQ,
+// assignment operators (=, |=, +=, etc.) are permitted because they are the purpose of the
+// expression. Dangerous recursive/unbounded operations are still rejected.
+func ValidateActionExpression(expr string) error {
+	if expr == "" {
+		return nil
+	}
+
+	parsed, err := gojq.Parse(expr)
+	if err != nil {
+		return fmt.Errorf("failed to parse JQ expression '%s': %w", expr, err)
+	}
+
+	return validateActionParsedJQ(parsed)
+}
+
+// validateActionParsedJQ recursively checks that a parsed JQ query is safe for manifest
+// mutation: assignment operators are allowed; dangerous recursive/unbounded built-ins are not.
+func validateActionParsedJQ(q *gojq.Query) error {
+	if q == nil {
+		return nil
+	}
+
+	if q.Term != nil {
+		if q.Term.Func != nil {
+			f := q.Term.Func
+
+			switch f.Name {
+			case "del":
+				return errors.New("del function is not allowed")
+			case "range", "paths", "recurse", "walk", "repeat":
+				return fmt.Errorf("function '%s' may produce excessive output and is not allowed", f.Name)
+			}
+
+			for _, arg := range f.Args {
+				if err := validateActionParsedJQ(arg); err != nil {
+					return err
+				}
+			}
+		}
+
+		if q.Term.Type == gojq.TermTypeRecurse {
+			return errors.New("recursive descent operator '..' is not allowed")
+		}
+	}
+
+	if q.Op > 0 {
+		if err := validateActionParsedJQ(q.Left); err != nil {
+			return err
+		}
+		if err := validateActionParsedJQ(q.Right); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
