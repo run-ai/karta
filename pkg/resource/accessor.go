@@ -335,7 +335,7 @@ func (a *Accessor) ApplySuspendActions(ctx context.Context, definition v1alpha1.
 	}
 	for i, action := range definition.SuspendDefinition.SuspendActions {
 		var value any
-		if err := json.Unmarshal(action.Value.Raw, &value); err != nil {
+		if err := json.Unmarshal([]byte(action.Value), &value); err != nil {
 			return fmt.Errorf("suspendActions[%d]: failed to decode value: %w", i, err)
 		}
 		if err := a.jqRunner.Assign(ctx, action.Path, value); err != nil {
@@ -354,7 +354,7 @@ func (a *Accessor) ApplyResumeActions(ctx context.Context, definition v1alpha1.C
 	}
 	for i, action := range definition.SuspendDefinition.ResumeActions {
 		var value any
-		if err := json.Unmarshal(action.Value.Raw, &value); err != nil {
+		if err := json.Unmarshal([]byte(action.Value), &value); err != nil {
 			return fmt.Errorf("resumeActions[%d]: failed to decode value: %w", i, err)
 		}
 		if err := a.jqRunner.Assign(ctx, action.Path, value); err != nil {

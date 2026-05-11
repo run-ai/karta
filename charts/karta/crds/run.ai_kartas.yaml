@@ -898,9 +898,10 @@ spec:
                                       Only read/navigation expressions are permitted; assignment operators are not.
                                     type: string
                                   value:
-                                    description: Value is the raw JSON value to assign
-                                      at the path (e.g. true, 0, "paused", null).
-                                    x-kubernetes-preserve-unknown-fields: true
+                                    description: Value is the JSON-encoded value to
+                                      assign at the path (e.g. "true", "0", `"paused"`,
+                                      "null").
+                                    type: string
                                 required:
                                 - path
                                 - value
@@ -922,9 +923,10 @@ spec:
                                       Only read/navigation expressions are permitted; assignment operators are not.
                                     type: string
                                   value:
-                                    description: Value is the raw JSON value to assign
-                                      at the path (e.g. true, 0, "paused", null).
-                                    x-kubernetes-preserve-unknown-fields: true
+                                    description: Value is the JSON-encoded value to
+                                      assign at the path (e.g. "true", "0", `"paused"`,
+                                      "null").
+                                    type: string
                                 required:
                                 - path
                                 - value
@@ -1671,9 +1673,10 @@ spec:
                                     Only read/navigation expressions are permitted; assignment operators are not.
                                   type: string
                                 value:
-                                  description: Value is the raw JSON value to assign
-                                    at the path (e.g. true, 0, "paused", null).
-                                  x-kubernetes-preserve-unknown-fields: true
+                                  description: Value is the JSON-encoded value to
+                                    assign at the path (e.g. "true", "0", `"paused"`,
+                                    "null").
+                                  type: string
                               required:
                               - path
                               - value
@@ -1695,9 +1698,10 @@ spec:
                                     Only read/navigation expressions are permitted; assignment operators are not.
                                   type: string
                                 value:
-                                  description: Value is the raw JSON value to assign
-                                    at the path (e.g. true, 0, "paused", null).
-                                  x-kubernetes-preserve-unknown-fields: true
+                                  description: Value is the JSON-encoded value to
+                                    assign at the path (e.g. "true", "0", `"paused"`,
+                                    "null").
+                                  type: string
                               required:
                               - path
                               - value
