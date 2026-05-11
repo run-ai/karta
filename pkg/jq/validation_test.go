@@ -6,6 +6,7 @@ package jq
 import (
 	"strings"
 
+	"github.com/itchyny/gojq"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -428,6 +429,90 @@ var _ = Describe("JQ Validation", func() {
 func stringPtr(s string) *string {
 	return &s
 }
+
+var _ = Describe("ValidateParsedJQ", func() {
+	parseOrFail := func(expr string) *gojq.Query {
+		q, err := gojq.Parse(expr)
+		Expect(err).NotTo(HaveOccurred())
+		return q
+	}
+
+	Describe("allowMutation=false (read-only mode)", func() {
+		It("should accept a plain path expression", func() {
+			Expect(ValidateParsedJQ(parseOrFail(".spec.replicas"), false)).To(Succeed())
+		})
+
+		It("should reject mutation operators", func() {
+			err := ValidateParsedJQ(parseOrFail(".spec.suspend = true"), false)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("modifying operator"))
+		})
+
+		It("should reject del", func() {
+			err := ValidateParsedJQ(parseOrFail("del(.spec)"), false)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("del function is not allowed"))
+		})
+
+		It("should reject recursive descent", func() {
+			err := ValidateParsedJQ(parseOrFail(".. | .name"), false)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("'..' is not allowed"))
+		})
+
+		It("should return nil for a nil query", func() {
+			Expect(ValidateParsedJQ(nil, false)).To(Succeed())
+		})
+	})
+
+	Describe("allowMutation=true (action mode)", func() {
+		It("should accept assignment operators", func() {
+			Expect(ValidateParsedJQ(parseOrFail(".spec.suspend = true"), true)).To(Succeed())
+		})
+
+		It("should accept update-modify operators", func() {
+			Expect(ValidateParsedJQ(parseOrFail(".spec.replicas |= . + 1"), true)).To(Succeed())
+		})
+
+		It("should still reject del", func() {
+			err := ValidateParsedJQ(parseOrFail("del(.spec)"), true)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("del function is not allowed"))
+		})
+
+		It("should still reject range", func() {
+			err := ValidateParsedJQ(parseOrFail("range(5)"), true)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("function 'range'"))
+		})
+
+		It("should still reject recursive descent", func() {
+			err := ValidateParsedJQ(parseOrFail(".. | .name"), true)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("'..' is not allowed"))
+		})
+	})
+
+	Describe("user-defined functions (FuncDefs) cannot hide blacklisted operations", func() {
+		DescribeTable("should reject expressions where a def body contains a blacklisted operation",
+			func(expr, expectedSubstring string) {
+				err := ValidateParsedJQ(parseOrFail(expr), true)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
+			},
+			Entry("del hidden in a named function", "def evil: del(.x); evil", "del function is not allowed"),
+			Entry("recurse hidden in a named function", "def evil: recurse; evil", "function 'recurse'"),
+			Entry("recursive descent hidden in a named function", "def evil: ..; evil | .name", "'..' is not allowed"),
+			Entry("range hidden in a named function", "def evil: range(1000000); evil", "function 'range'"),
+			Entry("del in nested inner function", "def outer: def inner: del(.x); inner; outer", "del function is not allowed"),
+			Entry("del passed as argument via higher-order function", "def apply(f): f; apply(del(.x))", "del function is not allowed"),
+		)
+
+		It("should accept a safe user-defined function", func() {
+			Expect(ValidateParsedJQ(parseOrFail("def double: . * 2; .spec.replicas | double"), true)).To(Succeed())
+		})
+	})
+})
 
 var _ = Describe("ValidateActionExpression", func() {
 	Context("valid mutation expressions", func() {

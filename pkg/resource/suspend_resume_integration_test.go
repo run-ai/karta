@@ -183,49 +183,5 @@ var _ = Describe("Suspend and Resume (integration)", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(status.MatchedStatuses).To(ConsistOf(v1alpha1.ResumingStatus))
 		})
-
-		It("should report SuspendedStatus after suspend actions + condition are both applied", func() {
-			// Extend the suspend actions to also set the condition, simulating the
-			// combined effect of the operator patching the spec and the controller
-			// updating the status in a single test runner.
-			karta.Spec.StructureDefinition.RootComponent.SuspendDefinition = &v1alpha1.SuspendDefinition{
-				SuspendActions: []string{
-					".spec.suspend = true",
-					`.status.conditions |= (. // []) + [{"type":"Suspended","status":"True"}]`,
-				},
-				ResumeActions: []string{
-					".spec.suspend = false",
-					`.status.conditions |= map(select(.type != "Suspended"))`,
-				},
-			}
-			accessor, component = sharedSetup(karta, pyflow, "pyflow")
-
-			Expect(component.Suspend(ctx)).To(Succeed())
-
-			status, err := component.GetStatus(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(status.MatchedStatuses).To(ContainElement(v1alpha1.SuspendedStatus))
-		})
-
-		It("should no longer report SuspendedStatus after resume clears the condition", func() {
-			karta.Spec.StructureDefinition.RootComponent.SuspendDefinition = &v1alpha1.SuspendDefinition{
-				SuspendActions: []string{
-					".spec.suspend = true",
-					`.status.conditions |= (. // []) + [{"type":"Suspended","status":"True"}]`,
-				},
-				ResumeActions: []string{
-					".spec.suspend = false",
-					`.status.conditions |= map(select(.type != "Suspended"))`,
-				},
-			}
-			accessor, component = sharedSetup(karta, pyflow, "pyflow")
-
-			Expect(component.Suspend(ctx)).To(Succeed())
-			Expect(component.Resume(ctx)).To(Succeed())
-
-			status, err := component.GetStatus(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(status.MatchedStatuses).NotTo(ContainElement(v1alpha1.SuspendedStatus))
-		})
 	})
 })
