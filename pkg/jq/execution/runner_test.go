@@ -680,5 +680,4 @@ var _ = Describe("Runner", func() {
 			Expect(err.Error()).To(ContainSubstring("array length mismatch"))
 		})
 	})
-
 })

@@ -108,7 +108,7 @@ func (r *runner) assignWithExpression(ctx context.Context, updateExpression stri
 
 	query, err := r.compile(updateExpression, variables)
 	if err != nil {
-		return err
+		return &JQCompileError{Expression: updateExpression, Err: err}
 	}
 
 	results, err := r.safeRunWithVariables(ctx, query, objectData, updateExpression, convertedValues)

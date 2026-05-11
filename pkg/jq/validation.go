@@ -11,7 +11,7 @@ import (
 	"github.com/itchyny/gojq"
 )
 
-// ValidateJQExpressions recursively validates all the fields of the object tagged with 'jq:"validate"'.
+// ValidateJQExpressions recursively validates all the fields of the object tagged with 'jq:"validate"'
 func ValidateJQExpressions(object any) []error {
 	var errs []error
 	validateJQExpressionsRecursive(reflect.ValueOf(object), "", &errs)
@@ -130,6 +130,7 @@ func validateStringField(field reflect.Value, fieldPath string) error {
 		field = field.Elem()
 	}
 
+	// Ensure field is a string
 	if field.Kind() != reflect.String {
 		return fmt.Errorf("%s: jq:'validate' tag can only be used on string or *string fields", fieldPath)
 	}
