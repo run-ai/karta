@@ -49,10 +49,6 @@ spec:
           - byConditions:
               - type: Suspending
                 status: "True"
-          resuming:
-          - byConditions:
-              - type: Resuming
-                status: "True"
     childComponents:
       - name: master
         kind:
