@@ -59,13 +59,9 @@ func validateJQExpressionsInStruct(val reflect.Value, basePath string, errs *[]e
 		// Build field path for error reporting
 		currentPath := buildFieldPath(basePath, fieldType.Name)
 
-		// jq:"validate" — read-only expressions (no mutation operators)
-		if jqTag, ok := fieldType.Tag.Lookup("jq"); ok {
-			if jqTag == "validate" {
-				handleTaggedStructField(field, currentPath, errs)
-			} else {
-				validateJQExpressionsRecursive(field, currentPath, errs)
-			}
+		// Check if field has jq:"validate" tag and handle string, *string, []string, and map[K]string fields
+		if jqTag, ok := fieldType.Tag.Lookup("jq"); ok && jqTag == "validate" {
+			handleTaggedStructField(field, currentPath, errs)
 		} else {
 			// Recursively validate nested structures
 			validateJQExpressionsRecursive(field, currentPath, errs)
@@ -73,7 +69,6 @@ func validateJQExpressionsInStruct(val reflect.Value, basePath string, errs *[]e
 	}
 }
 
-// handleTaggedStructField validates a jq:"validate"-tagged field (read-only, no mutation operators).
 func handleTaggedStructField(field reflect.Value, currentPath string, errs *[]error) {
 	switch {
 	case isStringField(field):
@@ -97,7 +92,7 @@ func handleTaggedStructField(field reflect.Value, currentPath string, errs *[]er
 			}
 		}
 	default:
-		*errs = append(*errs, fmt.Errorf("%s: jq:%q tag can only be used on string, *string, []string, and map[K]string fields", currentPath, "validate"))
+		*errs = append(*errs, fmt.Errorf("%s: jq:'validate' tag can only be used on string, *string, []string, and map[K]string fields", currentPath))
 	}
 }
 
@@ -128,9 +123,10 @@ func validateJQExpressionsInMap(val reflect.Value, basePath string, errs *[]erro
 }
 
 func validateStringField(field reflect.Value, fieldPath string) error {
+	// Handle pointer to string (*string)
 	if field.Kind() == reflect.Ptr {
 		if field.IsNil() {
-			return nil
+			return nil // Optional field, skip validation
 		}
 		field = field.Elem()
 	}
@@ -141,7 +137,7 @@ func validateStringField(field reflect.Value, fieldPath string) error {
 
 	jqExpression := field.String()
 	if jqExpression == "" {
-		return nil
+		return nil // Empty jqExpression, skip validation
 	}
 
 	parsed, err := gojq.Parse(jqExpression)
@@ -149,7 +145,8 @@ func validateStringField(field reflect.Value, fieldPath string) error {
 		return fmt.Errorf("failed to parse JQ expression '%s' at '%s': %w", jqExpression, fieldPath, err)
 	}
 
-	if err := ValidateParsedJQ(parsed); err != nil {
+	err = ValidateParsedJQ(parsed)
+	if err != nil {
 		return fmt.Errorf("JQ expression '%s' at '%s' failed validation: %w", jqExpression, fieldPath, err)
 	}
 
@@ -181,10 +178,10 @@ func ValidateParsedJQ(q *gojq.Query) error {
 	}
 
 	if q.Term != nil {
-		// Function call: check blacklist then recurse into args.
 		if q.Term.Func != nil {
 			f := q.Term.Func
 
+			// Reject mutating and recursion-related functions
 			switch f.Name {
 			case "del":
 				return errors.New("del function is not allowed")
@@ -199,13 +196,13 @@ func ValidateParsedJQ(q *gojq.Query) error {
 			}
 		}
 
-		// Recursive descent operator (..)
 		if q.Term.Type == gojq.TermTypeRecurse {
 			return errors.New("recursive descent operator '..' is not allowed")
 		}
 
 		// Parenthesized expression: (expr)
-		if err := ValidateParsedJQ(q.Term.Query); err != nil {
+		err := ValidateParsedJQ(q.Term.Query)
+		if err != nil {
 			return err
 		}
 
@@ -320,23 +317,23 @@ func ValidateParsedJQ(q *gojq.Query) error {
 		}
 	}
 
-	// Binary operator: left op right — reject all assignment operators
+	// If the query has an operator, validate it and its operands
 	if q.Op > 0 {
 		switch q.Op {
 		case gojq.OpAssign, gojq.OpModify, gojq.OpUpdateAdd, gojq.OpUpdateSub, gojq.OpUpdateMul, gojq.OpUpdateDiv, gojq.OpUpdateMod, gojq.OpUpdateAlt:
 			return fmt.Errorf("modifying operator '%s' is not allowed", q.Op)
 		}
 
-		if err := ValidateParsedJQ(q.Left); err != nil {
+		err := ValidateParsedJQ(q.Left)
+		if err != nil {
 			return err
 		}
-		if err := ValidateParsedJQ(q.Right); err != nil {
+		err = ValidateParsedJQ(q.Right)
+		if err != nil {
 			return err
 		}
+
 	}
 
 	return nil
 }
-
-
-

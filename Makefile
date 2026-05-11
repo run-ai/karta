@@ -111,11 +111,11 @@ $(GO_LICENSES): $(LOCALBIN)
 .PHONY: generate-licenses
 generate-licenses: go-licenses download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
 	echo "Updating NOTICE and THIRD_PARTY_LICENSES"
-	set -e; \
+	`@set` -e; \
 	tmp_notice=$$(mktemp); \
 	tmp_third=$$(mktemp); \
-	GOROOT=$(GOROOT) GOFLAGS=-mod=mod $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/notice.tpl > $$tmp_notice; \
-	GOROOT=$(GOROOT) GOFLAGS=-mod=mod $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/third_party_licenses.tpl > $$tmp_third; \
+	GOROOT=$(GOROOT) $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/notice.tpl > $$tmp_notice; \
+	GOROOT=$(GOROOT) $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/third_party_licenses.tpl > $$tmp_third; \
 	mv $$tmp_notice NOTICE; \
 	mv $$tmp_third THIRD_PARTY_LICENSES
 

@@ -221,6 +221,7 @@ func (v *KartaValidator) checkPathToRoot(component ComponentDefinition, validate
 func (v *KartaValidator) validateInstructions() []error {
 	return v.validateGangScheduling()
 }
+
 func (v *KartaValidator) validateGangScheduling() []error {
 	if v.karta.Spec.Instructions.GangScheduling == nil {
 		return nil
