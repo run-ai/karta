@@ -894,6 +894,7 @@ spec:
                                 Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
                               items:
                                 type: string
+                              minItems: 1
                               type: array
                               x-kubernetes-list-type: atomic
                             suspendActions:
@@ -903,6 +904,7 @@ spec:
                                 Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
                               items:
                                 type: string
+                              minItems: 1
                               type: array
                               x-kubernetes-list-type: atomic
                           required:
@@ -1640,6 +1642,7 @@ spec:
                               Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
                             items:
                               type: string
+                            minItems: 1
                             type: array
                             x-kubernetes-list-type: atomic
                           suspendActions:
@@ -1649,6 +1652,7 @@ spec:
                               Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
                             items:
                               type: string
+                            minItems: 1
                             type: array
                             x-kubernetes-list-type: atomic
                         required:
