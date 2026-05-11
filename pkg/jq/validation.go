@@ -59,15 +59,11 @@ func validateJQExpressionsInStruct(val reflect.Value, basePath string, errs *[]e
 		// Build field path for error reporting
 		currentPath := buildFieldPath(basePath, fieldType.Name)
 
-		// jq:"validate"       — read-only expressions (no mutation operators)
-		// jq:"validateAction" — mutation expressions (assignment operators allowed)
+		// jq:"validate" — read-only expressions (no mutation operators)
 		if jqTag, ok := fieldType.Tag.Lookup("jq"); ok {
-			switch jqTag {
-			case "validate":
-				handleTaggedStructField(field, currentPath, false, errs)
-			case "validateAction":
-				handleTaggedStructField(field, currentPath, true, errs)
-			default:
+			if jqTag == "validate" {
+				handleTaggedStructField(field, currentPath, errs)
+			} else {
 				validateJQExpressionsRecursive(field, currentPath, errs)
 			}
 		} else {
@@ -77,23 +73,18 @@ func validateJQExpressionsInStruct(val reflect.Value, basePath string, errs *[]e
 	}
 }
 
-// handleTaggedStructField validates a jq-tagged field.
-// allowMutation controls whether mutation operators (=, |=, +=, …) are permitted.
-func handleTaggedStructField(field reflect.Value, currentPath string, allowMutation bool, errs *[]error) {
-	tagName := "validate"
-	if allowMutation {
-		tagName = "validateAction"
-	}
+// handleTaggedStructField validates a jq:"validate"-tagged field (read-only, no mutation operators).
+func handleTaggedStructField(field reflect.Value, currentPath string, errs *[]error) {
 	switch {
 	case isStringField(field):
-		if err := validateStringField(field, currentPath, allowMutation); err != nil {
+		if err := validateStringField(field, currentPath); err != nil {
 			*errs = append(*errs, err)
 		}
 	case isStringSliceField(field):
 		for j := 0; j < field.Len(); j++ {
 			elem := field.Index(j)
 			elemPath := fmt.Sprintf("%s[%d]", currentPath, j)
-			if err := validateStringField(elem, elemPath, allowMutation); err != nil {
+			if err := validateStringField(elem, elemPath); err != nil {
 				*errs = append(*errs, err)
 			}
 		}
@@ -101,12 +92,12 @@ func handleTaggedStructField(field reflect.Value, currentPath string, allowMutat
 		for _, key := range field.MapKeys() {
 			value := field.MapIndex(key)
 			valuePath := fmt.Sprintf("%s[%v]", currentPath, key.Interface())
-			if err := validateStringField(value, valuePath, allowMutation); err != nil {
+			if err := validateStringField(value, valuePath); err != nil {
 				*errs = append(*errs, err)
 			}
 		}
 	default:
-		*errs = append(*errs, fmt.Errorf("%s: jq:%q tag can only be used on string, *string, []string, and map[K]string fields", currentPath, tagName))
+		*errs = append(*errs, fmt.Errorf("%s: jq:%q tag can only be used on string, *string, []string, and map[K]string fields", currentPath, "validate"))
 	}
 }
 
@@ -136,23 +127,21 @@ func validateJQExpressionsInMap(val reflect.Value, basePath string, errs *[]erro
 	}
 }
 
-func validateStringField(field reflect.Value, fieldPath string, allowMutation bool) error {
-	// Handle pointer to string (*string)
+func validateStringField(field reflect.Value, fieldPath string) error {
 	if field.Kind() == reflect.Ptr {
 		if field.IsNil() {
-			return nil // Optional field, skip validation
+			return nil
 		}
 		field = field.Elem()
 	}
 
-	// Ensure field is a string
 	if field.Kind() != reflect.String {
 		return fmt.Errorf("%s: jq:'validate' tag can only be used on string or *string fields", fieldPath)
 	}
 
 	jqExpression := field.String()
 	if jqExpression == "" {
-		return nil // Empty jqExpression, skip validation
+		return nil
 	}
 
 	parsed, err := gojq.Parse(jqExpression)
@@ -160,12 +149,7 @@ func validateStringField(field reflect.Value, fieldPath string, allowMutation bo
 		return fmt.Errorf("failed to parse JQ expression '%s' at '%s': %w", jqExpression, fieldPath, err)
 	}
 
-	if allowMutation {
-		err = ValidateActionExpression(jqExpression)
-	} else {
-		err = ValidateParsedJQ(parsed)
-	}
-	if err != nil {
+	if err := ValidateParsedJQ(parsed); err != nil {
 		return fmt.Errorf("JQ expression '%s' at '%s' failed validation: %w", jqExpression, fieldPath, err)
 	}
 
@@ -354,27 +338,5 @@ func ValidateParsedJQ(q *gojq.Query) error {
 	return nil
 }
 
-// ValidateActionExpression validates a JQ expression used in a suspend or resume action.
-// Only simple assignment expressions of the form "PATH = VALUE" are accepted.
-// The path (left-hand side) must be a valid read-only JQ selector.
-// Use-cases like .spec.suspend = true or .metadata.annotations["key"] = "value" are supported.
-func ValidateActionExpression(expr string) error {
-	if expr == "" {
-		return nil
-	}
 
-	q, err := gojq.Parse(expr)
-	if err != nil {
-		return fmt.Errorf("failed to parse JQ expression '%s': %w", expr, err)
-	}
 
-	if q.Op != gojq.OpAssign {
-		return fmt.Errorf("only the '=' operator is supported in suspend/resume actions; got expression: %s", expr)
-	}
-
-	if err := ValidateParsedJQ(q.Left); err != nil {
-		return fmt.Errorf("invalid path in action expression '%s': %w", expr, err)
-	}
-
-	return nil
-}

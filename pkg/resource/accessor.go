@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/itchyny/gojq"
 	"k8s.io/utils/ptr"
 
 	"github.com/samber/lo"
@@ -328,19 +327,18 @@ func (a *Accessor) extractConditions(ctx context.Context, condDef *v1alpha1.Cond
 }
 
 // ApplySuspendActions applies the component's SuspendActions in sequence against the manifest.
-// Each action must be a simple assignment expression of the form "PATH = VALUE".
-// The path is extracted and the value is evaluated against null, then applied via Assign.
-// Returns DefinitionNotFoundError if the component has no SuspendDefinition.
+// Each action's path is used as the JQ selector and its value is decoded from JSON and
+// assigned via Assign. Returns DefinitionNotFoundError if the component has no SuspendDefinition.
 func (a *Accessor) ApplySuspendActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error {
 	if definition.SuspendDefinition == nil {
 		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have suspendDefinition", definition.Name))
 	}
-	for i, expr := range definition.SuspendDefinition.SuspendActions {
-		path, value, err := parseAssignAction(expr)
-		if err != nil {
-			return fmt.Errorf("suspendActions[%d]: %w", i, err)
+	for i, action := range definition.SuspendDefinition.SuspendActions {
+		var value any
+		if err := json.Unmarshal(action.Value.Raw, &value); err != nil {
+			return fmt.Errorf("suspendActions[%d]: failed to decode value: %w", i, err)
 		}
-		if err := a.jqRunner.Assign(ctx, path, value); err != nil {
+		if err := a.jqRunner.Assign(ctx, action.Path, value); err != nil {
 			return fmt.Errorf("suspendActions[%d]: %w", i, err)
 		}
 	}
@@ -348,96 +346,22 @@ func (a *Accessor) ApplySuspendActions(ctx context.Context, definition v1alpha1.
 }
 
 // ApplyResumeActions applies the component's ResumeActions in sequence against the manifest.
-// Each action must be a simple assignment expression of the form "PATH = VALUE".
-// The path is extracted and the value is evaluated against null, then applied via Assign.
-// Returns DefinitionNotFoundError if the component has no SuspendDefinition.
+// Each action's path is used as the JQ selector and its value is decoded from JSON and
+// assigned via Assign. Returns DefinitionNotFoundError if the component has no SuspendDefinition.
 func (a *Accessor) ApplyResumeActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error {
 	if definition.SuspendDefinition == nil {
 		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have suspendDefinition", definition.Name))
 	}
-	for i, expr := range definition.SuspendDefinition.ResumeActions {
-		path, value, err := parseAssignAction(expr)
-		if err != nil {
-			return fmt.Errorf("resumeActions[%d]: %w", i, err)
+	for i, action := range definition.SuspendDefinition.ResumeActions {
+		var value any
+		if err := json.Unmarshal(action.Value.Raw, &value); err != nil {
+			return fmt.Errorf("resumeActions[%d]: failed to decode value: %w", i, err)
 		}
-		if err := a.jqRunner.Assign(ctx, path, value); err != nil {
+		if err := a.jqRunner.Assign(ctx, action.Path, value); err != nil {
 			return fmt.Errorf("resumeActions[%d]: %w", i, err)
 		}
 	}
 	return nil
-}
-
-// parseAssignAction parses a "PATH = VALUE" JQ assignment expression and returns
-// the path string and the Go value produced by evaluating the right-hand side
-// against null input. Only the plain '=' operator is supported.
-func parseAssignAction(expr string) (string, any, error) {
-	q, err := gojq.Parse(expr)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to parse action expression %q: %w", expr, err)
-	}
-	if q.Op != gojq.OpAssign {
-		return "", nil, fmt.Errorf("only the '=' operator is supported in suspend/resume actions: %q", expr)
-	}
-
-	// Extract the path string (left-hand side) by locating the '=' in the
-	// original expression. We skip '=' characters that form compound operators
-	// (!=, >=, <=, |=, +=, -=, *=, /=, %=, ==) and skip inside string literals.
-	eqIdx := findAssignOpIndex(expr)
-	if eqIdx < 0 {
-		return "", nil, fmt.Errorf("could not locate '=' in expression %q", expr)
-	}
-	path := strings.TrimSpace(expr[:eqIdx])
-
-	// Evaluate the right-hand side against null to obtain a static Go value.
-	compiled, compileErr := gojq.Compile(q.Right)
-	if compileErr != nil {
-		return "", nil, fmt.Errorf("failed to compile value in %q: %w", expr, compileErr)
-	}
-	iter := compiled.Run(nil)
-	val, ok := iter.Next()
-	if !ok {
-		return "", nil, fmt.Errorf("value expression in %q produced no output", expr)
-	}
-	if execErr, isErr := val.(error); isErr {
-		return "", nil, fmt.Errorf("value expression in %q failed: %w", expr, execErr)
-	}
-
-	return path, val, nil
-}
-
-// findAssignOpIndex returns the byte index of the standalone '=' assignment operator
-// in a JQ expression string. It skips compound operators (!=, >=, <=, |=, +=, -=,
-// *=, /=, %=, ==) and characters inside double-quoted string literals.
-func findAssignOpIndex(expr string) int {
-	inStr := false
-	for i := 0; i < len(expr); i++ {
-		ch := expr[i]
-		if inStr {
-			if ch == '\\' {
-				i++ // skip escaped character
-			} else if ch == '"' {
-				inStr = false
-			}
-			continue
-		}
-		if ch == '"' {
-			inStr = true
-			continue
-		}
-		if ch == '=' {
-			if i > 0 {
-				switch expr[i-1] {
-				case '!', '<', '>', '|', '+', '-', '*', '/', '%':
-					continue
-				}
-			}
-			if i+1 < len(expr) && expr[i+1] == '=' {
-				continue
-			}
-			return i
-		}
-	}
-	return -1
 }
 
 func (a *Accessor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) {

@@ -880,27 +880,55 @@ spec:
                           type: object
                         suspendDefinition:
                           description: |-
-                            SuspendDefinition defines the JQ expressions used to suspend and resume this component.
+                            SuspendDefinition defines the path/value assignments used to suspend and resume this component.
                             Should only be populated for components where the underlying framework provides native, first-class support for suspension primitives.
                             (e.g. spec.suspend for batch/v1 Job).
                           properties:
                             resumeActions:
                               description: |-
-                                ResumeActions is an ordered array of JQ expressions applied to the manifest on resume.
-                                Each expression receives the output of the previous one, allowing multi-field patches.
-                                Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
+                                ResumeActions is an ordered list of path/value assignments applied on resume.
+                                Actions are applied in sequence; later actions may overwrite earlier ones.
                               items:
-                                type: string
+                                description: SuspendAction is a single field assignment
+                                  applied during a suspend or resume operation.
+                                properties:
+                                  path:
+                                    description: |-
+                                      Path is a JQ expression that selects the target field (e.g. ".spec.suspend").
+                                      Only read/navigation expressions are permitted; assignment operators are not.
+                                    type: string
+                                  value:
+                                    description: Value is the raw JSON value to assign
+                                      at the path (e.g. true, 0, "paused", null).
+                                    x-kubernetes-preserve-unknown-fields: true
+                                required:
+                                - path
+                                - value
+                                type: object
                               minItems: 1
                               type: array
                               x-kubernetes-list-type: atomic
                             suspendActions:
                               description: |-
-                                SuspendActions is an ordered array of JQ expressions applied to the manifest on suspend.
-                                Each expression receives the output of the previous one, allowing multi-field patches.
-                                Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
+                                SuspendActions is an ordered list of path/value assignments applied on suspend.
+                                Actions are applied in sequence; later actions may overwrite earlier ones.
                               items:
-                                type: string
+                                description: SuspendAction is a single field assignment
+                                  applied during a suspend or resume operation.
+                                properties:
+                                  path:
+                                    description: |-
+                                      Path is a JQ expression that selects the target field (e.g. ".spec.suspend").
+                                      Only read/navigation expressions are permitted; assignment operators are not.
+                                    type: string
+                                  value:
+                                    description: Value is the raw JSON value to assign
+                                      at the path (e.g. true, 0, "paused", null).
+                                    x-kubernetes-preserve-unknown-fields: true
+                                required:
+                                - path
+                                - value
+                                type: object
                               minItems: 1
                               type: array
                               x-kubernetes-list-type: atomic
@@ -1625,27 +1653,55 @@ spec:
                         type: object
                       suspendDefinition:
                         description: |-
-                          SuspendDefinition defines the JQ expressions used to suspend and resume this component.
+                          SuspendDefinition defines the path/value assignments used to suspend and resume this component.
                           Should only be populated for components where the underlying framework provides native, first-class support for suspension primitives.
                           (e.g. spec.suspend for batch/v1 Job).
                         properties:
                           resumeActions:
                             description: |-
-                              ResumeActions is an ordered array of JQ expressions applied to the manifest on resume.
-                              Each expression receives the output of the previous one, allowing multi-field patches.
-                              Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
+                              ResumeActions is an ordered list of path/value assignments applied on resume.
+                              Actions are applied in sequence; later actions may overwrite earlier ones.
                             items:
-                              type: string
+                              description: SuspendAction is a single field assignment
+                                applied during a suspend or resume operation.
+                              properties:
+                                path:
+                                  description: |-
+                                    Path is a JQ expression that selects the target field (e.g. ".spec.suspend").
+                                    Only read/navigation expressions are permitted; assignment operators are not.
+                                  type: string
+                                value:
+                                  description: Value is the raw JSON value to assign
+                                    at the path (e.g. true, 0, "paused", null).
+                                  x-kubernetes-preserve-unknown-fields: true
+                              required:
+                              - path
+                              - value
+                              type: object
                             minItems: 1
                             type: array
                             x-kubernetes-list-type: atomic
                           suspendActions:
                             description: |-
-                              SuspendActions is an ordered array of JQ expressions applied to the manifest on suspend.
-                              Each expression receives the output of the previous one, allowing multi-field patches.
-                              Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
+                              SuspendActions is an ordered list of path/value assignments applied on suspend.
+                              Actions are applied in sequence; later actions may overwrite earlier ones.
                             items:
-                              type: string
+                              description: SuspendAction is a single field assignment
+                                applied during a suspend or resume operation.
+                              properties:
+                                path:
+                                  description: |-
+                                    Path is a JQ expression that selects the target field (e.g. ".spec.suspend").
+                                    Only read/navigation expressions are permitted; assignment operators are not.
+                                  type: string
+                                value:
+                                  description: Value is the raw JSON value to assign
+                                    at the path (e.g. true, 0, "paused", null).
+                                  x-kubernetes-preserve-unknown-fields: true
+                              required:
+                              - path
+                              - value
+                              type: object
                             minItems: 1
                             type: array
                             x-kubernetes-list-type: atomic

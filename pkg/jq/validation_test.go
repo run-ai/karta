@@ -34,11 +34,6 @@ type StructWithUntagged struct {
 	UntaggedStringMap map[string]string
 }
 
-type ActionTestStruct struct {
-	SuspendActions []string `jq:"validateAction"`
-	ResumeActions  []string `jq:"validateAction"`
-	ReadOnlyPath   string   `jq:"validate"`
-}
 
 var _ = Describe("JQ Validation", func() {
 	Describe("ValidateJQExpressions", func() {
@@ -486,107 +481,6 @@ var _ = Describe("ValidateParsedJQ", func() {
 
 		It("should accept a safe user-defined function", func() {
 			Expect(ValidateParsedJQ(parseOrFail("def double: . * 2; .spec.replicas | double"))).To(Succeed())
-		})
-	})
-})
-
-var _ = Describe("ValidateActionExpression", func() {
-	Context("valid assignment expressions", func() {
-		DescribeTable("should accept '=' assignments with constant values",
-			func(expr string) {
-				Expect(ValidateActionExpression(expr)).To(Succeed())
-			},
-			Entry("boolean true", ".spec.suspend = true"),
-			Entry("boolean false", ".spec.suspend = false"),
-			Entry("null", ".spec.field = null"),
-			Entry("integer", ".spec.replicas = 0"),
-			Entry("string", `.metadata.annotations["key"] = "value"`),
-			Entry("nested field", ".spec.runPolicy.suspend = true"),
-		)
-
-		It("should accept empty expression", func() {
-			Expect(ValidateActionExpression("")).To(Succeed())
-		})
-	})
-
-	Context("invalid expressions — non-'=' operators rejected", func() {
-		DescribeTable("should reject compound assignment and update operators",
-			func(expr, expectedSubstring string) {
-				err := ValidateActionExpression(expr)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
-			},
-			Entry("update-modify operator", ".spec.suspend |= not", "only the '=' operator"),
-			Entry("update-add operator", ".spec.replicas += 1", "only the '=' operator"),
-			Entry("plain path (no assignment)", ".spec.suspend", "only the '=' operator"),
-			Entry("pipe before assignment", ".spec | .suspend = true", "only the '=' operator"),
-		)
-
-		It("should reject malformed JQ syntax", func() {
-			err := ValidateActionExpression(".spec.suspend = [")
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("failed to parse JQ expression"))
-		})
-	})
-
-	Context("invalid expressions — dangerous path on left-hand side", func() {
-		DescribeTable("should reject dangerous functions in the path",
-			func(expr, expectedSubstring string) {
-				err := ValidateActionExpression(expr)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
-			},
-			Entry("del in path", "del(.spec) = true", "del function is not allowed"),
-			Entry("recursive descent in path", ".. = true", "recursive descent operator"),
-		)
-	})
-})
-
-var _ = Describe("jq:validateAction tag", func() {
-	Describe("ValidateJQExpressions with validateAction tag", func() {
-		It("should accept '=' assignments in validateAction-tagged fields", func() {
-			obj := ActionTestStruct{
-				SuspendActions: []string{".spec.suspend = true"},
-				ResumeActions:  []string{".spec.suspend = false"},
-				ReadOnlyPath:   ".metadata.name",
-			}
-			Expect(ValidateJQExpressions(obj)).To(BeEmpty())
-		})
-
-		It("should reject non-'=' operators in validateAction-tagged fields", func() {
-			obj := ActionTestStruct{
-				SuspendActions: []string{".spec.suspend |= not"},
-			}
-			errs := ValidateJQExpressions(obj)
-			Expect(errs).To(HaveLen(1))
-			Expect(errs[0].Error()).To(ContainSubstring("only the '=' operator"))
-		})
-
-		It("should reject dangerous functions in validateAction-tagged path", func() {
-			obj := ActionTestStruct{
-				SuspendActions: []string{"del(.spec) = true"},
-			}
-			errs := ValidateJQExpressions(obj)
-			Expect(errs).To(HaveLen(1))
-		})
-
-		It("should still reject mutation operators in validate-tagged fields", func() {
-			obj := ActionTestStruct{
-				SuspendActions: []string{".spec.suspend = true"},
-				ResumeActions:  []string{".spec.suspend = false"},
-				ReadOnlyPath:   ".spec.replicas = 0",
-			}
-			errs := ValidateJQExpressions(obj)
-			Expect(errs).To(HaveLen(1))
-			Expect(errs[0].Error()).To(ContainSubstring("modifying operator"))
-		})
-
-		It("should report errors for all invalid entries in a slice", func() {
-			obj := ActionTestStruct{
-				SuspendActions: []string{".spec.suspend = true", ".spec.suspend |= not", ".spec.replicas += 1"},
-			}
-			errs := ValidateJQExpressions(obj)
-			Expect(errs).To(HaveLen(2))
 		})
 	})
 })

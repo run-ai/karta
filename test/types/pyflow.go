@@ -147,8 +147,8 @@ func SuspendablePyFlowKarta() *v1alpha1.Karta {
 	root := &karta.Spec.StructureDefinition.RootComponent
 
 	root.SuspendDefinition = &v1alpha1.SuspendDefinition{
-		SuspendActions: []string{".spec.suspend = true"},
-		ResumeActions:  []string{".spec.suspend = false"},
+		SuspendActions: []v1alpha1.SuspendAction{v1alpha1.NewSuspendAction(".spec.suspend", true)},
+		ResumeActions:  []v1alpha1.SuspendAction{v1alpha1.NewSuspendAction(".spec.suspend", false)},
 	}
 
 	root.StatusDefinition.StatusMappings.Suspended = []v1alpha1.StatusMatcher{

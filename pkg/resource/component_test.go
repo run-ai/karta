@@ -1085,8 +1085,8 @@ var _ = Describe("Component", func() {
 		var component *Component
 
 		suspendDef := v1alpha1.SuspendDefinition{
-			SuspendActions: []string{".spec.suspend = true"},
-			ResumeActions:  []string{".spec.suspend = false"},
+			SuspendActions: []v1alpha1.SuspendAction{v1alpha1.NewSuspendAction(".spec.suspend", true)},
+			ResumeActions:  []v1alpha1.SuspendAction{v1alpha1.NewSuspendAction(".spec.suspend", false)},
 		}
 
 		BeforeEach(func() {

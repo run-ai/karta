@@ -3,6 +3,13 @@
 
 package v1alpha1
 
+import (
+	"encoding/json"
+	"fmt"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+)
+
 // GroupVersionKind represents a Kubernetes API object's group, version, and kind.
 type GroupVersionKind struct {
 	// Group is the API group of the resource
@@ -43,7 +50,7 @@ type ComponentDefinition struct {
 	// +kubebuilder:validation:Optional
 	StatusDefinition *StatusDefinition `json:"statusDefinition,omitempty"`
 
-	// SuspendDefinition defines the JQ expressions used to suspend and resume this component.
+	// SuspendDefinition defines the path/value assignments used to suspend and resume this component.
 	// Should only be populated for components where the underlying framework provides native, first-class support for suspension primitives.
 	// (e.g. spec.suspend for batch/v1 Job).
 	// +kubebuilder:validation:Optional
@@ -58,27 +65,48 @@ type ComponentDefinition struct {
 	PodSelector *PodSelector `json:"podSelector,omitempty"`
 }
 
-// SuspendDefinition defines the JQ mutation expressions applied to a manifest when
-// suspending or resuming a workload. Expressions must use mutation-safe JQ (assignment
-// operators are allowed; dangerous recursive operations are not).
+// SuspendDefinition defines the field assignments applied to a manifest when
+// suspending or resuming a workload. Each action specifies the target field path
+// and the value to assign, applied via the runner's Assign method.
 type SuspendDefinition struct {
-	// SuspendActions is an ordered array of JQ expressions applied to the manifest on suspend.
-	// Each expression receives the output of the previous one, allowing multi-field patches.
-	// Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
+	// SuspendActions is an ordered list of path/value assignments applied on suspend.
+	// Actions are applied in sequence; later actions may overwrite earlier ones.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	// +listType=atomic
-	SuspendActions []string `json:"suspendActions" jq:"validateAction"`
+	SuspendActions []SuspendAction `json:"suspendActions"`
 
-	// ResumeActions is an ordered array of JQ expressions applied to the manifest on resume.
-	// Each expression receives the output of the previous one, allowing multi-field patches.
-	// Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
+	// ResumeActions is an ordered list of path/value assignments applied on resume.
+	// Actions are applied in sequence; later actions may overwrite earlier ones.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	// +listType=atomic
-	ResumeActions []string `json:"resumeActions" jq:"validateAction"`
+	ResumeActions []SuspendAction `json:"resumeActions"`
 }
 
+// SuspendAction is a single field assignment applied during a suspend or resume operation.
+type SuspendAction struct {
+	// Path is a JQ expression that selects the target field (e.g. ".spec.suspend").
+	// Only read/navigation expressions are permitted; assignment operators are not.
+	// +kubebuilder:validation:Required
+	Path string `json:"path" jq:"validate"`
+
+	// Value is the raw JSON value to assign at the path (e.g. true, 0, "paused", null).
+	// +kubebuilder:validation:Required
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Value apiextensionsv1.JSON `json:"value"`
+}
+
+// NewSuspendAction is a convenience constructor that marshals any Go value into the
+// raw JSON required by SuspendAction.Value. Panics on marshal error (which can only
+// happen with non-serialisable types such as channels or functions).
+func NewSuspendAction(path string, value any) SuspendAction {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		panic(fmt.Sprintf("NewSuspendAction: failed to marshal value for path %q: %v", path, err))
+	}
+	return SuspendAction{Path: path, Value: apiextensionsv1.JSON{Raw: raw}}
+}
 // SpecDefinition defines how to extract pod specifications from a component.
 // Only one of the three options should be provided (PodTemplateSpec, FragmentedPodSpec, PodSpec + Metadata).
 type SpecDefinition struct {
