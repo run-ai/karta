@@ -87,6 +87,10 @@ func (r *runner) AssignZip(ctx context.Context, expression string, values []any)
 	return r.assignWithExpression(ctx, updateExpression, []string{"$val"}, []any{values})
 }
 
+func (r *runner) Mutate(ctx context.Context, expression string) error {
+	return r.assignWithExpression(ctx, expression, nil, nil)
+}
+
 func (r *runner) assignWithExpression(ctx context.Context, updateExpression string, variables []string, values []any) error {
 	if len(variables) != len(values) {
 		return fmt.Errorf("variables and values length mismatch: %d variables but %d values", len(variables), len(values))

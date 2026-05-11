@@ -326,8 +326,37 @@ func (a *Accessor) extractConditions(ctx context.Context, condDef *v1alpha1.Cond
 	return conditions, nil
 }
 
-func (a *Accessor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) {
-	if definition.InstanceIdPath == nil {
+// ApplySuspendActions applies the component's SuspendActions in sequence against the manifest.
+// Each expression receives the output of the previous one. Returns DefinitionNotFoundError
+// if the component has no SuspendDefinition.
+func (a *Accessor) ApplySuspendActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error {
+	if definition.SuspendDefinition == nil {
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have suspend definition", definition.Name))
+	}
+	for i, expr := range definition.SuspendDefinition.SuspendActions {
+		if err := a.jqRunner.Mutate(ctx, expr); err != nil {
+			return fmt.Errorf("suspendActions[%d]: %w", i, err)
+		}
+	}
+	return nil
+}
+
+// ApplyResumeActions applies the component's ResumeActions in sequence against the manifest.
+// Each expression receives the output of the previous one. Returns DefinitionNotFoundError
+// if the component has no SuspendDefinition.
+func (a *Accessor) ApplyResumeActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error {
+	if definition.SuspendDefinition == nil {
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have suspend definition", definition.Name))
+	}
+	for i, expr := range definition.SuspendDefinition.ResumeActions {
+		if err := a.jqRunner.Mutate(ctx, expr); err != nil {
+			return fmt.Errorf("resumeActions[%d]: %w", i, err)
+		}
+	}
+	return nil
+}
+
+func (a *Accessor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) {	if definition.InstanceIdPath == nil {
 		return nil, DefinitionNotFoundError("no instance id path defined")
 	}
 

@@ -593,13 +593,13 @@ var _ = Describe("Runner", func() {
 		})
 
 		Context("error handling", func() {
-			It("should return JQParseError for malformed JQ syntax", func() {
+			It("should return JQCompileError for malformed JQ syntax", func() {
 				testData := M{"name": "test"}
 				runner := NewDefaultRunner(testData)
 
 				err := runner.Assign(ctx, ".invalid[[[", "value")
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(BeAssignableToTypeOf(&JQParseError{}))
+				Expect(err).To(BeAssignableToTypeOf(&JQCompileError{}))
 			})
 		})
 	})
@@ -678,6 +678,74 @@ var _ = Describe("Runner", func() {
 			err := runner.AssignZip(ctx, ".items[]", A{"d", "e"})
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("array length mismatch"))
+		})
+	})
+
+	Describe("Mutate operations (self-contained mutation expressions)", func() {
+		It("should apply a simple assignment expression", func() {
+			testData := M{"spec": M{"suspend": false}}
+			runner := NewDefaultRunner(testData)
+
+			err := runner.Mutate(ctx, ".spec.suspend = true")
+			Expect(err).ToNot(HaveOccurred())
+
+			updated, err := runner.GetObject()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(updated.(M)["spec"].(M)["suspend"]).To(BeTrue())
+		})
+
+		It("should apply an update-modify expression", func() {
+			testData := M{"spec": M{"replicas": float64(3)}}
+			runner := NewDefaultRunner(testData)
+
+			err := runner.Mutate(ctx, ".spec.replicas |= . + 1")
+			Expect(err).ToNot(HaveOccurred())
+
+			updated, err := runner.GetObject()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(updated.(M)["spec"].(M)["replicas"]).To(BeNumerically("==", 4))
+		})
+
+		It("should apply multiple mutations in sequence, each building on the previous result", func() {
+			testData := M{"spec": M{"suspend": false, "replicas": float64(2)}}
+			runner := NewDefaultRunner(testData)
+
+			Expect(runner.Mutate(ctx, ".spec.suspend = true")).To(Succeed())
+			Expect(runner.Mutate(ctx, ".spec.replicas = 0")).To(Succeed())
+
+			updated, err := runner.GetObject()
+			Expect(err).ToNot(HaveOccurred())
+			spec := updated.(M)["spec"].(M)
+			Expect(spec["suspend"]).To(BeTrue())
+			Expect(spec["replicas"]).To(BeNumerically("==", 0))
+		})
+
+		It("should create a new field if it does not exist", func() {
+			testData := M{"spec": M{}}
+			runner := NewDefaultRunner(testData)
+
+			err := runner.Mutate(ctx, `.metadata.labels.suspended = "true"`)
+			Expect(err).ToNot(HaveOccurred())
+
+			updated, err := runner.GetObject()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(updated.(M)["metadata"].(M)["labels"].(M)["suspended"]).To(Equal("true"))
+		})
+
+		It("should return JQCompileError for malformed expression", func() {
+			runner := NewDefaultRunner(M{"spec": M{}})
+
+			err := runner.Mutate(ctx, ".spec.suspend = [[[")
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(&JQCompileError{}))
+		})
+
+		It("should return JQExecutionError when expression yields a runtime error", func() {
+			runner := NewDefaultRunner(M{"spec": M{}})
+
+			err := runner.Mutate(ctx, `error("intentional")`)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(&JQExecutionError{}))
 		})
 	})
 })
