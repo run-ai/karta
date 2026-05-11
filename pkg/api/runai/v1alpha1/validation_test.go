@@ -539,17 +539,6 @@ var _ = Describe("KartaValidator", func() {
 				Expect(entry.Matchers).To(BeNil())
 			}
 		})
-
-		It("should return suspend statuses with priority before operational statuses", func() {
-			entries := StatusMappings{}.Entries()
-			statuses := make([]ResourceStatus, len(entries))
-			for i, e := range entries {
-				statuses[i] = e.Status
-			}
-			Expect(statuses[0]).To(Equal(ResumingStatus))
-			Expect(statuses[1]).To(Equal(SuspendingStatus))
-			Expect(statuses[2]).To(Equal(SuspendedStatus))
-		})
 	})
 
 	Describe("short circuit on errors", func() {

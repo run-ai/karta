@@ -44,8 +44,8 @@ type ComponentDefinition struct {
 	StatusDefinition *StatusDefinition `json:"statusDefinition,omitempty"`
 
 	// SuspendDefinition defines the JQ expressions used to suspend and resume this component.
-	// Only set on components whose underlying framework has a native, first-class suspend primitive
-	// (e.g. spec.suspend for batch/v1 Job or Kubeflow training jobs).
+	// Should only be populated for components where the underlying framework provides native, first-class support for suspension primitives.
+	// (e.g. spec.suspend for batch/v1 Job).
 	// +kubebuilder:validation:Optional
 	SuspendDefinition *SuspendDefinition `json:"suspendDefinition,omitempty"`
 
@@ -251,7 +251,7 @@ const (
 	// SuspendingStatus indicates the component is in the process of being suspended (draining pods)
 	SuspendingStatus ResourceStatus = "Suspending"
 
-	// ResumingStatus indicates a resume has been issued but the component has not yet left the suspended state
+	// ResumingStatus indicates the component is in the process of being resumed
 	ResumingStatus ResourceStatus = "Resuming"
 )
 
@@ -363,8 +363,7 @@ type StatusMatchEntry struct {
 	Matchers []StatusMatcher
 }
 
-// Entries returns all status-to-matchers pairs defined in the mappings in priority order
-// (first match wins). Suspend-related statuses take precedence over operational statuses.
+// Entries returns all status-to-matchers pairs defined in the mappings.
 // When adding a new ResourceStatus, add a corresponding entry here.
 func (m StatusMappings) Entries() []StatusMatchEntry {
 	return []StatusMatchEntry{
