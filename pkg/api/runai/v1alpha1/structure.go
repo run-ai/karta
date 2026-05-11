@@ -66,6 +66,7 @@ type SuspendDefinition struct {
 	// Each expression receives the output of the previous one, allowing multi-field patches.
 	// Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
 	// +listType=atomic
 	SuspendActions []string `json:"suspendActions"`
 
@@ -73,6 +74,7 @@ type SuspendDefinition struct {
 	// Each expression receives the output of the previous one, allowing multi-field patches.
 	// Mutation operators (=, |=, etc.) are permitted; dangerous recursive/unbounded operations are not.
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
 	// +listType=atomic
 	ResumeActions []string `json:"resumeActions"`
 }
