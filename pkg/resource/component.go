@@ -307,6 +307,35 @@ func (c *Component) GetExtractedInstances(ctx context.Context) (map[string]Extra
 	return result, nil
 }
 
+// HasSuspendDefinition returns true if this component supports native suspend/resume
+func (c *Component) HasSuspendDefinition() bool {
+	return c.definition.SuspendDefinition != nil
+}
+
+// Suspend applies the component's SuspendActions in sequence against the manifest.
+// It is a no-op if the component has no SuspendDefinition.
+func (c *Component) Suspend(ctx context.Context) error {
+	if err := c.accessor.ApplySuspendActions(ctx, c.definition); err != nil {
+		if isDefinitionNotFoundError(err) {
+			return nil
+		}
+		return fmt.Errorf("apply suspend actions for component '%s': %w", c.name, err)
+	}
+	return nil
+}
+
+// Resume applies the component's ResumeActions in sequence against the manifest.
+// It is a no-op if the component has no SuspendDefinition.
+func (c *Component) Resume(ctx context.Context) error {
+	if err := c.accessor.ApplyResumeActions(ctx, c.definition); err != nil {
+		if isDefinitionNotFoundError(err) {
+			return nil
+		}
+		return fmt.Errorf("apply resume actions for component '%s': %w", c.name, err)
+	}
+	return nil
+}
+
 // HasPodDefinition returns true if this component defines pods
 func (c *Component) HasPodDefinition() bool {
 	spec := c.definition.SpecDefinition

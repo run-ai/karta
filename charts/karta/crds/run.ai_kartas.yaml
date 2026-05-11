@@ -630,6 +630,67 @@ spec:
                                     type: object
                                   type: array
                                   x-kubernetes-list-type: atomic
+                                resuming:
+                                  description: |-
+                                    Resuming defines matchers for the Resuming status
+                                    Multiple matchers are OR'd together.
+                                  items:
+                                    description: |-
+                                      StatusMatcher defines criteria for matching a specific status.
+                                      If both ByPhase and ByConditions are provided, ALL must match (AND logic).
+                                    properties:
+                                      byConditions:
+                                        description: ByConditions matches against
+                                          specific condition combinations (ANDed together)
+                                          at least one of status or reason must be
+                                          used.
+                                        items:
+                                          description: ExpectedCondition defines a
+                                            condition type and status that must be
+                                            present.
+                                          properties:
+                                            reason:
+                                              description: Reason is the expected
+                                                condition reason
+                                              type: string
+                                            status:
+                                              description: Status is the expected
+                                                condition status
+                                              type: string
+                                            type:
+                                              description: Type is the condition type
+                                                to match
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                        type: array
+                                        x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value in string format from the
+                                              expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
+                                      byPhase:
+                                        description: ByPhase matches against a specific
+                                          phase value
+                                        type: string
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-type: atomic
                                 running:
                                   description: |-
                                     Running defines matchers for the Running status.
@@ -691,9 +752,191 @@ spec:
                                     type: object
                                   type: array
                                   x-kubernetes-list-type: atomic
+                                suspended:
+                                  description: |-
+                                    Suspended defines matchers for the Suspended status
+                                    Multiple matchers are OR'd together.
+                                  items:
+                                    description: |-
+                                      StatusMatcher defines criteria for matching a specific status.
+                                      If both ByPhase and ByConditions are provided, ALL must match (AND logic).
+                                    properties:
+                                      byConditions:
+                                        description: ByConditions matches against
+                                          specific condition combinations (ANDed together)
+                                          at least one of status or reason must be
+                                          used.
+                                        items:
+                                          description: ExpectedCondition defines a
+                                            condition type and status that must be
+                                            present.
+                                          properties:
+                                            reason:
+                                              description: Reason is the expected
+                                                condition reason
+                                              type: string
+                                            status:
+                                              description: Status is the expected
+                                                condition status
+                                              type: string
+                                            type:
+                                              description: Type is the condition type
+                                                to match
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                        type: array
+                                        x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value in string format from the
+                                              expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
+                                      byPhase:
+                                        description: ByPhase matches against a specific
+                                          phase value
+                                        type: string
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                                suspending:
+                                  description: |-
+                                    Suspending defines matchers for the Suspending status
+                                    Multiple matchers are OR'd together.
+                                  items:
+                                    description: |-
+                                      StatusMatcher defines criteria for matching a specific status.
+                                      If both ByPhase and ByConditions are provided, ALL must match (AND logic).
+                                    properties:
+                                      byConditions:
+                                        description: ByConditions matches against
+                                          specific condition combinations (ANDed together)
+                                          at least one of status or reason must be
+                                          used.
+                                        items:
+                                          description: ExpectedCondition defines a
+                                            condition type and status that must be
+                                            present.
+                                          properties:
+                                            reason:
+                                              description: Reason is the expected
+                                                condition reason
+                                              type: string
+                                            status:
+                                              description: Status is the expected
+                                                condition status
+                                              type: string
+                                            type:
+                                              description: Type is the condition type
+                                                to match
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                        type: array
+                                        x-kubernetes-list-type: atomic
+                                      byExpression:
+                                        description: ByExpression is a JQ expression
+                                          that matches against the object for status
+                                          matching
+                                        properties:
+                                          expectedResult:
+                                            description: ExpectedResult is the expected
+                                              result value in string format from the
+                                              expression evaluation
+                                            type: string
+                                          expression:
+                                            description: Expression is the JQ expression
+                                              to evaluate
+                                            type: string
+                                        required:
+                                        - expectedResult
+                                        - expression
+                                        type: object
+                                      byPhase:
+                                        description: ByPhase matches against a specific
+                                          phase value
+                                        type: string
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-type: atomic
                               type: object
                           required:
                           - statusMappings
+                          type: object
+                        suspendDefinition:
+                          description: |-
+                            SuspendDefinition defines the path/value assignments used to suspend and resume this component.
+                            Should only be populated for components where the underlying framework provides native, first-class support for suspension primitives.
+                            (e.g. spec.suspend for batch/v1 Job).
+                          properties:
+                            resumeActions:
+                              description: |-
+                                ResumeActions is an ordered list of path/value assignments applied on resume.
+                                Actions are applied in sequence; later actions may overwrite earlier ones.
+                              items:
+                                description: SuspendAction is a single field assignment
+                                  applied during a suspend or resume operation.
+                                properties:
+                                  path:
+                                    description: |-
+                                      Path is a JQ expression that selects the target field (e.g. ".spec.suspend").
+                                      Only read/navigation expressions are permitted; assignment operators are not.
+                                    type: string
+                                  value:
+                                    description: Value is the JSON-encoded value to
+                                      assign at the path (e.g. "true", "0", `"paused"`,
+                                      "null").
+                                    type: string
+                                required:
+                                - path
+                                - value
+                                type: object
+                              minItems: 1
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            suspendActions:
+                              description: |-
+                                SuspendActions is an ordered list of path/value assignments applied on suspend.
+                                Actions are applied in sequence; later actions may overwrite earlier ones.
+                              items:
+                                description: SuspendAction is a single field assignment
+                                  applied during a suspend or resume operation.
+                                properties:
+                                  path:
+                                    description: |-
+                                      Path is a JQ expression that selects the target field (e.g. ".spec.suspend").
+                                      Only read/navigation expressions are permitted; assignment operators are not.
+                                    type: string
+                                  value:
+                                    description: Value is the JSON-encoded value to
+                                      assign at the path (e.g. "true", "0", `"paused"`,
+                                      "null").
+                                    type: string
+                                required:
+                                - path
+                                - value
+                                type: object
+                              minItems: 1
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - resumeActions
+                          - suspendActions
                           type: object
                       required:
                       - name
@@ -1170,6 +1413,65 @@ spec:
                                   type: object
                                 type: array
                                 x-kubernetes-list-type: atomic
+                              resuming:
+                                description: |-
+                                  Resuming defines matchers for the Resuming status
+                                  Multiple matchers are OR'd together.
+                                items:
+                                  description: |-
+                                    StatusMatcher defines criteria for matching a specific status.
+                                    If both ByPhase and ByConditions are provided, ALL must match (AND logic).
+                                  properties:
+                                    byConditions:
+                                      description: ByConditions matches against specific
+                                        condition combinations (ANDed together) at
+                                        least one of status or reason must be used.
+                                      items:
+                                        description: ExpectedCondition defines a condition
+                                          type and status that must be present.
+                                        properties:
+                                          reason:
+                                            description: Reason is the expected condition
+                                              reason
+                                            type: string
+                                          status:
+                                            description: Status is the expected condition
+                                              status
+                                            type: string
+                                          type:
+                                            description: Type is the condition type
+                                              to match
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value in string format from the
+                                            expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
+                                    byPhase:
+                                      description: ByPhase matches against a specific
+                                        phase value
+                                      type: string
+                                  type: object
+                                type: array
+                                x-kubernetes-list-type: atomic
                               running:
                                 description: |-
                                   Running defines matchers for the Running status.
@@ -1229,9 +1531,187 @@ spec:
                                   type: object
                                 type: array
                                 x-kubernetes-list-type: atomic
+                              suspended:
+                                description: |-
+                                  Suspended defines matchers for the Suspended status
+                                  Multiple matchers are OR'd together.
+                                items:
+                                  description: |-
+                                    StatusMatcher defines criteria for matching a specific status.
+                                    If both ByPhase and ByConditions are provided, ALL must match (AND logic).
+                                  properties:
+                                    byConditions:
+                                      description: ByConditions matches against specific
+                                        condition combinations (ANDed together) at
+                                        least one of status or reason must be used.
+                                      items:
+                                        description: ExpectedCondition defines a condition
+                                          type and status that must be present.
+                                        properties:
+                                          reason:
+                                            description: Reason is the expected condition
+                                              reason
+                                            type: string
+                                          status:
+                                            description: Status is the expected condition
+                                              status
+                                            type: string
+                                          type:
+                                            description: Type is the condition type
+                                              to match
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value in string format from the
+                                            expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
+                                    byPhase:
+                                      description: ByPhase matches against a specific
+                                        phase value
+                                      type: string
+                                  type: object
+                                type: array
+                                x-kubernetes-list-type: atomic
+                              suspending:
+                                description: |-
+                                  Suspending defines matchers for the Suspending status
+                                  Multiple matchers are OR'd together.
+                                items:
+                                  description: |-
+                                    StatusMatcher defines criteria for matching a specific status.
+                                    If both ByPhase and ByConditions are provided, ALL must match (AND logic).
+                                  properties:
+                                    byConditions:
+                                      description: ByConditions matches against specific
+                                        condition combinations (ANDed together) at
+                                        least one of status or reason must be used.
+                                      items:
+                                        description: ExpectedCondition defines a condition
+                                          type and status that must be present.
+                                        properties:
+                                          reason:
+                                            description: Reason is the expected condition
+                                              reason
+                                            type: string
+                                          status:
+                                            description: Status is the expected condition
+                                              status
+                                            type: string
+                                          type:
+                                            description: Type is the condition type
+                                              to match
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    byExpression:
+                                      description: ByExpression is a JQ expression
+                                        that matches against the object for status
+                                        matching
+                                      properties:
+                                        expectedResult:
+                                          description: ExpectedResult is the expected
+                                            result value in string format from the
+                                            expression evaluation
+                                          type: string
+                                        expression:
+                                          description: Expression is the JQ expression
+                                            to evaluate
+                                          type: string
+                                      required:
+                                      - expectedResult
+                                      - expression
+                                      type: object
+                                    byPhase:
+                                      description: ByPhase matches against a specific
+                                        phase value
+                                      type: string
+                                  type: object
+                                type: array
+                                x-kubernetes-list-type: atomic
                             type: object
                         required:
                         - statusMappings
+                        type: object
+                      suspendDefinition:
+                        description: |-
+                          SuspendDefinition defines the path/value assignments used to suspend and resume this component.
+                          Should only be populated for components where the underlying framework provides native, first-class support for suspension primitives.
+                          (e.g. spec.suspend for batch/v1 Job).
+                        properties:
+                          resumeActions:
+                            description: |-
+                              ResumeActions is an ordered list of path/value assignments applied on resume.
+                              Actions are applied in sequence; later actions may overwrite earlier ones.
+                            items:
+                              description: SuspendAction is a single field assignment
+                                applied during a suspend or resume operation.
+                              properties:
+                                path:
+                                  description: |-
+                                    Path is a JQ expression that selects the target field (e.g. ".spec.suspend").
+                                    Only read/navigation expressions are permitted; assignment operators are not.
+                                  type: string
+                                value:
+                                  description: Value is the JSON-encoded value to
+                                    assign at the path (e.g. "true", "0", `"paused"`,
+                                    "null").
+                                  type: string
+                              required:
+                              - path
+                              - value
+                              type: object
+                            minItems: 1
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          suspendActions:
+                            description: |-
+                              SuspendActions is an ordered list of path/value assignments applied on suspend.
+                              Actions are applied in sequence; later actions may overwrite earlier ones.
+                            items:
+                              description: SuspendAction is a single field assignment
+                                applied during a suspend or resume operation.
+                              properties:
+                                path:
+                                  description: |-
+                                    Path is a JQ expression that selects the target field (e.g. ".spec.suspend").
+                                    Only read/navigation expressions are permitted; assignment operators are not.
+                                  type: string
+                                value:
+                                  description: Value is the JSON-encoded value to
+                                    assign at the path (e.g. "true", "0", `"paused"`,
+                                    "null").
+                                  type: string
+                              required:
+                              - path
+                              - value
+                              type: object
+                            minItems: 1
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        required:
+                        - resumeActions
+                        - suspendActions
                         type: object
                     required:
                     - name

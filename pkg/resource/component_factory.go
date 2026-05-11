@@ -32,6 +32,8 @@ type ComponentWriter interface {
 	UpdatePodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, podSpecs []corev1.PodSpec) error
 	UpdatePodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition, podMetadata []metav1.ObjectMeta) error
 	UpdateFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, fragmentedPodSpecs []FragmentedPodSpec) error
+	ApplySuspendActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error
+	ApplyResumeActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error
 }
 
 //go:generate mockgen -source=component_factory.go -destination=accessor_mock.go -package=resource ComponentAccessor
@@ -41,7 +43,7 @@ type ComponentAccessor interface {
 }
 
 type ComponentFactory struct {
-	karta      *v1alpha1.Karta
+	karta    *v1alpha1.Karta
 	accessor ComponentAccessor
 
 	componentDefinitionsByName map[string]v1alpha1.ComponentDefinition
@@ -58,7 +60,7 @@ func NewComponentFactory(karta *v1alpha1.Karta, accessor ComponentAccessor) *Com
 	}
 
 	return &ComponentFactory{
-		karta:                        karta,
+		karta:                      karta,
 		accessor:                   accessor,
 		componentDefinitionsByName: definitionsByName,
 	}
