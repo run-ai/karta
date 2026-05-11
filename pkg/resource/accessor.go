@@ -331,7 +331,7 @@ func (a *Accessor) extractConditions(ctx context.Context, condDef *v1alpha1.Cond
 // if the component has no SuspendDefinition.
 func (a *Accessor) ApplySuspendActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error {
 	if definition.SuspendDefinition == nil {
-		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have suspend definition", definition.Name))
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have suspendDefinition", definition.Name))
 	}
 	for i, expr := range definition.SuspendDefinition.SuspendActions {
 		if err := a.jqRunner.Mutate(ctx, expr); err != nil {
@@ -346,7 +346,7 @@ func (a *Accessor) ApplySuspendActions(ctx context.Context, definition v1alpha1.
 // if the component has no SuspendDefinition.
 func (a *Accessor) ApplyResumeActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error {
 	if definition.SuspendDefinition == nil {
-		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have suspend definition", definition.Name))
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have suspendDefinition", definition.Name))
 	}
 	for i, expr := range definition.SuspendDefinition.ResumeActions {
 		if err := a.jqRunner.Mutate(ctx, expr); err != nil {
