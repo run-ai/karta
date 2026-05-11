@@ -453,7 +453,7 @@ var _ = Describe("ValidateActionExpression", func() {
 		})
 	})
 
-	Context("invalid expressions — dangerous built-ins still rejected", func() {
+	Context("invalid expressions — dangerous built-ins rejected at top level", func() {
 		DescribeTable("should reject dangerous recursive/unbounded operations",
 			func(expr, expectedSubstring string) {
 				err := ValidateActionExpression(expr)
@@ -474,5 +474,100 @@ var _ = Describe("ValidateActionExpression", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to parse JQ expression"))
 		})
+	})
+
+	Context("AST traversal — nested constructs cannot bypass the blacklist", func() {
+		DescribeTable("Array constructor",
+			func(expr, expectedSubstring string) {
+				err := ValidateActionExpression(expr)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
+			},
+			Entry("del nested in array", "[del(.x)]", "del function is not allowed"),
+			Entry("recurse nested in array", "[recurse]", "function 'recurse'"),
+		)
+
+		DescribeTable("Object constructor",
+			func(expr, expectedSubstring string) {
+				err := ValidateActionExpression(expr)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
+			},
+			Entry("del in object value", "{a: del(.x)}", "del function is not allowed"),
+			Entry("del in computed object key", "{(del(.x)): .}", "del function is not allowed"),
+			Entry("recurse in object value", "{a: recurse}", "function 'recurse'"),
+		)
+
+		DescribeTable("if-then-elif-else",
+			func(expr, expectedSubstring string) {
+				err := ValidateActionExpression(expr)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
+			},
+			Entry("del in if condition", "if del(.x) then . end", "del function is not allowed"),
+			Entry("del in then branch", "if . then del(.x) end", "del function is not allowed"),
+			Entry("del in else branch", "if . then . else del(.x) end", "del function is not allowed"),
+			Entry("del in elif condition", "if . then . elif del(.x) then . end", "del function is not allowed"),
+			Entry("del in elif then branch", "if . then . elif . then del(.x) end", "del function is not allowed"),
+		)
+
+		DescribeTable("try-catch",
+			func(expr, expectedSubstring string) {
+				err := ValidateActionExpression(expr)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
+			},
+			Entry("del in try body", "try del(.x)", "del function is not allowed"),
+			Entry("del in catch handler", "try . catch del(.x)", "del function is not allowed"),
+		)
+
+		DescribeTable("reduce",
+			func(expr, expectedSubstring string) {
+				err := ValidateActionExpression(expr)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
+			},
+			Entry("del as iterable expression", "reduce del(.x) as $x (0; .)", "del function is not allowed"),
+			Entry("del as initial accumulator", "reduce .[] as $x (del(.x); .)", "del function is not allowed"),
+			Entry("del in update step", "reduce .[] as $x (0; del(.x))", "del function is not allowed"),
+		)
+
+		DescribeTable("foreach",
+			func(expr, expectedSubstring string) {
+				err := ValidateActionExpression(expr)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
+			},
+			Entry("del as iterable expression", "foreach del(.x) as $x (0; .)", "del function is not allowed"),
+			Entry("del as initial state", "foreach .[] as $x (del(.x); .)", "del function is not allowed"),
+			Entry("del in update step", "foreach .[] as $x (0; del(.x))", "del function is not allowed"),
+			Entry("del in extract step", "foreach .[] as $x (0; .; del(.x))", "del function is not allowed"),
+		)
+
+		DescribeTable("parenthesized expression (Term.Query)",
+			func(expr, expectedSubstring string) {
+				err := ValidateActionExpression(expr)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
+			},
+			Entry("del in parens", "(del(.x))", "del function is not allowed"),
+			Entry("recurse in parens", "(recurse)", "function 'recurse'"),
+		)
+
+		DescribeTable("SuffixList index bounds",
+			func(expr, expectedSubstring string) {
+				err := ValidateActionExpression(expr)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
+			},
+			// .[expr] / .[start:end] — dangerous function on Term.Index directly
+			Entry("banned function in direct index", ".[range(5)]", "function 'range'"),
+			Entry("banned function in direct slice start", ".[range(5):0]", "function 'range'"),
+			Entry("banned function in direct slice end", ".[0:range(5)]", "function 'range'"),
+			// .foo[expr] — dangerous function in SuffixList Index
+			Entry("banned function in suffix index", ".spec[range(5)]", "function 'range'"),
+			Entry("banned function in suffix slice start", ".spec[range(5):0]", "function 'range'"),
+			Entry("banned function in suffix slice end", ".spec[0:range(5)]", "function 'range'"),
+		)
 	})
 })

@@ -232,12 +232,18 @@ func ValidateActionExpression(expr string) error {
 
 // validateActionParsedJQ recursively checks that a parsed JQ query is safe for manifest
 // mutation: assignment operators are allowed; dangerous recursive/unbounded built-ins are not.
+//
+// The walk covers every AST node that can contain a nested *Query:
+// binary Op (Left/Right), Func args, Term.Query, Array.Query, Object key/value
+// queries, If/Elif/Else branches, Try body and catch, Reduce and Foreach
+// sub-expressions, and SuffixList index bounds.
 func validateActionParsedJQ(q *gojq.Query) error {
 	if q == nil {
 		return nil
 	}
 
 	if q.Term != nil {
+		// Function call: check blacklist then recurse into args.
 		if q.Term.Func != nil {
 			f := q.Term.Func
 
@@ -255,11 +261,120 @@ func validateActionParsedJQ(q *gojq.Query) error {
 			}
 		}
 
+		// Recursive descent operator (..)
 		if q.Term.Type == gojq.TermTypeRecurse {
 			return errors.New("recursive descent operator '..' is not allowed")
 		}
+
+		// Parenthesized expression: (expr)
+		if err := validateActionParsedJQ(q.Term.Query); err != nil {
+			return err
+		}
+
+		// Array constructor: [expr]
+		if q.Term.Array != nil {
+			if err := validateActionParsedJQ(q.Term.Array.Query); err != nil {
+				return err
+			}
+		}
+
+		// Object constructor: {key: val, (keyExpr): val}
+		if q.Term.Object != nil {
+			for _, kv := range q.Term.Object.KeyVals {
+				if err := validateActionParsedJQ(kv.KeyQuery); err != nil {
+					return err
+				}
+				if err := validateActionParsedJQ(kv.Val); err != nil {
+					return err
+				}
+			}
+		}
+
+		// if-then-elif*-else-end
+		if q.Term.If != nil {
+			if err := validateActionParsedJQ(q.Term.If.Cond); err != nil {
+				return err
+			}
+			if err := validateActionParsedJQ(q.Term.If.Then); err != nil {
+				return err
+			}
+			for _, elif := range q.Term.If.Elif {
+				if err := validateActionParsedJQ(elif.Cond); err != nil {
+					return err
+				}
+				if err := validateActionParsedJQ(elif.Then); err != nil {
+					return err
+				}
+			}
+			if err := validateActionParsedJQ(q.Term.If.Else); err != nil {
+				return err
+			}
+		}
+
+		// try-catch
+		if q.Term.Try != nil {
+			if err := validateActionParsedJQ(q.Term.Try.Body); err != nil {
+				return err
+			}
+			if err := validateActionParsedJQ(q.Term.Try.Catch); err != nil {
+				return err
+			}
+		}
+
+		// reduce EXPR as $pat (init; update)
+		if q.Term.Reduce != nil {
+			if err := validateActionParsedJQ(q.Term.Reduce.Query); err != nil {
+				return err
+			}
+			if err := validateActionParsedJQ(q.Term.Reduce.Start); err != nil {
+				return err
+			}
+			if err := validateActionParsedJQ(q.Term.Reduce.Update); err != nil {
+				return err
+			}
+		}
+
+		// foreach EXPR as $pat (init; update [; extract])
+		if q.Term.Foreach != nil {
+			if err := validateActionParsedJQ(q.Term.Foreach.Query); err != nil {
+				return err
+			}
+			if err := validateActionParsedJQ(q.Term.Foreach.Start); err != nil {
+				return err
+			}
+			if err := validateActionParsedJQ(q.Term.Foreach.Update); err != nil {
+				return err
+			}
+			if err := validateActionParsedJQ(q.Term.Foreach.Extract); err != nil {
+				return err
+			}
+		}
+
+		// Suffix list: index/slice bounds (.x[start:end], .x[idx])
+		for _, suffix := range q.Term.SuffixList {
+			if suffix.Index != nil {
+				if err := validateActionParsedJQ(suffix.Index.Start); err != nil {
+					return err
+				}
+				if err := validateActionParsedJQ(suffix.Index.End); err != nil {
+					return err
+				}
+			}
+		}
+
+		// Direct index term: .[expr] or .[start:end] where the index is on Term.Index itself
+		// (SuffixList only captures trailing suffixes after a named field, e.g. .foo[expr])
+		if q.Term.Index != nil {
+			if err := validateActionParsedJQ(q.Term.Index.Start); err != nil {
+				return err
+			}
+			if err := validateActionParsedJQ(q.Term.Index.End); err != nil {
+				return err
+			}
+		}
 	}
 
+	// Binary operator: left op right (assignment operators are intentionally allowed)
 	if q.Op > 0 {
 		if err := validateActionParsedJQ(q.Left); err != nil {
 			return err
