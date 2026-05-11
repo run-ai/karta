@@ -21,15 +21,7 @@ type Assigner interface {
 	AssignZip(ctx context.Context, expression string, values []any) error
 }
 
-type Mutator interface {
-	// Mutate applies a self-contained mutation expression (e.g. ".spec.suspend = true")
-	// against the current object and replaces the internal state with the result.
-	// Unlike Assign, the expression owns the full update; no external value is injected.
-	Mutate(ctx context.Context, expression string) error
-}
-
 type Runner interface {
 	Evaluator
 	Assigner
-	Mutator
 }

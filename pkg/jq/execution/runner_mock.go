@@ -122,44 +122,6 @@ func (mr *MockAssignerMockRecorder) AssignZip(ctx, expression, values any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssignZip", reflect.TypeOf((*MockAssigner)(nil).AssignZip), ctx, expression, values)
 }
 
-// MockMutator is a mock of Mutator interface.
-type MockMutator struct {
-	ctrl     *gomock.Controller
-	recorder *MockMutatorMockRecorder
-	isgomock struct{}
-}
-
-// MockMutatorMockRecorder is the mock recorder for MockMutator.
-type MockMutatorMockRecorder struct {
-	mock *MockMutator
-}
-
-// NewMockMutator creates a new mock instance.
-func NewMockMutator(ctrl *gomock.Controller) *MockMutator {
-	mock := &MockMutator{ctrl: ctrl}
-	mock.recorder = &MockMutatorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockMutator) EXPECT() *MockMutatorMockRecorder {
-	return m.recorder
-}
-
-// Mutate mocks base method.
-func (m *MockMutator) Mutate(ctx context.Context, expression string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Mutate", ctx, expression)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Mutate indicates an expected call of Mutate.
-func (mr *MockMutatorMockRecorder) Mutate(ctx, expression any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Mutate", reflect.TypeOf((*MockMutator)(nil).Mutate), ctx, expression)
-}
-
 // MockRunner is a mock of Runner interface.
 type MockRunner struct {
 	ctrl     *gomock.Controller
@@ -240,18 +202,4 @@ func (m *MockRunner) GetObject() (any, error) {
 func (mr *MockRunnerMockRecorder) GetObject() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObject", reflect.TypeOf((*MockRunner)(nil).GetObject))
-}
-
-// Mutate mocks base method.
-func (m *MockRunner) Mutate(ctx context.Context, expression string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Mutate", ctx, expression)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Mutate indicates an expected call of Mutate.
-func (mr *MockRunnerMockRecorder) Mutate(ctx, expression any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Mutate", reflect.TypeOf((*MockRunner)(nil).Mutate), ctx, expression)
 }

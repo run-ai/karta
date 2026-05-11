@@ -437,66 +437,42 @@ var _ = Describe("ValidateParsedJQ", func() {
 		return q
 	}
 
-	Describe("allowMutation=false (read-only mode)", func() {
-		It("should accept a plain path expression", func() {
-			Expect(ValidateParsedJQ(parseOrFail(".spec.replicas"), false)).To(Succeed())
-		})
-
-		It("should reject mutation operators", func() {
-			err := ValidateParsedJQ(parseOrFail(".spec.suspend = true"), false)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("modifying operator"))
-		})
-
-		It("should reject del", func() {
-			err := ValidateParsedJQ(parseOrFail("del(.spec)"), false)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("del function is not allowed"))
-		})
-
-		It("should reject recursive descent", func() {
-			err := ValidateParsedJQ(parseOrFail(".. | .name"), false)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("'..' is not allowed"))
-		})
-
-		It("should return nil for a nil query", func() {
-			Expect(ValidateParsedJQ(nil, false)).To(Succeed())
-		})
+	It("should accept a plain path expression", func() {
+		Expect(ValidateParsedJQ(parseOrFail(".spec.replicas"))).To(Succeed())
 	})
 
-	Describe("allowMutation=true (action mode)", func() {
-		It("should accept assignment operators", func() {
-			Expect(ValidateParsedJQ(parseOrFail(".spec.suspend = true"), true)).To(Succeed())
-		})
+	It("should return nil for a nil query", func() {
+		Expect(ValidateParsedJQ(nil)).To(Succeed())
+	})
 
-		It("should accept update-modify operators", func() {
-			Expect(ValidateParsedJQ(parseOrFail(".spec.replicas |= . + 1"), true)).To(Succeed())
-		})
+	It("should reject assignment operators", func() {
+		err := ValidateParsedJQ(parseOrFail(".spec.suspend = true"))
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("modifying operator"))
+	})
 
-		It("should still reject del", func() {
-			err := ValidateParsedJQ(parseOrFail("del(.spec)"), true)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("del function is not allowed"))
-		})
+	It("should reject update-modify operators", func() {
+		err := ValidateParsedJQ(parseOrFail(".spec.replicas |= . + 1"))
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("modifying operator"))
+	})
 
-		It("should still reject range", func() {
-			err := ValidateParsedJQ(parseOrFail("range(5)"), true)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("function 'range'"))
-		})
+	It("should reject del", func() {
+		err := ValidateParsedJQ(parseOrFail("del(.spec)"))
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("del function is not allowed"))
+	})
 
-		It("should still reject recursive descent", func() {
-			err := ValidateParsedJQ(parseOrFail(".. | .name"), true)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("'..' is not allowed"))
-		})
+	It("should reject recursive descent", func() {
+		err := ValidateParsedJQ(parseOrFail(".. | .name"))
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("'..' is not allowed"))
 	})
 
 	Describe("user-defined functions (FuncDefs) cannot hide blacklisted operations", func() {
 		DescribeTable("should reject expressions where a def body contains a blacklisted operation",
 			func(expr, expectedSubstring string) {
-				err := ValidateParsedJQ(parseOrFail(expr), true)
+				err := ValidateParsedJQ(parseOrFail(expr))
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
 			},
@@ -509,55 +485,41 @@ var _ = Describe("ValidateParsedJQ", func() {
 		)
 
 		It("should accept a safe user-defined function", func() {
-			Expect(ValidateParsedJQ(parseOrFail("def double: . * 2; .spec.replicas | double"), true)).To(Succeed())
+			Expect(ValidateParsedJQ(parseOrFail("def double: . * 2; .spec.replicas | double"))).To(Succeed())
 		})
 	})
 })
 
 var _ = Describe("ValidateActionExpression", func() {
-	Context("valid mutation expressions", func() {
-		DescribeTable("should accept assignment and update operators",
+	Context("valid assignment expressions", func() {
+		DescribeTable("should accept '=' assignments with constant values",
 			func(expr string) {
-				err := ValidateActionExpression(expr)
-				Expect(err).NotTo(HaveOccurred())
+				Expect(ValidateActionExpression(expr)).To(Succeed())
 			},
-			Entry("simple assignment", ".spec.suspend = true"),
-			Entry("update-add operator", ".spec.replicas += 1"),
-			Entry("update-sub operator", ".spec.replicas -= 1"),
-			Entry("update-mul operator", ".spec.replicas *= 2"),
-			Entry("update-div operator", ".spec.replicas /= 2"),
-			Entry("update-mod operator", ".spec.replicas %= 3"),
-			Entry("update-alt operator", ".spec.field //= null"),
-			Entry("modify operator", ".spec.suspend |= not"),
-			Entry("piped assignment", ".spec | .suspend = true"),
-			Entry("nested field assignment", ".spec.runPolicy.suspend = true"),
+			Entry("boolean true", ".spec.suspend = true"),
+			Entry("boolean false", ".spec.suspend = false"),
+			Entry("null", ".spec.field = null"),
+			Entry("integer", ".spec.replicas = 0"),
+			Entry("string", `.metadata.annotations["key"] = "value"`),
+			Entry("nested field", ".spec.runPolicy.suspend = true"),
 		)
 
 		It("should accept empty expression", func() {
-			err := ValidateActionExpression("")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should accept a simple read-only path expression", func() {
-			err := ValidateActionExpression(".spec.suspend")
-			Expect(err).NotTo(HaveOccurred())
+			Expect(ValidateActionExpression("")).To(Succeed())
 		})
 	})
 
-	Context("invalid expressions — dangerous built-ins rejected at top level", func() {
-		DescribeTable("should reject dangerous recursive/unbounded operations",
+	Context("invalid expressions — non-'=' operators rejected", func() {
+		DescribeTable("should reject compound assignment and update operators",
 			func(expr, expectedSubstring string) {
 				err := ValidateActionExpression(expr)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
 			},
-			Entry("del function", "del(.spec.suspend)", "del function is not allowed"),
-			Entry("recurse function", "recurse(.children[])", "function 'recurse'"),
-			Entry("walk function", "walk(if type == \"object\" then . else empty end)", "function 'walk'"),
-			Entry("paths function", "paths", "function 'paths'"),
-			Entry("range function", "range(1000000)", "function 'range'"),
-			Entry("repeat function", "repeat(.)", "function 'repeat'"),
-			Entry("recursive descent operator", ".. | .name", "recursive descent operator"),
+			Entry("update-modify operator", ".spec.suspend |= not", "only the '=' operator"),
+			Entry("update-add operator", ".spec.replicas += 1", "only the '=' operator"),
+			Entry("plain path (no assignment)", ".spec.suspend", "only the '=' operator"),
+			Entry("pipe before assignment", ".spec | .suspend = true", "only the '=' operator"),
 		)
 
 		It("should reject malformed JQ syntax", func() {
@@ -567,145 +529,51 @@ var _ = Describe("ValidateActionExpression", func() {
 		})
 	})
 
-	Context("AST traversal — nested constructs cannot bypass the blacklist", func() {
-		DescribeTable("Array constructor",
+	Context("invalid expressions — dangerous path on left-hand side", func() {
+		DescribeTable("should reject dangerous functions in the path",
 			func(expr, expectedSubstring string) {
 				err := ValidateActionExpression(expr)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
 			},
-			Entry("del nested in array", "[del(.x)]", "del function is not allowed"),
-			Entry("recurse nested in array", "[recurse]", "function 'recurse'"),
+			Entry("del in path", "del(.spec) = true", "del function is not allowed"),
+			Entry("recursive descent in path", ".. = true", "recursive descent operator"),
 		)
-
-		DescribeTable("Object constructor",
-			func(expr, expectedSubstring string) {
-				err := ValidateActionExpression(expr)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
-			},
-			Entry("del in object value", "{a: del(.x)}", "del function is not allowed"),
-			Entry("del in computed object key", "{(del(.x)): .}", "del function is not allowed"),
-			Entry("recurse in object value", "{a: recurse}", "function 'recurse'"),
-		)
-
-		DescribeTable("if-then-elif-else",
-			func(expr, expectedSubstring string) {
-				err := ValidateActionExpression(expr)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
-			},
-			Entry("del in if condition", "if del(.x) then . end", "del function is not allowed"),
-			Entry("del in then branch", "if . then del(.x) end", "del function is not allowed"),
-			Entry("del in else branch", "if . then . else del(.x) end", "del function is not allowed"),
-			Entry("del in elif condition", "if . then . elif del(.x) then . end", "del function is not allowed"),
-			Entry("del in elif then branch", "if . then . elif . then del(.x) end", "del function is not allowed"),
-		)
-
-		DescribeTable("try-catch",
-			func(expr, expectedSubstring string) {
-				err := ValidateActionExpression(expr)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
-			},
-			Entry("del in try body", "try del(.x)", "del function is not allowed"),
-			Entry("del in catch handler", "try . catch del(.x)", "del function is not allowed"),
-		)
-
-		DescribeTable("reduce",
-			func(expr, expectedSubstring string) {
-				err := ValidateActionExpression(expr)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
-			},
-			Entry("del as iterable expression", "reduce del(.x) as $x (0; .)", "del function is not allowed"),
-			Entry("del as initial accumulator", "reduce .[] as $x (del(.x); .)", "del function is not allowed"),
-			Entry("del in update step", "reduce .[] as $x (0; del(.x))", "del function is not allowed"),
-		)
-
-		DescribeTable("foreach",
-			func(expr, expectedSubstring string) {
-				err := ValidateActionExpression(expr)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
-			},
-			Entry("del as iterable expression", "foreach del(.x) as $x (0; .)", "del function is not allowed"),
-			Entry("del as initial state", "foreach .[] as $x (del(.x); .)", "del function is not allowed"),
-			Entry("del in update step", "foreach .[] as $x (0; del(.x))", "del function is not allowed"),
-			Entry("del in extract step", "foreach .[] as $x (0; .; del(.x))", "del function is not allowed"),
-		)
-
-		DescribeTable("parenthesized expression (Term.Query)",
-			func(expr, expectedSubstring string) {
-				err := ValidateActionExpression(expr)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
-			},
-			Entry("del in parens", "(del(.x))", "del function is not allowed"),
-			Entry("recurse in parens", "(recurse)", "function 'recurse'"),
-		)
-
-		DescribeTable("SuffixList index bounds",
-			func(expr, expectedSubstring string) {
-				err := ValidateActionExpression(expr)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
-			},
-			// .[expr] / .[start:end] — dangerous function on Term.Index directly
-			Entry("banned function in direct index", ".[range(5)]", "function 'range'"),
-			Entry("banned function in direct slice start", ".[range(5):0]", "function 'range'"),
-			Entry("banned function in direct slice end", ".[0:range(5)]", "function 'range'"),
-			// .foo[expr] — dangerous function in SuffixList Index
-			Entry("banned function in suffix index", ".spec[range(5)]", "function 'range'"),
-			Entry("banned function in suffix slice start", ".spec[range(5):0]", "function 'range'"),
-			Entry("banned function in suffix slice end", ".spec[0:range(5)]", "function 'range'"),
-		)
-
-		DescribeTable("string interpolation (Term.Str.Queries)",
-			func(expr, expectedSubstring string) {
-				err := ValidateActionExpression(expr)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
-			},
-		Entry("del nested in interpolated string", `"value: \(del(.x))"`, "del function is not allowed"),
-		Entry("range nested in interpolated string", `"count: \(range(5))"`, "function 'range'"),
-	)
+	})
 })
 
 var _ = Describe("jq:validateAction tag", func() {
 	Describe("ValidateJQExpressions with validateAction tag", func() {
-		It("should accept mutation operators in validateAction-tagged fields", func() {
+		It("should accept '=' assignments in validateAction-tagged fields", func() {
 			obj := ActionTestStruct{
-				SuspendActions: []string{".spec.suspend = true", ".spec.replicas |= . * 0"},
+				SuspendActions: []string{".spec.suspend = true"},
 				ResumeActions:  []string{".spec.suspend = false"},
 				ReadOnlyPath:   ".metadata.name",
 			}
-			errs := ValidateJQExpressions(obj)
-			Expect(errs).To(BeEmpty())
+			Expect(ValidateJQExpressions(obj)).To(BeEmpty())
 		})
 
-		It("should still reject dangerous functions in validateAction-tagged fields", func() {
+		It("should reject non-'=' operators in validateAction-tagged fields", func() {
 			obj := ActionTestStruct{
-				SuspendActions: []string{"del(.spec)"},
+				SuspendActions: []string{".spec.suspend |= not"},
 			}
 			errs := ValidateJQExpressions(obj)
 			Expect(errs).To(HaveLen(1))
-			Expect(errs[0].Error()).To(ContainSubstring("del function is not allowed"))
+			Expect(errs[0].Error()).To(ContainSubstring("only the '=' operator"))
 		})
 
-		It("should still reject recursive descent in validateAction-tagged fields", func() {
+		It("should reject dangerous functions in validateAction-tagged path", func() {
 			obj := ActionTestStruct{
-				ResumeActions: []string{".. | .spec?"},
+				SuspendActions: []string{"del(.spec) = true"},
 			}
 			errs := ValidateJQExpressions(obj)
 			Expect(errs).To(HaveLen(1))
-			Expect(errs[0].Error()).To(ContainSubstring("'..' is not allowed"))
 		})
 
 		It("should still reject mutation operators in validate-tagged fields", func() {
 			obj := ActionTestStruct{
-				SuspendActions: []string{".spec.suspend"},
-				ResumeActions:  []string{".spec.suspend"},
+				SuspendActions: []string{".spec.suspend = true"},
+				ResumeActions:  []string{".spec.suspend = false"},
 				ReadOnlyPath:   ".spec.replicas = 0",
 			}
 			errs := ValidateJQExpressions(obj)
@@ -715,11 +583,10 @@ var _ = Describe("jq:validateAction tag", func() {
 
 		It("should report errors for all invalid entries in a slice", func() {
 			obj := ActionTestStruct{
-				SuspendActions: []string{".spec.suspend = true", "del(.x)", "range(5) | ."},
+				SuspendActions: []string{".spec.suspend = true", ".spec.suspend |= not", ".spec.replicas += 1"},
 			}
 			errs := ValidateJQExpressions(obj)
 			Expect(errs).To(HaveLen(2))
 		})
 	})
-})
 })
