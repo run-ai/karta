@@ -3,6 +3,7 @@
 
 package v1alpha1
 
+
 // GroupVersionKind represents a Kubernetes API object's group, version, and kind.
 type GroupVersionKind struct {
 	// Group is the API group of the resource
@@ -43,6 +44,12 @@ type ComponentDefinition struct {
 	// +kubebuilder:validation:Optional
 	StatusDefinition *StatusDefinition `json:"statusDefinition,omitempty"`
 
+	// SuspendDefinition defines the path/value assignments used to suspend and resume this component.
+	// Should only be populated for components where the underlying framework provides native, first-class support for suspension primitives.
+	// (e.g. spec.suspend for batch/v1 Job).
+	// +kubebuilder:validation:Optional
+	SuspendDefinition *SuspendDefinition `json:"suspendDefinition,omitempty"`
+
 	// InstanceIdPath is the JQ path to the instance id, for components that hold multiple pod definitions (in array or map)
 	// +kubebuilder:validation:Optional
 	InstanceIdPath *string `json:"instanceIdPath,omitempty" jq:"validate"`
@@ -50,6 +57,37 @@ type ComponentDefinition struct {
 	// PodSelector defines how to identify pods belonging to this component
 	// +kubebuilder:validation:Optional
 	PodSelector *PodSelector `json:"podSelector,omitempty"`
+}
+
+// SuspendDefinition defines the field assignments applied to a manifest when
+// suspending or resuming a workload. Each action specifies the target field path
+// and the value to assign, applied via the runner's Assign method.
+type SuspendDefinition struct {
+	// SuspendActions is an ordered list of path/value assignments applied on suspend.
+	// Actions are applied in sequence; later actions may overwrite earlier ones.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	// +listType=atomic
+	SuspendActions []SuspendAction `json:"suspendActions"`
+
+	// ResumeActions is an ordered list of path/value assignments applied on resume.
+	// Actions are applied in sequence; later actions may overwrite earlier ones.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	// +listType=atomic
+	ResumeActions []SuspendAction `json:"resumeActions"`
+}
+
+// SuspendAction is a single field assignment applied during a suspend or resume operation.
+type SuspendAction struct {
+	// Path is a JQ expression that selects the target field (e.g. ".spec.suspend").
+	// Only read/navigation expressions are permitted; assignment operators are not.
+	// +kubebuilder:validation:Required
+	Path string `json:"path" jq:"validate"`
+
+	// Value is the JSON-encoded value to assign at the path (e.g. "true", "0", `"paused"`, "null").
+	// +kubebuilder:validation:Required
+	Value string `json:"value"`
 }
 
 // SpecDefinition defines how to extract pod specifications from a component.
@@ -196,7 +234,7 @@ type ReplicaSelector struct {
 }
 
 // ResourceStatus represents the high-level status of a component.
-// +kubebuilder:validation:Enum=Initializing;Running;Completed;Failed;Degraded;Undefined
+// +kubebuilder:validation:Enum=Initializing;Running;Completed;Failed;Degraded;Undefined;Suspended;Suspending;Resuming
 type ResourceStatus string
 
 const (
@@ -217,6 +255,15 @@ const (
 
 	// UndefinedStatus is used when status was not defined or cannot be determined
 	UndefinedStatus ResourceStatus = "Undefined"
+
+	// SuspendedStatus indicates the component is fully suspended
+	SuspendedStatus ResourceStatus = "Suspended"
+
+	// SuspendingStatus indicates the component is in the process of being suspended (draining pods)
+	SuspendingStatus ResourceStatus = "Suspending"
+
+	// ResumingStatus indicates the component is in the process of being resumed
+	ResumingStatus ResourceStatus = "Resuming"
 )
 
 // StatusDefinition defines how to interpret the status of a component.
@@ -301,6 +348,24 @@ type StatusMappings struct {
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	Degraded []StatusMatcher `json:"degraded,omitempty"`
+
+	// Suspended defines matchers for the Suspended status
+	// Multiple matchers are OR'd together.
+	// +kubebuilder:validation:Optional
+	// +listType=atomic
+	Suspended []StatusMatcher `json:"suspended,omitempty"`
+
+	// Suspending defines matchers for the Suspending status
+	// Multiple matchers are OR'd together.
+	// +kubebuilder:validation:Optional
+	// +listType=atomic
+	Suspending []StatusMatcher `json:"suspending,omitempty"`
+
+	// Resuming defines matchers for the Resuming status
+	// Multiple matchers are OR'd together.
+	// +kubebuilder:validation:Optional
+	// +listType=atomic
+	Resuming []StatusMatcher `json:"resuming,omitempty"`
 }
 
 // StatusMatchEntry pairs a ResourceStatus with its matchers.
@@ -313,6 +378,9 @@ type StatusMatchEntry struct {
 // When adding a new ResourceStatus, add a corresponding entry here.
 func (m StatusMappings) Entries() []StatusMatchEntry {
 	return []StatusMatchEntry{
+		{ResumingStatus, m.Resuming},
+		{SuspendingStatus, m.Suspending},
+		{SuspendedStatus, m.Suspended},
 		{RunningStatus, m.Running},
 		{FailedStatus, m.Failed},
 		{CompletedStatus, m.Completed},
