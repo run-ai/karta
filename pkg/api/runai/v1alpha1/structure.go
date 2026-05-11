@@ -68,7 +68,7 @@ type SuspendDefinition struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	// +listType=atomic
-	SuspendActions []string `json:"suspendActions"`
+	SuspendActions []string `json:"suspendActions" jq:"validateAction"`
 
 	// ResumeActions is an ordered array of JQ expressions applied to the manifest on resume.
 	// Each expression receives the output of the previous one, allowing multi-field patches.
@@ -76,7 +76,7 @@ type SuspendDefinition struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	// +listType=atomic
-	ResumeActions []string `json:"resumeActions"`
+	ResumeActions []string `json:"resumeActions" jq:"validateAction"`
 }
 
 // SpecDefinition defines how to extract pod specifications from a component.

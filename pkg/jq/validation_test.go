@@ -33,6 +33,12 @@ type StructWithUntagged struct {
 	UntaggedStringMap map[string]string
 }
 
+type ActionTestStruct struct {
+	SuspendActions []string `jq:"validateAction"`
+	ResumeActions  []string `jq:"validateAction"`
+	ReadOnlyPath   string   `jq:"validate"`
+}
+
 var _ = Describe("JQ Validation", func() {
 	Describe("ValidateJQExpressions", func() {
 		Context("valid JQ expressions", func() {
@@ -576,8 +582,59 @@ var _ = Describe("ValidateActionExpression", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
 			},
-			Entry("del nested in interpolated string", `"value: \(del(.x))"`, "del function is not allowed"),
-			Entry("range nested in interpolated string", `"count: \(range(5))"`, "function 'range'"),
-		)
+		Entry("del nested in interpolated string", `"value: \(del(.x))"`, "del function is not allowed"),
+		Entry("range nested in interpolated string", `"count: \(range(5))"`, "function 'range'"),
+	)
+})
+
+var _ = Describe("jq:validateAction tag", func() {
+	Describe("ValidateJQExpressions with validateAction tag", func() {
+		It("should accept mutation operators in validateAction-tagged fields", func() {
+			obj := ActionTestStruct{
+				SuspendActions: []string{".spec.suspend = true", ".spec.replicas |= . * 0"},
+				ResumeActions:  []string{".spec.suspend = false"},
+				ReadOnlyPath:   ".metadata.name",
+			}
+			errs := ValidateJQExpressions(obj)
+			Expect(errs).To(BeEmpty())
+		})
+
+		It("should still reject dangerous functions in validateAction-tagged fields", func() {
+			obj := ActionTestStruct{
+				SuspendActions: []string{"del(.spec)"},
+			}
+			errs := ValidateJQExpressions(obj)
+			Expect(errs).To(HaveLen(1))
+			Expect(errs[0].Error()).To(ContainSubstring("del function is not allowed"))
+		})
+
+		It("should still reject recursive descent in validateAction-tagged fields", func() {
+			obj := ActionTestStruct{
+				ResumeActions: []string{".. | .spec?"},
+			}
+			errs := ValidateJQExpressions(obj)
+			Expect(errs).To(HaveLen(1))
+			Expect(errs[0].Error()).To(ContainSubstring("'..' is not allowed"))
+		})
+
+		It("should still reject mutation operators in validate-tagged fields", func() {
+			obj := ActionTestStruct{
+				SuspendActions: []string{".spec.suspend"},
+				ResumeActions:  []string{".spec.suspend"},
+				ReadOnlyPath:   ".spec.replicas = 0",
+			}
+			errs := ValidateJQExpressions(obj)
+			Expect(errs).To(HaveLen(1))
+			Expect(errs[0].Error()).To(ContainSubstring("modifying operator"))
+		})
+
+		It("should report errors for all invalid entries in a slice", func() {
+			obj := ActionTestStruct{
+				SuspendActions: []string{".spec.suspend = true", "del(.x)", "range(5) | ."},
+			}
+			errs := ValidateJQExpressions(obj)
+			Expect(errs).To(HaveLen(2))
+		})
 	})
+})
 })

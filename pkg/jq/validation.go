@@ -11,7 +11,8 @@ import (
 	"github.com/itchyny/gojq"
 )
 
-// ValidateJQExpressions recursively validates all the fields of the object tagged with 'jq:"validate"'
+// ValidateJQExpressions recursively validates all the fields of the object tagged with
+// 'jq:"validate"' (read-only rules) or 'jq:"validateAction"' (mutation rules).
 func ValidateJQExpressions(object any) []error {
 	var errs []error
 	validateJQExpressionsRecursive(reflect.ValueOf(object), "", &errs)
@@ -58,9 +59,17 @@ func validateJQExpressionsInStruct(val reflect.Value, basePath string, errs *[]e
 		// Build field path for error reporting
 		currentPath := buildFieldPath(basePath, fieldType.Name)
 
-		// Check if field has jq:"validate" tag and handle string, *string, []string, and map[K]string fields
-		if jqTag, ok := fieldType.Tag.Lookup("jq"); ok && jqTag == "validate" {
-			handleTaggedStructField(field, currentPath, errs)
+		// jq:"validate"       — read-only expressions (no mutation operators)
+		// jq:"validateAction" — mutation expressions (assignment operators allowed)
+		if jqTag, ok := fieldType.Tag.Lookup("jq"); ok {
+			switch jqTag {
+			case "validate":
+				handleTaggedStructField(field, currentPath, false, errs)
+			case "validateAction":
+				handleTaggedStructField(field, currentPath, true, errs)
+			default:
+				validateJQExpressionsRecursive(field, currentPath, errs)
+			}
 		} else {
 			// Recursively validate nested structures
 			validateJQExpressionsRecursive(field, currentPath, errs)
@@ -68,17 +77,23 @@ func validateJQExpressionsInStruct(val reflect.Value, basePath string, errs *[]e
 	}
 }
 
-func handleTaggedStructField(field reflect.Value, currentPath string, errs *[]error) {
+// handleTaggedStructField validates a jq-tagged field.
+// allowMutation controls whether mutation operators (=, |=, +=, …) are permitted.
+func handleTaggedStructField(field reflect.Value, currentPath string, allowMutation bool, errs *[]error) {
+	tagName := "validate"
+	if allowMutation {
+		tagName = "validateAction"
+	}
 	switch {
 	case isStringField(field):
-		if err := validateStringField(field, currentPath); err != nil {
+		if err := validateStringField(field, currentPath, allowMutation); err != nil {
 			*errs = append(*errs, err)
 		}
 	case isStringSliceField(field):
 		for j := 0; j < field.Len(); j++ {
 			elem := field.Index(j)
 			elemPath := fmt.Sprintf("%s[%d]", currentPath, j)
-			if err := validateStringField(elem, elemPath); err != nil {
+			if err := validateStringField(elem, elemPath, allowMutation); err != nil {
 				*errs = append(*errs, err)
 			}
 		}
@@ -86,12 +101,12 @@ func handleTaggedStructField(field reflect.Value, currentPath string, errs *[]er
 		for _, key := range field.MapKeys() {
 			value := field.MapIndex(key)
 			valuePath := fmt.Sprintf("%s[%v]", currentPath, key.Interface())
-			if err := validateStringField(value, valuePath); err != nil {
+			if err := validateStringField(value, valuePath, allowMutation); err != nil {
 				*errs = append(*errs, err)
 			}
 		}
 	default:
-		*errs = append(*errs, fmt.Errorf("%s: jq:'validate' tag can only be used on string, *string, []string, and map[K]string fields", currentPath))
+		*errs = append(*errs, fmt.Errorf("%s: jq:%q tag can only be used on string, *string, []string, and map[K]string fields", currentPath, tagName))
 	}
 }
 
@@ -121,7 +136,7 @@ func validateJQExpressionsInMap(val reflect.Value, basePath string, errs *[]erro
 	}
 }
 
-func validateStringField(field reflect.Value, fieldPath string) error {
+func validateStringField(field reflect.Value, fieldPath string, allowMutation bool) error {
 	// Handle pointer to string (*string)
 	if field.Kind() == reflect.Ptr {
 		if field.IsNil() {
@@ -145,62 +160,9 @@ func validateStringField(field reflect.Value, fieldPath string) error {
 		return fmt.Errorf("failed to parse JQ expression '%s' at '%s': %w", jqExpression, fieldPath, err)
 	}
 
-	err = ValidateParsedJQ(parsed)
+	err = validateParsedJQ(parsed, allowMutation)
 	if err != nil {
 		return fmt.Errorf("JQ expression '%s' at '%s' failed validation: %w", jqExpression, fieldPath, err)
-	}
-
-	return nil
-}
-
-// ValidateParsedJQ checks if a gojq query is read-only and safe
-func ValidateParsedJQ(q *gojq.Query) error {
-	if q == nil {
-		return nil
-	}
-
-	if q.Term != nil {
-		if q.Term.Func != nil {
-			f := q.Term.Func
-
-			// Reject mutating and recursion-related functions
-			switch f.Name {
-			case "del":
-				return errors.New("del function is not allowed")
-			case "range", "paths", "recurse", "walk", "repeat":
-				return fmt.Errorf("function '%s' may produce excessive output and is not allowed", f.Name)
-			}
-
-			for _, arg := range f.Args {
-				err := ValidateParsedJQ(arg)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		if q.Term.Type == gojq.TermTypeRecurse {
-			return errors.New("recursive descent operator '..' is not allowed")
-		}
-	}
-
-	// If the query has an operator, validate it and its operands
-	if q.Op > 0 {
-		switch q.Op {
-		case gojq.OpAssign, gojq.OpModify, gojq.OpUpdateAdd, gojq.OpUpdateSub, gojq.OpUpdateMul, gojq.OpUpdateDiv, gojq.OpUpdateMod, gojq.OpUpdateAlt:
-			return fmt.Errorf("modifying operator '%s' is not allowed", q.Op)
-		}
-
-		err := ValidateParsedJQ(q.Left)
-		if err != nil {
-			return err
-		}
-
-		err = ValidateParsedJQ(q.Right)
-		if err != nil {
-			return err
-		}
-
 	}
 
 	return nil
@@ -213,31 +175,29 @@ func buildFieldPath(basePath, fieldName string) string {
 	return fmt.Sprintf("%s.%s", basePath, fieldName)
 }
 
-// ValidateActionExpression validates a mutation-safe JQ expression intended for manifest
-// patching (e.g. suspendActions/resumeActions in a SuspendDefinition). Unlike ValidateParsedJQ,
-// assignment operators (=, |=, +=, etc.) are permitted because they are the purpose of the
-// expression. Dangerous recursive/unbounded operations are still rejected.
-func ValidateActionExpression(expr string) error {
-	if expr == "" {
-		return nil
-	}
-
-	parsed, err := gojq.Parse(expr)
-	if err != nil {
-		return fmt.Errorf("failed to parse JQ expression '%s': %w", expr, err)
-	}
-
-	return validateActionParsedJQ(parsed)
+// ValidateParsedJQ checks if a gojq query is read-only and safe.
+// It is a convenience wrapper around validateParsedJQ with allowMutation=false.
+func ValidateParsedJQ(q *gojq.Query) error {
+	return validateParsedJQ(q, false)
 }
 
-// validateActionParsedJQ recursively checks that a parsed JQ query is safe for manifest
-// mutation: assignment operators are allowed; dangerous recursive/unbounded built-ins are not.
+// validateParsedJQ recursively checks that a parsed JQ query is safe.
+//
+// When allowMutation is false the function also rejects assignment operators
+// (=, |=, +=, …). When allowMutation is true those operators are permitted
+// because they are the purpose of the expression (e.g. suspendActions).
+//
+// In both modes the following are always rejected:
+//   - del function
+//   - range, paths, recurse, walk, repeat (excessive-output built-ins)
+//   - recursive descent operator (..)
 //
 // The walk covers every AST node that can contain a nested *Query:
 // binary Op (Left/Right), Func args, Term.Query, Array.Query, Object key/value
 // queries, If/Elif/Else branches, Try body and catch, Reduce and Foreach
-// sub-expressions, SuffixList index bounds, and Term.Str interpolated queries.
-func validateActionParsedJQ(q *gojq.Query) error {
+// sub-expressions, SuffixList index bounds, Term.Index bounds, and
+// Term.Str interpolated queries.
+func validateParsedJQ(q *gojq.Query, allowMutation bool) error {
 	if q == nil {
 		return nil
 	}
@@ -255,7 +215,7 @@ func validateActionParsedJQ(q *gojq.Query) error {
 			}
 
 			for _, arg := range f.Args {
-				if err := validateActionParsedJQ(arg); err != nil {
+				if err := validateParsedJQ(arg, allowMutation); err != nil {
 					return err
 				}
 			}
@@ -267,13 +227,13 @@ func validateActionParsedJQ(q *gojq.Query) error {
 		}
 
 		// Parenthesized expression: (expr)
-		if err := validateActionParsedJQ(q.Term.Query); err != nil {
+		if err := validateParsedJQ(q.Term.Query, allowMutation); err != nil {
 			return err
 		}
 
 		// Array constructor: [expr]
 		if q.Term.Array != nil {
-			if err := validateActionParsedJQ(q.Term.Array.Query); err != nil {
+			if err := validateParsedJQ(q.Term.Array.Query, allowMutation); err != nil {
 				return err
 			}
 		}
@@ -282,7 +242,7 @@ func validateActionParsedJQ(q *gojq.Query) error {
 		// interpolated segment; plain string literals have Queries == nil.
 		if q.Term.Str != nil {
 			for _, strQuery := range q.Term.Str.Queries {
-				if err := validateActionParsedJQ(strQuery); err != nil {
+				if err := validateParsedJQ(strQuery, allowMutation); err != nil {
 					return err
 				}
 			}
@@ -291,10 +251,10 @@ func validateActionParsedJQ(q *gojq.Query) error {
 		// Object constructor: {key: val, (keyExpr): val}
 		if q.Term.Object != nil {
 			for _, kv := range q.Term.Object.KeyVals {
-				if err := validateActionParsedJQ(kv.KeyQuery); err != nil {
+				if err := validateParsedJQ(kv.KeyQuery, allowMutation); err != nil {
 					return err
 				}
-				if err := validateActionParsedJQ(kv.Val); err != nil {
+				if err := validateParsedJQ(kv.Val, allowMutation); err != nil {
 					return err
 				}
 			}
@@ -302,60 +262,60 @@ func validateActionParsedJQ(q *gojq.Query) error {
 
 		// if-then-elif*-else-end
 		if q.Term.If != nil {
-			if err := validateActionParsedJQ(q.Term.If.Cond); err != nil {
+			if err := validateParsedJQ(q.Term.If.Cond, allowMutation); err != nil {
 				return err
 			}
-			if err := validateActionParsedJQ(q.Term.If.Then); err != nil {
+			if err := validateParsedJQ(q.Term.If.Then, allowMutation); err != nil {
 				return err
 			}
 			for _, elif := range q.Term.If.Elif {
-				if err := validateActionParsedJQ(elif.Cond); err != nil {
+				if err := validateParsedJQ(elif.Cond, allowMutation); err != nil {
 					return err
 				}
-				if err := validateActionParsedJQ(elif.Then); err != nil {
+				if err := validateParsedJQ(elif.Then, allowMutation); err != nil {
 					return err
 				}
 			}
-			if err := validateActionParsedJQ(q.Term.If.Else); err != nil {
+			if err := validateParsedJQ(q.Term.If.Else, allowMutation); err != nil {
 				return err
 			}
 		}
 
 		// try-catch
 		if q.Term.Try != nil {
-			if err := validateActionParsedJQ(q.Term.Try.Body); err != nil {
+			if err := validateParsedJQ(q.Term.Try.Body, allowMutation); err != nil {
 				return err
 			}
-			if err := validateActionParsedJQ(q.Term.Try.Catch); err != nil {
+			if err := validateParsedJQ(q.Term.Try.Catch, allowMutation); err != nil {
 				return err
 			}
 		}
 
 		// reduce EXPR as $pat (init; update)
 		if q.Term.Reduce != nil {
-			if err := validateActionParsedJQ(q.Term.Reduce.Query); err != nil {
+			if err := validateParsedJQ(q.Term.Reduce.Query, allowMutation); err != nil {
 				return err
 			}
-			if err := validateActionParsedJQ(q.Term.Reduce.Start); err != nil {
+			if err := validateParsedJQ(q.Term.Reduce.Start, allowMutation); err != nil {
 				return err
 			}
-			if err := validateActionParsedJQ(q.Term.Reduce.Update); err != nil {
+			if err := validateParsedJQ(q.Term.Reduce.Update, allowMutation); err != nil {
 				return err
 			}
 		}
 
 		// foreach EXPR as $pat (init; update [; extract])
 		if q.Term.Foreach != nil {
-			if err := validateActionParsedJQ(q.Term.Foreach.Query); err != nil {
+			if err := validateParsedJQ(q.Term.Foreach.Query, allowMutation); err != nil {
 				return err
 			}
-			if err := validateActionParsedJQ(q.Term.Foreach.Start); err != nil {
+			if err := validateParsedJQ(q.Term.Foreach.Start, allowMutation); err != nil {
 				return err
 			}
-			if err := validateActionParsedJQ(q.Term.Foreach.Update); err != nil {
+			if err := validateParsedJQ(q.Term.Foreach.Update, allowMutation); err != nil {
 				return err
 			}
-			if err := validateActionParsedJQ(q.Term.Foreach.Extract); err != nil {
+			if err := validateParsedJQ(q.Term.Foreach.Extract, allowMutation); err != nil {
 				return err
 			}
 		}
@@ -363,10 +323,10 @@ func validateActionParsedJQ(q *gojq.Query) error {
 		// Suffix list: index/slice bounds (.x[start:end], .x[idx])
 		for _, suffix := range q.Term.SuffixList {
 			if suffix.Index != nil {
-				if err := validateActionParsedJQ(suffix.Index.Start); err != nil {
+				if err := validateParsedJQ(suffix.Index.Start, allowMutation); err != nil {
 					return err
 				}
-				if err := validateActionParsedJQ(suffix.Index.End); err != nil {
+				if err := validateParsedJQ(suffix.Index.End, allowMutation); err != nil {
 					return err
 				}
 			}
@@ -375,24 +335,48 @@ func validateActionParsedJQ(q *gojq.Query) error {
 		// Direct index term: .[expr] or .[start:end] where the index is on Term.Index itself
 		// (SuffixList only captures trailing suffixes after a named field, e.g. .foo[expr])
 		if q.Term.Index != nil {
-			if err := validateActionParsedJQ(q.Term.Index.Start); err != nil {
+			if err := validateParsedJQ(q.Term.Index.Start, allowMutation); err != nil {
 				return err
 			}
-			if err := validateActionParsedJQ(q.Term.Index.End); err != nil {
+			if err := validateParsedJQ(q.Term.Index.End, allowMutation); err != nil {
 				return err
 			}
 		}
 	}
 
-	// Binary operator: left op right (assignment operators are intentionally allowed)
+	// Binary operator: left op right
 	if q.Op > 0 {
-		if err := validateActionParsedJQ(q.Left); err != nil {
+		if !allowMutation {
+			switch q.Op {
+			case gojq.OpAssign, gojq.OpModify, gojq.OpUpdateAdd, gojq.OpUpdateSub, gojq.OpUpdateMul, gojq.OpUpdateDiv, gojq.OpUpdateMod, gojq.OpUpdateAlt:
+				return fmt.Errorf("modifying operator '%s' is not allowed", q.Op)
+			}
+		}
+
+		if err := validateParsedJQ(q.Left, allowMutation); err != nil {
 			return err
 		}
-		if err := validateActionParsedJQ(q.Right); err != nil {
+		if err := validateParsedJQ(q.Right, allowMutation); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// ValidateActionExpression validates a mutation-safe JQ expression intended for manifest
+// patching (e.g. suspendActions/resumeActions in a SuspendDefinition). Unlike ValidateParsedJQ,
+// assignment operators (=, |=, +=, etc.) are permitted because they are the purpose of the
+// expression. Dangerous recursive/unbounded operations are still rejected.
+func ValidateActionExpression(expr string) error {
+	if expr == "" {
+		return nil
+	}
+
+	parsed, err := gojq.Parse(expr)
+	if err != nil {
+		return fmt.Errorf("failed to parse JQ expression '%s': %w", expr, err)
+	}
+
+	return validateParsedJQ(parsed, true)
 }
