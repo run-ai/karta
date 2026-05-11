@@ -138,7 +138,43 @@ func PyFlowKarta() *v1alpha1.Karta {
 	}
 }
 
-// NewPyFlowObject creates a test instance of PyFlow
+// SuspendablePyFlowKarta returns a Karta for PyFlow that includes a SuspendDefinition
+// on the root component. The suspend action sets .spec.suspend = true and the resume
+// action sets it back to false. Suspended/Suspending/Resuming status matchers are also
+// included so callers can exercise the full suspend/resume lifecycle.
+func SuspendablePyFlowKarta() *v1alpha1.Karta {
+	karta := PyFlowKarta()
+	root := &karta.Spec.StructureDefinition.RootComponent
+
+	root.SuspendDefinition = &v1alpha1.SuspendDefinition{
+		SuspendActions: []string{".spec.suspend = true"},
+		ResumeActions:  []string{".spec.suspend = false"},
+	}
+
+	root.StatusDefinition.StatusMappings.Suspended = []v1alpha1.StatusMatcher{
+		{
+			ByConditions: []v1alpha1.ExpectedCondition{
+				{Type: "Suspended", Status: ptr.To("True")},
+			},
+		},
+	}
+	root.StatusDefinition.StatusMappings.Suspending = []v1alpha1.StatusMatcher{
+		{
+			ByConditions: []v1alpha1.ExpectedCondition{
+				{Type: "Suspending", Status: ptr.To("True")},
+			},
+		},
+	}
+	root.StatusDefinition.StatusMappings.Resuming = []v1alpha1.StatusMatcher{
+		{
+			ByConditions: []v1alpha1.ExpectedCondition{
+				{Type: "Resuming", Status: ptr.To("True")},
+			},
+		},
+	}
+
+	return karta
+}
 // Simple job structure with hardcoded master and worker fields
 func NewPyFlowObject() *PyFlow {
 	return &PyFlow{
