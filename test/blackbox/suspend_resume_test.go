@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package resource
+package blackbox
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/jq/execution"
+	"github.com/run-ai/karta/pkg/resource"
 	"github.com/run-ai/karta/test/types"
 )
 
@@ -23,17 +24,17 @@ var _ = Describe("Suspend and Resume (integration)", func() {
 		ctx       context.Context
 		karta     *v1alpha1.Karta
 		pyflow    *types.PyFlow
-		accessor  *Accessor
-		component *Component
+		accessor  *resource.Accessor
+		component *resource.Component
 	)
 
 	// sharedSetup wires a real accessor and component to the same JQ runner so
 	// that mutations applied through component.Suspend/Resume are visible via
 	// accessor.GetObject().
-	sharedSetup := func(k *v1alpha1.Karta, obj *types.PyFlow, name string) (*Accessor, *Component) {
+	sharedSetup := func(k *v1alpha1.Karta, obj *types.PyFlow, name string) (*resource.Accessor, *resource.Component) {
 		runner := execution.NewDefaultRunner(obj)
-		a := NewAccessor(runner)
-		factory := NewComponentFactory(k, a)
+		a := resource.NewAccessor(runner)
+		factory := resource.NewComponentFactory(k, a)
 		comp, err := factory.GetComponent(name)
 		Expect(err).NotTo(HaveOccurred())
 		return a, comp
@@ -129,14 +130,14 @@ var _ = Describe("Suspend and Resume (integration)", func() {
 	Describe("Multi-action SuspendDefinition", func() {
 		It("should apply all suspend actions in sequence", func() {
 			karta.Spec.StructureDefinition.RootComponent.SuspendDefinition = &v1alpha1.SuspendDefinition{
-			SuspendActions: []v1alpha1.SuspendAction{
-				{Path: ".spec.suspend", Value: "true"},
-				{Path: `.metadata.annotations["suspended-by"]`, Value: `"karta"`},
-			},
-			ResumeActions: []v1alpha1.SuspendAction{
-				{Path: ".spec.suspend", Value: "false"},
-				{Path: `.metadata.annotations["suspended-by"]`, Value: "null"},
-			},
+				SuspendActions: []v1alpha1.SuspendAction{
+					{Path: ".spec.suspend", Value: "true"},
+					{Path: `.metadata.annotations["suspended-by"]`, Value: `"karta"`},
+				},
+				ResumeActions: []v1alpha1.SuspendAction{
+					{Path: ".spec.suspend", Value: "false"},
+					{Path: `.metadata.annotations["suspended-by"]`, Value: "null"},
+				},
 			}
 			accessor, component = sharedSetup(karta, pyflow, "pyflow")
 

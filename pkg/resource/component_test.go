@@ -1137,7 +1137,7 @@ var _ = Describe("Component", func() {
 
 				err := component.Suspend(ctx)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to apply suspend actions"))
+				Expect(err.Error()).To(ContainSubstring("apply suspend actions"))
 				Expect(err.Error()).To(ContainSubstring(expectedErr.Error()))
 			})
 		})
@@ -1168,7 +1168,7 @@ var _ = Describe("Component", func() {
 
 				err := component.Resume(ctx)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed to apply resume actions"))
+				Expect(err.Error()).To(ContainSubstring("apply resume actions"))
 				Expect(err.Error()).To(ContainSubstring(expectedErr.Error()))
 			})
 		})

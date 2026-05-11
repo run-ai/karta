@@ -319,7 +319,7 @@ func (c *Component) Suspend(ctx context.Context) error {
 		if isDefinitionNotFoundError(err) {
 			return nil
 		}
-		return fmt.Errorf("failed to apply suspend actions for component '%s': %w", c.name, err)
+		return fmt.Errorf("apply suspend actions for component '%s': %w", c.name, err)
 	}
 	return nil
 }
@@ -331,7 +331,7 @@ func (c *Component) Resume(ctx context.Context) error {
 		if isDefinitionNotFoundError(err) {
 			return nil
 		}
-		return fmt.Errorf("failed to apply resume actions for component '%s': %w", c.name, err)
+		return fmt.Errorf("apply resume actions for component '%s': %w", c.name, err)
 	}
 	return nil
 }

@@ -11,6 +11,11 @@ import (
 	"github.com/itchyny/gojq"
 )
 
+var (
+	ErrDelFunc          = errors.New("del function is not allowed")
+	ErrRecursiveDescent = errors.New("recursive descent operator '..' is not allowed")
+)
+
 // ValidateJQExpressions recursively validates all the fields of the object tagged with 'jq:"validate"'
 func ValidateJQExpressions(object any) []error {
 	var errs []error
@@ -153,13 +158,6 @@ func validateStringField(field reflect.Value, fieldPath string) error {
 	return nil
 }
 
-func buildFieldPath(basePath, fieldName string) string {
-	if basePath == "" {
-		return fieldName
-	}
-	return fmt.Sprintf("%s.%s", basePath, fieldName)
-}
-
 // ValidateParsedJQ checks that a parsed JQ query is safe for read-only use.
 // It rejects assignment operators, del, dangerous recursive/unbounded built-ins,
 // and the recursive descent operator.
@@ -217,15 +215,22 @@ func checkASTNode(v reflect.Value) error {
 		}
 	case *gojq.Term:
 		if n.Type == gojq.TermTypeRecurse {
-			return errors.New("recursive descent operator '..' is not allowed")
+			return ErrRecursiveDescent
 		}
 	case *gojq.Func:
 		switch n.Name {
 		case "del":
-			return errors.New("del function is not allowed")
+			return ErrDelFunc
 		case "range", "paths", "recurse", "walk", "repeat":
 			return fmt.Errorf("function '%s' may produce excessive output and is not allowed", n.Name)
 		}
 	}
 	return nil
+}
+
+func buildFieldPath(basePath, fieldName string) string {
+	if basePath == "" {
+		return fieldName
+	}
+	return fmt.Sprintf("%s.%s", basePath, fieldName)
 }
