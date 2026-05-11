@@ -593,13 +593,13 @@ var _ = Describe("Runner", func() {
 		})
 
 		Context("error handling", func() {
-			It("should return JQCompileError for malformed JQ syntax", func() {
+			It("should return JQParseError for malformed JQ syntax", func() {
 				testData := M{"name": "test"}
 				runner := NewDefaultRunner(testData)
 
 				err := runner.Assign(ctx, ".invalid[[[", "value")
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(BeAssignableToTypeOf(&JQCompileError{}))
+				Expect(err).To(BeAssignableToTypeOf(&JQParseError{}))
 			})
 		})
 	})
@@ -732,12 +732,12 @@ var _ = Describe("Runner", func() {
 			Expect(updated.(M)["metadata"].(M)["labels"].(M)["suspended"]).To(Equal("true"))
 		})
 
-		It("should return JQCompileError for malformed expression", func() {
+		It("should return JQParseError for malformed expression", func() {
 			runner := NewDefaultRunner(M{"spec": M{}})
 
 			err := runner.Mutate(ctx, ".spec.suspend = [[[")
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeAssignableToTypeOf(&JQCompileError{}))
+			Expect(err).To(BeAssignableToTypeOf(&JQParseError{}))
 		})
 
 		It("should return JQExecutionError when expression yields a runtime error", func() {
