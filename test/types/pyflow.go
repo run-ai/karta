@@ -9,10 +9,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
-
-	"k8s.io/utils/ptr"
 )
 
 // PyFlow represents a PyTorch-like training job with hardcoded component fields
@@ -147,8 +146,8 @@ func SuspendablePyFlowKarta() *v1alpha1.Karta {
 	root := &karta.Spec.StructureDefinition.RootComponent
 
 	root.SuspendDefinition = &v1alpha1.SuspendDefinition{
-		SuspendActions: []v1alpha1.SuspendAction{v1alpha1.NewSuspendAction(".spec.suspend", true)},
-		ResumeActions:  []v1alpha1.SuspendAction{v1alpha1.NewSuspendAction(".spec.suspend", false)},
+		SuspendActions: []v1alpha1.SuspendAction{{Path: ".spec.suspend", Value: "true"}},
+		ResumeActions:  []v1alpha1.SuspendAction{{Path: ".spec.suspend", Value: "false"}},
 	}
 
 	root.StatusDefinition.StatusMappings.Suspended = []v1alpha1.StatusMatcher{

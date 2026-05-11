@@ -11,8 +11,7 @@ import (
 	"github.com/itchyny/gojq"
 )
 
-// ValidateJQExpressions recursively validates all the fields of the object tagged with
-// 'jq:"validate"' (read-only rules) or 'jq:"validateAction"' (mutation rules).
+// ValidateJQExpressions recursively validates all the fields of the object tagged with 'jq:"validate"'.
 func ValidateJQExpressions(object any) []error {
 	var errs []error
 	validateJQExpressionsRecursive(reflect.ValueOf(object), "", &errs)
@@ -162,178 +161,70 @@ func buildFieldPath(basePath, fieldName string) string {
 
 // ValidateParsedJQ checks that a parsed JQ query is safe for read-only use.
 // It rejects assignment operators, del, dangerous recursive/unbounded built-ins,
-// the recursive descent operator, and user-defined functions whose bodies
-// contain any of the above.
+// and the recursive descent operator.
+//
+// The walk is reflection-driven so it automatically covers any new node types
+// added by future gojq versions — no manual field enumeration needed.
 func ValidateParsedJQ(q *gojq.Query) error {
-	if q == nil {
+	return walkAST(reflect.ValueOf(q))
+}
+
+// walkAST recursively visits every value reachable from v, calling checkASTNode
+// on each struct it encounters.
+func walkAST(v reflect.Value) error {
+	if !v.IsValid() {
 		return nil
 	}
-
-	// User-defined functions: def f: body; — walk every body so the blacklist
-	// cannot be hidden inside a named helper (e.g. "def evil: del(.x); evil").
-	for _, fd := range q.FuncDefs {
-		if err := ValidateParsedJQ(fd.Body); err != nil {
+	switch v.Kind() {
+	case reflect.Ptr, reflect.Interface:
+		if v.IsNil() {
+			return nil
+		}
+		return walkAST(v.Elem())
+	case reflect.Struct:
+		if err := checkASTNode(v); err != nil {
 			return err
 		}
-	}
-
-	if q.Term != nil {
-		if q.Term.Func != nil {
-			f := q.Term.Func
-
-			// Reject mutating and recursion-related functions
-			switch f.Name {
-			case "del":
-				return errors.New("del function is not allowed")
-			case "range", "paths", "recurse", "walk", "repeat":
-				return fmt.Errorf("function '%s' may produce excessive output and is not allowed", f.Name)
-			}
-
-			for _, arg := range f.Args {
-				if err := ValidateParsedJQ(arg); err != nil {
-					return err
-				}
+		for i := 0; i < v.NumField(); i++ {
+			if err := walkAST(v.Field(i)); err != nil {
+				return err
 			}
 		}
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < v.Len(); i++ {
+			if err := walkAST(v.Index(i)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
 
-		if q.Term.Type == gojq.TermTypeRecurse {
+// checkASTNode inspects a single gojq AST struct node and returns an error if
+// it contains a disallowed construct.
+func checkASTNode(v reflect.Value) error {
+	if !v.CanAddr() {
+		return nil
+	}
+	switch n := v.Addr().Interface().(type) {
+	case *gojq.Query:
+		switch n.Op {
+		case gojq.OpAssign, gojq.OpModify,
+			gojq.OpUpdateAdd, gojq.OpUpdateSub, gojq.OpUpdateMul,
+			gojq.OpUpdateDiv, gojq.OpUpdateMod, gojq.OpUpdateAlt:
+			return fmt.Errorf("modifying operator '%s' is not allowed", n.Op)
+		}
+	case *gojq.Term:
+		if n.Type == gojq.TermTypeRecurse {
 			return errors.New("recursive descent operator '..' is not allowed")
 		}
-
-		// Parenthesized expression: (expr)
-		err := ValidateParsedJQ(q.Term.Query)
-		if err != nil {
-			return err
-		}
-
-		// Array constructor: [expr]
-		if q.Term.Array != nil {
-			if err := ValidateParsedJQ(q.Term.Array.Query); err != nil {
-				return err
-			}
-		}
-
-		// String interpolation: "\(expr)"
-		if q.Term.Str != nil {
-			for _, strQuery := range q.Term.Str.Queries {
-				if err := ValidateParsedJQ(strQuery); err != nil {
-					return err
-				}
-			}
-		}
-
-		// Object constructor: {key: val, (keyExpr): val}
-		if q.Term.Object != nil {
-			for _, kv := range q.Term.Object.KeyVals {
-				if err := ValidateParsedJQ(kv.KeyQuery); err != nil {
-					return err
-				}
-				if err := ValidateParsedJQ(kv.Val); err != nil {
-					return err
-				}
-			}
-		}
-
-		// if-then-elif*-else-end
-		if q.Term.If != nil {
-			if err := ValidateParsedJQ(q.Term.If.Cond); err != nil {
-				return err
-			}
-			if err := ValidateParsedJQ(q.Term.If.Then); err != nil {
-				return err
-			}
-			for _, elif := range q.Term.If.Elif {
-				if err := ValidateParsedJQ(elif.Cond); err != nil {
-					return err
-				}
-				if err := ValidateParsedJQ(elif.Then); err != nil {
-					return err
-				}
-			}
-			if err := ValidateParsedJQ(q.Term.If.Else); err != nil {
-				return err
-			}
-		}
-
-		// try-catch
-		if q.Term.Try != nil {
-			if err := ValidateParsedJQ(q.Term.Try.Body); err != nil {
-				return err
-			}
-			if err := ValidateParsedJQ(q.Term.Try.Catch); err != nil {
-				return err
-			}
-		}
-
-		// reduce EXPR as $pat (init; update)
-		if q.Term.Reduce != nil {
-			if err := ValidateParsedJQ(q.Term.Reduce.Query); err != nil {
-				return err
-			}
-			if err := ValidateParsedJQ(q.Term.Reduce.Start); err != nil {
-				return err
-			}
-			if err := ValidateParsedJQ(q.Term.Reduce.Update); err != nil {
-				return err
-			}
-		}
-
-		// foreach EXPR as $pat (init; update [; extract])
-		if q.Term.Foreach != nil {
-			if err := ValidateParsedJQ(q.Term.Foreach.Query); err != nil {
-				return err
-			}
-			if err := ValidateParsedJQ(q.Term.Foreach.Start); err != nil {
-				return err
-			}
-			if err := ValidateParsedJQ(q.Term.Foreach.Update); err != nil {
-				return err
-			}
-			if err := ValidateParsedJQ(q.Term.Foreach.Extract); err != nil {
-				return err
-			}
-		}
-
-		// Suffix list: index/slice bounds (.x[start:end], .x[idx])
-		for _, suffix := range q.Term.SuffixList {
-			if suffix.Index != nil {
-				if err := ValidateParsedJQ(suffix.Index.Start); err != nil {
-					return err
-				}
-				if err := ValidateParsedJQ(suffix.Index.End); err != nil {
-					return err
-				}
-			}
-		}
-
-		// Direct index term: .[expr] or .[start:end]
-		if q.Term.Index != nil {
-			if err := ValidateParsedJQ(q.Term.Index.Start); err != nil {
-				return err
-			}
-			if err := ValidateParsedJQ(q.Term.Index.End); err != nil {
-				return err
-			}
+	case *gojq.Func:
+		switch n.Name {
+		case "del":
+			return errors.New("del function is not allowed")
+		case "range", "paths", "recurse", "walk", "repeat":
+			return fmt.Errorf("function '%s' may produce excessive output and is not allowed", n.Name)
 		}
 	}
-
-	// If the query has an operator, validate it and its operands
-	if q.Op > 0 {
-		switch q.Op {
-		case gojq.OpAssign, gojq.OpModify, gojq.OpUpdateAdd, gojq.OpUpdateSub, gojq.OpUpdateMul, gojq.OpUpdateDiv, gojq.OpUpdateMod, gojq.OpUpdateAlt:
-			return fmt.Errorf("modifying operator '%s' is not allowed", q.Op)
-		}
-
-		err := ValidateParsedJQ(q.Left)
-		if err != nil {
-			return err
-		}
-		err = ValidateParsedJQ(q.Right)
-		if err != nil {
-			return err
-		}
-
-	}
-
 	return nil
 }

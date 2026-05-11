@@ -1084,10 +1084,10 @@ var _ = Describe("Component", func() {
 	Context("Suspend and Resume", func() {
 		var component *Component
 
-		suspendDef := v1alpha1.SuspendDefinition{
-			SuspendActions: []v1alpha1.SuspendAction{v1alpha1.NewSuspendAction(".spec.suspend", true)},
-			ResumeActions:  []v1alpha1.SuspendAction{v1alpha1.NewSuspendAction(".spec.suspend", false)},
-		}
+	suspendDef := v1alpha1.SuspendDefinition{
+		SuspendActions: []v1alpha1.SuspendAction{{Path: ".spec.suspend", Value: "true"}},
+		ResumeActions:  []v1alpha1.SuspendAction{{Path: ".spec.suspend", Value: "false"}},
+	}
 
 		BeforeEach(func() {
 			component = &Component{

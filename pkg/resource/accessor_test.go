@@ -1837,11 +1837,11 @@ var _ = Describe("Accessor", func() {
 			reactorKarta := types.ReactorKarta()
 			reactorKarta.Spec.StructureDefinition.RootComponent.SuspendDefinition = &v1alpha1.SuspendDefinition{
 				SuspendActions: []v1alpha1.SuspendAction{
-					v1alpha1.NewSuspendAction(".spec.suspend", true),
-					v1alpha1.NewSuspendAction(".metadata.labels.state", "suspended"),
+					{Path: ".spec.suspend", Value: "true"},
+					{Path: ".metadata.labels.state", Value: `"suspended"`},
 				},
 				ResumeActions: []v1alpha1.SuspendAction{
-					v1alpha1.NewSuspendAction(".spec.suspend", false),
+					{Path: ".spec.suspend", Value: "false"},
 				},
 			}
 			accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
@@ -1874,11 +1874,11 @@ var _ = Describe("Accessor", func() {
 			reactorKarta := types.ReactorKarta()
 			reactorKarta.Spec.StructureDefinition.RootComponent.SuspendDefinition = &v1alpha1.SuspendDefinition{
 				SuspendActions: []v1alpha1.SuspendAction{
-					v1alpha1.NewSuspendAction(".spec.suspend", true),
+					{Path: ".spec.suspend", Value: "true"},
 				},
 				ResumeActions: []v1alpha1.SuspendAction{
-					v1alpha1.NewSuspendAction(".spec.suspend", false),
-					v1alpha1.NewSuspendAction(".metadata.labels.state", "running"),
+					{Path: ".spec.suspend", Value: "false"},
+					{Path: ".metadata.labels.state", Value: `"running"`},
 				},
 			}
 			accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")

@@ -3,10 +3,6 @@
 
 package v1alpha1
 
-import (
-	"encoding/json"
-	"fmt"
-)
 
 // GroupVersionKind represents a Kubernetes API object's group, version, and kind.
 type GroupVersionKind struct {
@@ -94,16 +90,6 @@ type SuspendAction struct {
 	Value string `json:"value"`
 }
 
-// NewSuspendAction is a convenience constructor that marshals any Go value into the
-// JSON string required by SuspendAction.Value. Panics on marshal error (which can only
-// happen with non-serialisable types such as channels or functions).
-func NewSuspendAction(path string, value any) SuspendAction {
-	raw, err := json.Marshal(value)
-	if err != nil {
-		panic(fmt.Sprintf("NewSuspendAction: failed to marshal value for path %q: %v", path, err))
-	}
-	return SuspendAction{Path: path, Value: string(raw)}
-}
 // SpecDefinition defines how to extract pod specifications from a component.
 // Only one of the three options should be provided (PodTemplateSpec, FragmentedPodSpec, PodSpec + Metadata).
 type SpecDefinition struct {
