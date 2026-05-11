@@ -337,7 +337,8 @@ func (c *Component) Resume(ctx context.Context) error {
 }
 
 // HasPodDefinition returns true if this component defines pods
-func (c *Component) HasPodDefinition() bool {	spec := c.definition.SpecDefinition
+func (c *Component) HasPodDefinition() bool {
+	spec := c.definition.SpecDefinition
 	if spec == nil {
 		return false
 	}

@@ -356,7 +356,8 @@ func (a *Accessor) ApplyResumeActions(ctx context.Context, definition v1alpha1.C
 	return nil
 }
 
-func (a *Accessor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) {	if definition.InstanceIdPath == nil {
+func (a *Accessor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) {
+	if definition.InstanceIdPath == nil {
 		return nil, DefinitionNotFoundError("no instance id path defined")
 	}
 

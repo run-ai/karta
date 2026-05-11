@@ -21,7 +21,7 @@ var _ = Describe("ComponentFactory", func() {
 	var (
 		ctrl         *gomock.Controller
 		mockAccessor *MockComponentAccessor
-		karta          *v1alpha1.Karta
+		karta        *v1alpha1.Karta
 		factory      *ComponentFactory
 	)
 

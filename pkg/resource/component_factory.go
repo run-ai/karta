@@ -43,7 +43,7 @@ type ComponentAccessor interface {
 }
 
 type ComponentFactory struct {
-	karta      *v1alpha1.Karta
+	karta    *v1alpha1.Karta
 	accessor ComponentAccessor
 
 	componentDefinitionsByName map[string]v1alpha1.ComponentDefinition
@@ -60,7 +60,7 @@ func NewComponentFactory(karta *v1alpha1.Karta, accessor ComponentAccessor) *Com
 	}
 
 	return &ComponentFactory{
-		karta:                        karta,
+		karta:                      karta,
 		accessor:                   accessor,
 		componentDefinitionsByName: definitionsByName,
 	}
