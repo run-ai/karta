@@ -338,22 +338,19 @@ type StatusMappings struct {
 	// +listType=atomic
 	Degraded []StatusMatcher `json:"degraded,omitempty"`
 
-	// Suspended defines matchers for the Suspended status (workload fully stopped by suspend).
-	// A resource matches when the framework emits a Suspended condition with status True.
+	// Suspended defines matchers for the Suspended status
 	// Multiple matchers are OR'd together.
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	Suspended []StatusMatcher `json:"suspended,omitempty"`
 
-	// Suspending defines matchers for the Suspending status (pods draining after suspend request).
-	// A resource matches when spec.suspend==true but pods are still running.
+	// Suspending defines matchers for the Suspending status
 	// Multiple matchers are OR'd together.
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
 	Suspending []StatusMatcher `json:"suspending,omitempty"`
 
-	// Resuming defines matchers for the Resuming status (resume issued but pods not yet recovered).
-	// A resource matches when spec.suspend==false but the Suspended condition is still True.
+	// Resuming defines matchers for the Resuming status
 	// Multiple matchers are OR'd together.
 	// +kubebuilder:validation:Optional
 	// +listType=atomic
