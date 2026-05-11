@@ -236,7 +236,7 @@ func ValidateActionExpression(expr string) error {
 // The walk covers every AST node that can contain a nested *Query:
 // binary Op (Left/Right), Func args, Term.Query, Array.Query, Object key/value
 // queries, If/Elif/Else branches, Try body and catch, Reduce and Foreach
-// sub-expressions, and SuffixList index bounds.
+// sub-expressions, SuffixList index bounds, and Term.Str interpolated queries.
 func validateActionParsedJQ(q *gojq.Query) error {
 	if q == nil {
 		return nil
@@ -275,6 +275,16 @@ func validateActionParsedJQ(q *gojq.Query) error {
 		if q.Term.Array != nil {
 			if err := validateActionParsedJQ(q.Term.Array.Query); err != nil {
 				return err
+			}
+		}
+
+		// String interpolation: "\(expr)" — Str.Queries holds one *Query per
+		// interpolated segment; plain string literals have Queries == nil.
+		if q.Term.Str != nil {
+			for _, strQuery := range q.Term.Str.Queries {
+				if err := validateActionParsedJQ(strQuery); err != nil {
+					return err
+				}
 			}
 		}
 

@@ -569,5 +569,15 @@ var _ = Describe("ValidateActionExpression", func() {
 			Entry("banned function in suffix slice start", ".spec[range(5):0]", "function 'range'"),
 			Entry("banned function in suffix slice end", ".spec[0:range(5)]", "function 'range'"),
 		)
+
+		DescribeTable("string interpolation (Term.Str.Queries)",
+			func(expr, expectedSubstring string) {
+				err := ValidateActionExpression(expr)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(expectedSubstring))
+			},
+			Entry("del nested in interpolated string", `"value: \(del(.x))"`, "del function is not allowed"),
+			Entry("range nested in interpolated string", `"count: \(range(5))"`, "function 'range'"),
+		)
 	})
 })
