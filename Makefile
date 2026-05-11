@@ -21,6 +21,7 @@ MOCKGEN ?= $(LOCALBIN)/mockgen
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
 GO_LICENSES ?= $(LOCALBIN)/go-licenses
 GOROOT ?= $(shell go env GOROOT)
+
 # Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
 GOMOCK_VERSION ?= v0.6.0
@@ -28,87 +29,56 @@ GOLANGCI_LINT_VERSION ?= v2.5.0
 GO_LICENSES_VERSION ?= v2.0.1
 PATH := $(abspath $(LOCALBIN)):$(PATH)
 
-# --- Multi-module discovery ------------------------------------------------
-# Every Go module in this repo (sorted, vendor/bin/.git excluded). The repo
-# is split across sub-modules so consumers can pull a minimal dep surface;
-# tools that operate on "this module" (go test, golangci-lint, go mod tidy,
-# controller-gen, go generate) must therefore be run once per module — `./...`
-# stops at module boundaries and does not cross go.mod files.
-GO_MOD_DIRS := $(shell find . \( -path ./vendor -o -path ./bin -o -path ./.git \) -prune -false -o -name go.mod -exec dirname {} \; | sort)
-
-# Modules that ship Kubernetes CRD types (have +kubebuilder markers). Listed
-# explicitly because controller-gen output paths are deliberate (boilerplate
-# header, CRD output dir). Append the dir here if you add a new CRD-bearing
-# module.
-CRD_MODULE_DIRS := pkg/api/runai/v1alpha1
+# Karta is split into two Go modules:
+#   - root        (github.com/run-ai/karta)              — helpers, validation, jq, instructions, resource
+#   - api module  (github.com/run-ai/karta/pkg/api/...)  — CRD types only
+# `go ./...` stops at module boundaries, so any target that should walk both
+# modules runs once per module.
+API_MODULE := pkg/api/runai/v1alpha1
 
 .PHONY: manifests
-manifests: controller-gen ## Generate CRD manifests across every CRD-bearing sub-module
-	@for dir in $(CRD_MODULE_DIRS); do \
-	  echo ">> manifests in $$dir"; \
-	  (cd $$dir && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=$(KARTA_CRDS_DIR)) || exit 1; \
-	done
+manifests: controller-gen ## Generate CRD manifests from the api sub-module
+	cd $(API_MODULE) && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=$(KARTA_CRDS_DIR)
 
 .PHONY: generate
-generate: controller-gen ## Regenerate zz_generated.deepcopy.go in every CRD-bearing sub-module
-	@for dir in $(CRD_MODULE_DIRS); do \
-	  echo ">> deepcopy in $$dir"; \
-	  (cd $$dir && $(CONTROLLER_GEN) object paths="./...") || exit 1; \
-	done
+generate: controller-gen ## Regenerate zz_generated.deepcopy.go in the api sub-module
+	cd $(API_MODULE) && $(CONTROLLER_GEN) object paths="./..."
 
 .PHONY: generate-mocks
-generate-mocks: mockgen ## Run go generate (mockgen) across every sub-module
-	@for dir in $(GO_MOD_DIRS); do \
-	  if [ -z "$$(cd $$dir && go list ./... 2>/dev/null)" ]; then echo ">> go generate in $$dir (no packages, skipping)"; continue; fi; \
-	  echo ">> go generate in $$dir"; \
-	  (cd $$dir && go generate ./...) || exit 1; \
-	done
+generate-mocks: mockgen ## Run go generate (mockgen) — only root has //go:generate directives
+	go generate ./...
 
 .PHONY: test
-test: generate-mocks ## Run tests across every sub-module
-	@for dir in $(GO_MOD_DIRS); do \
-	  if [ -z "$$(cd $$dir && go list ./... 2>/dev/null)" ]; then echo ">> go test in $$dir (no packages, skipping)"; continue; fi; \
-	  echo ">> go test in $$dir"; \
-	  (cd $$dir && go test ./...) || exit 1; \
-	done
+test: generate-mocks ## Run tests in both modules
+	go test ./...
+	cd $(API_MODULE) && go test ./...
 
 .PHONY: tidy
-tidy: ## go mod tidy across every sub-module
-	@for dir in $(GO_MOD_DIRS); do \
-	  echo ">> go mod tidy in $$dir"; \
-	  (cd $$dir && go mod tidy) || exit 1; \
-	done
+tidy: ## go mod tidy in both modules
+	go mod tidy
+	cd $(API_MODULE) && go mod tidy
 
-lint-go: golangci-lint
-	@for dir in $(GO_MOD_DIRS); do \
-	  if [ -z "$$(cd $$dir && go list ./... 2>/dev/null)" ]; then echo ">> golangci-lint in $$dir (no packages, skipping)"; continue; fi; \
-	  echo ">> golangci-lint in $$dir"; \
-	  (cd $$dir && $(GOLANGCI_LINT) run -v -c $(PROJECT_DIR)/.golangci.yml) || exit 1; \
-	done
-.PHONY: lint-go
-
-fmt-go:
-	@for dir in $(GO_MOD_DIRS); do \
-	  if [ -z "$$(cd $$dir && go list ./... 2>/dev/null)" ]; then echo ">> go fmt in $$dir (no packages, skipping)"; continue; fi; \
-	  echo ">> go fmt in $$dir"; \
-	  (cd $$dir && go fmt ./...) || exit 1; \
-	done
 .PHONY: fmt-go
+fmt-go: ## go fmt in both modules
+	go fmt ./...
+	cd $(API_MODULE) && go fmt ./...
 
-vet-go:
-	@for dir in $(GO_MOD_DIRS); do \
-	  if [ -z "$$(cd $$dir && go list ./... 2>/dev/null)" ]; then echo ">> go vet in $$dir (no packages, skipping)"; continue; fi; \
-	  echo ">> go vet in $$dir"; \
-	  (cd $$dir && go vet ./...) || exit 1; \
-	done
 .PHONY: vet-go
+vet-go: ## go vet in both modules
+	go vet ./...
+	cd $(API_MODULE) && go vet ./...
 
-lint: fmt-go vet-go lint-go
+.PHONY: lint-go
+lint-go: golangci-lint ## golangci-lint in both modules
+	$(GOLANGCI_LINT) run -v -c $(PROJECT_DIR)/.golangci.yml ./...
+	cd $(API_MODULE) && $(GOLANGCI_LINT) run -v -c $(PROJECT_DIR)/.golangci.yml ./...
+
 .PHONY: lint
+lint: fmt-go vet-go lint-go
 
 .PHONY: validate
 validate: generate manifests generate-mocks generate-licenses
-	@git diff --exit-code 
+	@git diff --exit-code
 
 .PHONY: install-crd
 install-crd: manifests ## Install CRDs into the cluster
@@ -156,8 +126,8 @@ $(GO_LICENSES): $(LOCALBIN)
 
 .PHONY: generate-licenses
 generate-licenses: go-licenses download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
-	echo "Updating NOTICE and THIRD_PARTY_LICENSES"
-	`@set` -e; \
+	@echo "Updating NOTICE and THIRD_PARTY_LICENSES"
+	@set -e; \
 	tmp_notice=$$(mktemp); \
 	tmp_third=$$(mktemp); \
 	GOROOT=$(GOROOT) $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/notice.tpl > $$tmp_notice; \
