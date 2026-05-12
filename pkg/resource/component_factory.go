@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/karta/pkg/api/optimization/v1alpha1"
 	"github.com/run-ai/karta/pkg/jq/execution"
@@ -65,7 +64,7 @@ func NewComponentFactory(ri *v1alpha1.ResourceInterface, accessor ComponentAcces
 }
 
 // NewComponentFactoryFromObject creates a new ResourceInterface-based component factory from a Kubernetes object
-func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object client.Object) *ComponentFactory {
+func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object KubernetesObject) *ComponentFactory {
 	jqRunner := execution.NewDefaultRunner(object)
 	accessor := NewAccessor(jqRunner)
 	return NewComponentFactory(ri, accessor)
@@ -112,7 +111,7 @@ func (f *ComponentFactory) GetChildComponents() ([]*Component, error) {
 	return childComponents, nil
 }
 
-func (f *ComponentFactory) GetResource() (client.Object, error) {
+func (f *ComponentFactory) GetResource() (KubernetesObject, error) {
 	object, err := f.accessor.GetObject()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get updated data: %w", err)

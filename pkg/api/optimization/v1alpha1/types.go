@@ -78,7 +78,3 @@ type ResourceInterfaceList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ResourceInterface `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&ResourceInterface{}, &ResourceInterfaceList{})
-}
