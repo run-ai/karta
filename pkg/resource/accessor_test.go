@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/karta/pkg/api/optimization/v1alpha1"
 	"github.com/run-ai/karta/pkg/jq/execution"
@@ -66,7 +65,7 @@ const (
 
 func accessorForObject(
 	ri *v1alpha1.ResourceInterface,
-	object client.Object,
+	object KubernetesObject,
 	componentName string,
 ) (*Accessor, *Component) {
 	accessor := NewAccessor(execution.NewDefaultRunner(object))
