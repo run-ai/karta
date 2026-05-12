@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 package resource
 
 import (
@@ -10,8 +13,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/jq/execution"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+	"github.com/run-ai/karta/pkg/jq/execution"
 )
 
 var _ = Describe("PodQuerier", func() {
@@ -412,6 +415,172 @@ var _ = Describe("PodQuerier", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(BeAssignableToTypeOf(&execution.JQParseError{}))
 				Expect(matches).To(BeFalse())
+			})
+		})
+	})
+
+	Describe("ExtractReplicaKey", func() {
+		Context("when selector is nil", func() {
+			It("should return empty string and found=false", func() {
+				key, found, err := querier.ExtractReplicaKey(ctx, nil)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeFalse())
+				Expect(key).To(Equal(""))
+			})
+		})
+
+		Context("with valid selector", func() {
+			It("should extract replica key from label", func() {
+				testPod.Labels["group-index"] = "2"
+				querier = NewPodQuerier(&testPod)
+
+				selector := &v1alpha1.ReplicaSelector{
+					KeyPath: `.metadata.labels["group-index"]`,
+				}
+
+				key, found, err := querier.ExtractReplicaKey(ctx, selector)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeTrue())
+				Expect(key).To(Equal("2"))
+			})
+
+			It("should extract replica key from annotation", func() {
+				testPod.Annotations["replica-id"] = "group-0"
+				querier = NewPodQuerier(&testPod)
+
+				selector := &v1alpha1.ReplicaSelector{
+					KeyPath: `.metadata.annotations["replica-id"]`,
+				}
+
+				key, found, err := querier.ExtractReplicaKey(ctx, selector)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeTrue())
+				Expect(key).To(Equal("group-0"))
+			})
+		})
+
+		Context("with invalid selector", func() {
+			It("should return error for non-existent path", func() {
+				selector := &v1alpha1.ReplicaSelector{
+					KeyPath: ".metadata.labels.nonexistent",
+				}
+
+				key, found, err := querier.ExtractReplicaKey(ctx, selector)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("query result is empty"))
+				Expect(found).To(BeFalse())
+				Expect(key).To(Equal(""))
+			})
+
+			It("should return error for invalid JQ expression", func() {
+				selector := &v1alpha1.ReplicaSelector{
+					KeyPath: ".invalid[[[syntax",
+				}
+
+				key, found, err := querier.ExtractReplicaKey(ctx, selector)
+				Expect(err).To(HaveOccurred())
+				Expect(found).To(BeFalse())
+				Expect(key).To(Equal(""))
+			})
+
+			It("should return error for path returning multiple values", func() {
+				selector := &v1alpha1.ReplicaSelector{
+					KeyPath: ".metadata.labels | to_entries | .[].value",
+				}
+
+				key, found, err := querier.ExtractReplicaKey(ctx, selector)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("expected single query result"))
+				Expect(found).To(BeFalse())
+				Expect(key).To(Equal(""))
+			})
+		})
+	})
+
+	Describe("ExtractInstanceId", func() {
+		Context("when selector is nil", func() {
+			It("should return empty string and found=false", func() {
+				id, found, err := querier.ExtractInstanceId(ctx, nil)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeFalse())
+				Expect(id).To(Equal(""))
+			})
+		})
+
+		Context("when IdPath is empty", func() {
+			It("should return empty string and found=false", func() {
+				selector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: "",
+				}
+
+				id, found, err := querier.ExtractInstanceId(ctx, selector)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeFalse())
+				Expect(id).To(Equal(""))
+			})
+		})
+
+		Context("with valid selector", func() {
+			It("should extract instance id from label", func() {
+				testPod.Labels["job-name"] = "indexer"
+				querier = NewPodQuerier(&testPod)
+
+				selector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: `.metadata.labels["job-name"]`,
+				}
+
+				id, found, err := querier.ExtractInstanceId(ctx, selector)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeTrue())
+				Expect(id).To(Equal("indexer"))
+			})
+
+			It("should extract instance id from annotation", func() {
+				selector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".metadata.annotations.config",
+				}
+
+				id, found, err := querier.ExtractInstanceId(ctx, selector)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(found).To(BeTrue())
+				Expect(id).To(Equal("high-memory"))
+			})
+		})
+
+		Context("with invalid selector", func() {
+			It("should return error for non-existent path", func() {
+				selector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".metadata.labels.nonexistent",
+				}
+
+				id, found, err := querier.ExtractInstanceId(ctx, selector)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("query result is empty"))
+				Expect(found).To(BeFalse())
+				Expect(id).To(Equal(""))
+			})
+
+			It("should return error for invalid JQ expression", func() {
+				selector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".invalid[[[syntax",
+				}
+
+				id, found, err := querier.ExtractInstanceId(ctx, selector)
+				Expect(err).To(HaveOccurred())
+				Expect(found).To(BeFalse())
+				Expect(id).To(Equal(""))
+			})
+
+			It("should return error for path returning multiple values", func() {
+				selector := &v1alpha1.ComponentInstanceSelector{
+					IdPath: ".metadata.labels | to_entries | .[].value",
+				}
+
+				id, found, err := querier.ExtractInstanceId(ctx, selector)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("expected single query result"))
+				Expect(found).To(BeFalse())
+				Expect(id).To(Equal(""))
 			})
 		})
 	})

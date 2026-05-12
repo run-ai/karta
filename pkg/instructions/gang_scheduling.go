@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 package instructions
 
 import (
@@ -7,8 +10,8 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/resource"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+	"github.com/run-ai/karta/pkg/resource"
 )
 
 // PodGroupingEffectiveComponent contains the effective component information for pod grouping
@@ -92,7 +95,7 @@ func CalculateSubtreeScale(ctx context.Context, componentName string, instanceId
 		return calculateSubtreeScaleByDefinition(ctx, componentName, subtreeRoot, factory, summary)
 	}
 
-	// if no component in the RI had defined scale, return the count of leaf components in this subtree
+	// if no component in the Karta had defined scale, return the count of leaf components in this subtree
 	return calculateSubtreeScaleByLeaves(ctx, componentName, subtreeRoot, factory, summary)
 }
 
@@ -162,7 +165,7 @@ func calculateSubtreeScaleByDefinition(ctx context.Context, currentComponentName
 	return currentComponentScale * childrenSum, nil
 }
 
-// calculateSubtreeScaleByLeaves is a fallback method for cases where the RI does not contain any scale definition.
+// calculateSubtreeScaleByLeaves is a fallback method for cases where the Karta does not contain any scale definition.
 // It returns the number of leaf components (components with SpecDefinition) in the subtree rooted at the given component.
 func calculateSubtreeScaleByLeaves(ctx context.Context, currentComponentName string, subtreeRoot SubtreeRoot, factory *resource.ComponentFactory, summary *StructureSummary) (int32, error) {
 	// Get this component's scale

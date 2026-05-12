@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 package resource
 
 import (
@@ -12,8 +15,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/jq/execution"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+	"github.com/run-ai/karta/pkg/jq/execution"
 )
 
 // DefinitionNotFoundError represents an error when a requested definition is not found
@@ -323,6 +326,44 @@ func (a *Accessor) extractConditions(ctx context.Context, condDef *v1alpha1.Cond
 	return conditions, nil
 }
 
+// ApplySuspendActions applies the component's SuspendActions in sequence against the manifest.
+// Each action's path is used as the JQ selector and its value is decoded from JSON and
+// assigned via Assign. Returns DefinitionNotFoundError if the component has no SuspendDefinition.
+func (a *Accessor) ApplySuspendActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error {
+	if definition.SuspendDefinition == nil {
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have suspendDefinition", definition.Name))
+	}
+	for i, action := range definition.SuspendDefinition.SuspendActions {
+		var value any
+		if err := json.Unmarshal([]byte(action.Value), &value); err != nil {
+			return fmt.Errorf("suspendActions[%d]: failed to decode value: %w", i, err)
+		}
+		if err := a.jqRunner.Assign(ctx, action.Path, value); err != nil {
+			return fmt.Errorf("suspendActions[%d]: %w", i, err)
+		}
+	}
+	return nil
+}
+
+// ApplyResumeActions applies the component's ResumeActions in sequence against the manifest.
+// Each action's path is used as the JQ selector and its value is decoded from JSON and
+// assigned via Assign. Returns DefinitionNotFoundError if the component has no SuspendDefinition.
+func (a *Accessor) ApplyResumeActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error {
+	if definition.SuspendDefinition == nil {
+		return DefinitionNotFoundError(fmt.Sprintf("component %s does not have suspendDefinition", definition.Name))
+	}
+	for i, action := range definition.SuspendDefinition.ResumeActions {
+		var value any
+		if err := json.Unmarshal([]byte(action.Value), &value); err != nil {
+			return fmt.Errorf("resumeActions[%d]: failed to decode value: %w", i, err)
+		}
+		if err := a.jqRunner.Assign(ctx, action.Path, value); err != nil {
+			return fmt.Errorf("resumeActions[%d]: %w", i, err)
+		}
+	}
+	return nil
+}
+
 func (a *Accessor) ExtractInstanceIds(ctx context.Context, definition v1alpha1.ComponentDefinition) ([]string, error) {
 	if definition.InstanceIdPath == nil {
 		return nil, DefinitionNotFoundError("no instance id path defined")
@@ -434,6 +475,18 @@ func (a *Accessor) UpdateFragmentedPodSpec(ctx context.Context, definition v1alp
 
 func (a *Accessor) updateField(ctx context.Context, def v1alpha1.ComponentDefinition, path *string, values []any, isEmpty func(any) bool) error {
 	if path != nil {
+		// Skip assignment if all values are empty/nil to avoid writing null
+		// into the JSON.
+		allEmpty := true
+		for _, v := range values {
+			if !isEmpty(v) {
+				allEmpty = false
+				break
+			}
+		}
+		if allEmpty {
+			return nil
+		}
 		return a.assign(ctx, def, *path, values)
 	}
 	for _, v := range values {
@@ -554,36 +607,14 @@ func matchStatus(ctx context.Context, jqRunner execution.Runner, phase *string, 
 	}
 
 	matchedStatuses := make([]v1alpha1.ResourceStatus, 0)
-	matched, err := evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Running)
-	if err != nil {
-		return nil, err
-	}
-	if matched {
-		matchedStatuses = append(matchedStatuses, v1alpha1.RunningStatus)
-	}
-
-	matched, err = evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Failed)
-	if err != nil {
-		return nil, err
-	}
-	if matched {
-		matchedStatuses = append(matchedStatuses, v1alpha1.FailedStatus)
-	}
-
-	matched, err = evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Completed)
-	if err != nil {
-		return nil, err
-	}
-	if matched {
-		matchedStatuses = append(matchedStatuses, v1alpha1.CompletedStatus)
-	}
-
-	matched, err = evaluateMatchers(ctx, jqRunner, phase, conditionsMap, mappings.Initializing)
-	if err != nil {
-		return nil, err
-	}
-	if matched {
-		matchedStatuses = append(matchedStatuses, v1alpha1.InitializingStatus)
+	for _, entry := range mappings.Entries() {
+		matched, err := evaluateMatchers(ctx, jqRunner, phase, conditionsMap, entry.Matchers)
+		if err != nil {
+			return nil, err
+		}
+		if matched {
+			matchedStatuses = append(matchedStatuses, entry.Status)
+		}
 	}
 
 	if len(matchedStatuses) == 0 {

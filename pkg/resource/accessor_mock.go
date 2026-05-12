@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1alpha1 "github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+	v1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	gomock "go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 	v10 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -187,6 +187,34 @@ func (m *MockComponentWriter) EXPECT() *MockComponentWriterMockRecorder {
 	return m.recorder
 }
 
+// ApplyResumeActions mocks base method.
+func (m *MockComponentWriter) ApplyResumeActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyResumeActions", ctx, definition)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyResumeActions indicates an expected call of ApplyResumeActions.
+func (mr *MockComponentWriterMockRecorder) ApplyResumeActions(ctx, definition any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyResumeActions", reflect.TypeOf((*MockComponentWriter)(nil).ApplyResumeActions), ctx, definition)
+}
+
+// ApplySuspendActions mocks base method.
+func (m *MockComponentWriter) ApplySuspendActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplySuspendActions", ctx, definition)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplySuspendActions indicates an expected call of ApplySuspendActions.
+func (mr *MockComponentWriterMockRecorder) ApplySuspendActions(ctx, definition any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplySuspendActions", reflect.TypeOf((*MockComponentWriter)(nil).ApplySuspendActions), ctx, definition)
+}
+
 // UpdateFragmentedPodSpec mocks base method.
 func (m *MockComponentWriter) UpdateFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, fragmentedPodSpecs []FragmentedPodSpec) error {
 	m.ctrl.T.Helper()
@@ -265,6 +293,34 @@ func NewMockComponentAccessor(ctrl *gomock.Controller) *MockComponentAccessor {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockComponentAccessor) EXPECT() *MockComponentAccessorMockRecorder {
 	return m.recorder
+}
+
+// ApplyResumeActions mocks base method.
+func (m *MockComponentAccessor) ApplyResumeActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyResumeActions", ctx, definition)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyResumeActions indicates an expected call of ApplyResumeActions.
+func (mr *MockComponentAccessorMockRecorder) ApplyResumeActions(ctx, definition any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyResumeActions", reflect.TypeOf((*MockComponentAccessor)(nil).ApplyResumeActions), ctx, definition)
+}
+
+// ApplySuspendActions mocks base method.
+func (m *MockComponentAccessor) ApplySuspendActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplySuspendActions", ctx, definition)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplySuspendActions indicates an expected call of ApplySuspendActions.
+func (mr *MockComponentAccessorMockRecorder) ApplySuspendActions(ctx, definition any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplySuspendActions", reflect.TypeOf((*MockComponentAccessor)(nil).ApplySuspendActions), ctx, definition)
 }
 
 // ExtractFragmentedPodSpec mocks base method.

@@ -1,0 +1,163 @@
+# Third-Party Software Licenses
+
+This file contains license information for third-party software components used in karta.
+
+For complete license texts, please refer to the source repositories or the LICENSE files in the respective dependency packages.
+
+## Dependencies
+ 
+### github.com/fxamacker/cbor/v2
+- Name: github.com/fxamacker/cbor/v2
+- Version: v2.9.0
+- License: [MIT](https://github.com/fxamacker/cbor/blob/v2.9.0/LICENSE)
+ 
+### github.com/go-logr/logr
+- Name: github.com/go-logr/logr
+- Version: v1.4.3
+- License: [Apache-2.0](https://github.com/go-logr/logr/blob/v1.4.3/LICENSE)
+ 
+### github.com/google/go-cmp/cmp
+- Name: github.com/google/go-cmp/cmp
+- Version: v0.7.0
+- License: [BSD-3-Clause](https://github.com/google/go-cmp/blob/v0.7.0/LICENSE)
+ 
+### github.com/itchyny/gojq
+- Name: github.com/itchyny/gojq
+- Version: v0.12.18
+- License: [MIT](https://github.com/itchyny/gojq/blob/v0.12.18/LICENSE)
+ 
+### github.com/itchyny/timefmt-go
+- Name: github.com/itchyny/timefmt-go
+- Version: v0.1.7
+- License: [MIT](https://github.com/itchyny/timefmt-go/blob/v0.1.7/LICENSE)
+ 
+### github.com/json-iterator/go
+- Name: github.com/json-iterator/go
+- Version: v1.1.12
+- License: [MIT](https://github.com/json-iterator/go/blob/v1.1.12/LICENSE)
+ 
+### github.com/modern-go/concurrent
+- Name: github.com/modern-go/concurrent
+- Version: v0.0.0-20180306012644-bacd9c7ef1dd
+- License: [Apache-2.0](https://github.com/modern-go/concurrent/blob/bacd9c7ef1dd/LICENSE)
+ 
+### github.com/modern-go/reflect2
+- Name: github.com/modern-go/reflect2
+- Version: v1.0.3-0.20250322232337-35a7c28c31ee
+- License: [Apache-2.0](https://github.com/modern-go/reflect2/blob/35a7c28c31ee/LICENSE)
+ 
+### github.com/onsi/gomega
+- Name: github.com/onsi/gomega
+- Version: v1.39.1
+- License: [MIT](https://github.com/onsi/gomega/blob/v1.39.1/LICENSE)
+ 
+### github.com/samber/lo
+- Name: github.com/samber/lo
+- Version: v1.52.0
+- License: [MIT](https://github.com/samber/lo/blob/v1.52.0/LICENSE)
+ 
+### github.com/x448/float16
+- Name: github.com/x448/float16
+- Version: v0.8.4
+- License: [MIT](https://github.com/x448/float16/blob/v0.8.4/LICENSE)
+ 
+### go.uber.org/mock/gomock
+- Name: go.uber.org/mock/gomock
+- Version: v0.6.0
+- License: [Apache-2.0](https://github.com/uber/mock/blob/v0.6.0/LICENSE)
+ 
+### go.yaml.in/yaml/v2
+- Name: go.yaml.in/yaml/v2
+- Version: v2.4.3
+- License: [Apache-2.0](https://github.com/yaml/go-yaml/blob/v2.4.3/LICENSE)
+ 
+### go.yaml.in/yaml/v3
+- Name: go.yaml.in/yaml/v3
+- Version: v3.0.4
+- License: [MIT](https://github.com/yaml/go-yaml/blob/v3.0.4/LICENSE)
+ 
+### golang.org/x/net
+- Name: golang.org/x/net
+- Version: v0.51.0
+- License: [BSD-3-Clause](https://cs.opensource.google/go/x/net/+/v0.51.0:LICENSE)
+ 
+### golang.org/x/text
+- Name: golang.org/x/text
+- Version: v0.34.0
+- License: [BSD-3-Clause](https://cs.opensource.google/go/x/text/+/v0.34.0:LICENSE)
+ 
+### gopkg.in/inf.v0
+- Name: gopkg.in/inf.v0
+- Version: v0.9.1
+- License: [BSD-3-Clause](https://github.com/go-inf/inf/blob/v0.9.1/LICENSE)
+ 
+### k8s.io/api/core/v1
+- Name: k8s.io/api/core/v1
+- Version: v0.35.1
+- License: [Apache-2.0](https://github.com/kubernetes/api/blob/v0.35.1/LICENSE)
+ 
+### k8s.io/apimachinery/pkg
+- Name: k8s.io/apimachinery/pkg
+- Version: v0.35.1
+- License: [Apache-2.0](https://github.com/kubernetes/apimachinery/blob/v0.35.1/LICENSE)
+ 
+### k8s.io/apimachinery/third_party/forked/golang/reflect
+- Name: k8s.io/apimachinery/third_party/forked/golang/reflect
+- Version: v0.35.1
+- License: [BSD-3-Clause](https://github.com/kubernetes/apimachinery/blob/v0.35.1/third_party/forked/golang/LICENSE)
+ 
+### k8s.io/klog/v2
+- Name: k8s.io/klog/v2
+- Version: v2.130.1
+- License: [Apache-2.0](https://github.com/kubernetes/klog/blob/v2.130.1/LICENSE)
+ 
+### k8s.io/kube-openapi/pkg/util
+- Name: k8s.io/kube-openapi/pkg/util
+- Version: v0.0.0-20260127142750-a19766b6e2d4
+- License: [Apache-2.0](https://github.com/kubernetes/kube-openapi/blob/a19766b6e2d4/LICENSE)
+ 
+### k8s.io/utils
+- Name: k8s.io/utils
+- Version: v0.0.0-20260210185600-b8788abfbbc2
+- License: [Apache-2.0](https://github.com/kubernetes/utils/blob/b8788abfbbc2/LICENSE)
+ 
+### k8s.io/utils/internal/third_party/forked/golang/net
+- Name: k8s.io/utils/internal/third_party/forked/golang/net
+- Version: v0.0.0-20260210185600-b8788abfbbc2
+- License: [BSD-3-Clause](https://github.com/kubernetes/utils/blob/b8788abfbbc2/internal/third_party/forked/golang/LICENSE)
+ 
+### sigs.k8s.io/json
+- Name: sigs.k8s.io/json
+- Version: v0.0.0-20250730193827-2d320260d730
+- License: [Apache-2.0](https://github.com/kubernetes-sigs/json/blob/2d320260d730/LICENSE)
+ 
+### sigs.k8s.io/json
+- Name: sigs.k8s.io/json
+- Version: v0.0.0-20250730193827-2d320260d730
+- License: [BSD-3-Clause](https://github.com/kubernetes-sigs/json/blob/2d320260d730/LICENSE)
+ 
+### sigs.k8s.io/randfill
+- Name: sigs.k8s.io/randfill
+- Version: v1.0.0
+- License: [Apache-2.0](https://github.com/kubernetes-sigs/randfill/blob/v1.0.0/LICENSE)
+ 
+### sigs.k8s.io/structured-merge-diff/v6/value
+- Name: sigs.k8s.io/structured-merge-diff/v6/value
+- Version: v6.3.2
+- License: [Apache-2.0](https://github.com/kubernetes-sigs/structured-merge-diff/blob/v6.3.2/LICENSE)
+
+
+## License Texts
+
+Full license texts for the above dependencies can be found in their respective source repositories or in the vendor directory if vendoring is used. The most common licenses used are:
+
+- Apache-2.0: See LICENSE file in this repository for the full Apache License 2.0 text
+- MIT: See individual dependency repositories for MIT license text
+- BSD-3-Clause: See individual dependency repositories for BSD 3-Clause license text
+- ISC: See individual dependency repositories for ISC license text
+- Unicode-DFS: See individual dependency repositories for Unicode License Agreement text
+
+For detailed license information, please refer to:
+- The LICENSE files in each dependency's source repository
+- The go.sum file which contains checksums and version information
+- The vendor directory (if vendoring is enabled)

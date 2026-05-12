@@ -1,0 +1,12 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v2
+name: karta
+description: A Helm chart for deploying Karta by NVIDIA.
+type: application
+version: 0.0.0
+appVersion: "0.0.0"
+annotations:
+  org.opencontainers.image.source: https://github.com/run-ai/karta
+  org.opencontainers.image.licenses: Apache-2.0

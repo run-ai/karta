@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 package execution
 
 import (
@@ -105,7 +108,7 @@ func (r *runner) assignWithExpression(ctx context.Context, updateExpression stri
 
 	query, err := r.compile(updateExpression, variables)
 	if err != nil {
-		return &JQCompileError{Expression: updateExpression, Err: err}
+		return err
 	}
 
 	results, err := r.safeRunWithVariables(ctx, query, objectData, updateExpression, convertedValues)

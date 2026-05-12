@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 package resource
 
 import (
@@ -7,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestRid(t *testing.T) {
+func TestKarta(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ResourceInterface Suite")
+	RunSpecs(t, "Karta Suite")
 }

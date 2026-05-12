@@ -1,5 +1,5 @@
-apiVersion: optimization.nvidia.com/v1alpha1
-kind: ResourceInterface
+apiVersion: run.ai/v1alpha1
+kind: Karta
 metadata:
   name: nvidia-com-dynamographdeployment-v1alpha1
 spec:
@@ -22,10 +22,6 @@ spec:
           - byPhase: failed
     childComponents:
       - name: service
-        kind:
-          group: nvidia.com
-          version: v1alpha1
-          kind: DynamoComponentDeployment
         ownerRef: dynamographdeployment
         specDefinition:
           fragmentedPodSpecDefinition:
@@ -47,6 +43,8 @@ spec:
         podSelector:
           componentInstanceSelector:
             idPath: .metadata.labels["nvidia.com/dynamo-component"]
+          replicaSelector:
+            keyPath: .metadata.labels["grove.io/podcliquescalinggroup-replica-index"] // .metadata.labels["leaderworkerset.sigs.k8s.io/group-index"]
     additionalChildKinds:
       - group: nvidia.com
         version: v1alpha1
@@ -67,7 +65,6 @@ spec:
         version: v1alpha1
         kind: PodCliqueScalingGroup
   optimizationInstructions:
-    # Gang scheduling for graph service coordination
     gangScheduling:
       podGroups:
         - name: service

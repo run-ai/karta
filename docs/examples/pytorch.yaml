@@ -1,5 +1,5 @@
-apiVersion: optimization.nvidia.com/v1alpha1
-kind: ResourceInterface
+apiVersion: run.ai/v1alpha1
+kind: Karta
 metadata:
   name: kubeflow-org-pytorchjob-v1
 spec:
@@ -10,6 +10,14 @@ spec:
         group: kubeflow.org
         version: v1
         kind: PyTorchJob
+      # suspendDefinition sets spec.suspend to pause/resume the job natively.
+      suspendDefinition:
+        suspendActions:
+          - path: .spec.suspend
+            value: "true"
+        resumeActions:
+          - path: .spec.suspend
+            value: "false"
       statusDefinition:
         conditionsDefinition:
           path: .status.conditions
@@ -25,10 +33,6 @@ spec:
           - byConditions:
               - type: Running
                 status: "True"
-              - type: "Succeeded"
-                status: "False"
-              - type: Failed
-                status: "False"
           completed:
           - byConditions:
               - type: Succeeded
@@ -36,6 +40,14 @@ spec:
           failed:
           - byConditions:
               - type: Failed
+                status: "True"
+          suspended:
+          - byConditions:
+              - type: Suspended
+                status: "True"
+          suspending:
+          - byConditions:
+              - type: Suspending
                 status: "True"
     childComponents:
       - name: master

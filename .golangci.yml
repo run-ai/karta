@@ -29,7 +29,7 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/run-ai/kai-bolt
+        - github.com/run-ai/karta
   exclusions:
     generated: lax
     paths:

@@ -17,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.6'
+          go-version: '1.25.7'
           cache: true
 
       - name: Cache bin tools
@@ -31,3 +31,8 @@ jobs:
       - name: Run checks
         run: make check
 
+      - name: Lint helm chart
+        run: make helm-lint
+
+      - name: Validate helm chart renders
+        run: make helm-validate

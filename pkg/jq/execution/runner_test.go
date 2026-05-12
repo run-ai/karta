@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 package execution
 
 import (
@@ -5,7 +8,7 @@ import (
 	"errors"
 	"strings"
 
-	testutils "github.com/run-ai/kai-bolt/test/types/jsonutils"
+	testutils "github.com/run-ai/karta/test/types/jsonutils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

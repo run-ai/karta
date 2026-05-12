@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 // +kubebuilder:object:generate=true
 
 package types
@@ -6,10 +9,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-
 	"k8s.io/utils/ptr"
+
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
 // PyFlow represents a PyTorch-like training job with hardcoded component fields
@@ -49,14 +51,14 @@ type PyFlowStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// PyFlowRI returns a ResourceInterface for PyFlow
+// PyFlowKarta returns a Karta for PyFlow
 // Models simple structure: hardcoded fields, multiple components (master + workers)
-func PyFlowRI() *v1alpha1.ResourceInterface {
-	return &v1alpha1.ResourceInterface{
+func PyFlowKarta() *v1alpha1.Karta {
+	return &v1alpha1.Karta{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "pyflow",
 		},
-		Spec: v1alpha1.ResourceInterfaceSpec{
+		Spec: v1alpha1.KartaSpec{
 			StructureDefinition: v1alpha1.StructureDefinition{
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "pyflow",
@@ -135,7 +137,43 @@ func PyFlowRI() *v1alpha1.ResourceInterface {
 	}
 }
 
-// NewPyFlowObject creates a test instance of PyFlow
+// SuspendablePyFlowKarta returns a Karta for PyFlow that includes a SuspendDefinition
+// on the root component. The suspend action sets .spec.suspend = true and the resume
+// action sets it back to false. Suspended/Suspending/Resuming status matchers are also
+// included so callers can exercise the full suspend/resume lifecycle.
+func SuspendablePyFlowKarta() *v1alpha1.Karta {
+	karta := PyFlowKarta()
+	root := &karta.Spec.StructureDefinition.RootComponent
+
+	root.SuspendDefinition = &v1alpha1.SuspendDefinition{
+		SuspendActions: []v1alpha1.SuspendAction{{Path: ".spec.suspend", Value: "true"}},
+		ResumeActions:  []v1alpha1.SuspendAction{{Path: ".spec.suspend", Value: "false"}},
+	}
+
+	root.StatusDefinition.StatusMappings.Suspended = []v1alpha1.StatusMatcher{
+		{
+			ByConditions: []v1alpha1.ExpectedCondition{
+				{Type: "Suspended", Status: ptr.To("True")},
+			},
+		},
+	}
+	root.StatusDefinition.StatusMappings.Suspending = []v1alpha1.StatusMatcher{
+		{
+			ByConditions: []v1alpha1.ExpectedCondition{
+				{Type: "Suspending", Status: ptr.To("True")},
+			},
+		},
+	}
+	root.StatusDefinition.StatusMappings.Resuming = []v1alpha1.StatusMatcher{
+		{
+			ByConditions: []v1alpha1.ExpectedCondition{
+				{Type: "Resuming", Status: ptr.To("True")},
+			},
+		},
+	}
+
+	return karta
+}
 // Simple job structure with hardcoded master and worker fields
 func NewPyFlowObject() *PyFlow {
 	return &PyFlow{

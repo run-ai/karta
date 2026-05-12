@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 package resource
 
 import (
@@ -7,10 +10,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/jq/execution"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+	"github.com/run-ai/karta/pkg/jq/execution"
 )
 
 type ComponentReader interface {
@@ -29,6 +31,8 @@ type ComponentWriter interface {
 	UpdatePodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, podSpecs []corev1.PodSpec) error
 	UpdatePodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition, podMetadata []metav1.ObjectMeta) error
 	UpdateFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, fragmentedPodSpecs []FragmentedPodSpec) error
+	ApplySuspendActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error
+	ApplyResumeActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error
 }
 
 //go:generate mockgen -source=component_factory.go -destination=accessor_mock.go -package=resource ComponentAccessor
@@ -38,34 +42,34 @@ type ComponentAccessor interface {
 }
 
 type ComponentFactory struct {
-	ri       *v1alpha1.ResourceInterface
+	karta    *v1alpha1.Karta
 	accessor ComponentAccessor
 
 	componentDefinitionsByName map[string]v1alpha1.ComponentDefinition
 }
 
-// NewComponentFactory creates a new ResourceInterface-based component factory
-func NewComponentFactory(ri *v1alpha1.ResourceInterface, accessor ComponentAccessor) *ComponentFactory {
+// NewComponentFactory creates a new Karta-based component factory
+func NewComponentFactory(karta *v1alpha1.Karta, accessor ComponentAccessor) *ComponentFactory {
 	definitionsByName := make(map[string]v1alpha1.ComponentDefinition)
 
 	// Create single slice with all components (root + children)
-	allDefinitions := append(ri.Spec.StructureDefinition.ChildComponents, ri.Spec.StructureDefinition.RootComponent)
+	allDefinitions := append(karta.Spec.StructureDefinition.ChildComponents, karta.Spec.StructureDefinition.RootComponent)
 	for _, componentDefinition := range allDefinitions {
 		definitionsByName[componentDefinition.Name] = componentDefinition
 	}
 
 	return &ComponentFactory{
-		ri:                         ri,
+		karta:                      karta,
 		accessor:                   accessor,
 		componentDefinitionsByName: definitionsByName,
 	}
 }
 
-// NewComponentFactoryFromObject creates a new ResourceInterface-based component factory from a Kubernetes object
-func NewComponentFactoryFromObject(ri *v1alpha1.ResourceInterface, object client.Object) *ComponentFactory {
+// NewComponentFactoryFromObject creates a new Karta-based component factory from a Kubernetes object
+func NewComponentFactoryFromObject(karta *v1alpha1.Karta, object KubernetesObject) *ComponentFactory {
 	jqRunner := execution.NewDefaultRunner(object)
 	accessor := NewAccessor(jqRunner)
-	return NewComponentFactory(ri, accessor)
+	return NewComponentFactory(karta, accessor)
 }
 
 // GetComponent retrieves a component by name
@@ -84,21 +88,21 @@ func (f *ComponentFactory) GetComponent(name string) (*Component, error) {
 
 // GetRootComponent retrieves the root component
 func (f *ComponentFactory) GetRootComponent() (*Component, error) {
-	if f.ri == nil {
-		return nil, fmt.Errorf("resource interface is nil")
+	if f.karta == nil {
+		return nil, fmt.Errorf("karta is nil")
 	}
 
-	return f.GetComponent(f.ri.Spec.StructureDefinition.RootComponent.Name)
+	return f.GetComponent(f.karta.Spec.StructureDefinition.RootComponent.Name)
 }
 
 // GetChildComponents retrieves all child components
 func (f *ComponentFactory) GetChildComponents() ([]*Component, error) {
-	if f.ri == nil {
-		return nil, fmt.Errorf("resource interface is nil")
+	if f.karta == nil {
+		return nil, fmt.Errorf("karta is nil")
 	}
 
-	childComponents := make([]*Component, 0, len(f.ri.Spec.StructureDefinition.ChildComponents))
-	for _, childDefinition := range f.ri.Spec.StructureDefinition.ChildComponents {
+	childComponents := make([]*Component, 0, len(f.karta.Spec.StructureDefinition.ChildComponents))
+	for _, childDefinition := range f.karta.Spec.StructureDefinition.ChildComponents {
 		component, err := f.GetComponent(childDefinition.Name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get child component %s: %w", childDefinition.Name, err)
@@ -109,7 +113,7 @@ func (f *ComponentFactory) GetChildComponents() ([]*Component, error) {
 	return childComponents, nil
 }
 
-func (f *ComponentFactory) GetResource() (client.Object, error) {
+func (f *ComponentFactory) GetResource() (KubernetesObject, error) {
 	object, err := f.accessor.GetObject()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get updated data: %w", err)

@@ -1,0 +1,75 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+name: Upload artifacts to GitHub Container Registry
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  HELM_REGISTRY: "ghcr.io/run-ai/karta"
+
+jobs:
+  build-and-push:
+    name: Build & Push Helm Chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install helm
+        uses: azure/setup-helm@v5
+
+      - name: Set package version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            echo "Tag release: using the tag as the version (strip leading 'v' if present)"
+            PACKAGE_VERSION=${GITHUB_REF_NAME#v}
+          else
+            echo "Push to main: dev build keyed off the commit sha"
+            PACKAGE_VERSION=0.0.0-main-$(git rev-parse --short HEAD)
+          fi
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify version not already published
+        run: |
+          if helm show chart oci://${{ env.HELM_REGISTRY }}/karta --version "$PACKAGE_VERSION" >/dev/null 2>&1; then
+            echo "Version $PACKAGE_VERSION already published to ${{ env.HELM_REGISTRY }}/karta." >&2
+            exit 1
+          fi
+
+      - name: Lint and validate helm chart
+        run: make helm-lint helm-validate
+
+      - name: Build helm chart
+        run: |
+          helm package ./charts/karta -d ./charts \
+            --version "$PACKAGE_VERSION" \
+            --app-version "$PACKAGE_VERSION"
+
+      - name: Push Helm Chart
+        run: |
+          helm push ./charts/karta-$PACKAGE_VERSION.tgz oci://${{ env.HELM_REGISTRY }}
+
+      - name: Upload chart as release asset
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v3
+        with:
+          files: charts/karta-${{ env.PACKAGE_VERSION }}.tgz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

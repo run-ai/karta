@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 package instructions
 
 import (
@@ -12,8 +15,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/resource"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+	"github.com/run-ai/karta/pkg/resource"
 )
 
 var _ = Describe("Pod Utils", func() {
@@ -26,8 +29,8 @@ var _ = Describe("Pod Utils", func() {
 	Describe("InferPodComponent", func() {
 		Context("with single leaf component", func() {
 			It("should infer the only leaf component", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "simple-job",
@@ -39,7 +42,7 @@ var _ = Describe("Pod Utils", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				pod := &corev1.Pod{
@@ -56,8 +59,8 @@ var _ = Describe("Pod Utils", func() {
 			})
 
 			It("should ignore non-matching selector", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "simple-job",
@@ -74,7 +77,7 @@ var _ = Describe("Pod Utils", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				pod := &corev1.Pod{
@@ -98,8 +101,8 @@ var _ = Describe("Pod Utils", func() {
 				)
 
 				BeforeEach(func() {
-					ri := &v1alpha1.ResourceInterface{
-						Spec: v1alpha1.ResourceInterfaceSpec{
+					karta := &v1alpha1.Karta{
+						Spec: v1alpha1.KartaSpec{
 							StructureDefinition: v1alpha1.StructureDefinition{
 								RootComponent: v1alpha1.ComponentDefinition{
 									Name: "pytorch-job",
@@ -135,7 +138,7 @@ var _ = Describe("Pod Utils", func() {
 					}
 
 					var err error
-					summary, err = NewStructureSummary(ri)
+					summary, err = NewStructureSummary(karta)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -177,8 +180,8 @@ var _ = Describe("Pod Utils", func() {
 			})
 
 			It("should return error when pod doesn't match any component", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "pytorch-job",
@@ -213,7 +216,7 @@ var _ = Describe("Pod Utils", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Pod with no labels - won't match any component
@@ -260,9 +263,9 @@ var _ = Describe("Pod Utils", func() {
 
 		Context("when component doesn't exist", func() {
 			It("should return error", func() {
-				// Create minimal RI with no components
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				// Create minimal Karta with no components
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "root",
@@ -270,7 +273,7 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				factory = resource.NewComponentFactory(ri, mockAccessor)
+				factory = resource.NewComponentFactory(karta, mockAccessor)
 
 				instancePtr, err := InferPodComponentInstance(ctx, podQuerier, "non-existent", factory)
 				Expect(err).To(HaveOccurred())
@@ -281,9 +284,9 @@ var _ = Describe("Pod Utils", func() {
 
 		Context("when component has no instance IDs", func() {
 			It("should return nil", func() {
-				// Create RI with single component, no instance path
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				// Create Karta with single component, no instance path
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "simple-job",
@@ -297,11 +300,11 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				factory = resource.NewComponentFactory(ri, mockAccessor)
+				factory = resource.NewComponentFactory(karta, mockAccessor)
 
 				// Mock GetInstanceIds to return definition not found error (no instanceIdPath)
 				mockAccessor.EXPECT().
-					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
+					ExtractInstanceIds(ctx, karta.Spec.StructureDefinition.RootComponent).
 					Return(nil, resource.DefinitionNotFoundError("no instanceIdPath"))
 
 				instancePtr, err := InferPodComponentInstance(ctx, podQuerier, "simple-job", factory)
@@ -312,13 +315,13 @@ var _ = Describe("Pod Utils", func() {
 
 		Context("when component has instance IDs", func() {
 			var (
-				ri *v1alpha1.ResourceInterface
+				karta *v1alpha1.Karta
 			)
 
 			BeforeEach(func() {
-				// RI with component that has instance IDs
-				ri = &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				// Karta with component that has instance IDs
+				karta = &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name:           "worker",
@@ -339,11 +342,11 @@ var _ = Describe("Pod Utils", func() {
 			})
 
 			It("should return matching instance ID", func() {
-				factory = resource.NewComponentFactory(ri, mockAccessor)
+				factory = resource.NewComponentFactory(karta, mockAccessor)
 
 				// Mock GetInstanceIds to return multiple instance IDs
 				mockAccessor.EXPECT().
-					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
+					ExtractInstanceIds(ctx, karta.Spec.StructureDefinition.RootComponent).
 					Return([]string{"gpu-workers", "cpu-workers"}, nil)
 
 				// Create pod with matching label
@@ -365,11 +368,11 @@ var _ = Describe("Pod Utils", func() {
 			})
 
 			It("should return nil when matching returns empty string", func() {
-				factory = resource.NewComponentFactory(ri, mockAccessor)
+				factory = resource.NewComponentFactory(karta, mockAccessor)
 
 				// Mock GetInstanceIds to return single empty instance ID (single instance case)
 				mockAccessor.EXPECT().
-					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
+					ExtractInstanceIds(ctx, karta.Spec.StructureDefinition.RootComponent).
 					Return([]string{""}, nil)
 
 				instancePtr, err := InferPodComponentInstance(ctx, podQuerier, "worker", factory)
@@ -378,9 +381,9 @@ var _ = Describe("Pod Utils", func() {
 			})
 
 			It("should return error when GetMatchingInstanceId fails", func() {
-				// Create RI with component that has instance IDs
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				// Create Karta with component that has instance IDs
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name:           "worker",
@@ -398,11 +401,11 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				factory = resource.NewComponentFactory(ri, mockAccessor)
+				factory = resource.NewComponentFactory(karta, mockAccessor)
 
 				// Mock GetInstanceIds to return multiple instance IDs
 				mockAccessor.EXPECT().
-					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
+					ExtractInstanceIds(ctx, karta.Spec.StructureDefinition.RootComponent).
 					Return([]string{"gpu-workers", "cpu-workers"}, nil)
 
 				// Create pod with non-matching label
@@ -424,9 +427,9 @@ var _ = Describe("Pod Utils", func() {
 			})
 
 			It("should return error when GetInstanceIds fails", func() {
-				// Create RI with component that has instance IDs
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				// Create Karta with component that has instance IDs
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name:           "worker",
@@ -435,11 +438,11 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				factory = resource.NewComponentFactory(ri, mockAccessor)
+				factory = resource.NewComponentFactory(karta, mockAccessor)
 
 				// Mock GetInstanceIds to return error
 				mockAccessor.EXPECT().
-					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
+					ExtractInstanceIds(ctx, karta.Spec.StructureDefinition.RootComponent).
 					Return(nil, errors.New("extraction failed"))
 
 				instancePtr, err := InferPodComponentInstance(ctx, podQuerier, "worker", factory)
@@ -451,9 +454,9 @@ var _ = Describe("Pod Utils", func() {
 
 		Context("when component has instance IDs but no instance selector", func() {
 			It("should return error when no instance selector but has instance IDs", func() {
-				// Create RI with component that has instance IDs but no instance selector
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				// Create Karta with component that has instance IDs but no instance selector
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name:           "worker",
@@ -469,11 +472,11 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				factory = resource.NewComponentFactory(ri, mockAccessor)
+				factory = resource.NewComponentFactory(karta, mockAccessor)
 
 				// Mock GetInstanceIds to return instance IDs
 				mockAccessor.EXPECT().
-					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
+					ExtractInstanceIds(ctx, karta.Spec.StructureDefinition.RootComponent).
 					Return([]string{"worker1", "worker2"}, nil)
 
 				instancePtr, err := InferPodComponentInstance(ctx, podQuerier, "worker", factory)
@@ -485,9 +488,9 @@ var _ = Describe("Pod Utils", func() {
 
 		Context("when component has no pod selector", func() {
 			It("should return nil", func() {
-				// Create RI with component that has instance IDs but no pod selector
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				// Create Karta with component that has instance IDs but no pod selector
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name:           "worker",
@@ -497,11 +500,11 @@ var _ = Describe("Pod Utils", func() {
 						},
 					},
 				}
-				factory = resource.NewComponentFactory(ri, mockAccessor)
+				factory = resource.NewComponentFactory(karta, mockAccessor)
 
 				// Mock GetInstanceIds to return instance IDs
 				mockAccessor.EXPECT().
-					ExtractInstanceIds(ctx, ri.Spec.StructureDefinition.RootComponent).
+					ExtractInstanceIds(ctx, karta.Spec.StructureDefinition.RootComponent).
 					Return([]string{"worker1", "worker2"}, nil)
 
 				instancePtr, err := InferPodComponentInstance(ctx, podQuerier, "worker", factory)

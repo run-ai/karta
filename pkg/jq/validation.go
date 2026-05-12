@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 package jq
 
 import (
@@ -6,6 +9,11 @@ import (
 	"reflect"
 
 	"github.com/itchyny/gojq"
+)
+
+var (
+	ErrDelFunc          = errors.New("del function is not allowed")
+	ErrRecursiveDescent = errors.New("recursive descent operator '..' is not allowed")
 )
 
 // ValidateJQExpressions recursively validates all the fields of the object tagged with 'jq:"validate"'
@@ -142,7 +150,7 @@ func validateStringField(field reflect.Value, fieldPath string) error {
 		return fmt.Errorf("failed to parse JQ expression '%s' at '%s': %w", jqExpression, fieldPath, err)
 	}
 
-	err = validatedParsedJQ(parsed)
+	err = ValidateParsedJQ(parsed)
 	if err != nil {
 		return fmt.Errorf("JQ expression '%s' at '%s' failed validation: %w", jqExpression, fieldPath, err)
 	}
@@ -150,56 +158,73 @@ func validateStringField(field reflect.Value, fieldPath string) error {
 	return nil
 }
 
-// validatedParsedJQ checks if a gojq query is read-only and safe
-func validatedParsedJQ(q *gojq.Query) error {
-	if q == nil {
+// ValidateParsedJQ checks that a parsed JQ query is safe for read-only use.
+// It rejects assignment operators, del, dangerous recursive/unbounded built-ins,
+// and the recursive descent operator.
+//
+// The walk is reflection-driven so it automatically covers any new node types
+// added by future gojq versions — no manual field enumeration needed.
+func ValidateParsedJQ(q *gojq.Query) error {
+	return walkAST(reflect.ValueOf(q))
+}
+
+// walkAST recursively visits every value reachable from v, calling checkASTNode
+// on each struct it encounters.
+func walkAST(v reflect.Value) error {
+	if !v.IsValid() {
 		return nil
 	}
-
-	if q.Term != nil {
-		if q.Term.Func != nil {
-			f := q.Term.Func
-
-			// Reject mutating and recursion-related functions
-			switch f.Name {
-			case "del":
-				return errors.New("del function is not allowed")
-			case "range", "paths", "recurse", "walk", "repeat":
-				return fmt.Errorf("function '%s' may produce excessive output and is not allowed", f.Name)
-			}
-
-			for _, arg := range f.Args {
-				err := validatedParsedJQ(arg)
-				if err != nil {
-					return err
-				}
-			}
+	switch v.Kind() {
+	case reflect.Ptr, reflect.Interface:
+		if v.IsNil() {
+			return nil
 		}
-
-		if q.Term.Type == gojq.TermTypeRecurse {
-			return errors.New("recursive descent operator '..' is not allowed")
-		}
-	}
-
-	// If the query has an operator, validate it and its operands
-	if q.Op > 0 {
-		switch q.Op {
-		case gojq.OpAssign, gojq.OpModify, gojq.OpUpdateAdd, gojq.OpUpdateSub, gojq.OpUpdateMul, gojq.OpUpdateDiv, gojq.OpUpdateMod, gojq.OpUpdateAlt:
-			return fmt.Errorf("modifying operator '%s' is not allowed", q.Op)
-		}
-
-		err := validatedParsedJQ(q.Left)
-		if err != nil {
+		return walkAST(v.Elem())
+	case reflect.Struct:
+		if err := checkASTNode(v); err != nil {
 			return err
 		}
-
-		err = validatedParsedJQ(q.Right)
-		if err != nil {
-			return err
+		for i := 0; i < v.NumField(); i++ {
+			if err := walkAST(v.Field(i)); err != nil {
+				return err
+			}
 		}
-
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < v.Len(); i++ {
+			if err := walkAST(v.Index(i)); err != nil {
+				return err
+			}
+		}
 	}
+	return nil
+}
 
+// checkASTNode inspects a single gojq AST struct node and returns an error if
+// it contains a disallowed construct.
+func checkASTNode(v reflect.Value) error {
+	if !v.CanAddr() {
+		return nil
+	}
+	switch n := v.Addr().Interface().(type) {
+	case *gojq.Query:
+		switch n.Op {
+		case gojq.OpAssign, gojq.OpModify,
+			gojq.OpUpdateAdd, gojq.OpUpdateSub, gojq.OpUpdateMul,
+			gojq.OpUpdateDiv, gojq.OpUpdateMod, gojq.OpUpdateAlt:
+			return fmt.Errorf("modifying operator '%s' is not allowed", n.Op)
+		}
+	case *gojq.Term:
+		if n.Type == gojq.TermTypeRecurse {
+			return ErrRecursiveDescent
+		}
+	case *gojq.Func:
+		switch n.Name {
+		case "del":
+			return ErrDelFunc
+		case "range", "paths", "recurse", "walk", "repeat":
+			return fmt.Errorf("function '%s' may produce excessive output and is not allowed", n.Name)
+		}
+	}
 	return nil
 }
 

@@ -11,21 +11,26 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-RI_CHART_DIR := $(PROJECT_DIR)/charts/ri
-RI_CRDS_DIR := $(RI_CHART_DIR)/crds
+KARTA_CHART_DIR := $(PROJECT_DIR)/charts/karta
+KARTA_CRDS_DIR := $(KARTA_CHART_DIR)/crds
+
+HELM_CHART_VERSION ?= 0.0.1
 
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 MOCKGEN ?= $(LOCALBIN)/mockgen
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
+GO_LICENSES ?= $(LOCALBIN)/go-licenses
+GOROOT ?= $(shell go env GOROOT)
 # Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
 GOMOCK_VERSION ?= v0.6.0
 GOLANGCI_LINT_VERSION ?= v2.5.0
+GO_LICENSES_VERSION ?= v2.0.1
 PATH := $(abspath $(LOCALBIN)):$(PATH)
 
 .PHONY: manifests
 manifests: controller-gen ## Generate CRD manifests
-	$(CONTROLLER_GEN) crd paths="./pkg/..." output:crd:artifacts:config=$(RI_CRDS_DIR)
+	$(CONTROLLER_GEN) crd paths="./pkg/..." output:crd:artifacts:config=$(KARTA_CRDS_DIR)
 
 .PHONY: generate
 generate: controller-gen ## Generate DeepCopy methods
@@ -56,16 +61,16 @@ lint: fmt-go vet-go lint-go
 .PHONY: lint
 
 .PHONY: validate
-validate: generate manifests generate-mocks 
+validate: generate manifests generate-mocks generate-licenses
 	@git diff --exit-code 
 
 .PHONY: install-crd
 install-crd: manifests ## Install CRDs into the cluster
-	kubectl apply --server-side -f $(RI_CRDS_DIR)
+	kubectl apply --server-side -f $(KARTA_CRDS_DIR)
 
 .PHONY: uninstall-crd
 uninstall-crd: ## Uninstall CRDs from the cluster
-	kubectl delete -f $(RI_CRDS_DIR) --ignore-not-found
+	kubectl delete -f $(KARTA_CRDS_DIR) --ignore-not-found
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
@@ -94,9 +99,43 @@ $(GOLANGCI_LINT): $(LOCALBIN)
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
 	}
 
+.PHONY: go-licenses
+go-licenses: $(GO_LICENSES) ## Download go-licenses locally if necessary.
+$(GO_LICENSES): $(LOCALBIN)
+	@[ -f "$(GO_LICENSES)" ] || { \
+	set -e; \
+	echo "Downloading go-licenses@$(GO_LICENSES_VERSION)" ;\
+	GOBIN=$(LOCALBIN) go install github.com/google/go-licenses/v2@$(GO_LICENSES_VERSION) ;\
+	}
+
+.PHONY: generate-licenses
+generate-licenses: go-licenses download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
+	echo "Updating NOTICE and THIRD_PARTY_LICENSES"
+	`@set` -e; \
+	tmp_notice=$$(mktemp); \
+	tmp_third=$$(mktemp); \
+	GOROOT=$(GOROOT) $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/notice.tpl > $$tmp_notice; \
+	GOROOT=$(GOROOT) $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/third_party_licenses.tpl > $$tmp_third; \
+	mv $$tmp_notice NOTICE; \
+	mv $$tmp_third THIRD_PARTY_LICENSES
+
 .PHONY: download-dependencies
 download-dependencies:
 	go mod download
 
 .PHONY: check
 check: download-dependencies validate test lint
+
+##@ Helm
+
+.PHONY: helm-build
+helm-build: ## Build the helm chart
+	helm package $(KARTA_CHART_DIR) --version $(HELM_CHART_VERSION) --app-version $(HELM_CHART_VERSION)
+
+.PHONY: helm-lint
+helm-lint: ## Lint the helm chart
+	helm lint $(KARTA_CHART_DIR)
+
+.PHONY: helm-validate
+helm-validate: ## Validate the helm chart renders
+	helm template $(KARTA_CHART_DIR)

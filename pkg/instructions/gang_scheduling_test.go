@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 package instructions
 
 import (
@@ -10,8 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
-	"github.com/run-ai/kai-bolt/pkg/resource"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+	"github.com/run-ai/karta/pkg/resource"
 )
 
 var _ = Describe("Gang Scheduling", func() {
@@ -24,8 +27,8 @@ var _ = Describe("Gang Scheduling", func() {
 	Describe("GetPodGroupingEffectiveComponent", func() {
 		Context("with single leaf component", func() {
 			It("should return correct gang scheduling info", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "simple-job",
@@ -51,7 +54,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				pod := &corev1.Pod{
@@ -74,8 +77,8 @@ var _ = Describe("Gang Scheduling", func() {
 
 		Context("with multiple leaf components and selectors", func() {
 			It("should infer correct component based on pod labels", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "pytorch-job",
@@ -125,7 +128,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Test worker pod
@@ -168,8 +171,8 @@ var _ = Describe("Gang Scheduling", func() {
 
 		Context("with filters on gang scheduling members", func() {
 			It("should respect filters when selecting effective component", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "worker-set",
@@ -209,7 +212,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Test GPU pod
@@ -252,8 +255,8 @@ var _ = Describe("Gang Scheduling", func() {
 
 		Context("with parent component fallback", func() {
 			It("should fallback to parent when direct component has no matching filters", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "pytorch-job",
@@ -302,7 +305,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Pod that matches worker selector but not the specific filter
@@ -328,8 +331,8 @@ var _ = Describe("Gang Scheduling", func() {
 
 		Context("with no gang scheduling", func() {
 			It("should return nil when no gang scheduling instructions exist", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "simple-job",
@@ -342,7 +345,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				pod := &corev1.Pod{
@@ -364,8 +367,8 @@ var _ = Describe("Gang Scheduling", func() {
 	Describe("CalculateSubtreeScale", func() {
 		Context("with single component scale", func() {
 			It("should return component scale for leaf component", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "worker",
@@ -389,8 +392,8 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
-				summary, err := NewStructureSummary(ri)
+				factory := resource.NewComponentFactoryFromObject(karta, &unstructured.Unstructured{Object: obj})
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				scale, err := CalculateSubtreeScale(ctx, "worker", nil, factory, summary)
@@ -401,11 +404,11 @@ var _ = Describe("Gang Scheduling", func() {
 
 		Context("with parent-child hierarchy", func() {
 			var (
-				ri *v1alpha1.ResourceInterface
+				karta *v1alpha1.Karta
 			)
 			BeforeEach(func() {
-				ri = &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta = &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name:           "pytorch-job",
@@ -453,8 +456,8 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
-				summary, err := NewStructureSummary(ri)
+				factory := resource.NewComponentFactoryFromObject(karta, &unstructured.Unstructured{Object: obj})
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Calculate root scale: parent(2) * (worker(4) + master(1)) = 2 * 5 = 10
@@ -472,7 +475,7 @@ var _ = Describe("Gang Scheduling", func() {
 				Expect(masterScale).To(Equal(int32(1)))
 			})
 			It("when parent does not have scale, should only return children sum", func() {
-				ri.Spec.StructureDefinition.RootComponent.ScaleDefinition = nil
+				karta.Spec.StructureDefinition.RootComponent.ScaleDefinition = nil
 				obj := map[string]any{
 					"spec": map[string]any{
 						"worker": map[string]any{
@@ -484,8 +487,8 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
-				summary, err := NewStructureSummary(ri)
+				factory := resource.NewComponentFactoryFromObject(karta, &unstructured.Unstructured{Object: obj})
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Calculate root scale: worker(4) + master(1) = 5
@@ -506,8 +509,8 @@ var _ = Describe("Gang Scheduling", func() {
 
 		Context("with array/map components", func() {
 			It("should sum multiple scales from same component", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name:           "pytorch-job",
@@ -549,8 +552,8 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
-				summary, err := NewStructureSummary(ri)
+				factory := resource.NewComponentFactoryFromObject(karta, &unstructured.Unstructured{Object: obj})
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should sum all workers scale: 3 + 2 = 5
@@ -567,8 +570,8 @@ var _ = Describe("Gang Scheduling", func() {
 
 		Context("with missing scale definitions", func() {
 			It("should carry children sum when parent has no scale", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "cluster",
@@ -606,8 +609,8 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
-				summary, err := NewStructureSummary(ri)
+				factory := resource.NewComponentFactoryFromObject(karta, &unstructured.Unstructured{Object: obj})
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should carry children sum (4) since parent has no scale
@@ -617,8 +620,8 @@ var _ = Describe("Gang Scheduling", func() {
 			})
 
 			It("should use parent scale when children have no scale", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name:           "job-group",
@@ -657,8 +660,8 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
-				summary, err := NewStructureSummary(ri)
+				factory := resource.NewComponentFactoryFromObject(karta, &unstructured.Unstructured{Object: obj})
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				// Should use parent scale (3) since children have no scale
@@ -670,8 +673,8 @@ var _ = Describe("Gang Scheduling", func() {
 
 		Context("with getEffectiveMinReplicas edge cases", func() {
 			It("should prefer MinReplicas over Replicas", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "worker",
@@ -694,8 +697,8 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
-				summary, err := NewStructureSummary(ri)
+				factory := resource.NewComponentFactoryFromObject(karta, &unstructured.Unstructured{Object: obj})
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				scale, err := CalculateSubtreeScale(ctx, "worker", nil, factory, summary)
@@ -704,8 +707,8 @@ var _ = Describe("Gang Scheduling", func() {
 			})
 
 			It("should fallback to Replicas when MinReplicas is zero", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "worker",
@@ -738,8 +741,8 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
-				summary, err := NewStructureSummary(ri)
+				factory := resource.NewComponentFactoryFromObject(karta, &unstructured.Unstructured{Object: obj})
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				scale, err := CalculateSubtreeScale(ctx, "worker", nil, factory, summary)
@@ -748,8 +751,8 @@ var _ = Describe("Gang Scheduling", func() {
 			})
 
 			It("should return 0 when both scales are missing", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "worker",
@@ -781,8 +784,8 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
-				summary, err := NewStructureSummary(ri)
+				factory := resource.NewComponentFactoryFromObject(karta, &unstructured.Unstructured{Object: obj})
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				scale, err := CalculateSubtreeScale(ctx, "worker", nil, factory, summary)
@@ -793,8 +796,8 @@ var _ = Describe("Gang Scheduling", func() {
 
 		Context("with fallback scale logic (no scale definitions)", func() {
 			It("should return leaf component count when no scale definitions exist", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{Name: "pytorch-job"},
 							ChildComponents: []v1alpha1.ComponentDefinition{
@@ -821,11 +824,11 @@ var _ = Describe("Gang Scheduling", func() {
 					"metadata": map[string]any{"name": "test-job"},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(summary.hasScaleDefinition).To(BeFalse())
 
-				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
+				factory := resource.NewComponentFactoryFromObject(karta, &unstructured.Unstructured{Object: obj})
 
 				// Root component should return total leaf count in its subtree (2)
 				scale, err := CalculateSubtreeScale(ctx, "pytorch-job", nil, factory, summary)
@@ -843,8 +846,8 @@ var _ = Describe("Gang Scheduling", func() {
 			})
 
 			It("should return leaf count for complex hierarchy without scale definitions", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{Name: "cluster"},
 							ChildComponents: []v1alpha1.ComponentDefinition{
@@ -882,12 +885,12 @@ var _ = Describe("Gang Scheduling", func() {
 					"metadata": map[string]any{"name": "test-cluster"},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(summary.hasScaleDefinition).To(BeFalse())
 				Expect(summary.leafComponents).To(ContainElements("worker", "master", "storage"))
 
-				factory := resource.NewComponentFactoryFromObject(ri, &unstructured.Unstructured{Object: obj})
+				factory := resource.NewComponentFactoryFromObject(karta, &unstructured.Unstructured{Object: obj})
 
 				// Should return 3 (worker, master, storage are leaf components in cluster subtree)
 				scale, err := CalculateSubtreeScale(ctx, "cluster", nil, factory, summary)
@@ -912,8 +915,8 @@ var _ = Describe("Gang Scheduling", func() {
 
 		Context("with instance IDs", func() {
 			It("should calculate scale for specific instance using byScale method - array", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "job-group",
@@ -935,7 +938,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				jobgroupObject := &unstructured.Unstructured{
@@ -966,7 +969,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, jobgroupObject)
+				factory := resource.NewComponentFactoryFromObject(karta, jobgroupObject)
 
 				// Test scale for all instances (nil instanceId)
 				allScale, err := CalculateSubtreeScale(ctx, "job", nil, factory, summary)
@@ -985,8 +988,8 @@ var _ = Describe("Gang Scheduling", func() {
 			})
 
 			It("should calculate scale for specific instance using byScale method - map", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "job-group",
@@ -1008,7 +1011,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				jobgroupObject := &unstructured.Unstructured{
@@ -1037,7 +1040,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, jobgroupObject)
+				factory := resource.NewComponentFactoryFromObject(karta, jobgroupObject)
 
 				// Test scale for all instances (nil instanceId)
 				allScale, err := CalculateSubtreeScale(ctx, "job", nil, factory, summary)
@@ -1056,8 +1059,8 @@ var _ = Describe("Gang Scheduling", func() {
 			})
 
 			It("should calculate scale for specific instance using byLeaves method", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "job-group",
@@ -1076,7 +1079,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				jobgroupObject := &unstructured.Unstructured{
@@ -1104,7 +1107,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, jobgroupObject)
+				factory := resource.NewComponentFactoryFromObject(karta, jobgroupObject)
 
 				// Test scale for all instances (nil instanceId) - should count all instances
 				allScale, err := CalculateSubtreeScale(ctx, "job", nil, factory, summary)
@@ -1123,8 +1126,8 @@ var _ = Describe("Gang Scheduling", func() {
 			})
 
 			It("should return error for non-existent instance ID", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{
 								Name: "job-group",
@@ -1142,7 +1145,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				jobgroupObject := &unstructured.Unstructured{
@@ -1162,7 +1165,7 @@ var _ = Describe("Gang Scheduling", func() {
 					},
 				}
 
-				factory := resource.NewComponentFactoryFromObject(ri, jobgroupObject)
+				factory := resource.NewComponentFactoryFromObject(karta, jobgroupObject)
 
 				// Test scale for non-existent instance
 				nonExistentId := "non-existent"
@@ -1173,15 +1176,15 @@ var _ = Describe("Gang Scheduling", func() {
 			})
 
 			It("should return error for empty instance ID", func() {
-				ri := &v1alpha1.ResourceInterface{
-					Spec: v1alpha1.ResourceInterfaceSpec{
+				karta := &v1alpha1.Karta{
+					Spec: v1alpha1.KartaSpec{
 						StructureDefinition: v1alpha1.StructureDefinition{
 							RootComponent: v1alpha1.ComponentDefinition{Name: "job-group"},
 						},
 					},
 				}
 
-				summary, err := NewStructureSummary(ri)
+				summary, err := NewStructureSummary(karta)
 				Expect(err).NotTo(HaveOccurred())
 
 				scale, err := CalculateSubtreeScale(ctx, "job", ptr.To(""), nil, summary)

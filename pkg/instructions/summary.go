@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
 package instructions
 
 import (
@@ -6,18 +9,18 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/run-ai/kai-bolt/pkg/api/optimization/v1alpha1"
+	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// StructureSummary provides a pre-computed summary of ResourceInterface structure
+// StructureSummary provides a pre-computed summary of Karta structure
 // for efficient navigation and lookup operations
 type StructureSummary struct {
-	ri                         *v1alpha1.ResourceInterface
+	karta                      *v1alpha1.Karta
 	parentMap                  map[string]string                        // child component name -> parent component name
 	childrenMap                map[string][]string                      // parent component name -> list of child component names
 	componentDefinitionsByName map[string]*v1alpha1.ComponentDefinition // component name -> component definition
 	leafComponents             []string                                 // list of component names that have pod definitions
-	hasScaleDefinition         bool                                     // true if any of the resource interface components has a scale definition
+	hasScaleDefinition         bool                                     // true if any of the karta components has a scale definition
 	gangSchedulingSummary      *gangSchedulingSummary                   // summary of gang scheduling instructions
 }
 
@@ -33,14 +36,14 @@ type gangSchedulingSummary struct {
 	podGroupsByName              map[string]*v1alpha1.PodGroupDefinition // pod group name -> pod group definition
 }
 
-// NewStructureSummary creates a new StructureSummary by analyzing the ResourceInterface structure
-func NewStructureSummary(ri *v1alpha1.ResourceInterface) (*StructureSummary, error) {
-	if ri == nil {
-		return nil, fmt.Errorf("resource interface cannot be nil")
+// NewStructureSummary creates a new StructureSummary by analyzing the Karta structure
+func NewStructureSummary(karta *v1alpha1.Karta) (*StructureSummary, error) {
+	if karta == nil {
+		return nil, fmt.Errorf("karta cannot be nil")
 	}
 
 	summary := &StructureSummary{
-		ri:                         ri,
+		karta:                      karta,
 		parentMap:                  make(map[string]string),
 		childrenMap:                make(map[string][]string),
 		componentDefinitionsByName: make(map[string]*v1alpha1.ComponentDefinition),
@@ -55,12 +58,12 @@ func NewStructureSummary(ri *v1alpha1.ResourceInterface) (*StructureSummary, err
 	return summary, nil
 }
 
-// GetRI returns the underlying Resource Interface
-func (s *StructureSummary) GetRI() *v1alpha1.ResourceInterface {
-	return s.ri
+// GetKarta returns the underlying Karta
+func (s *StructureSummary) GetKarta() *v1alpha1.Karta {
+	return s.karta
 }
 
-// buildMaps constructs all the lookup maps and metadata from the ResourceInterface
+// buildMaps constructs all the lookup maps and metadata from the Karta
 func (s *StructureSummary) build() error {
 	for _, component := range s.getAllComponents() {
 		// Add to component definitions map
@@ -88,13 +91,13 @@ func (s *StructureSummary) build() error {
 		}
 	}
 
-	if s.ri.Spec.Instructions.GangScheduling != nil {
+	if s.karta.Spec.Instructions.GangScheduling != nil {
 		s.gangSchedulingSummary = &gangSchedulingSummary{
 			effectiveComponentCandidates: make(map[string][]effectiveComponentCandidate),
 		}
 
 		s.gangSchedulingSummary.podGroupsByName = lo.SliceToMap(
-			s.ri.Spec.Instructions.GangScheduling.PodGroups,
+			s.karta.Spec.Instructions.GangScheduling.PodGroups,
 			func(group v1alpha1.PodGroupDefinition) (string, *v1alpha1.PodGroupDefinition) {
 				return group.Name, &group
 			},
@@ -133,7 +136,7 @@ func (s *StructureSummary) findEffectiveComponentCandidates(componentName string
 	current := componentName
 	for current != "" {
 		// Look for this component in all pod groups
-		for _, group := range s.ri.Spec.Instructions.GangScheduling.PodGroups {
+		for _, group := range s.karta.Spec.Instructions.GangScheduling.PodGroups {
 			for _, member := range group.Members {
 				if member.ComponentName == current {
 					candidates = append(candidates, effectiveComponentCandidate{
@@ -186,7 +189,7 @@ func (s *StructureSummary) sortEffectiveComponentCandidatesByPriority(candidates
 }
 
 func (s *StructureSummary) getAllComponents() []v1alpha1.ComponentDefinition {
-	return append([]v1alpha1.ComponentDefinition{s.ri.Spec.StructureDefinition.RootComponent}, s.ri.Spec.StructureDefinition.ChildComponents...)
+	return append([]v1alpha1.ComponentDefinition{s.karta.Spec.StructureDefinition.RootComponent}, s.karta.Spec.StructureDefinition.ChildComponents...)
 }
 
 // hasPodDefinition returns true if the component has any pod-related definition

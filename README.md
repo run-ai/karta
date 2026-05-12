@@ -1,148 +1,203 @@
-# Resource Interface
-## What is a Resource Interface?
-In Kubernetes, a workload is not a standalone execution unit (pod). Instead, it comprises various components, including an ingress entry point, a collection of pods, and storage.
+# Karta
 
-The purpose of the Resource Interface (RI) is to allow to perform actions and extract information from a new workload type. RI enables any controller to manage, monitor, and interact with new and custom Kubernetes workload types. By registering a workload type via an RI, the code can perform resource allocation, scheduling, monitoring, and data extraction, ensuring efficient operation and seamless integration.
+**A standard way to describe the structure of any Kubernetes workload type.**
 
-A Resource Interface (RI) is a structured mapping of a Kubernetes workload type.
+Karta lets you define a portable, declarative blueprint for any Kubernetes workload — whether it's a simple Deployment, a distributed PyTorchJob, or a custom CRD. Controllers and platforms can then use that blueprint to inspect, modify, and manage workloads without hard-coding knowledge of each type.
 
-It tells the user how to:
-- Identify the root component (the described CRD itself)
-- Model child components (replicas, workers, statefulsets)
-- Locate pod specs inside the resource definition
-- Interpret status (running, completed, failed)
-- Apply optimization instructions (gang scheduling)
-- Think of it as the blueprint of the workload.
+## The Problem
 
-## Usage
-Use the Component API to programmatically extract workload information from specific Kubernetes resource using its ResourceInterface.
+In Kubernetes, and especially in AI systems, a workload is not a standalone execution unit such as a single Pod. Instead, it is composed of multiple components organized in a complex hierarchy of resources, often exposed via custom resource definitions (CRDs) — for example: PyTorchJob, RayCluster, and MPIJob. Each of these CRDs structures the workload configuration differently, but they all share the same conceptual building blocks: pod specifications, scaling parameters, and status definitions.
 
-### Example: JobSet with RI
+If you're building a controller, scheduler, or platform that needs to work with multiple workload types, you end up writing bespoke logic for each one:
 
-**JobSet Object:**
-```yaml
-apiVersion: jobset.x-k8s.io/v1alpha2
-kind: JobSet
-metadata:
-  name: my-training-job
-spec:
-  replicatedJobs:
-  - name: master
-    replicas: 1
-    template:
-      spec:
-        template:
-          spec:
-            containers:
-            - name: trainer
-              image: my-training:latest
-  - name: worker
-    replicas: 3
-    template:
-      spec:
-        template:
-          spec:
-            containers:
-            - name: trainer
-              image: my-training:latest
+- Where is the pod template?
+- How do I find the replica count?
+- Which status conditions mean "running" vs "failed"?
+- How do I modify the pod spec without breaking the workload?
+
+This doesn't scale. Every new workload type means new integration code — schedulers, controllers, and platforms all end up maintaining per-CRD adapters that implement the same patterns over and over.
+
+## The Solution
+
+Karta (*a map to navigate resources*) introduces a CRD that maps the structure of any workload type into a standard schema. Using JQ-based path expressions, a Karta declaratively defines how to locate pod specifications, scaling parameters, and status fields within any workload hierarchy. Define it once, and any controller can use it to:
+
+- **Extract** pod templates, replica counts, status, and metadata
+- **Update** pod specs, labels, and annotations across all instances
+- **Understand** workload hierarchy (e.g., a JobSet with master + worker groups)
+
+In addition to the CRD, Karta provides a **Go package** that performs the core processing logic: query evaluation to dynamically interpret custom resource schemas, resource extraction that traverses workload hierarchies to identify and group pods, and optimization instruction processors that apply strategies such as gang scheduling to ensure coordinated placement of pods for distributed workloads.
+
+```
+┌──────────────────────────────────────────────────┐
+│                   Your Platform                  │
+│  (scheduler, controller, dashboard, CLI, etc.)   │
+├──────────────────────────────────────────────────┤
+│              Karta Component API                 │
+│    Extract pods · Update specs · Read status     │
+├────────────┬────────────┬────────────┬───────────┤
+│ Karta:     │ Karta:     │ Karta:     │ Karta:    │
+│ JobSet     │ RayCluster │ PyTorchJob │ YourCRD   │
+└────────────┴────────────┴────────────┴───────────┘
 ```
 
-**ResourceInterface Definition:**
+## Quick Start
+
+### Install the CRD
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/run-ai/karta/main/charts/karta/crds/run.ai_kartas.yaml
+```
+
+### Use the Go library
+
+```bash
+go get github.com/run-ai/karta@latest
+```
+
+### Define a Karta
+
+Here's a Karta for a JobSet — a distributed training workload with master and worker groups:
+
 ```yaml
-apiVersion: optimization.nvidia.com/v1alpha1
-kind: ResourceInterface
+apiVersion: run.ai/v1alpha1
+kind: Karta
 spec:
   structureDefinition:
     rootComponent:
-      name: "jobset"
+      name: jobset
       kind:
-        group: "jobset.x-k8s.io"
-        version: "v1alpha2"
-        kind: "JobSet"
+        group: jobset.x-k8s.io
+        version: v1alpha2
+        kind: JobSet
       statusDefinition:
         conditionsDefinition:
-          path: ".status.conditions"
-          typeFieldName: "type"
-          statusFieldName: "status"
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
         statusMappings:
           running:
           - byConditions:
-            - type: "StartupPolicyCompleted"
+            - type: StartupPolicyCompleted
               status: "True"
           completed:
           - byConditions:
-            - type: "Completed"
+            - type: Completed
               status: "True"
           failed:
           - byConditions:
-            - type: "Failed"
+            - type: Failed
               status: "True"
+
     childComponents:
-    - name: "replicatedjob"
+    - name: replicatedjob
+      kind:
+        group: batch
+        version: v1
+        kind: Job
+      ownerRef: jobset
       specDefinition:
-        podTemplateSpecPath: ".spec.replicatedJobs[].template"
+        podTemplateSpecPath: .spec.replicatedJobs[].template.spec.template
       scaleDefinition:
-        replicasPath: ".spec.replicatedJobs[].replicas"
-      instanceIdPath: ".spec.replicatedJobs[].name"  # Instances: "master", "worker"
+        replicasPath: .spec.replicatedJobs[].replicas
+      instanceIdPath: .spec.replicatedJobs[].name  # Instances: "master", "worker"
 ```
 
-### Basic Extraction
+### Extract workload information
+
 ```go
-import "github.com/run-ai/kai-bolt/pkg/resource"
+import "github.com/run-ai/karta/pkg/resource"
 
-// Create a factory from your ResourceInterface and JobSet object
-factory := resource.NewComponentFactoryFromObject(resourceInterface, jobSetObject)
+// Create a factory from your Karta and workload object
+factory := resource.NewComponentFactoryFromObject(karta, jobSetObject)
 
-// Get the child component (replicatedjob) which has the instances
+// Get the child component which has the per-instance data
 component, _ := factory.GetComponent("replicatedjob")
 summaries, _ := component.GetExtractedInstances(ctx)
 
 // Access pod template specs, metadata, and scale info for each instance
 for instanceID, summary := range summaries {
-    // instanceID will be "master" or "worker" in our example
+    // instanceID will be "master" or "worker"
     if summary.PodTemplateSpec != nil {
-        // Work with pod template specs
+        fmt.Printf("Instance %s image: %s\n", instanceID, summary.PodTemplateSpec.Spec.Containers[0].Image)
     }
 }
 
-// Get status from the root component (jobset)
+// Get status from the root component
 rootComponent, _ := factory.GetRootComponent()
 status, _ := rootComponent.GetStatus(ctx)
-// status.MatchedStatuses: []ResourceStatus - statuses matched based on conditions (e.g., ["running"])
+// status.MatchedStatuses: matched statuses based on conditions (e.g., ["running"])
 // status.Phase: raw phase string from the workload
 // status.Conditions: []Condition with Type, Status, Message fields
 ```
 
-### Update Capabilities
-The Resource Interface also supports updating the workload resource. You can modify pod specifications, metadata, or specific fields using the Component API.
+### Update workload specs
 
-The same paths defined in `SpecDefinition` are used for both extraction and updates.
+The same paths defined in `specDefinition` are used for both extraction and updates:
 
 ```go
-// ... assuming factory and component are already created ...
-
-// 1. Prepare the updates
-// Map instance IDs to the new values you want to set
+// Prepare updates per instance
 updates := map[string]resource.FragmentedPodSpec{
     "master": {
         SchedulerName: "my-custom-scheduler",
-        Labels: map[string]string{
-            "my-label": "true",
-        },
+        Labels: map[string]string{"my-label": "true"},
     },
     "worker": {
         SchedulerName: "my-custom-scheduler",
     },
 }
 
-// 2. Apply the updates
-// This modifies the underlying unstructured object in the factory
+// Apply updates — modifies the underlying unstructured object
 err := component.UpdateFragmentedPodSpec(ctx, updates)
-if err != nil {
-    // Handle error
-}
 
-// 3. Get the updated object to apply it back to the cluster
+// Get the updated object to apply back to the cluster
 updatedObject, _ := factory.GetObject()
-// ... use dynamic client to Update/Patch the object in Kubernetes ...
 ```
+
+## Pre-built Karta Definitions
+
+Karta supports any workload type. The following are pre-built and tested Karta definitions that ship with the project:
+
+| Workload Type | Framework |
+|---|---|
+| JobSet | Kubernetes |
+| PyTorchJob | Kubeflow |
+| RayCluster | Ray |
+| RayJob | Ray |
+| InferenceService | KServe |
+| Knative Service | Knative |
+| MPIJob | Kubeflow |
+| NIM Service | NVIDIA |
+| LeaderWorkerSet | Kubernetes |
+| Milvus | Milvus |
+| DynamoGraphDeployment | NVIDIA Dynamo |
+
+See [`docs/examples/`](docs/examples/) for the full Karta definitions.
+
+### Complex example: NVIDIA Dynamo
+
+The [Dynamo Karta](docs/examples/dynamo.yaml) shows Karta handling a real-world multi-service inference graph - fragmented pod specs across services, autoscaling with min/max replicas, replica selectors for multi-node workers, gang scheduling, and 6 additional child resource types (DynamoComponentDeployment, LeaderWorkerSet, PodGang, PodClique, PodCliqueSet, PodCliqueScalingGroup). A single Karta definition replaces what would otherwise require hundreds of lines of per-type controller logic.
+
+## Who Uses Karta?
+
+Karta was created at [Run:ai](https://run.ai) (NVIDIA) to power workload management across diverse Kubernetes workload types. It is used internally by multiple services including the workload controllers, scheduler integrations, and platform components.
+
+## Documentation
+
+- [Technical Guide](docs/Technical%20Guide.md) - Full Karta spec, path syntax (jq), validation rules
+- [Examples](docs/examples/) - Real-world Karta definitions for common workload types
+- [API Reference](https://pkg.go.dev/github.com/run-ai/karta) — Go package documentation
+- [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute (DCO required)
+
+## Status
+
+Karta is in active development (pre-1.0). The API may change between minor versions. We welcome feedback and contributions — please open an issue or start a discussion.
+
+## Third-Party Software
+
+This project includes third-party software components. See the [NOTICE](NOTICE) file for attributions and the [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) file for detailed license information.
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE) for the full text.
+
+Copyright (c) 2026 NVIDIA Corporation.
