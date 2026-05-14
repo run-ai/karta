@@ -1080,6 +1080,99 @@ var _ = Describe("Component", func() {
 			})
 		})
 	})
+
+	Context("Suspend and Resume", func() {
+		var component *Component
+
+	suspendDef := v1alpha1.SuspendDefinition{
+		SuspendActions: []v1alpha1.SuspendAction{{Path: ".spec.suspend", Value: "true"}},
+		ResumeActions:  []v1alpha1.SuspendAction{{Path: ".spec.suspend", Value: "false"}},
+	}
+
+		BeforeEach(func() {
+			component = &Component{
+				name: "suspendable-component",
+				definition: v1alpha1.ComponentDefinition{
+					Name:              "suspendable-component",
+					SuspendDefinition: &suspendDef,
+				},
+				accessor: mockAccessor,
+			}
+		})
+
+		Describe("HasSuspendDefinition", func() {
+			It("should return true when SuspendDefinition is set", func() {
+				Expect(component.HasSuspendDefinition()).To(BeTrue())
+			})
+
+			It("should return false when SuspendDefinition is nil", func() {
+				component.definition.SuspendDefinition = nil
+				Expect(component.HasSuspendDefinition()).To(BeFalse())
+			})
+		})
+
+		Describe("Suspend", func() {
+			It("should call ApplySuspendActions and succeed", func() {
+				mockAccessor.EXPECT().
+					ApplySuspendActions(ctx, component.definition).
+					Return(nil)
+
+				Expect(component.Suspend(ctx)).To(Succeed())
+			})
+
+			It("should return nil when component has no SuspendDefinition", func() {
+				component.definition.SuspendDefinition = nil
+				mockAccessor.EXPECT().
+					ApplySuspendActions(ctx, component.definition).
+					Return(DefinitionNotFoundError("no suspend definition"))
+
+				Expect(component.Suspend(ctx)).To(Succeed())
+			})
+
+			It("should propagate non-definition errors from ApplySuspendActions", func() {
+				expectedErr := errors.New("mutation failed")
+				mockAccessor.EXPECT().
+					ApplySuspendActions(ctx, component.definition).
+					Return(expectedErr)
+
+				err := component.Suspend(ctx)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("apply suspend actions"))
+				Expect(err.Error()).To(ContainSubstring(expectedErr.Error()))
+			})
+		})
+
+		Describe("Resume", func() {
+			It("should call ApplyResumeActions and succeed", func() {
+				mockAccessor.EXPECT().
+					ApplyResumeActions(ctx, component.definition).
+					Return(nil)
+
+				Expect(component.Resume(ctx)).To(Succeed())
+			})
+
+			It("should return nil when component has no SuspendDefinition", func() {
+				component.definition.SuspendDefinition = nil
+				mockAccessor.EXPECT().
+					ApplyResumeActions(ctx, component.definition).
+					Return(DefinitionNotFoundError("no suspend definition"))
+
+				Expect(component.Resume(ctx)).To(Succeed())
+			})
+
+			It("should propagate non-definition errors from ApplyResumeActions", func() {
+				expectedErr := errors.New("mutation failed")
+				mockAccessor.EXPECT().
+					ApplyResumeActions(ctx, component.definition).
+					Return(expectedErr)
+
+				err := component.Resume(ctx)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("apply resume actions"))
+				Expect(err.Error()).To(ContainSubstring(expectedErr.Error()))
+			})
+		})
+	})
 })
 
 // Helper functions

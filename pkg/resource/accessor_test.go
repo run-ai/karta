@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/jq/execution"
@@ -66,7 +65,7 @@ const (
 
 func accessorForObject(
 	karta *v1alpha1.Karta,
-	object client.Object,
+	object KubernetesObject,
 	componentName string,
 ) (*Accessor, *Component) {
 	accessor := NewAccessor(execution.NewDefaultRunner(object))
@@ -845,6 +844,66 @@ var _ = Describe("Accessor", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).NotTo(BeNil())
 				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.DegradedStatus))
+			})
+
+			It("should match Suspended status", func() {
+				reactorKarta := types.ReactorKarta()
+				reactorKarta.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Suspended: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "suspended",
+						},
+					},
+				}
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "suspended"
+				accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.SuspendedStatus))
+			})
+
+			It("should match Suspending status", func() {
+				reactorKarta := types.ReactorKarta()
+				reactorKarta.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Suspending: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "suspending",
+						},
+					},
+				}
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "suspending"
+				accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.SuspendingStatus))
+			})
+
+			It("should match Resuming status", func() {
+				reactorKarta := types.ReactorKarta()
+				reactorKarta.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Resuming: []v1alpha1.StatusMatcher{
+						{
+							ByPhase: "resuming",
+						},
+					},
+				}
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "resuming"
+				accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.ResumingStatus))
 			})
 
 			It("should return UndefinedStatus when phase does not match", func() {
@@ -1768,6 +1827,80 @@ var _ = Describe("Accessor", func() {
 			err := accessor.UpdatePodMetadata(ctx, masterComp.definition, podMetadata)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring(noMetadataError))
+		})
+	})
+
+	Describe("ApplySuspendActions", func() {
+		It("should apply each suspend action in sequence and mutate the object", func() {
+			reactorObject := types.NewReactorObject()
+			reactorKarta := types.ReactorKarta()
+			reactorKarta.Spec.StructureDefinition.RootComponent.SuspendDefinition = &v1alpha1.SuspendDefinition{
+				SuspendActions: []v1alpha1.SuspendAction{
+					{Path: ".spec.suspend", Value: "true"},
+					{Path: ".metadata.labels.state", Value: `"suspended"`},
+				},
+				ResumeActions: []v1alpha1.SuspendAction{
+					{Path: ".spec.suspend", Value: "false"},
+				},
+			}
+			accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+			err := accessor.ApplySuspendActions(ctx, reactorComp.definition)
+			Expect(err).ToNot(HaveOccurred())
+
+			obj, err := accessor.GetObject()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(obj["spec"].(map[string]any)["suspend"]).To(BeTrue())
+			Expect(obj["metadata"].(map[string]any)["labels"].(map[string]any)["state"]).To(Equal("suspended"))
+		})
+
+		It("should return DefinitionNotFoundError when SuspendDefinition is nil", func() {
+			reactorObject := types.NewReactorObject()
+			reactorKarta := types.ReactorKarta()
+			reactorKarta.Spec.StructureDefinition.RootComponent.SuspendDefinition = nil
+			accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+			err := accessor.ApplySuspendActions(ctx, reactorComp.definition)
+			Expect(err).To(HaveOccurred())
+			var defErr DefinitionNotFoundError
+			Expect(errors.As(err, &defErr)).To(BeTrue())
+		})
+	})
+
+	Describe("ApplyResumeActions", func() {
+		It("should apply each resume action in sequence and mutate the object", func() {
+			reactorObject := types.NewReactorObject()
+			reactorKarta := types.ReactorKarta()
+			reactorKarta.Spec.StructureDefinition.RootComponent.SuspendDefinition = &v1alpha1.SuspendDefinition{
+				SuspendActions: []v1alpha1.SuspendAction{
+					{Path: ".spec.suspend", Value: "true"},
+				},
+				ResumeActions: []v1alpha1.SuspendAction{
+					{Path: ".spec.suspend", Value: "false"},
+					{Path: ".metadata.labels.state", Value: `"running"`},
+				},
+			}
+			accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+			Expect(accessor.ApplySuspendActions(ctx, reactorComp.definition)).To(Succeed())
+			Expect(accessor.ApplyResumeActions(ctx, reactorComp.definition)).To(Succeed())
+
+			obj, err := accessor.GetObject()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(obj["spec"].(map[string]any)["suspend"]).To(BeFalse())
+			Expect(obj["metadata"].(map[string]any)["labels"].(map[string]any)["state"]).To(Equal("running"))
+		})
+
+		It("should return DefinitionNotFoundError when SuspendDefinition is nil", func() {
+			reactorObject := types.NewReactorObject()
+			reactorKarta := types.ReactorKarta()
+			reactorKarta.Spec.StructureDefinition.RootComponent.SuspendDefinition = nil
+			accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+			err := accessor.ApplyResumeActions(ctx, reactorComp.definition)
+			Expect(err).To(HaveOccurred())
+			var defErr DefinitionNotFoundError
+			Expect(errors.As(err, &defErr)).To(BeTrue())
 		})
 	})
 })
