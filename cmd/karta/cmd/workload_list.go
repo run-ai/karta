@@ -18,7 +18,8 @@ import (
 )
 
 func newWorkloadListCmd(opts *rootOptions) *cobra.Command {
-	return &cobra.Command{
+	var allNamespaces bool
+	c := &cobra.Command{
 		Use:   "list",
 		Short: "List workloads discovered via known Karta definitions",
 		RunE: func(c *cobra.Command, _ []string) error {
@@ -34,7 +35,11 @@ func newWorkloadListCmd(opts *rootOptions) *cobra.Command {
 				return fmt.Errorf("load community Karta definitions: %w", err)
 			}
 
-			workloads, pods, err := loader.ListWorkloads(ctx, client, registry, client.Namespace())
+			ns := client.Namespace()
+			if allNamespaces {
+				ns = ""
+			}
+			workloads, pods, err := loader.ListWorkloads(ctx, client, registry, ns)
 			if err != nil {
 				return err
 			}
@@ -57,8 +62,15 @@ func newWorkloadListCmd(opts *rootOptions) *cobra.Command {
 				})
 			}
 
-			sort.SliceStable(rows, func(i, j int) bool { return rows[i].Name < rows[j].Name })
+			sort.SliceStable(rows, func(i, j int) bool {
+				if rows[i].Namespace != rows[j].Namespace {
+					return rows[i].Namespace < rows[j].Namespace
+				}
+				return rows[i].Name < rows[j].Name
+			})
 			return render.List(c.OutOrStdout(), rows, opts.styleFor(c.OutOrStdout()))
 		},
 	}
+	c.Flags().BoolVarP(&allNamespaces, "all-namespaces", "A", false, "List workloads across every namespace")
+	return c
 }
