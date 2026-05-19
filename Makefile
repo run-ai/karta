@@ -134,6 +134,11 @@ download-dependencies:
 check: download-dependencies validate test lint
 
 ##@ Helm
+
+.PHONY: release-snapshot
+release-snapshot: ## Build a local snapshot release with goreleaser (no GH publish)
+	goreleaser release --snapshot --clean --skip=publish
+
 .PHONY: helm-build
 helm-build: ## Build the helm chart
 	helm package $(KARTA_CHART_DIR) --version $(HELM_CHART_VERSION) --app-version $(HELM_CHART_VERSION)

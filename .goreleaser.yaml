@@ -1,0 +1,62 @@
+# Goreleaser config for the karta CLI.
+# Triggered by tags matching kartacli-v* (see .github/workflows/release-cli.yaml).
+# The kartacli- prefix isolates these releases from the existing
+# v[0-9].[0-9].[0-9] tags used for the Karta helm chart / Go module.
+version: 2
+
+project_name: karta-cli
+
+# Note on tag prefix: the kartacli- prefix is stripped by the GitHub workflow
+# (.github/workflows/release-cli.yaml) via GORELEASER_CURRENT_TAG before
+# goreleaser runs, because the goreleaser monorepo feature is Pro-only.
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: karta
+    main: ./cmd/karta
+    binary: karta
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X github.com/run-ai/karta/cmd/karta/cmd.version={{.Version}}
+      - -X github.com/run-ai/karta/cmd/karta/cmd.commit={{.ShortCommit}}
+      - -X github.com/run-ai/karta/cmd/karta/cmd.date={{.Date}}
+
+archives:
+  - id: karta
+    ids: [karta]
+    name_template: "karta_{{.Version}}_{{.Os}}_{{.Arch}}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - src: cmd/karta/README.md
+        dst: README.md
+
+checksum:
+  name_template: 'karta_{{.Version}}_checksums.txt'
+
+release:
+  prerelease: auto    # auto-marks pre-release when the tag has -alpha/-beta/-rc
+  name_template: "karta CLI {{.Tag}}"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'

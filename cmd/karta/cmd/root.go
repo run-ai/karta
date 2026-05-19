@@ -51,6 +51,7 @@ Same output shape regardless of the underlying CRD.`,
 	root.PersistentFlags().StringVar(&opts.colorMode, "color", "auto", "Colorize output: auto, always, never")
 
 	root.AddCommand(newWorkloadCmd(opts))
+	root.AddCommand(newVersionCmd())
 
 	return root
 }
