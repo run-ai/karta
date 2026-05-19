@@ -9,7 +9,6 @@ import (
 	"sort"
 
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/jq/execution"
@@ -28,7 +27,7 @@ import (
 // instance (ComponentInstanceSelector) and ReplicaSelector flows are wired
 // through but produce a single InstanceNode per component for now; richer
 // instance splitting is a follow-up.
-func Build(ctx context.Context, karta *v1alpha1.Karta, workload client.Object, pods []corev1.Pod, matcher PodMatcher) (*WorkloadTree, error) {
+func Build(ctx context.Context, karta *v1alpha1.Karta, workload resource.KubernetesObject, pods []corev1.Pod, matcher PodMatcher) (*WorkloadTree, error) {
 	if karta == nil {
 		return nil, fmt.Errorf("karta definition must not be nil")
 	}
