@@ -1,0 +1,86 @@
+apiVersion: run.ai/v1alpha1
+kind: Karta
+metadata:
+  name: serving-kserve-io-inferenceservice-v1beta1
+spec:
+  structureDefinition:
+    rootComponent:
+      name: inferenceservice
+      kind:
+        group: serving.kserve.io
+        version: v1beta1
+        kind: InferenceService
+      statusDefinition:
+        conditionsDefinition:
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
+        statusMappings:
+          running:
+          - byConditions:
+              - type: PredictorReady
+                status: "True"
+              - type: RoutesReady
+                status: "True"
+              - type: LatestDeploymentReady
+                status: "True"
+          failed:
+          - byConditions:
+              - type: PredictorReady
+                status: "False"
+              - type: PredictorConfigurationReady
+                status: "False"
+              - type: RoutesReady
+                status: "False"
+    childComponents:
+      - name: predictor
+        kind:
+          group: apps
+          version: v1
+          kind: Deployment
+        ownerRef: inferenceservice
+        specDefinition:
+          fragmentedPodSpecDefinition:
+            schedulerNamePath: .spec.predictor.schedulerName
+            labelsPath: .spec.predictor.labels
+            annotationsPath: .spec.predictor.annotations
+            podAffinityPath: .spec.predictor.affinity.podAffinity
+            nodeAffinityPath: .spec.predictor.affinity.nodeAffinity
+            containersPath: .spec.predictor.containers
+            containerPath: .spec.predictor | ( (.[]?  | select(type =="object" and .storageUri )))
+            priorityClassNamePath: .spec.predictor.priorityClassName
+        scaleDefinition:
+          minReplicasPath: .spec.predictor.minReplicas
+          maxReplicasPath: .spec.predictor.maxReplicas
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["component"]
+            value: predictor
+      - name: transformer
+        kind:
+          group: apps
+          version: v1
+          kind: Deployment
+        ownerRef: inferenceservice
+        specDefinition:
+          podSpecPath: .spec.transformer
+          metadataPath: .spec.transformer
+        scaleDefinition:
+          minReplicasPath: .spec.transformer.minReplicas
+          maxReplicasPath: .spec.transformer.maxReplicas
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["component"]
+            value: transformer
+  optimizationInstructions:
+    gangScheduling:
+      podGroups:
+        - name: service
+          members:
+            - componentName: predictor
+              groupByKeyPaths:
+                - .metadata.labels["serving.kserve.io/inferenceservice"]
+            - componentName: transformer
+              groupByKeyPaths:
+                - .metadata.labels["serving.kserve.io/inferenceservice"]

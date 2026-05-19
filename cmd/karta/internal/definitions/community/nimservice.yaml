@@ -1,0 +1,47 @@
+apiVersion: run.ai/v1alpha1
+kind: Karta
+metadata:
+  name: apps-nvidia-com-nimservice-v1alpha1
+spec:
+  structureDefinition:
+    rootComponent:
+      name: nimservice
+      kind:
+        group: apps.nvidia.com
+        version: v1alpha1
+        kind: NIMService
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          schedulerNamePath: .spec.schedulerName
+          labelsPath: .spec.labels
+          annotationsPath: .spec.annotations
+          resourcesPath: .spec.resources
+          podAffinityPath: .spec.affinity.podAffinity
+          nodeAffinityPath: .spec.affinity.nodeAffinity
+      scaleDefinition:
+        replicasPath: .spec.replicas // 1
+      statusDefinition:
+        phaseDefinition:
+          path: .status.state
+        conditionsDefinition:
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
+        statusMappings:
+          initializing:
+          - byPhase: NotReady
+          running:
+          - byPhase: Ready
+          failed:
+          - byPhase: Failed
+  # Optimization instructions using new structure
+  optimizationInstructions:
+    # Gang scheduling for inference pipeline coordination (preferred for serving)
+    gangScheduling:
+      podGroups:
+      - name: service
+        members:
+        - componentName: nimservice
+          groupByKeyPaths:
+          - .metadata.labels["app.kubernetes.io/name"]

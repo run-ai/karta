@@ -13,6 +13,8 @@ $(LOCALBIN):
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 KARTA_CHART_DIR := $(PROJECT_DIR)/charts/karta
 KARTA_CRDS_DIR := $(KARTA_CHART_DIR)/crds
+KARTA_DEFINITIONS_DIR := $(PROJECT_DIR)/docs/examples
+CLI_DEFINITIONS_DIR := $(PROJECT_DIR)/cmd/karta/internal/definitions/community
 
 HELM_CHART_VERSION ?= 0.0.1
 
@@ -31,6 +33,11 @@ PATH := $(abspath $(LOCALBIN)):$(PATH)
 .PHONY: manifests
 manifests: controller-gen ## Generate CRD manifests
 	$(CONTROLLER_GEN) crd paths="./pkg/..." output:crd:artifacts:config=$(KARTA_CRDS_DIR)
+
+.PHONY: sync-cli-definitions
+sync-cli-definitions: ## Sync canonical Karta definitions into the CLI's embedded bundle
+	rm -f $(CLI_DEFINITIONS_DIR)/*.yaml
+	cp $(KARTA_DEFINITIONS_DIR)/*.yaml $(CLI_DEFINITIONS_DIR)/
 
 .PHONY: generate
 generate: controller-gen ## Generate DeepCopy methods
@@ -61,7 +68,7 @@ lint: fmt-go vet-go lint-go
 .PHONY: lint
 
 .PHONY: validate
-validate: generate manifests generate-mocks generate-licenses
+validate: generate manifests generate-mocks generate-licenses sync-cli-definitions
 	@git diff --exit-code 
 
 .PHONY: install-crd
@@ -127,7 +134,6 @@ download-dependencies:
 check: download-dependencies validate test lint
 
 ##@ Helm
-
 .PHONY: helm-build
 helm-build: ## Build the helm chart
 	helm package $(KARTA_CHART_DIR) --version $(HELM_CHART_VERSION) --app-version $(HELM_CHART_VERSION)

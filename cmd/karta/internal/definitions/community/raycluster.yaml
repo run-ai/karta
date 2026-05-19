@@ -1,0 +1,65 @@
+apiVersion: run.ai/v1alpha1
+kind: Karta
+metadata:
+  name: ray-io-raycluster-v1
+spec:
+  structureDefinition:
+    rootComponent:
+      name: raycluster
+      kind:
+        group: ray.io
+        version: v1
+        kind: RayCluster
+      statusDefinition:
+        phaseDefinition:
+          path: .status.state
+        statusMappings:
+          running:
+          - byPhase: ready
+          failed:
+          - byPhase: failed
+    childComponents:
+      - name: head
+        kind:
+          group: ""
+          version: v1
+          kind: Pod
+        ownerRef: raycluster
+        specDefinition:
+          podTemplateSpecPath: .spec.headGroupSpec.template
+        scaleDefinition:
+          replicasPath: "1"
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["ray.io/node-type"]
+            value: head
+      - name: worker
+        kind:
+          group: ""
+          version: v1
+          kind: Pod
+        ownerRef: raycluster
+        specDefinition:
+          podTemplateSpecPath: .spec.workerGroupSpecs[].template
+        scaleDefinition:
+          replicasPath: .spec.workerGroupSpecs[].replicas
+          minReplicasPath: .spec.workerGroupSpecs[].minReplicas
+          maxReplicasPath: .spec.workerGroupSpecs[].maxReplicas
+        instanceIdPath: .spec.workerGroupSpecs[].groupName
+        podSelector:
+          componentTypeSelector:
+            keyPath: .metadata.labels["ray.io/node-type"]
+            value: worker
+          componentInstanceSelector:
+            idPath: .metadata.labels["ray.io/group"]
+  optimizationInstructions:
+    gangScheduling:
+      podGroups:
+        - name: cluster
+          members:
+            - componentName: head
+              groupByKeyPaths:
+                - .metadata.labels["ray.io/cluster"]
+            - componentName: worker
+              groupByKeyPaths:
+                - .metadata.labels["ray.io/cluster"]
