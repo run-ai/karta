@@ -137,7 +137,7 @@ check: download-dependencies validate test lint
 
 .PHONY: release-snapshot
 release-snapshot: ## Build a local snapshot release with goreleaser (no GH publish)
-	goreleaser release --snapshot --clean --skip=publish
+	cd cmd/karta && goreleaser release --snapshot --clean --skip=publish
 
 .PHONY: helm-build
 helm-build: ## Build the helm chart

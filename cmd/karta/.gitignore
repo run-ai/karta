@@ -1,0 +1,6 @@
+# Staged at release time by .goreleaser.yaml's before-hook
+LICENSE
+# goreleaser output
+dist/
+# local builds of the CLI binary
+karta

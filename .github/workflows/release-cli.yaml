@@ -48,6 +48,7 @@ jobs:
       - name: Build artifacts with goreleaser
         uses: goreleaser/goreleaser-action@v6
         with:
+          workdir: cmd/karta
           distribution: goreleaser
           version: '~> v2'
           args: release --clean --skip=publish
@@ -59,7 +60,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "${{ steps.ver.outputs.tag }}" \
-            dist/*.tar.gz dist/*.zip dist/*_checksums.txt \
+            cmd/karta/dist/*.tar.gz cmd/karta/dist/*.zip cmd/karta/dist/*_checksums.txt \
             --prerelease \
             --latest=false \
             --title "karta CLI ${{ steps.ver.outputs.tag }}" \

@@ -13,10 +13,11 @@ project_name: karta-cli
 before:
   hooks:
     - go mod tidy
+    - sh -c 'cp ../../LICENSE LICENSE'
 
 builds:
   - id: karta
-    main: ./cmd/karta
+    main: .
     binary: karta
     env:
       - CGO_ENABLED=0
@@ -41,8 +42,7 @@ archives:
         formats: [zip]
     files:
       - LICENSE
-      - src: cmd/karta/README.md
-        dst: README.md
+      - README.md
 
 checksum:
   name_template: 'karta_{{.Version}}_checksums.txt'
