@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/jq/execution"
@@ -32,6 +31,8 @@ type ComponentWriter interface {
 	UpdatePodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, podSpecs []corev1.PodSpec) error
 	UpdatePodMetadata(ctx context.Context, definition v1alpha1.ComponentDefinition, podMetadata []metav1.ObjectMeta) error
 	UpdateFragmentedPodSpec(ctx context.Context, definition v1alpha1.ComponentDefinition, fragmentedPodSpecs []FragmentedPodSpec) error
+	ApplySuspendActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error
+	ApplyResumeActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error
 }
 
 //go:generate mockgen -source=component_factory.go -destination=accessor_mock.go -package=resource ComponentAccessor
@@ -41,7 +42,7 @@ type ComponentAccessor interface {
 }
 
 type ComponentFactory struct {
-	karta      *v1alpha1.Karta
+	karta    *v1alpha1.Karta
 	accessor ComponentAccessor
 
 	componentDefinitionsByName map[string]v1alpha1.ComponentDefinition
@@ -58,14 +59,14 @@ func NewComponentFactory(karta *v1alpha1.Karta, accessor ComponentAccessor) *Com
 	}
 
 	return &ComponentFactory{
-		karta:                        karta,
+		karta:                      karta,
 		accessor:                   accessor,
 		componentDefinitionsByName: definitionsByName,
 	}
 }
 
 // NewComponentFactoryFromObject creates a new Karta-based component factory from a Kubernetes object
-func NewComponentFactoryFromObject(karta *v1alpha1.Karta, object client.Object) *ComponentFactory {
+func NewComponentFactoryFromObject(karta *v1alpha1.Karta, object KubernetesObject) *ComponentFactory {
 	jqRunner := execution.NewDefaultRunner(object)
 	accessor := NewAccessor(jqRunner)
 	return NewComponentFactory(karta, accessor)
@@ -112,7 +113,7 @@ func (f *ComponentFactory) GetChildComponents() ([]*Component, error) {
 	return childComponents, nil
 }
 
-func (f *ComponentFactory) GetResource() (client.Object, error) {
+func (f *ComponentFactory) GetResource() (KubernetesObject, error) {
 	object, err := f.accessor.GetObject()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get updated data: %w", err)

@@ -13,7 +13,7 @@ import (
 var _ = Describe("KartaValidator", func() {
 	var (
 		validator *KartaValidator
-		baseKarta    *Karta
+		baseKarta *Karta
 	)
 
 	BeforeEach(func() {
@@ -500,10 +500,13 @@ var _ = Describe("KartaValidator", func() {
 				Completed:    []StatusMatcher{{ByPhase: "Completed"}},
 				Initializing: []StatusMatcher{{ByPhase: "Initializing"}},
 				Degraded:     []StatusMatcher{{ByPhase: "Degraded"}},
+				Suspended:    []StatusMatcher{{ByPhase: "Suspended"}},
+				Resuming:     []StatusMatcher{{ByPhase: "Resuming"}},
+				Suspending:   []StatusMatcher{{ByPhase: "Suspending"}},
 			}
 
 			entries := mappings.Entries()
-			Expect(entries).To(HaveLen(5))
+			Expect(entries).To(HaveLen(8))
 
 			statusToMatchers := make(map[ResourceStatus][]StatusMatcher)
 			for _, entry := range entries {
@@ -520,12 +523,18 @@ var _ = Describe("KartaValidator", func() {
 			Expect(statusToMatchers[InitializingStatus]).To(Equal(mappings.Initializing))
 			Expect(statusToMatchers).To(HaveKey(DegradedStatus))
 			Expect(statusToMatchers[DegradedStatus]).To(Equal(mappings.Degraded))
+			Expect(statusToMatchers).To(HaveKey(SuspendedStatus))
+			Expect(statusToMatchers[SuspendedStatus]).To(Equal(mappings.Suspended))
+			Expect(statusToMatchers).To(HaveKey(SuspendingStatus))
+			Expect(statusToMatchers[SuspendingStatus]).To(Equal(mappings.Suspending))
+			Expect(statusToMatchers).To(HaveKey(ResumingStatus))
+			Expect(statusToMatchers[ResumingStatus]).To(Equal(mappings.Resuming))
 		})
 
 		It("should return entries with nil matchers for empty mappings", func() {
 			mappings := StatusMappings{}
 			entries := mappings.Entries()
-			Expect(entries).To(HaveLen(5))
+			Expect(entries).To(HaveLen(8))
 			for _, entry := range entries {
 				Expect(entry.Matchers).To(BeNil())
 			}
