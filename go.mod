@@ -1,6 +1,6 @@
 module github.com/run-ai/karta
 
-go 1.26.0
+go 1.25.9
 
 require (
 	github.com/itchyny/gojq v0.12.18
@@ -8,8 +8,8 @@ require (
 	github.com/onsi/gomega v1.39.1
 	github.com/samber/lo v1.52.0
 	go.uber.org/mock v0.6.0
-	k8s.io/api v0.36.1
-	k8s.io/apimachinery v0.36.1
+	k8s.io/api v0.35.1
+	k8s.io/apimachinery v0.35.1
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
 	sigs.k8s.io/yaml v1.6.0
 )
