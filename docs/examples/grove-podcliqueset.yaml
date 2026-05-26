@@ -28,7 +28,9 @@ spec:
                   status: "True"
           running:
             - byExpression:
-                expression: '(.spec.replicas // 0) > 0 and (.status.availableReplicas // 0) >= (.spec.replicas // 0)'
+                # Matches when all desired replicas are available (including the
+                # vacuous replicas=0 case, same as k8s Deployment Available=True).
+                expression: '(.status.availableReplicas // 0) >= (.spec.replicas // 0)'
                 expectedResult: "true"
           initializing:
             - byExpression:
