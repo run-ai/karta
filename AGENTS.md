@@ -34,74 +34,23 @@ Never do:
 
 ## Repo Layout
 
-```text
-karta/
-  pkg/                  Go library source
-    api/runai/v1alpha1/ CRD types (group: run.ai)
-    resource/           Component extraction and update logic
-    instructions/       Gang scheduling and pod manipulation
-    jq/                 JQ path engine for spec/status traversal
-  charts/karta/         Helm chart (CRDs auto-generated)
-  docs/
-    Technical Guide.md  CRD anatomy, JQ paths, spec definitions
-    examples/           Pre-built Karta definitions
-  hack/                 Build and codegen scripts
-  test/                 Test fixtures and integration tests
-  .github/              CODEOWNERS, issue templates, PR template, CI workflows
-```
-
-If a directory has its own `AGENTS.md`, prefer that for subtree-specific rules.
+- `pkg/` Karta Go library source
+- `charts/` Helm chart (CRDs auto-generated)
+- `docs/` Pre-built Karta definitions and guides
 
 ## Build, Test, Lint
 
-| Command | What it does |
-|---------|--------------|
-| `make check` | Umbrella: validates generated artifacts, runs tests, runs lint. Run before every PR. |
-| `make test` | Run Go tests with mock regeneration. |
-| `make lint` | `go fmt`, `go vet`, `golangci-lint`. |
-| `make manifests` | Regenerate CRD YAML into `charts/karta/crds/`. |
-| `make generate` | Regenerate DeepCopy methods. |
-| `make generate-licenses` | Refresh `NOTICE` and `THIRD_PARTY_LICENSES`. |
-| `make validate` | Run all generators and fail if the working tree drifts. |
-
-Tools install into `./bin/` on first use. Versions are pinned in the Makefile.
-
-### Running a single test
-
-```bash
-go test ./pkg/resource/                          # one package
-go test ./pkg/resource/ -run TestComponentFactory # one test function
-go test ./pkg/resource/ -run TestComponentFactory -v -count=1
-```
-
-`make test` regenerates mocks first (`go generate ./pkg/...`); `go test` directly does not. If you change interfaces being mocked, run `make generate-mocks` before iterating.
+Use `Makefile` to build, test, lint, and generate code (e.g. `make test`, `make validate`). For a single test use `go test`.
 
 ## Code Style
-
-### Imports
-
-Three groups, separated by blank lines (enforced by `goimports` with `local-prefixes: github.com/run-ai/karta`):
-
-```go
-import (
-    // 1. Standard library
-    "context"
-    "fmt"
-
-    // 2. External dependencies
-    corev1 "k8s.io/api/core/v1"
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-    // 3. Internal packages
-    "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
-)
-```
 
 ### Naming and Go patterns
 
 - Files `snake_case.go`; types `PascalCase`; interfaces `-er` suffix or `Interface`; boolean predicates use `is`/`has`/`should` prefix.
 - `context.Context` first parameter; pointer receivers for state-mutating methods; constructors return interface types when an interface exists; wrap errors with `%w`; do not log and return the same error.
 - Test files live next to the code (`*_test.go` in the same package).
+- Prefer idiomatic Go and Effective Go best practices (switch/case blocks, sentinel error types, etc.).
+- Keep code inline; only write helper functions if you test them later or they are re-used elsewhere.
 
 ### Linter
 
@@ -160,7 +109,3 @@ Unit tests live next to the code (`*_test.go` in the same package). Mocks are re
 - Conduct concerns: `CODE_OF_CONDUCT.md`.
 
 For feature discussion or bug reports, open a GitHub issue using the templates under `.github/ISSUE_TEMPLATE/`.
-
-## Subtree AGENTS.md Files
-
-When a subtree (e.g. `pkg/jq/`, `charts/karta/`) has non-obvious local conventions, add a nested `AGENTS.md` (under 200 lines). For Claude Code parity, add a sibling `CLAUDE.md` containing only `@AGENTS.md` (`printf '@AGENTS.md\n' > CLAUDE.md`). Do not use symlinks or put unique content in `CLAUDE.md`.
