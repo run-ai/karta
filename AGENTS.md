@@ -136,6 +136,8 @@ Use the PR template at `.github/PULL_REQUEST_TEMPLATE.md`. Required: link to an 
 
 Every new source/Markdown file starts with `SPDX-License-Identifier: Apache-2.0` and `Copyright (c) 2026 NVIDIA Corporation`, in the file's comment syntax (Go `//`, Markdown `<!-- -->`, YAML/shell `#`).
 
+Exception: a Markdown file whose only content is an `@` import directive (for example, a sibling `CLAUDE.md` containing only `@AGENTS.md`) has no header.
+
 ## Third-Party Dependencies
 
 Allowed licenses: MIT, BSD-2/3, Apache 2.0, ISC. Disallowed: GPL, LGPL, AGPL, any copyleft. After adding a module:
