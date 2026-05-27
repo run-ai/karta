@@ -31,9 +31,9 @@ func buildScheme() *runtime.Scheme {
 	return s
 }
 
-// newKarta builds a Karta with the given name and optional root GVK. It is
-// not intended to be a "valid" Karta in the validation sense - this PR does
-// not exercise spec validation.
+// newKarta builds a Karta with the given name and optional root GVK. The root
+// component has no StatusDefinition so it will fail spec validation — use
+// newValidKarta when KartaValidated=True is expected.
 func newKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Karta {
 	k := &kartav1alpha1.Karta{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -47,6 +47,31 @@ func newKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Karta {
 		}
 	}
 	return k
+}
+
+// newValidKarta builds a Karta that passes KartaValidator.Validate(): it has
+// a root component with a full GVK and a minimal StatusDefinition.
+func newValidKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Karta {
+	k := newKarta(name, gvk)
+	if gvk != nil {
+		k.Spec.StructureDefinition.RootComponent.StatusDefinition = &kartav1alpha1.StatusDefinition{
+			StatusMappings: kartav1alpha1.StatusMappings{},
+		}
+	}
+	return k
+}
+
+// findCondition returns the condition with the given type, failing the test
+// when not found.
+func findCondition(conds []metav1.Condition, t kartav1alpha1.ConditionType) metav1.Condition {
+	GinkgoHelper()
+	for _, c := range conds {
+		if c.Type == string(t) {
+			return c
+		}
+	}
+	Fail("condition not found: " + string(t))
+	return metav1.Condition{}
 }
 
 // newCRD builds a CustomResourceDefinition serving the given versions for
