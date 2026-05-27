@@ -37,7 +37,7 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 		Expect(r.MapCRDToKartaEvent(ctx, crd)).To(BeEmpty())
 	})
 
-	It("returns one request per Karta whose root GVK matches a served CRD version", func() {
+	It("enqueues all Kartas that share the CRD group+kind, regardless of version", func() {
 		gvkV1 := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 		gvkV2 := schema.GroupVersionKind{Group: "test.run.ai", Version: "v2", Kind: "Foo"}
 		other := schema.GroupVersionKind{Group: "other.run.ai", Version: "v1", Kind: "Bar"}
@@ -47,7 +47,9 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 		Expect(k8s.Create(ctx, newKarta("karta-other", &other))).To(Succeed())
 		Expect(k8s.Create(ctx, newKarta("karta-no-gvk", nil))).To(Succeed())
 
-		crd := newCRD("foos.test.run.ai", "test.run.ai", "Foo", "v1", "v2")
+		// CRD only serves v1 now; karta-v2 still gets enqueued because we match
+		// on group+kind only. The reconciler decides whether v2 actually exists.
+		crd := newCRD("foos.test.run.ai", "test.run.ai", "Foo", "v1")
 		reqs := r.MapCRDToKartaEvent(ctx, crd)
 
 		names := make([]string, 0, len(reqs))
@@ -57,12 +59,31 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 		Expect(names).To(ConsistOf("karta-v1", "karta-v2"))
 	})
 
-	It("ignores CRD versions that are not served", func() {
+	It("enqueues a Karta even when its referenced version was just removed from the CRD", func() {
+		// This is the gap the group+kind approach fixes: if the CRD drops v1
+		// from its served set, the version-based mapper would miss karta-v1.
 		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 		Expect(k8s.Create(ctx, newKarta("karta-v1", &gvk))).To(Succeed())
 
-		crd := newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version)
-		crd.Spec.Versions[0].Served = false
+		// CRD now only serves v2 - v1 is gone.
+		crd := newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, "v2")
+		reqs := r.MapCRDToKartaEvent(ctx, crd)
+
+		names := make([]string, 0, len(reqs))
+		for _, req := range reqs {
+			names = append(names, req.Name)
+		}
+		Expect(names).To(ConsistOf("karta-v1"))
+	})
+
+	It("skips Kartas whose group or kind does not match", func() {
+		differentGroup := schema.GroupVersionKind{Group: "other.run.ai", Version: "v1", Kind: "Foo"}
+		differentKind := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Bar"}
+
+		Expect(k8s.Create(ctx, newKarta("karta-diff-group", &differentGroup))).To(Succeed())
+		Expect(k8s.Create(ctx, newKarta("karta-diff-kind", &differentKind))).To(Succeed())
+
+		crd := newCRD("foos.test.run.ai", "test.run.ai", "Foo", "v1")
 		Expect(r.MapCRDToKartaEvent(ctx, crd)).To(BeEmpty())
 	})
 })

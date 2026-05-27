@@ -17,11 +17,15 @@ import (
 )
 
 // MapCRDToKartaEvent maps a CRD event to reconcile requests for every Karta
-// whose root component references the GVK served by that CRD.
+// whose root component references the same group and kind as that CRD,
+// regardless of version.
 //
-// CRDs can serve multiple versions, so a single CRD event can fan out to
-// several Kartas. We list all Kartas and select the ones whose root kind
-// matches the CRD group+kind and one of the served versions.
+// Matching on group+kind (not the full GVK) ensures that we enqueue Kartas
+// when a CRD update removes or stops serving a version they reference. Under
+// version-only matching the Karta would be invisible to the mapper the moment
+// its referenced version disappears from the served set - the reconciler would
+// never run and CRDExists would remain stale. The reconciler (Story 1.3)
+// re-checks the exact version and sets CRDExists correctly.
 func (r *Reconciler) MapCRDToKartaEvent(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
@@ -31,10 +35,7 @@ func (r *Reconciler) MapCRDToKartaEvent(ctx context.Context, obj client.Object) 
 		return nil
 	}
 
-	servedGVKs := servedGVKsFromCRD(crd)
-	if len(servedGVKs) == 0 {
-		return nil
-	}
+	crdGK := schema.GroupKind{Group: crd.Spec.Group, Kind: crd.Spec.Names.Kind}
 
 	kartas := &kartav1alpha1.KartaList{}
 	if err := r.List(ctx, kartas); err != nil {
@@ -49,7 +50,7 @@ func (r *Reconciler) MapCRDToKartaEvent(ctx context.Context, obj client.Object) 
 		if gvk == nil {
 			continue
 		}
-		if _, matches := servedGVKs[*gvk]; !matches {
+		if gvk.GroupKind() != crdGK {
 			continue
 		}
 		requests = append(requests, reconcile.Request{
@@ -57,23 +58,6 @@ func (r *Reconciler) MapCRDToKartaEvent(ctx context.Context, obj client.Object) 
 		})
 	}
 	return requests
-}
-
-// servedGVKsFromCRD returns the set of GroupVersionKinds served by the given
-// CRD. Non-served versions are skipped.
-func servedGVKsFromCRD(crd *apiextensionsv1.CustomResourceDefinition) map[schema.GroupVersionKind]struct{} {
-	result := make(map[schema.GroupVersionKind]struct{}, len(crd.Spec.Versions))
-	for _, v := range crd.Spec.Versions {
-		if !v.Served {
-			continue
-		}
-		result[schema.GroupVersionKind{
-			Group:   crd.Spec.Group,
-			Version: v.Name,
-			Kind:    crd.Spec.Names.Kind,
-		}] = struct{}{}
-	}
-	return result
 }
 
 // rootGVK extracts the GroupVersionKind of the Karta root component, or nil
