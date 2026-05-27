@@ -49,8 +49,8 @@ Use `Makefile` to build, test, lint, and generate code (e.g. `make test`, `make 
 - Files `snake_case.go`; types `PascalCase`; interfaces `-er` suffix or `Interface`; boolean predicates use `is`/`has`/`should` prefix.
 - `context.Context` first parameter; pointer receivers for state-mutating methods; constructors return interface types when an interface exists; wrap errors with `%w`; do not log and return the same error.
 - Test files live next to the code (`*_test.go` in the same package).
-- Prefer idiomatic Go and Effective Go best practices (switch/case blocks, sentinel error types, etc.).
-- Keep code inline; only write helper functions if you test them later or they are re-used elsewhere.
+- Prefer idiomatic go and effective go best practices (switch/case blocks, sentinel error types etc).
+- Keep code inline, only write helper functions if you test them later or they are re-used elsewhere.
 
 ### Linter
 
