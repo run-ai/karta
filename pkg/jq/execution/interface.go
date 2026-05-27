@@ -5,7 +5,7 @@ package execution
 
 import "context"
 
-//go:generate mockgen -source=interface.go -destination=runner_mock.go -package=execution Runner
+//go:generate go run go.uber.org/mock/mockgen -source=interface.go -destination=runner_mock.go -package=execution Runner
 type Evaluator interface {
 	// Evaluate evaluates a JQ expression and returns the results.
 	Evaluate(ctx context.Context, expression string) ([]any, error)

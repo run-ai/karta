@@ -35,7 +35,7 @@ type ComponentWriter interface {
 	ApplyResumeActions(ctx context.Context, definition v1alpha1.ComponentDefinition) error
 }
 
-//go:generate mockgen -source=component_factory.go -destination=accessor_mock.go -package=resource ComponentAccessor
+//go:generate go run go.uber.org/mock/mockgen -source=component_factory.go -destination=accessor_mock.go -package=resource ComponentAccessor
 type ComponentAccessor interface {
 	ComponentReader
 	ComponentWriter

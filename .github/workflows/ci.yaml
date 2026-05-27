@@ -17,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25.7'
+          go-version-file: 'go.mod'
           cache: true
 
       - name: Cache bin tools
@@ -30,6 +30,14 @@ jobs:
 
       - name: Run checks
         run: make check
+
+      - name: Get golangci-lint version
+        run: echo "GOLANGCI_LINT_VERSION=$(grep '^GOLANGCI_LINT_VERSION' Makefile | cut -d'=' -f2 | tr -d ' ')" >> $GITHUB_ENV
+
+      - name: Lint Go
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
 
       - name: Lint helm chart
         run: make helm-lint

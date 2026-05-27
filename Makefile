@@ -17,15 +17,13 @@ KARTA_CRDS_DIR := $(KARTA_CHART_DIR)/crds
 HELM_CHART_VERSION ?= 0.0.1
 
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-MOCKGEN ?= $(LOCALBIN)/mockgen
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
-GO_LICENSES ?= $(LOCALBIN)/go-licenses
-GOROOT ?= $(shell go env GOROOT)
+GO_LICENCE_DETECTOR ?= $(LOCALBIN)/go-licence-detector
+
 # Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
-GOMOCK_VERSION ?= v0.6.0
-GOLANGCI_LINT_VERSION ?= v2.5.0
-GO_LICENSES_VERSION ?= v2.0.1
+GOLANGCI_LINT_VERSION ?= v2.12.2
+GO_LICENCE_DETECTOR_VERSION ?= v0.10.0
 PATH := $(abspath $(LOCALBIN)):$(PATH)
 
 .PHONY: manifests
@@ -37,7 +35,7 @@ generate: controller-gen ## Generate DeepCopy methods
 	$(CONTROLLER_GEN) object paths="./..."
 
 .PHONY: generate-mocks
-generate-mocks: mockgen ## Generate mocks using go generate
+generate-mocks: ## Generate mocks using go generate
 	go generate ./pkg/...
 
 .PHONY: test
@@ -81,50 +79,41 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION) ;\
 	}
 
-.PHONY: mockgen
-mockgen: $(MOCKGEN) ## Download mockgen locally if necessary.
-$(MOCKGEN): $(LOCALBIN)
-	@[ -f "$(MOCKGEN)" ] || { \
-	set -e; \
-	echo "Downloading mockgen@$(GOMOCK_VERSION)" ;\
-	GOBIN=$(LOCALBIN) go install go.uber.org/mock/mockgen@$(GOMOCK_VERSION) ;\
-	}
-
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
 	@[ -f "$(GOLANGCI_LINT)" ] || { \
 	set -e; \
 	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)" ;\
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
+	curl -sSfL https://golangci-lint.run/install.sh  | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
 	}
 
-.PHONY: go-licenses
-go-licenses: $(GO_LICENSES) ## Download go-licenses locally if necessary.
-$(GO_LICENSES): $(LOCALBIN)
-	@[ -f "$(GO_LICENSES)" ] || { \
+.PHONY: go-licence-detector
+go-licence-detector: $(GO_LICENCE_DETECTOR) ## Download go-licence-detector locally if necessary.
+$(GO_LICENCE_DETECTOR): $(LOCALBIN)
+	@[ -f "$(GO_LICENCE_DETECTOR)" ] || { \
 	set -e; \
-	echo "Downloading go-licenses@$(GO_LICENSES_VERSION)" ;\
-	GOBIN=$(LOCALBIN) go install github.com/google/go-licenses/v2@$(GO_LICENSES_VERSION) ;\
+	echo "Downloading go-licence-detector@$(GO_LICENCE_DETECTOR_VERSION)" ;\
+	GOBIN=$(LOCALBIN) go install go.elastic.co/go-licence-detector@$(GO_LICENCE_DETECTOR_VERSION) ;\
 	}
 
 .PHONY: generate-licenses
-generate-licenses: go-licenses download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
-	echo "Updating NOTICE and THIRD_PARTY_LICENSES"
-	`@set` -e; \
-	tmp_notice=$$(mktemp); \
-	tmp_third=$$(mktemp); \
-	GOROOT=$(GOROOT) $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/notice.tpl > $$tmp_notice; \
-	GOROOT=$(GOROOT) $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/third_party_licenses.tpl > $$tmp_third; \
-	mv $$tmp_notice NOTICE; \
-	mv $$tmp_third THIRD_PARTY_LICENSES
+generate-licenses: go-licence-detector download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
+	@set -eu; \
+	echo "Generating NOTICE and THIRD_PARTY_LICENSES files from current dependencies using go-licence-detector"; \
+	go mod download -json | $(GO_LICENCE_DETECTOR) \
+		-noticeTemplate=hack/licenses/notice.tpl \
+		-noticeOut=NOTICE \
+		-depsTemplate=hack/licenses/third_party_licenses.tpl \
+		-depsOut=THIRD_PARTY_LICENSES; \
+	echo "Done"
 
 .PHONY: download-dependencies
 download-dependencies:
 	go mod download
 
 .PHONY: check
-check: download-dependencies validate test lint
+check: download-dependencies validate test
 
 ##@ Helm
 
