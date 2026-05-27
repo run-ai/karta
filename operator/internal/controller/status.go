@@ -33,48 +33,60 @@ const (
 	msgNotReady              = "KartaValidated and CRDExists must both be True"
 )
 
-// conditionInputs carries the computed True/False status for each of the two
-// independent conditions. Ready is always derived from them.
+// setKartaValidated writes the KartaValidated condition into status.
+func setKartaValidated(status *kartav1alpha1.KartaStatus, s metav1.ConditionStatus) {
+	upsertConditions(&status.Conditions, map[kartav1alpha1.ConditionType]metav1.Condition{
+		kartav1alpha1.ConditionKartaValidated: buildCondition(
+			kartav1alpha1.ConditionKartaValidated,
+			s,
+			reasonForBool(s, ReasonKartaValidationSucceeded, ReasonKartaValidationFailed),
+			msgWhenFalse(s, msgKartaValidationFailed),
+		),
+	})
+}
+
+// setCRDExists writes the CRDExists condition into status.
+func setCRDExists(status *kartav1alpha1.KartaStatus, s metav1.ConditionStatus) {
+	upsertConditions(&status.Conditions, map[kartav1alpha1.ConditionType]metav1.Condition{
+		kartav1alpha1.ConditionCRDExists: buildCondition(
+			kartav1alpha1.ConditionCRDExists,
+			s,
+			reasonForBool(s, ReasonCRDFound, ReasonCRDNotFound),
+			msgWhenFalse(s, msgCRDNotFound),
+		),
+	})
+}
+
+// setReady derives and writes the Ready condition from the current values of
+// KartaValidated and CRDExists already in status.
+func setReady(status *kartav1alpha1.KartaStatus, validated, crdExists metav1.ConditionStatus) {
+	readyStatus := metav1.ConditionFalse
+	readyReason := ReasonNotReady
+	readyMsg := msgNotReady
+	if validated == metav1.ConditionTrue && crdExists == metav1.ConditionTrue {
+		readyStatus = metav1.ConditionTrue
+		readyReason = ReasonReady
+		readyMsg = ""
+	}
+	upsertConditions(&status.Conditions, map[kartav1alpha1.ConditionType]metav1.Condition{
+		kartav1alpha1.ConditionReady: buildCondition(
+			kartav1alpha1.ConditionReady, readyStatus, readyReason, readyMsg,
+		),
+	})
+}
+
+// conditionInputs is kept for use by status_test.go which tests all three
+// conditions together through the helper below.
 type conditionInputs struct {
 	kartaValidated metav1.ConditionStatus
 	crdExists      metav1.ConditionStatus
 }
 
-// setConditions writes KartaValidated, CRDExists and the derived Ready
-// condition into status. It delegates to upsertConditions to preserve order
-// and LastTransitionTime semantics.
+// setConditions writes all three owned conditions at once. Used by tests.
 func setConditions(status *kartav1alpha1.KartaStatus, in conditionInputs) {
-	readyStatus := metav1.ConditionFalse
-	readyReason := ReasonNotReady
-	readyMsg := msgNotReady
-	if in.kartaValidated == metav1.ConditionTrue && in.crdExists == metav1.ConditionTrue {
-		readyStatus = metav1.ConditionTrue
-		readyReason = ReasonReady
-		readyMsg = ""
-	}
-
-	desired := map[kartav1alpha1.ConditionType]metav1.Condition{
-		kartav1alpha1.ConditionKartaValidated: buildCondition(
-			kartav1alpha1.ConditionKartaValidated,
-			in.kartaValidated,
-			reasonForBool(in.kartaValidated, ReasonKartaValidationSucceeded, ReasonKartaValidationFailed),
-			msgWhenFalse(in.kartaValidated, msgKartaValidationFailed),
-		),
-		kartav1alpha1.ConditionCRDExists: buildCondition(
-			kartav1alpha1.ConditionCRDExists,
-			in.crdExists,
-			reasonForBool(in.crdExists, ReasonCRDFound, ReasonCRDNotFound),
-			msgWhenFalse(in.crdExists, msgCRDNotFound),
-		),
-		kartav1alpha1.ConditionReady: buildCondition(
-			kartav1alpha1.ConditionReady,
-			readyStatus,
-			readyReason,
-			readyMsg,
-		),
-	}
-
-	upsertConditions(&status.Conditions, desired)
+	setKartaValidated(status, in.kartaValidated)
+	setCRDExists(status, in.crdExists)
+	setReady(status, in.kartaValidated, in.crdExists)
 }
 
 // upsertConditions merges desired into the existing condition list.
