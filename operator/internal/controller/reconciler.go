@@ -9,6 +9,7 @@ import (
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
+	"github.com/go-logr/logr"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -16,16 +17,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// reconcile is the per-Karta reconciliation logic. It:
-//  1. Validates the Karta spec                    (Story 1.2 — KartaValidated)
-//  2. Checks the referenced CRD exists            (Story 1.3 — CRDExists)
-//  3. Derives the aggregate Ready condition        (Story 1.4 — Ready)
-//  4. Patches Karta status if anything changed
+// reconcile runs the ordered step chain for one Karta. Every step continues
+// to the next so we always produce a complete status picture. The chain only
+// short-circuits on hard errors (StopWithError).
 func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) (ctrl.Result, error) {
+	logger := log.FromContext(ctx).WithValues("karta", karta.Name)
 	original := karta.Status.DeepCopy()
 
-	in := r.computeConditions(ctx, karta)
-	setConditions(&karta.Status, in)
+	steps := []StepFn{
+		r.stepValidateKarta,
+		r.stepCheckCRDExists,
+		r.stepDeriveReady,
+	}
+	for _, step := range steps {
+		if res := step(ctx, logger, karta); shortCircuit(res) {
+			return res.Result()
+		}
+	}
 
 	if err := r.patchStatusIfChanged(ctx, karta, original); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update status for karta %q: %w", karta.Name, err)
@@ -33,48 +41,55 @@ func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) 
 	return ctrl.Result{}, nil
 }
 
-// computeConditions evaluates KartaValidated and CRDExists independently.
-// Both start as False; each flips to True only if the check passes.
-func (r *Reconciler) computeConditions(ctx context.Context, karta *kartav1alpha1.Karta) conditionInputs {
-	logger := log.FromContext(ctx).WithValues("karta", karta.Name)
-
-	in := conditionInputs{
-		kartaValidated: metav1.ConditionFalse,
-		crdExists:      metav1.ConditionFalse,
-	}
-
-	// Story 1.2 — KartaValidated
+// stepValidateKarta runs the Karta spec validator and writes KartaValidated.
+func (r *Reconciler) stepValidateKarta(_ context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
 	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
 		logger.V(1).Info("Karta spec validation failed", "error", err.Error())
+		setKartaValidated(&karta.Status, metav1.ConditionFalse)
 	} else {
-		in.kartaValidated = metav1.ConditionTrue
+		setKartaValidated(&karta.Status, metav1.ConditionTrue)
 	}
+	return Continue()
+}
 
-	// Story 1.3 — CRDExists
+// stepCheckCRDExists looks up the referenced CRD and writes CRDExists.
+func (r *Reconciler) stepCheckCRDExists(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
 	gvk := rootGVK(karta)
 	if gvk == nil {
 		logger.V(1).Info("Karta has no root component kind; leaving CRDExists=False")
-		return in
+		setCRDExists(&karta.Status, metav1.ConditionFalse)
+		return Continue()
 	}
 
 	exists, err := r.crdExistsForGVK(ctx, *gvk)
 	if err != nil {
-		// Do not return the error: a transient API-server failure should not
-		// cause endless requeue storms. The CRD watch will re-trigger this
-		// reconcile when the CRD situation resolves.
+		// Transient API-server error: log and leave CRDExists=False. The CRD
+		// watch will re-trigger this reconcile when the situation resolves, so
+		// we do not requeue here to avoid a storm.
 		logger.Error(err, "Failed to check CRD existence", "gvk", gvk.String())
-		return in
-	}
-	if exists {
-		in.crdExists = metav1.ConditionTrue
+		setCRDExists(&karta.Status, metav1.ConditionFalse)
+		return Continue()
 	}
 
-	return in
+	if exists {
+		setCRDExists(&karta.Status, metav1.ConditionTrue)
+	} else {
+		setCRDExists(&karta.Status, metav1.ConditionFalse)
+	}
+	return Continue()
+}
+
+// stepDeriveReady sets Ready based on the KartaValidated and CRDExists
+// conditions already written to karta.Status by the preceding steps.
+func (r *Reconciler) stepDeriveReady(_ context.Context, _ logr.Logger, karta *kartav1alpha1.Karta) StepResult {
+	validated := conditionStatus(&karta.Status, kartav1alpha1.ConditionKartaValidated)
+	crdExists := conditionStatus(&karta.Status, kartav1alpha1.ConditionCRDExists)
+	setReady(&karta.Status, validated, crdExists)
+	return Continue()
 }
 
 // crdExistsForGVK reports whether a CRD serving the given group, version and
-// kind is present in the cluster. It returns false (not an error) when the
-// CRD simply does not exist.
+// kind is present in the cluster.
 func (r *Reconciler) crdExistsForGVK(ctx context.Context, gvk schema.GroupVersionKind) (bool, error) {
 	crds := &apiextensionsv1.CustomResourceDefinitionList{}
 	if err := r.List(ctx, crds); err != nil {
@@ -88,8 +103,8 @@ func (r *Reconciler) crdExistsForGVK(ctx context.Context, gvk schema.GroupVersio
 	return false, nil
 }
 
-// crdMatchesGVK returns true when the CRD covers the given group and kind and
-// lists the requested version (regardless of whether it is the storage version).
+// crdMatchesGVK returns true when the CRD covers the given group, kind and
+// version (storage or otherwise).
 func crdMatchesGVK(crd *apiextensionsv1.CustomResourceDefinition, gvk schema.GroupVersionKind) bool {
 	if crd.Spec.Group != gvk.Group || crd.Spec.Names.Kind != gvk.Kind {
 		return false
@@ -100,4 +115,15 @@ func crdMatchesGVK(crd *apiextensionsv1.CustomResourceDefinition, gvk schema.Gro
 		}
 	}
 	return false
+}
+
+// conditionStatus reads the current Status of the named condition from the
+// Karta status, returning ConditionFalse when not found.
+func conditionStatus(status *kartav1alpha1.KartaStatus, t kartav1alpha1.ConditionType) metav1.ConditionStatus {
+	for _, c := range status.Conditions {
+		if c.Type == string(t) {
+			return c.Status
+		}
+	}
+	return metav1.ConditionFalse
 }

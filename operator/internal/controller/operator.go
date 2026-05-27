@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Package operator implements the OSS Karta operator reconciliation logic.
+// Package controller implements the OSS Karta operator reconciliation logic.
 //
-// This story (Story 1.1 of the "Move Karta Controller from EWI to OSS" epic)
-// provides the controller skeleton: it watches Karta CRs and
-// CustomResourceDefinitions and wires them through controller-runtime. The
-// actual Karta status condition logic (KartaValidated, CRDExists, Ready) is
-// added by subsequent stories.
+// The operator watches Karta CRs and CustomResourceDefinitions and maintains
+// three status conditions on every Karta:
+//   - KartaValidated — spec is structurally valid (Story 1.2)
+//   - CRDExists      — referenced CRD is present in the cluster (Story 1.3)
+//   - Ready          — derived: True iff both above are True (Story 1.4)
 //
 // The operator is intentionally stateless and idempotent. It does not manage
-// RBAC, finalizers, or any consumer-specific concerns - those are left to
+// RBAC, finalizers, or any consumer-specific concerns — those are left to
 // downstream consumers (e.g., RunAI EWI, anyworkload-controller).
 package controller
 
@@ -25,10 +25,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 const (
@@ -55,10 +57,15 @@ func NewReconciler(c client.Client) *Reconciler {
 	return &Reconciler{Client: c}
 }
 
-// SetupWithManager registers the reconciler with the given manager. The
-// reconciler watches Karta resources for create/update/delete events and
-// CustomResourceDefinitions for create/delete events (mapped to the relevant
-// Karta).
+// SetupWithManager registers the reconciler with the given manager.
+//
+// Two watches are registered:
+//  1. Karta — all create/update/delete events trigger Reconcile.
+//  2. CustomResourceDefinition — events are mapped to the Kartas that
+//     reference the same group+kind. A GenerationChangedPredicate is applied
+//     so that only CRD spec changes (versions added/removed, served flag
+//     flipped) and create/delete events fire the mapping. Noisy CRD status
+//     updates (e.g. "Established" condition ticks) are dropped.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -66,6 +73,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&apiextensionsv1.CustomResourceDefinition{},
 			handler.EnqueueRequestsFromMapFunc(r.MapCRDToKartaEvent),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		WithOptions(controller.Options{
 			RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[ctrl.Request](
