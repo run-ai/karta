@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package controller
+package internal
 
 import (
 	"context"
@@ -20,12 +20,19 @@ import (
 // whose root component references the same group and kind as that CRD,
 // regardless of version.
 //
-// Matching on group+kind (not the full GVK) ensures that we enqueue Kartas
-// when a CRD update removes or stops serving a version they reference. Under
-// version-only matching the Karta would be invisible to the mapper the moment
-// its referenced version disappears from the served set - the reconciler would
-// never run and CRDExists would remain stale. The reconciler (Story 1.3)
-// re-checks the exact version and sets CRDExists correctly.
+// The lookup uses karta.run.ai/group + karta.run.ai/kind label selectors
+// (stamped by stepEnsureLabels during every reconcile) so that the mapper
+// issues a filtered API call instead of fetching all Kartas.
+//
+// Matching on group+kind (not the full GVK) means that when a CRD update
+// removes or stops serving a version, all Kartas referencing any version of
+// that group/kind are enqueued. The reconciler's stepCheckCRDExists then
+// re-evaluates the exact version and sets CRDExists accordingly.
+//
+// Note: a Karta that was just created but not yet reconciled will not have
+// the index labels and will therefore not be found here. This is acceptable
+// because its own create event will trigger a direct reconcile, which stamps
+// the labels for subsequent CRD events.
 func (r *Reconciler) MapCRDToKartaEvent(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
@@ -35,26 +42,19 @@ func (r *Reconciler) MapCRDToKartaEvent(ctx context.Context, obj client.Object) 
 		return nil
 	}
 
-	crdGK := schema.GroupKind{Group: crd.Spec.Group, Kind: crd.Spec.Names.Kind}
-
 	kartas := &kartav1alpha1.KartaList{}
-	if err := r.List(ctx, kartas); err != nil {
+	if err := r.List(ctx, kartas, client.MatchingLabels{
+		kartav1alpha1.LabelRootGroup: crd.Spec.Group,
+		kartav1alpha1.LabelRootKind:  crd.Spec.Names.Kind,
+	}); err != nil {
 		logger.Error(err, "Failed to list Kartas for CRD event", "crd", crd.Name)
 		return nil
 	}
 
 	requests := make([]reconcile.Request, 0, len(kartas.Items))
 	for i := range kartas.Items {
-		karta := &kartas.Items[i]
-		gvk := rootGVK(karta)
-		if gvk == nil {
-			continue
-		}
-		if gvk.GroupKind() != crdGK {
-			continue
-		}
 		requests = append(requests, reconcile.Request{
-			NamespacedName: client.ObjectKey{Name: karta.Name},
+			NamespacedName: client.ObjectKey{Name: kartas.Items[i].Name},
 		})
 	}
 	return requests

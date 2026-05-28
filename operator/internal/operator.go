@@ -12,7 +12,7 @@
 // The operator is intentionally stateless and idempotent. It does not manage
 // RBAC, finalizers, or any consumer-specific concerns — those are left to
 // downstream consumers (e.g., RunAI EWI, anyworkload-controller).
-package controller
+package internal
 
 import (
 	"context"
