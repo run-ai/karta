@@ -13,6 +13,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// conditionInputs is kept for use by status_test.go which tests all three
+// conditions together through the helper below.
+type conditionInputs struct {
+	validated metav1.ConditionStatus
+	crdExists metav1.ConditionStatus
+}
+
+// setConditions writes all three owned conditions at once. Used by tests.
+func setConditions(status *kartav1alpha1.KartaStatus, in conditionInputs) {
+	setValidated(status, in.validated)
+	setCRDExists(status, in.crdExists)
+	setReady(status, in.validated, in.crdExists)
+}
+
 var _ = Describe("setConditions", func() {
 	allFalse := conditionInputs{metav1.ConditionFalse, metav1.ConditionFalse}
 	allTrue := conditionInputs{metav1.ConditionTrue, metav1.ConditionTrue}
@@ -39,12 +53,12 @@ var _ = Describe("setConditions", func() {
 	It("sets non-empty messages on False conditions and clears them on True", func() {
 		status := &kartav1alpha1.KartaStatus{}
 		setConditions(status, allFalse)
-		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionKartaValidated).Message).NotTo(BeEmpty())
+		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionValidated).Message).NotTo(BeEmpty())
 		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionCRDExists).Message).NotTo(BeEmpty())
 		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionReady).Message).NotTo(BeEmpty())
 
 		setConditions(status, allTrue)
-		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionKartaValidated).Message).To(BeEmpty())
+		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionValidated).Message).To(BeEmpty())
 		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionCRDExists).Message).To(BeEmpty())
 		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionReady).Message).To(BeEmpty())
 	})
@@ -62,11 +76,11 @@ var _ = Describe("setConditions", func() {
 	It("bumps LastTransitionTime when status changes", func() {
 		status := &kartav1alpha1.KartaStatus{}
 		setConditions(status, allFalse)
-		beforeTime := findCondition(status.Conditions, kartav1alpha1.ConditionKartaValidated).LastTransitionTime
+		beforeTime := findCondition(status.Conditions, kartav1alpha1.ConditionValidated).LastTransitionTime
 
 		time.Sleep(2 * time.Millisecond)
 		setConditions(status, allTrue)
-		afterTime := findCondition(status.Conditions, kartav1alpha1.ConditionKartaValidated).LastTransitionTime
+		afterTime := findCondition(status.Conditions, kartav1alpha1.ConditionValidated).LastTransitionTime
 
 		Expect(afterTime.After(beforeTime.Time)).To(BeTrue())
 	})

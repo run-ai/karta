@@ -5,6 +5,7 @@ package internal
 
 import (
 	"context"
+	"errors"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
@@ -15,6 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 var _ = Describe("Reconciler — lifecycle", func() {
@@ -86,29 +88,29 @@ var _ = Describe("Reconciler — condition logic", func() {
 		return out
 	}
 
-	Context("Story 1.2 — KartaValidated", func() {
-		It("sets KartaValidated=False when root component has no StatusDefinition", func() {
+	Context("Story 1.2 — Validated", func() {
+		It("sets Validated=False when root component has no StatusDefinition", func() {
 			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
 			Expect(k8s.Create(ctx, newKarta("karta-invalid", &gvk))).To(Succeed())
 
 			got := reconcileAndGet("karta-invalid")
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionKartaValidated).Status).
+			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated).Status).
 				To(Equal(metav1.ConditionFalse))
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionKartaValidated).Reason).
-				To(Equal(ReasonKartaValidationFailed))
+			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated).Reason).
+				To(Equal(ReasonValidationFailed))
 		})
 
-		It("sets KartaValidated=True when spec is valid", func() {
+		It("sets Validated=True when spec is valid", func() {
 			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
 			Expect(k8s.Create(ctx, newValidKarta("karta-valid", &gvk))).To(Succeed())
 
 			got := reconcileAndGet("karta-valid")
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionKartaValidated).Status).
+			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated).Status).
 				To(Equal(metav1.ConditionTrue))
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionKartaValidated).Reason).
-				To(Equal(ReasonKartaValidationSucceeded))
+			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated).Reason).
+				To(Equal(ReasonValidationSucceeded))
 		})
 	})
 
@@ -167,7 +169,7 @@ var _ = Describe("Reconciler — condition logic", func() {
 	})
 
 	Context("Story 1.4 — Ready (derived)", func() {
-		It("sets Ready=False when KartaValidated=False regardless of CRDExists", func() {
+		It("sets Ready=False when Validated=False regardless of CRDExists", func() {
 			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
 			Expect(k8s.Create(ctx, newKarta("karta-invalid-crd-ok", &gvk))).To(Succeed())
@@ -177,7 +179,7 @@ var _ = Describe("Reconciler — condition logic", func() {
 				To(Equal(metav1.ConditionFalse))
 		})
 
-		It("sets Ready=False when CRDExists=False regardless of KartaValidated", func() {
+		It("sets Ready=False when CRDExists=False regardless of Validated", func() {
 			gvk := schema.GroupVersionKind{Group: "absent.run.ai", Version: "v1", Kind: "Missing"}
 			Expect(k8s.Create(ctx, newValidKarta("karta-valid-no-crd", &gvk))).To(Succeed())
 
@@ -186,7 +188,7 @@ var _ = Describe("Reconciler — condition logic", func() {
 				To(Equal(metav1.ConditionFalse))
 		})
 
-		It("sets Ready=True when both KartaValidated and CRDExists are True", func() {
+		It("sets Ready=True when both Validated and CRDExists are True", func() {
 			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
 			Expect(k8s.Create(ctx, newValidKarta("karta-all-good", &gvk))).To(Succeed())
@@ -292,6 +294,59 @@ var _ = Describe("Reconciler — condition logic", func() {
 			Expect(rbac.Status).To(Equal(metav1.ConditionTrue))
 			Expect(rbac.Reason).To(Equal("EWI"))
 		})
+	})
+})
+
+// This test pins the labels-last design: when the label patch fails the
+// reconcile must surface the error (so controller-runtime requeues), but the
+// status conditions must already be persisted from the earlier steps.
+var _ = Describe("Reconciler — label-patch failure does not block status", func() {
+	var (
+		ctx context.Context
+		k8s client.WithWatch
+		r   *Reconciler
+	)
+
+	labelPatchErr := errors.New("simulated: cannot patch labels")
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		k8s = fake.NewClientBuilder().
+			WithScheme(buildScheme()).
+			WithStatusSubresource(&kartav1alpha1.Karta{}).
+			// Reject every non-status Patch (i.e. the labels patch). Status
+			// patches go through SubResourcePatch, which we leave untouched.
+			WithInterceptorFuncs(interceptor.Funcs{
+				Patch: func(_ context.Context, _ client.WithWatch, _ client.Object, _ client.Patch, _ ...client.PatchOption) error {
+					return labelPatchErr
+				},
+			}).
+			Build()
+		r = NewReconciler(k8s)
+	})
+
+	It("persists status conditions and returns the label-patch error", func() {
+		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
+		Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
+		Expect(k8s.Create(ctx, newValidKarta("karta-label-fail", &gvk))).To(Succeed())
+
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Name: "karta-label-fail"}})
+		// Reconcile surfaces the label error so the manager will requeue.
+		Expect(err).To(HaveOccurred())
+		Expect(errors.Is(err, labelPatchErr)).To(BeTrue())
+
+		// But the status conditions are already on the cluster.
+		got := &kartav1alpha1.Karta{}
+		Expect(k8s.Get(ctx, client.ObjectKey{Name: "karta-label-fail"}, got)).To(Succeed())
+		Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated).Status).
+			To(Equal(metav1.ConditionTrue))
+		Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists).Status).
+			To(Equal(metav1.ConditionTrue))
+		Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionReady).Status).
+			To(Equal(metav1.ConditionTrue))
+
+		// And the labels are still missing — the next reconcile will retry.
+		Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup))
 	})
 })
 

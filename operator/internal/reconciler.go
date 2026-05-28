@@ -20,38 +20,55 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// reconcile runs the ordered step chain for one Karta. Every step continues
-// to the next so we always produce a complete status picture. The chain only
-// short-circuits on hard errors (StopWithError).
+// reconcile runs the ordered step chain for one Karta.
+//
+// Status is the user-facing API contract, so the condition-computing steps
+// run first and the status patch happens before the best-effort label
+// stamping. If label stamping fails (e.g., transient API error or missing
+// RBAC) the user still gets correct status conditions; controller-runtime
+// will requeue and retry the label patch on the next reconcile.
+//
+// Steps are otherwise independent — each writes its own slice of state and
+// returns Continue so the rest of the chain still runs. Only a hard error
+// (StopWithError) short-circuits the chain.
 func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("karta", karta.Name)
 	original := karta.Status.DeepCopy()
 
 	steps := []StepFn{
-		r.stepEnsureLabels,   // stamp GVK-derived index labels on metadata
-		r.stepValidateKarta,  // Story 1.2 — KartaValidated
-		r.stepCheckCRDExists, // Story 1.3 — CRDExists
-		r.stepDeriveReady,    // Story 1.4 — Ready (derived from previous two)
+		r.stepValidateKarta,
+		r.stepCheckCRDExists,
+		r.stepDeriveReady,
+		stepPatchStatusWith(r, original),
+		r.stepEnsureLabels,
 	}
 	for _, step := range steps {
 		if res := step(ctx, logger, karta); shortCircuit(res) {
 			return res.Result()
 		}
 	}
-
-	if err := r.patchStatusIfChanged(ctx, karta, original); err != nil {
-		return ctrl.Result{}, fmt.Errorf("update status for karta %q: %w", karta.Name, err)
-	}
 	return ctrl.Result{}, nil
 }
 
-// stepValidateKarta runs the Karta spec validator and writes KartaValidated.
+// stepPatchStatusWith returns a step that flushes status to the cluster,
+// closing over the snapshot taken at the start of reconcile so we only
+// patch when something actually changed.
+func stepPatchStatusWith(r *Reconciler, original *kartav1alpha1.KartaStatus) StepFn {
+	return func(ctx context.Context, _ logr.Logger, karta *kartav1alpha1.Karta) StepResult {
+		if err := r.patchStatusIfChanged(ctx, karta, original); err != nil {
+			return StopWithError(fmt.Errorf("update status for karta %q: %w", karta.Name, err))
+		}
+		return Continue()
+	}
+}
+
+// stepValidateKarta runs the Karta spec validator and writes Validated.
 func (r *Reconciler) stepValidateKarta(_ context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
 	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
 		logger.V(1).Info("Karta spec validation failed", "error", err.Error())
-		setKartaValidated(&karta.Status, metav1.ConditionFalse)
+		setValidated(&karta.Status, metav1.ConditionFalse)
 	} else {
-		setKartaValidated(&karta.Status, metav1.ConditionTrue)
+		setValidated(&karta.Status, metav1.ConditionTrue)
 	}
 	return Continue()
 }
@@ -83,19 +100,25 @@ func (r *Reconciler) stepCheckCRDExists(ctx context.Context, logger logr.Logger,
 	return Continue()
 }
 
-// stepDeriveReady sets Ready based on the KartaValidated and CRDExists
-// conditions already written to karta.Status by the preceding steps.
+// stepDeriveReady sets Ready based on the Validated and CRDExists conditions
+// already written to karta.Status by the preceding steps.
 func (r *Reconciler) stepDeriveReady(_ context.Context, _ logr.Logger, karta *kartav1alpha1.Karta) StepResult {
-	validated := conditionStatus(&karta.Status, kartav1alpha1.ConditionKartaValidated)
+	validated := conditionStatus(&karta.Status, kartav1alpha1.ConditionValidated)
 	crdExists := conditionStatus(&karta.Status, kartav1alpha1.ConditionCRDExists)
 	setReady(&karta.Status, validated, crdExists)
 	return Continue()
 }
 
-// stepEnsureLabels stamps the GVK-derived index labels (karta.run.ai/group,
-// karta.run.ai/version, karta.run.ai/kind) onto the Karta metadata so that
-// consumers and the CRD event mapper can locate a Karta by GVK via a label-
-// selector List instead of fetching all Kartas.
+// stepEnsureLabels stamps the GVK-derived index labels (karta/group,
+// karta/version, karta/kind) onto the Karta metadata so that consumers and
+// the CRD event mapper can locate a Karta by GVK via a label-selector List
+// instead of fetching all Kartas.
+//
+// This step runs last so that label-patch failures (transient API errors,
+// missing RBAC) never block the status patch — the user still sees correct
+// Validated / CRDExists / Ready conditions. On failure we return
+// StopWithError so controller-runtime requeues; the next reconcile retries
+// the label patch idempotently.
 func (r *Reconciler) stepEnsureLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
 	gvk := rootGVK(karta)
 	if gvk == nil {
