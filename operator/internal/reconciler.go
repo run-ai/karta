@@ -111,21 +111,12 @@ func (r *Reconciler) stepEnsureLabels(ctx context.Context, logger logr.Logger, k
 		kartav1alpha1.LabelRootKind:    gvk.Kind,
 	}
 
-	current := karta.Labels
-	if labelsMatch(current, desired) {
+	if labelsMatch(karta.Labels, desired) {
 		return Continue()
 	}
 
-	merged := make(map[string]string, len(current)+len(desired))
-	for k, v := range current {
-		merged[k] = v
-	}
-	for k, v := range desired {
-		merged[k] = v
-	}
-
 	patchBytes, err := json.Marshal(map[string]any{
-		"metadata": map[string]any{"labels": merged},
+		"metadata": map[string]any{"labels": desired},
 	})
 	if err != nil {
 		return StopWithError(fmt.Errorf("marshal label patch for karta %q: %w", karta.Name, err))
