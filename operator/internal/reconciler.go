@@ -21,16 +21,6 @@ import (
 )
 
 // reconcile runs the ordered step chain for one Karta.
-//
-// Status is the user-facing API contract, so the condition-computing steps
-// run first and the status patch happens before the best-effort label
-// stamping. If label stamping fails (e.g., transient API error or missing
-// RBAC) the user still gets correct status conditions; controller-runtime
-// will requeue and retry the label patch on the next reconcile.
-//
-// Steps are otherwise independent — each writes its own slice of state and
-// returns Continue so the rest of the chain still runs. Only a hard error
-// (StopWithError) short-circuits the chain.
 func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("karta", karta.Name)
 	original := karta.Status.DeepCopy()
@@ -84,9 +74,6 @@ func (r *Reconciler) stepCheckCRDExists(ctx context.Context, logger logr.Logger,
 
 	exists, err := r.crdExistsForGVK(ctx, *gvk)
 	if err != nil {
-		// Transient API-server error: log and leave CRDExists=False. The CRD
-		// watch will re-trigger this reconcile when the situation resolves, so
-		// we do not requeue here to avoid a storm.
 		logger.Error(err, "Failed to check CRD existence", "gvk", gvk.String())
 		setCRDExists(&karta.Status, metav1.ConditionFalse)
 		return Continue()
@@ -113,12 +100,6 @@ func (r *Reconciler) stepDeriveReady(_ context.Context, _ logr.Logger, karta *ka
 // karta/version, karta/kind) onto the Karta metadata so that consumers and
 // the CRD event mapper can locate a Karta by GVK via a label-selector List
 // instead of fetching all Kartas.
-//
-// This step runs last so that label-patch failures (transient API errors,
-// missing RBAC) never block the status patch — the user still sees correct
-// Validated / CRDExists / Ready conditions. On failure we return
-// StopWithError so controller-runtime requeues; the next reconcile retries
-// the label patch idempotently.
 func (r *Reconciler) stepEnsureLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
 	gvk := rootGVK(karta)
 	if gvk == nil {
@@ -136,7 +117,6 @@ func (r *Reconciler) stepEnsureLabels(ctx context.Context, logger logr.Logger, k
 		return Continue()
 	}
 
-	// Merge our labels into whatever labels already exist on the Karta.
 	merged := make(map[string]string, len(current)+len(desired))
 	for k, v := range current {
 		merged[k] = v
@@ -185,8 +165,6 @@ func (r *Reconciler) crdExistsForGVK(ctx context.Context, gvk schema.GroupVersio
 	return false, nil
 }
 
-// crdMatchesGVK returns true when the CRD covers the given group, kind and
-// version (storage or otherwise).
 func crdMatchesGVK(crd *apiextensionsv1.CustomResourceDefinition, gvk schema.GroupVersionKind) bool {
 	if crd.Spec.Group != gvk.Group || crd.Spec.Names.Kind != gvk.Kind {
 		return false

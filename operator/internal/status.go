@@ -100,9 +100,6 @@ func upsertConditions(current *[]metav1.Condition, desired map[kartav1alpha1.Con
 	*current = out
 }
 
-// patchStatusIfChanged issues a merge-patch on the Karta status subresource
-// only when something meaningful changed compared to the snapshot taken before
-// reconciliation began.
 func (r *Reconciler) patchStatusIfChanged(
 	ctx context.Context,
 	karta *kartav1alpha1.Karta,
@@ -141,7 +138,6 @@ func statusChanged(original, current *kartav1alpha1.KartaStatus) bool {
 	return false
 }
 
-// buildCondition assembles a metav1.Condition.
 func buildCondition(t kartav1alpha1.ConditionType, status metav1.ConditionStatus, reason, message string) metav1.Condition {
 	return metav1.Condition{
 		Type:    string(t),

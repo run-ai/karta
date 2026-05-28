@@ -15,17 +15,13 @@ import (
 // StepFn is a single reconciliation step for a Karta. Steps are chained by
 // reconcile(); returning a StepResult with continueReconcile=false short-
 // circuits the chain and returns the result directly to the manager.
-//
-// Inspired by Grove's ReconcileStepFn pattern. Generics are omitted because
-// the operator reconciles exactly one CR type (Karta). If a second CR is ever
-// added, the signature can be genericized at that point.
 type StepFn func(ctx context.Context, log logr.Logger, karta *kartav1alpha1.Karta) StepResult
 
 // StepResult is the outcome of a single reconciliation step.
 type StepResult struct {
-	result    ctrl.Result
-	err       error
-	continue_ bool
+	result            ctrl.Result
+	err               error
+	continueReconcile bool
 }
 
 // Result converts a StepResult to the (ctrl.Result, error) pair expected by
@@ -36,21 +32,21 @@ func (r StepResult) Result() (ctrl.Result, error) {
 
 // Continue signals that the step succeeded and the next step should run.
 func Continue() StepResult {
-	return StepResult{continue_: true}
+	return StepResult{continueReconcile: true}
 }
 
 // Stop signals that reconciliation is done (no error, no requeue).
 func Stop() StepResult {
-	return StepResult{continue_: false}
+	return StepResult{continueReconcile: false}
 }
 
 // StopWithError signals that the step failed. The manager will requeue with
 // exponential back-off.
 func StopWithError(err error) StepResult {
-	return StepResult{result: ctrl.Result{Requeue: true}, err: err, continue_: false}
+	return StepResult{result: ctrl.Result{Requeue: true}, err: err, continueReconcile: false}
 }
 
 // shortCircuit returns true when the step chain should stop.
 func shortCircuit(r StepResult) bool {
-	return !r.continue_
+	return !r.continueReconcile
 }

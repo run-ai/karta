@@ -62,10 +62,7 @@ func NewReconciler(c client.Client) *Reconciler {
 // Two watches are registered:
 //  1. Karta — all create/update/delete events trigger Reconcile.
 //  2. CustomResourceDefinition — events are mapped to the Kartas that
-//     reference the same group+kind. A GenerationChangedPredicate is applied
-//     so that only CRD spec changes (versions added/removed, served flag
-//     flipped) and create/delete events fire the mapping. Noisy CRD status
-//     updates (e.g. "Established" condition ticks) are dropped.
+//     reference the same group+kind.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(ControllerName).
@@ -83,8 +80,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// Reconcile is the main reconciliation entry point invoked by the
-// controller-runtime manager whenever a watched object changes.
+// Reconcile is the main reconciliation entry point .
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("karta", req.Name)
 
