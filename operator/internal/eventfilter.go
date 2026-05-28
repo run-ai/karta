@@ -19,20 +19,6 @@ import (
 // MapCRDToKartaEvent maps a CRD event to reconcile requests for every Karta
 // whose root component references the same group and kind as that CRD,
 // regardless of version.
-//
-// The lookup uses karta.run.ai/group + karta.run.ai/kind label selectors
-// (stamped by stepEnsureLabels during every reconcile) so that the mapper
-// issues a filtered API call instead of fetching all Kartas.
-//
-// Matching on group+kind (not the full GVK) means that when a CRD update
-// removes or stops serving a version, all Kartas referencing any version of
-// that group/kind are enqueued. The reconciler's stepCheckCRDExists then
-// re-evaluates the exact version and sets CRDExists accordingly.
-//
-// Note: a Karta that was just created but not yet reconciled will not have
-// the index labels and will therefore not be found here. This is acceptable
-// because its own create event will trigger a direct reconcile, which stamps
-// the labels for subsequent CRD events.
 func (r *Reconciler) MapCRDToKartaEvent(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
@@ -60,8 +46,6 @@ func (r *Reconciler) MapCRDToKartaEvent(ctx context.Context, obj client.Object) 
 	return requests
 }
 
-// rootGVK extracts the GroupVersionKind of the Karta root component, or nil
-// when the Karta has no root component kind defined.
 func rootGVK(karta *kartav1alpha1.Karta) *schema.GroupVersionKind {
 	kind := karta.Spec.StructureDefinition.RootComponent.Kind
 	if kind == nil {
