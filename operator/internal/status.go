@@ -15,37 +15,32 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Reason constants reported on Karta status conditions. They are
-// machine-readable and may be matched by consumers (EWI, dashboards, etc.).
 const (
-	ReasonKartaValidationSucceeded = "KartaValidationSucceeded"
-	ReasonKartaValidationFailed    = "KartaValidationFailed"
-	ReasonCRDFound                 = "CRDFound"
-	ReasonCRDNotFound              = "CRDNotFound"
-	ReasonReady                    = "Ready"
-	ReasonNotReady                 = "NotReady"
+	ReasonValidationSucceeded = "ValidationSucceeded"
+	ReasonValidationFailed    = "ValidationFailed"
+	ReasonCRDFound            = "CRDFound"
+	ReasonCRDNotFound         = "CRDNotFound"
+	ReasonReady               = "Ready"
+	ReasonNotReady            = "NotReady"
 )
 
-// condition message strings shown when a condition is False.
 const (
-	msgKartaValidationFailed = "Karta spec validation failed"
-	msgCRDNotFound           = "CustomResourceDefinition for the root component GVK does not exist in the cluster or does not serve the referenced version"
-	msgNotReady              = "KartaValidated and CRDExists must both be True"
+	msgValidationFailed = "Karta validation failed"
+	msgCRDNotFound      = "CustomResourceDefinition for the root component GVK does not exist in the cluster or does not serve the referenced version"
+	msgNotReady         = "Validated and CRDExists must both be True"
 )
 
-// setKartaValidated writes the KartaValidated condition into status.
-func setKartaValidated(status *kartav1alpha1.KartaStatus, s metav1.ConditionStatus) {
+func setValidated(status *kartav1alpha1.KartaStatus, s metav1.ConditionStatus) {
 	upsertConditions(&status.Conditions, map[kartav1alpha1.ConditionType]metav1.Condition{
-		kartav1alpha1.ConditionKartaValidated: buildCondition(
-			kartav1alpha1.ConditionKartaValidated,
+		kartav1alpha1.ConditionValidated: buildCondition(
+			kartav1alpha1.ConditionValidated,
 			s,
-			reasonForBool(s, ReasonKartaValidationSucceeded, ReasonKartaValidationFailed),
-			msgWhenFalse(s, msgKartaValidationFailed),
+			reasonForBool(s, ReasonValidationSucceeded, ReasonValidationFailed),
+			msgWhenFalse(s, msgValidationFailed),
 		),
 	})
 }
 
-// setCRDExists writes the CRDExists condition into status.
 func setCRDExists(status *kartav1alpha1.KartaStatus, s metav1.ConditionStatus) {
 	upsertConditions(&status.Conditions, map[kartav1alpha1.ConditionType]metav1.Condition{
 		kartav1alpha1.ConditionCRDExists: buildCondition(
@@ -57,8 +52,6 @@ func setCRDExists(status *kartav1alpha1.KartaStatus, s metav1.ConditionStatus) {
 	})
 }
 
-// setReady derives and writes the Ready condition from the current values of
-// KartaValidated and CRDExists already in status.
 func setReady(status *kartav1alpha1.KartaStatus, validated, crdExists metav1.ConditionStatus) {
 	readyStatus := metav1.ConditionFalse
 	readyReason := ReasonNotReady
@@ -75,30 +68,6 @@ func setReady(status *kartav1alpha1.KartaStatus, validated, crdExists metav1.Con
 	})
 }
 
-// conditionInputs is kept for use by status_test.go which tests all three
-// conditions together through the helper below.
-type conditionInputs struct {
-	kartaValidated metav1.ConditionStatus
-	crdExists      metav1.ConditionStatus
-}
-
-// setConditions writes all three owned conditions at once. Used by tests.
-func setConditions(status *kartav1alpha1.KartaStatus, in conditionInputs) {
-	setKartaValidated(status, in.kartaValidated)
-	setCRDExists(status, in.crdExists)
-	setReady(status, in.kartaValidated, in.crdExists)
-}
-
-// upsertConditions merges desired into the existing condition list.
-//
-// Rules:
-//   - Existing conditions owned by this operator are updated in-place,
-//     preserving list order.
-//   - LastTransitionTime is bumped only when Status actually changes.
-//   - Conditions present in the existing list but absent from desired are left
-//     completely untouched — this is how foreign conditions owned by other
-//     controllers (e.g. EWI's RBACReady) survive across our reconciles.
-//   - New desired conditions not yet in the list are appended.
 func upsertConditions(current *[]metav1.Condition, desired map[kartav1alpha1.ConditionType]metav1.Condition) {
 	if current == nil {
 		return

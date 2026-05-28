@@ -43,7 +43,7 @@ func kartaLabels(gvk schema.GroupVersionKind) map[string]string {
 
 // newKarta builds a Karta with the given name and optional root GVK. The root
 // component has no StatusDefinition so it will fail spec validation — use
-// newValidKarta when KartaValidated=True is expected.
+// newValidKarta when Validated=True is expected.
 func newKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Karta {
 	k := &kartav1alpha1.Karta{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
