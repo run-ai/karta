@@ -23,13 +23,13 @@ import (
 // reconcile runs the ordered step chain for one Karta.
 func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("karta", karta.Name)
-	original := karta.Status.DeepCopy()
+	base := karta.DeepCopy()
 
 	steps := []StepFn{
 		r.stepValidateKarta,
 		r.stepCheckCRDExists,
 		r.stepDeriveReady,
-		stepPatchStatusWith(r, original),
+		stepPatchStatusWith(r, base),
 		r.stepEnsureLabels,
 	}
 	for _, step := range steps {
@@ -41,11 +41,11 @@ func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) 
 }
 
 // stepPatchStatusWith returns a step that flushes status to the cluster,
-// closing over the snapshot taken at the start of reconcile so we only
-// patch when something actually changed.
-func stepPatchStatusWith(r *Reconciler, original *kartav1alpha1.KartaStatus) StepFn {
+// closing over the whole-object snapshot taken at the start of reconcile so
+// that only the fields that actually changed are sent in the patch body.
+func stepPatchStatusWith(r *Reconciler, base *kartav1alpha1.Karta) StepFn {
 	return func(ctx context.Context, _ logr.Logger, karta *kartav1alpha1.Karta) StepResult {
-		if err := r.patchStatusIfChanged(ctx, karta, original); err != nil {
+		if err := r.patchStatusIfChanged(ctx, karta, base); err != nil {
 			return StopWithError(fmt.Errorf("update status for karta %q: %w", karta.Name, err))
 		}
 		return Continue()

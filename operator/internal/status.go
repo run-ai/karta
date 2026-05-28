@@ -5,13 +5,12 @@ package internal
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -100,42 +99,22 @@ func upsertConditions(current *[]metav1.Condition, desired map[kartav1alpha1.Con
 	*current = out
 }
 
+// patchStatusIfChanged issues a JSON merge patch on the Karta status
+// subresource only when the in-memory status differs from the cluster-side
+// snapshot. The patch body is a delta computed by client.MergeFrom against
+// base, so fields we did not mutate are not shipped at all in the steady-state case.
 func (r *Reconciler) patchStatusIfChanged(
 	ctx context.Context,
 	karta *kartav1alpha1.Karta,
-	original *kartav1alpha1.KartaStatus,
+	base *kartav1alpha1.Karta,
 ) error {
-	if !statusChanged(original, &karta.Status) {
+	if equality.Semantic.DeepEqual(base.Status, karta.Status) {
 		return nil
 	}
-
-	patchBytes, err := json.Marshal(map[string]any{
-		"status": map[string]any{"conditions": karta.Status.Conditions},
-	})
-	if err != nil {
-		return fmt.Errorf("marshal status patch: %w", err)
-	}
-
-	if err := r.Status().Patch(ctx, karta, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
+	if err := r.Status().Patch(ctx, karta, client.MergeFrom(base)); err != nil {
 		return fmt.Errorf("patch status: %w", err)
 	}
 	return nil
-}
-
-// statusChanged reports whether conditions differ in any meaningful field
-// (Type, Status, Reason, Message). LastTransitionTime is intentionally ignored
-// so we don't patch on every reconcile when nothing actually changed.
-func statusChanged(original, current *kartav1alpha1.KartaStatus) bool {
-	if len(original.Conditions) != len(current.Conditions) {
-		return true
-	}
-	for i := range original.Conditions {
-		o, c := original.Conditions[i], current.Conditions[i]
-		if o.Type != c.Type || o.Status != c.Status || o.Reason != c.Reason || o.Message != c.Message {
-			return true
-		}
-	}
-	return false
 }
 
 func buildCondition(t kartav1alpha1.ConditionType, status metav1.ConditionStatus, reason, message string) metav1.Condition {
