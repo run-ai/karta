@@ -1,17 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Package controller implements the OSS Karta operator reconciliation logic.
-//
-// The operator watches Karta CRs and CustomResourceDefinitions and maintains
-// three status conditions on every Karta:
-//   - Validated      — spec is structurally valid (Story 1.2)
-//   - CRDExists      — referenced CRD is present in the cluster (Story 1.3)
-//   - Ready          — derived: True iff both above are True (Story 1.4)
-//
-// The operator is intentionally stateless and idempotent. It does not manage
-// RBAC, finalizers, or any consumer-specific concerns — those are left to
-// downstream consumers (e.g., RunAI EWI, anyworkload-controller).
 package internal
 
 import (
@@ -43,11 +32,6 @@ const (
 )
 
 // Reconciler reconciles Karta CRs.
-//
-// It watches Karta and CustomResourceDefinition objects. The per-Karta
-// reconciliation logic lives in the (currently empty) reconcile() hook,
-// which subsequent stories populate. It does not own any RBAC, finalizer,
-// or consumer-specific behavior.
 type Reconciler struct {
 	client.Client
 }
