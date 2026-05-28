@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package controller
+package internal
 
 import (
 	"context"
@@ -212,6 +212,67 @@ var _ = Describe("Reconciler — condition logic", func() {
 			secondTimes := transitionTimes(second.Status.Conditions)
 
 			Expect(secondTimes).To(Equal(firstTimes))
+		})
+	})
+
+	Context("Label stamping (stepEnsureLabels)", func() {
+		It("stamps GVK index labels after the first reconcile", func() {
+			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
+			Expect(k8s.Create(ctx, newKarta("karta-no-labels", &gvk))).To(Succeed())
+
+			got := reconcileAndGet("karta-no-labels")
+			Expect(got.Labels[kartav1alpha1.LabelRootGroup]).To(Equal(gvk.Group))
+			Expect(got.Labels[kartav1alpha1.LabelRootVersion]).To(Equal(gvk.Version))
+			Expect(got.Labels[kartav1alpha1.LabelRootKind]).To(Equal(gvk.Kind))
+		})
+
+		It("updates stale labels when root GVK changes", func() {
+			oldGVK := schema.GroupVersionKind{Group: "old.run.ai", Version: "v1", Kind: "Old"}
+			k := newKarta("karta-stale-labels", &oldGVK)
+			k.Labels = kartaLabels(oldGVK)
+			Expect(k8s.Create(ctx, k)).To(Succeed())
+
+			// Simulate someone updating the root GVK in spec
+			newGVK := schema.GroupVersionKind{Group: "new.run.ai", Version: "v2", Kind: "New"}
+			k.Spec.StructureDefinition.RootComponent.Kind = &kartav1alpha1.GroupVersionKind{
+				Group: newGVK.Group, Version: newGVK.Version, Kind: newGVK.Kind,
+			}
+			Expect(k8s.Update(ctx, k)).To(Succeed())
+
+			got := reconcileAndGet("karta-stale-labels")
+			Expect(got.Labels[kartav1alpha1.LabelRootGroup]).To(Equal(newGVK.Group))
+			Expect(got.Labels[kartav1alpha1.LabelRootVersion]).To(Equal(newGVK.Version))
+			Expect(got.Labels[kartav1alpha1.LabelRootKind]).To(Equal(newGVK.Kind))
+		})
+
+		It("preserves unrelated labels", func() {
+			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
+			k := newKarta("karta-extra-labels", &gvk)
+			k.Labels = map[string]string{"custom/label": "keep-me"}
+			Expect(k8s.Create(ctx, k)).To(Succeed())
+
+			got := reconcileAndGet("karta-extra-labels")
+			Expect(got.Labels["custom/label"]).To(Equal("keep-me"))
+			Expect(got.Labels[kartav1alpha1.LabelRootGroup]).To(Equal(gvk.Group))
+		})
+
+		It("does not patch labels when they are already correct", func() {
+			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
+			k := newKarta("karta-correct-labels", &gvk)
+			k.Labels = kartaLabels(gvk)
+			Expect(k8s.Create(ctx, k)).To(Succeed())
+
+			// reconcile twice and check the resource version doesn't change
+			// (no patch was issued the second time)
+			first := reconcileAndGet("karta-correct-labels")
+			second := reconcileAndGet("karta-correct-labels")
+			Expect(second.ResourceVersion).To(Equal(first.ResourceVersion))
+		})
+
+		It("skips label stamping when Karta has no root kind", func() {
+			Expect(k8s.Create(ctx, newKarta("karta-no-kind", nil))).To(Succeed())
+			got := reconcileAndGet("karta-no-kind")
+			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup))
 		})
 	})
 

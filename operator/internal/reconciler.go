@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package controller
+package internal
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
@@ -13,7 +14,9 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -25,9 +28,10 @@ func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) 
 	original := karta.Status.DeepCopy()
 
 	steps := []StepFn{
-		r.stepValidateKarta,
-		r.stepCheckCRDExists,
-		r.stepDeriveReady,
+		r.stepEnsureLabels,   // stamp GVK-derived index labels on metadata
+		r.stepValidateKarta,  // Story 1.2 — KartaValidated
+		r.stepCheckCRDExists, // Story 1.3 — CRDExists
+		r.stepDeriveReady,    // Story 1.4 — Ready (derived from previous two)
 	}
 	for _, step := range steps {
 		if res := step(ctx, logger, karta); shortCircuit(res) {
@@ -86,6 +90,61 @@ func (r *Reconciler) stepDeriveReady(_ context.Context, _ logr.Logger, karta *ka
 	crdExists := conditionStatus(&karta.Status, kartav1alpha1.ConditionCRDExists)
 	setReady(&karta.Status, validated, crdExists)
 	return Continue()
+}
+
+// stepEnsureLabels stamps the GVK-derived index labels (karta.run.ai/group,
+// karta.run.ai/version, karta.run.ai/kind) onto the Karta metadata so that
+// consumers and the CRD event mapper can locate a Karta by GVK via a label-
+// selector List instead of fetching all Kartas.
+func (r *Reconciler) stepEnsureLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
+	gvk := rootGVK(karta)
+	if gvk == nil {
+		return Continue()
+	}
+
+	desired := map[string]string{
+		kartav1alpha1.LabelRootGroup:   gvk.Group,
+		kartav1alpha1.LabelRootVersion: gvk.Version,
+		kartav1alpha1.LabelRootKind:    gvk.Kind,
+	}
+
+	current := karta.Labels
+	if labelsMatch(current, desired) {
+		return Continue()
+	}
+
+	// Merge our labels into whatever labels already exist on the Karta.
+	merged := make(map[string]string, len(current)+len(desired))
+	for k, v := range current {
+		merged[k] = v
+	}
+	for k, v := range desired {
+		merged[k] = v
+	}
+
+	patchBytes, err := json.Marshal(map[string]any{
+		"metadata": map[string]any{"labels": merged},
+	})
+	if err != nil {
+		return StopWithError(fmt.Errorf("marshal label patch for karta %q: %w", karta.Name, err))
+	}
+
+	if err = r.Patch(ctx, karta, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
+		return StopWithError(fmt.Errorf("patch labels for karta %q: %w", karta.Name, err))
+	}
+
+	logger.V(1).Info("Stamped GVK index labels", "group", gvk.Group, "version", gvk.Version, "kind", gvk.Kind)
+	return Continue()
+}
+
+// labelsMatch returns true when current already contains all desired key/value pairs.
+func labelsMatch(current, desired map[string]string) bool {
+	for k, v := range desired {
+		if current[k] != v {
+			return false
+		}
+	}
+	return true
 }
 
 // crdExistsForGVK reports whether a CRD serving the given group, version and

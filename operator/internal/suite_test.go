@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package controller
+package internal
 
 import (
 	"strings"
@@ -29,6 +29,16 @@ func buildScheme() *runtime.Scheme {
 	Expect(kartav1alpha1.AddToScheme(s)).To(Succeed())
 	Expect(apiextensionsv1.AddToScheme(s)).To(Succeed())
 	return s
+}
+
+// kartaLabels returns the index labels the operator stamps for the given GVK.
+// Mirrors the logic in stepEnsureLabels so tests can set up expected state.
+func kartaLabels(gvk schema.GroupVersionKind) map[string]string {
+	return map[string]string{
+		kartav1alpha1.LabelRootGroup:   gvk.Group,
+		kartav1alpha1.LabelRootVersion: gvk.Version,
+		kartav1alpha1.LabelRootKind:    gvk.Kind,
+	}
 }
 
 // newKarta builds a Karta with the given name and optional root GVK. The root

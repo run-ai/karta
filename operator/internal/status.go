@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package controller
+package internal
 
 import (
 	"context"
@@ -110,7 +110,6 @@ func upsertConditions(current *[]metav1.Condition, desired map[kartav1alpha1.Con
 	for _, existing := range *current {
 		incoming, owned := desired[kartav1alpha1.ConditionType(existing.Type)]
 		if !owned {
-			// not ours — pass through unchanged
 			out = append(out, existing)
 			continue
 		}

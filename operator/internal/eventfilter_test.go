@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package controller
+package internal
 
 import (
 	"context"
+
+	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -14,6 +16,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+// labeledKarta returns a Karta pre-stamped with the GVK index labels, as if
+// stepEnsureLabels had already run. Used to set up the label-selector tests.
+func labeledKarta(name string, gvk schema.GroupVersionKind) *kartav1alpha1.Karta {
+	k := newKarta(name, &gvk)
+	k.Labels = kartaLabels(gvk)
+	return k
+}
 
 var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 	var (
@@ -37,18 +47,26 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 		Expect(r.MapCRDToKartaEvent(ctx, crd)).To(BeEmpty())
 	})
 
-	It("enqueues all Kartas that share the CRD group+kind, regardless of version", func() {
+	It("returns no requests when Kartas exist but have no index labels (not yet reconciled)", func() {
+		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
+		Expect(k8s.Create(ctx, newKarta("karta-unlabeled", &gvk))).To(Succeed())
+
+		crd := newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version)
+		Expect(r.MapCRDToKartaEvent(ctx, crd)).To(BeEmpty())
+	})
+
+	It("enqueues all labeled Kartas sharing the CRD group+kind, regardless of version", func() {
 		gvkV1 := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 		gvkV2 := schema.GroupVersionKind{Group: "test.run.ai", Version: "v2", Kind: "Foo"}
 		other := schema.GroupVersionKind{Group: "other.run.ai", Version: "v1", Kind: "Bar"}
 
-		Expect(k8s.Create(ctx, newKarta("karta-v1", &gvkV1))).To(Succeed())
-		Expect(k8s.Create(ctx, newKarta("karta-v2", &gvkV2))).To(Succeed())
-		Expect(k8s.Create(ctx, newKarta("karta-other", &other))).To(Succeed())
+		Expect(k8s.Create(ctx, labeledKarta("karta-v1", gvkV1))).To(Succeed())
+		Expect(k8s.Create(ctx, labeledKarta("karta-v2", gvkV2))).To(Succeed())
+		Expect(k8s.Create(ctx, labeledKarta("karta-other", other))).To(Succeed())
 		Expect(k8s.Create(ctx, newKarta("karta-no-gvk", nil))).To(Succeed())
 
-		// CRD only serves v1 now; karta-v2 still gets enqueued because we match
-		// on group+kind only. The reconciler decides whether v2 actually exists.
+		// CRD only serves v1, but karta-v2 still gets enqueued because we
+		// match on group+kind labels. The reconciler decides whether v2 exists.
 		crd := newCRD("foos.test.run.ai", "test.run.ai", "Foo", "v1")
 		reqs := r.MapCRDToKartaEvent(ctx, crd)
 
@@ -60,12 +78,11 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 	})
 
 	It("enqueues a Karta even when its referenced version was just removed from the CRD", func() {
-		// This is the gap the group+kind approach fixes: if the CRD drops v1
-		// from its served set, the version-based mapper would miss karta-v1.
 		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-		Expect(k8s.Create(ctx, newKarta("karta-v1", &gvk))).To(Succeed())
+		Expect(k8s.Create(ctx, labeledKarta("karta-v1", gvk))).To(Succeed())
 
-		// CRD now only serves v2 - v1 is gone.
+		// CRD now only serves v2 — v1 is gone, but karta-v1 must still be
+		// enqueued so the reconciler can set CRDExists=False.
 		crd := newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, "v2")
 		reqs := r.MapCRDToKartaEvent(ctx, crd)
 
@@ -76,12 +93,12 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 		Expect(names).To(ConsistOf("karta-v1"))
 	})
 
-	It("skips Kartas whose group or kind does not match", func() {
+	It("skips Kartas whose group or kind label does not match", func() {
 		differentGroup := schema.GroupVersionKind{Group: "other.run.ai", Version: "v1", Kind: "Foo"}
 		differentKind := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Bar"}
 
-		Expect(k8s.Create(ctx, newKarta("karta-diff-group", &differentGroup))).To(Succeed())
-		Expect(k8s.Create(ctx, newKarta("karta-diff-kind", &differentKind))).To(Succeed())
+		Expect(k8s.Create(ctx, labeledKarta("karta-diff-group", differentGroup))).To(Succeed())
+		Expect(k8s.Create(ctx, labeledKarta("karta-diff-kind", differentKind))).To(Succeed())
 
 		crd := newCRD("foos.test.run.ai", "test.run.ai", "Foo", "v1")
 		Expect(r.MapCRDToKartaEvent(ctx, crd)).To(BeEmpty())
@@ -98,5 +115,15 @@ var _ = Describe("rootGVK helper", func() {
 		got := rootGVK(newKarta("k", &gvk))
 		Expect(got).NotTo(BeNil())
 		Expect(*got).To(Equal(gvk))
+	})
+})
+
+var _ = Describe("kartaLabels helper", func() {
+	It("produces the expected label map for a GVK", func() {
+		gvk := schema.GroupVersionKind{Group: "ray.io", Version: "v1", Kind: "RayCluster"}
+		labels := kartaLabels(gvk)
+		Expect(labels[kartav1alpha1.LabelRootGroup]).To(Equal("ray.io"))
+		Expect(labels[kartav1alpha1.LabelRootVersion]).To(Equal("v1"))
+		Expect(labels[kartav1alpha1.LabelRootKind]).To(Equal("RayCluster"))
 	})
 })
