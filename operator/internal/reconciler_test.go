@@ -11,6 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -276,6 +277,36 @@ var _ = Describe("Reconciler — condition logic", func() {
 			got := reconcileAndGet("karta-no-kind")
 			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup))
 		})
+
+		It("removes stale index labels when the root kind is removed from spec", func() {
+			oldGVK := schema.GroupVersionKind{Group: "old.run.ai", Version: "v1", Kind: "Old"}
+			k := newKarta("karta-lost-kind", &oldGVK)
+			// Simulate a previous successful reconcile having stamped the labels.
+			k.Labels = kartaLabels(oldGVK)
+			// And an unrelated label the user/admin owns — must be preserved.
+			k.Labels["custom/label"] = "keep-me"
+			Expect(k8s.Create(ctx, k)).To(Succeed())
+
+			// User now removes the root kind from the spec.
+			k.Spec.StructureDefinition.RootComponent.Kind = nil
+			Expect(k8s.Update(ctx, k)).To(Succeed())
+
+			got := reconcileAndGet("karta-lost-kind")
+			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup))
+			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootVersion))
+			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootKind))
+			Expect(got.Labels["custom/label"]).To(Equal("keep-me"))
+		})
+
+		It("does not patch when root kind is absent and no index labels are present", func() {
+			// First reconcile creates conditions but stamps no labels (no root kind).
+			Expect(k8s.Create(ctx, newKarta("karta-no-kind-idempotent", nil))).To(Succeed())
+			first := reconcileAndGet("karta-no-kind-idempotent")
+
+			// Second reconcile must be a true no-op for metadata (and for status).
+			second := reconcileAndGet("karta-no-kind-idempotent")
+			Expect(second.ResourceVersion).To(Equal(first.ResourceVersion))
+		})
 	})
 
 	Context("Foreign conditions", func() {
@@ -347,6 +378,84 @@ var _ = Describe("Reconciler — label-patch failure does not block status", fun
 
 		// And the labels are still missing — the next reconcile will retry.
 		Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup))
+	})
+})
+
+// This test pins the "transient List failure must not corrupt status"
+// guarantee for stepCheckCRDExists: when the CRD list call fails we must
+// neither overwrite CRDExists with a guess nor patch a Ready=False value
+// derived from that guess.
+var _ = Describe("Reconciler — CRD list failure does not corrupt status", func() {
+	var (
+		ctx context.Context
+		k8s client.WithWatch
+		r   *Reconciler
+	)
+
+	listErr := errors.New("simulated: cannot list CRDs")
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		k8s = fake.NewClientBuilder().
+			WithScheme(buildScheme()).
+			WithStatusSubresource(&kartav1alpha1.Karta{}).
+			// Fail List calls that target CRDs; other List calls (e.g.
+			// MapCRDToKartaEvent listing Kartas) keep working.
+			WithInterceptorFuncs(interceptor.Funcs{
+				List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					if _, ok := list.(*apiextensionsv1.CustomResourceDefinitionList); ok {
+						return listErr
+					}
+					return c.List(ctx, list, opts...)
+				},
+			}).
+			Build()
+		r = NewReconciler(k8s)
+	})
+
+	It("returns the list error and does not patch status or labels", func() {
+		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
+		Expect(k8s.Create(ctx, newValidKarta("karta-list-fail", &gvk))).To(Succeed())
+
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Name: "karta-list-fail"}})
+		Expect(err).To(HaveOccurred())
+		Expect(errors.Is(err, listErr)).To(BeTrue())
+
+		// stepPatchStatusWith and stepEnsureLabels both run after the
+		// failing step, so neither should have observed any cluster-side
+		// effect.
+		got := &kartav1alpha1.Karta{}
+		Expect(k8s.Get(ctx, client.ObjectKey{Name: "karta-list-fail"}, got)).To(Succeed())
+		Expect(got.Status.Conditions).To(BeEmpty(),
+			"status must not be patched when stepCheckCRDExists short-circuits")
+		Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup),
+			"labels must not be patched when stepCheckCRDExists short-circuits")
+	})
+
+	It("does not overwrite an existing CRDExists value with a guess", func() {
+		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
+		k := newValidKarta("karta-list-fail-existing", &gvk)
+		// Pre-populate a healthy CRDExists=True from a previous successful
+		// reconcile.
+		k.Status.Conditions = []metav1.Condition{
+			{
+				Type:               string(kartav1alpha1.ConditionCRDExists),
+				Status:             metav1.ConditionTrue,
+				Reason:             ReasonCRDFound,
+				LastTransitionTime: metav1.Now(),
+			},
+		}
+		Expect(k8s.Create(ctx, k)).To(Succeed())
+
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Name: "karta-list-fail-existing"}})
+		Expect(err).To(HaveOccurred())
+
+		got := &kartav1alpha1.Karta{}
+		Expect(k8s.Get(ctx, client.ObjectKey{Name: "karta-list-fail-existing"}, got)).To(Succeed())
+		// Previously-correct condition stays — we did not downgrade it to
+		// False because of the transient List error.
+		Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists).Status).
+			To(Equal(metav1.ConditionTrue))
 	})
 })
 

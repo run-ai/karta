@@ -75,8 +75,7 @@ func (r *Reconciler) stepCheckCRDExists(ctx context.Context, logger logr.Logger,
 	exists, err := r.crdExistsForGVK(ctx, *gvk)
 	if err != nil {
 		logger.Error(err, "Failed to check CRD existence", "gvk", gvk.String())
-		setCRDExists(&karta.Status, metav1.ConditionFalse)
-		return Continue()
+		return StopWithError(fmt.Errorf("check CRD existence for karta %q: %w", karta.Name, err))
 	}
 
 	if exists {
@@ -103,7 +102,7 @@ func (r *Reconciler) stepDeriveReady(_ context.Context, _ logr.Logger, karta *ka
 func (r *Reconciler) stepEnsureLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
 	gvk := rootGVK(karta)
 	if gvk == nil {
-		return Continue()
+		return r.removeIndexLabels(ctx, logger, karta)
 	}
 
 	desired := map[string]string{
@@ -140,6 +139,35 @@ func (r *Reconciler) stepEnsureLabels(ctx context.Context, logger logr.Logger, k
 	return Continue()
 }
 
+// removeIndexLabels deletes the three karta/* index labels from the Karta
+// metadata via a JSON merge-patch (setting each key to null deletes it).
+// It is a no-op when none of the labels are present.
+func (r *Reconciler) removeIndexLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
+	if !hasAnyIndexLabel(karta.Labels) {
+		return Continue()
+	}
+
+	patchBytes, err := json.Marshal(map[string]any{
+		"metadata": map[string]any{
+			"labels": map[string]any{
+				kartav1alpha1.LabelRootGroup:   nil,
+				kartav1alpha1.LabelRootVersion: nil,
+				kartav1alpha1.LabelRootKind:    nil,
+			},
+		},
+	})
+	if err != nil {
+		return StopWithError(fmt.Errorf("marshal label-removal patch for karta %q: %w", karta.Name, err))
+	}
+
+	if err = r.Patch(ctx, karta, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
+		return StopWithError(fmt.Errorf("remove stale index labels for karta %q: %w", karta.Name, err))
+	}
+
+	logger.V(1).Info("Removed stale GVK index labels (root kind no longer set)")
+	return Continue()
+}
+
 // labelsMatch returns true when current already contains all desired key/value pairs.
 func labelsMatch(current, desired map[string]string) bool {
 	for k, v := range desired {
@@ -148,6 +176,24 @@ func labelsMatch(current, desired map[string]string) bool {
 		}
 	}
 	return true
+}
+
+// hasAnyIndexLabel reports whether the Karta has any of the three GVK index
+// labels stamped on it.
+func hasAnyIndexLabel(labels map[string]string) bool {
+	if len(labels) == 0 {
+		return false
+	}
+	for _, k := range []string{
+		kartav1alpha1.LabelRootGroup,
+		kartav1alpha1.LabelRootVersion,
+		kartav1alpha1.LabelRootKind,
+	} {
+		if _, ok := labels[k]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // crdExistsForGVK reports whether a CRD serving the given group, version and
@@ -170,7 +216,7 @@ func crdMatchesGVK(crd *apiextensionsv1.CustomResourceDefinition, gvk schema.Gro
 		return false
 	}
 	for _, v := range crd.Spec.Versions {
-		if v.Name == gvk.Version {
+		if v.Name == gvk.Version && v.Served {
 			return true
 		}
 	}
