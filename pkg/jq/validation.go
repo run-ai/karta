@@ -31,7 +31,7 @@ func validateJQExpressionsRecursive(val reflect.Value, fieldPath string, errs *[
 	}
 
 	// Dereference pointers
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		if val.IsNil() {
 			return
 		}
@@ -101,7 +101,7 @@ func handleTaggedStructField(field reflect.Value, currentPath string, errs *[]er
 }
 
 func isStringField(field reflect.Value) bool {
-	return field.Kind() == reflect.String || (field.Kind() == reflect.Ptr && field.Type().Elem().Kind() == reflect.String)
+	return field.Kind() == reflect.String || (field.Kind() == reflect.Pointer && field.Type().Elem().Kind() == reflect.String)
 }
 
 func isStringSliceField(field reflect.Value) bool {
@@ -128,7 +128,7 @@ func validateJQExpressionsInMap(val reflect.Value, basePath string, errs *[]erro
 
 func validateStringField(field reflect.Value, fieldPath string) error {
 	// Handle pointer to string (*string)
-	if field.Kind() == reflect.Ptr {
+	if field.Kind() == reflect.Pointer {
 		if field.IsNil() {
 			return nil // Optional field, skip validation
 		}
@@ -175,7 +175,7 @@ func walkAST(v reflect.Value) error {
 		return nil
 	}
 	switch v.Kind() {
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Pointer, reflect.Interface:
 		if v.IsNil() {
 			return nil
 		}

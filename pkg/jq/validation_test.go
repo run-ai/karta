@@ -34,7 +34,6 @@ type StructWithUntagged struct {
 	UntaggedStringMap map[string]string
 }
 
-
 var _ = Describe("JQ Validation", func() {
 	Describe("ValidateJQExpressions", func() {
 		Context("valid JQ expressions", func() {

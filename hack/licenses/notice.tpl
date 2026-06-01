@@ -8,8 +8,8 @@ This product includes the following third-party software components:
 For a complete list of third-party software licenses, please see the
 THIRD_PARTY_LICENSES file.
 
-Third-party dependencies:
-{{ range . }}- {{ .Name }} ({{ .LicenseName }})
-{{ end }}
+Third-party Dependencies:
+{{ range .Direct }}{{ if ne .Name "github.com/run-ai/karta" }}- {{ .Name }} ({{ .LicenceType }})
+{{ end }}{{ end }}
 
 Full license texts for these dependencies are available in the THIRD_PARTY_LICENSES file.

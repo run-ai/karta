@@ -174,6 +174,7 @@ func SuspendablePyFlowKarta() *v1alpha1.Karta {
 
 	return karta
 }
+
 // Simple job structure with hardcoded master and worker fields
 func NewPyFlowObject() *PyFlow {
 	return &PyFlow{
