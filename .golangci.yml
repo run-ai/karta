@@ -16,6 +16,9 @@ linters:
       - linters:
           - all
         path: zz_generated.*\.go
+      - linters:
+          - all
+        path: _mock\.go
     paths:
       - bin
       - vendor
