@@ -5,12 +5,12 @@ This file contains license information for third-party software components used 
 For complete license texts, please refer to the source repositories or the LICENSE files in the respective dependency packages.
 
 ## Dependencies
-{{ range . }} 
+{{ range .Direct }}{{ if ne .Name "github.com/run-ai/karta" }}
 ### {{ .Name }}
 - Name: {{ .Name }}
 - Version: {{ .Version }}
-- License: [{{ .LicenseName }}]({{ .LicenseURL }})
-{{ end }}
+- License: {{ .LicenceType }}
+{{ end }}{{ end }}
 
 ## License Texts
 
