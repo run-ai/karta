@@ -111,3 +111,14 @@ Unit tests live next to the code (`*_test.go` in the same package). Mocks are re
 - Conduct concerns: `CODE_OF_CONDUCT.md`.
 
 For feature discussion or bug reports, open a GitHub issue using the templates under `.github/ISSUE_TEMPLATE/`.
+
+## Cursor Cloud specific instructions
+
+This repository is a Go library plus generated CRDs and a Helm chart (CRDs only). There is no `cmd/` binary or long-running service to start for local development.
+
+- Primary validation: `make check` (see Makefile). CI also runs `make lint` separately; run both before pushing.
+- Go is pinned in `go.mod`; the toolchain auto-downloads when needed.
+- Tools install into `bin/` on first `make validate` or `make lint` (`controller-gen`, `golangci-lint`, `go-licence-detector`). The Makefile prepends `bin/` to `PATH` for its own targets.
+- If `golangci-lint` download via the Makefile `curl` install script fails, install with the module Go version: `GOTOOLCHAIN=$(grep '^go ' go.mod | awk '{print $2}') GOBIN=$PWD/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2`. The linter must be built with Go >= the `go` directive in `go.mod`.
+- Cluster-free integration coverage: `go test ./test/blackbox/` (full suspend/resume stack with a real JQ runner).
+- Optional: `kubectl` plus a cluster for `make install-crd`; `helm` for `make helm-lint` and `make helm-validate` (not included in `make check`).
