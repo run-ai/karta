@@ -18,21 +18,23 @@ spec:
           messageFieldName: message
         statusMappings:
           initializing:
-          - byConditions:
-            - type: Available
-              status: "False"
-            - type: Progressing
-              status: "False"
-            - type: UpdateInProgress
-              status: "False"
+            - byConditions:
+                - status: "True"
+                  type: Progressing
+                - status: "False"
+                  type: Available
           running:
           - byConditions:
               - type: Available
                 status: "True"
+                reason: "AllGroupsReady"
               - type: Progressing
                 status: "False"
               - type: UpdateInProgress
                 status: "False"
+          - byExpression:
+              expression: ".status.readyReplicas == .status.replicas and .status.updatedReplicas == .status.replicas"
+              expectedResult: "true"
           failed:
           - byConditions:
               - type: Available
