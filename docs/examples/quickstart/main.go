@@ -93,12 +93,12 @@ func main() {
 	examples := []workloadExample{
 		{
 			name:         "JobSet",
-			kartaPath:    "docs/samples/jobset.yaml",
+			kartaPath:    "../../samples/jobset.yaml",
 			workloadYAML: jobsetWorkloadYAML,
 		},
 		{
 			name:         "LeaderWorkerSet",
-			kartaPath:    "docs/samples/lws.yaml",
+			kartaPath:    "../../samples/lws.yaml",
 			workloadYAML: lwsWorkloadYAML,
 		},
 	}
@@ -157,7 +157,7 @@ func run(ctx context.Context, ex workloadExample, o opts) error {
 	for i, s := range status.MatchedStatuses {
 		statuses[i] = string(s)
 	}
-	fmt.Printf("  Karta status: %s\n\n", strings.Join(statuses, ", "))
+	fmt.Printf("  Karta workload status: %s\n\n", strings.Join(statuses, ", "))
 
 	// ── Step 2: Inspect replica counts ───────────────────────────────────────
 	// GetScale reads replica counts from wherever the CRD stores them.

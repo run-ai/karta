@@ -91,7 +91,7 @@ Default expected output:
 ══════════════════════════════════════════
 
 === Workload status ===
-  Karta status: Initializing
+  Karta workload status: Initializing
 
 === Component replica counts ===
   group (virtual)              replicas=4
