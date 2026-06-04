@@ -8,7 +8,7 @@ Copyright (c) 2026 NVIDIA Corporation
 
 ## The problem
 
-A scheduler plugin needs to inject `schedulerName: kai-scheduler` into every pod of every workload it manages. Without Karta, you write a branch for every CRD type:
+A scheduler plugin needs to inject `schedulerName: kai-scheduler` into every pod of every workload it manages:
 
 ```go
 // Without Karta — grows with every new workload type you support
@@ -25,7 +25,7 @@ case "LeaderWorkerSet":
 }
 ```
 
-With Karta, each CRD structure is described once in a YAML definition. Your controller code uses a uniform API for all of them:
+With Karta:
 
 ```go
 // With Karta — identical for every workload type
