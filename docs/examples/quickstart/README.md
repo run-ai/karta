@@ -61,7 +61,7 @@ go run ./docs/examples/quickstart --help
 
 Default expected output:
 
-```
+```text
 ══════════════════════════════════════════
   JobSet  (scheduler: kai-scheduler)
 ══════════════════════════════════════════
