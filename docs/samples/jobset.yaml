@@ -28,7 +28,7 @@ spec:
           initializing:
           - byExpression:
               # Some replicatedJobs are active but none are ready yet
-              expression: ".status.replicatedJobsStatus | any(.active > 0 and .ready < 0) and all(.failed == 0)"
+              expression: ".status.replicatedJobsStatus | any(.active > 0 and (.ready // 0) == 0) and all(.failed == 0)"
               expectedResult: "true"
           running:
           - byExpression:

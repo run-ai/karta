@@ -33,7 +33,7 @@ spec:
               - type: UpdateInProgress
                 status: "False"
           - byExpression:
-              expression: ".status.readyReplicas == .status.replicas and .status.updatedReplicas == .status.replicas"
+              expression: "(.status.replicas // 0) > 0 and .status.readyReplicas == .status.replicas and .status.updatedReplicas == .status.replicas"
               expectedResult: "true"
           failed:
           - byConditions:

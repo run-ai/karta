@@ -33,7 +33,7 @@ spec:
           initializing:
             - byExpression:
                 expectedResult: "true"
-                expression: (.status.active // 0) > 0 and (.status.ready == 0)
+                expression: (.status.active // 0) > 0 and (.status.ready // 0) == 0
           running:
             - byExpression:
                 expectedResult: "true"
