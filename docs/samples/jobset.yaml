@@ -1,32 +1,40 @@
 apiVersion: run.ai/v1alpha1
 kind: Karta
+metadata:
+  name: jobset-x-k8s-io-v1alpha2-jobset
 spec:
   structureDefinition:
     rootComponent:
       name: jobset
-      # specPath omitted for root component (defaults to .spec)
       kind:
         group: jobset.x-k8s.io
         version: v1alpha2
         kind: JobSet
+      suspendDefinition:
+        suspendActions:
+          - path: .spec.suspend
+            value: "true"
+        resumeActions:
+          - path: .spec.suspend
+            value: "false"
       statusDefinition:
         conditionsDefinition:
           path: .status.conditions
           typeFieldName: type
           statusFieldName: status
+          messageFieldName: message
+          reasonFieldName: reason
         statusMappings:
           initializing:
-          - byConditions:
-            - type: StartupPolicyInProgress
-              status: "True"
+          - byExpression:
+              # Some replicatedJobs are active but none are ready yet
+              expression: ".status.replicatedJobsStatus | any(.active > 0 and (.ready // 0) == 0) and all(.failed == 0)"
+              expectedResult: "true"
           running:
-          - byConditions:
-            - type: StartupPolicyCompleted
-              status: "True"
-            - type: Completed
-              status: "False"
-            - type: Failed
-              status: "False"
+          - byExpression:
+              # Total ready across all replicatedJobs equals total expected replicas
+              expression: ".status.replicatedJobsStatus | any(.ready > 0 and .active > 0) and all(.failed == 0)"
+              expectedResult: "true"
           completed:
           - byConditions:
             - type: Completed
@@ -34,6 +42,10 @@ spec:
           failed:
           - byConditions:
             - type: Failed
+              status: "True"
+          suspended:
+          - byConditions:
+            - type: Suspended
               status: "True"
 
     childComponents:
@@ -47,15 +59,14 @@ spec:
       specDefinition:
         podTemplateSpecPath: .spec.replicatedJobs[].template.spec.template
       scaleDefinition:
-        replicasPath: .spec.replicatedJobs[].replicas
+        # Total pods per replicatedJob = replicas (Job instances) * parallelism (pods per Job)
+        replicasPath: .spec.replicatedJobs[] | .replicas * .template.spec.parallelism
       instanceIdPath: .spec.replicatedJobs[].name
       podSelector:
         componentInstanceSelector:
           idPath: .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]
 
-  # Optimization instructions
   optimizationInstructions:
-    # Gang scheduling for coordinated job execution
     gangScheduling:
       podGroups:
       - name: job

@@ -1,0 +1,69 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+# The Karta definition for this CRD lives in docs/samples/jobset.yaml.
+apiVersion: jobset.x-k8s.io/v1alpha2
+kind: JobSet
+metadata:
+  name: my-distributed-training
+  namespace: default
+spec:
+  replicatedJobs:
+  - name: leader
+    replicas: 1
+    template:
+      spec:
+        parallelism: 1
+        completions: 1
+        backoffLimit: 0
+        template:
+          spec:
+            containers:
+            - name: training
+              image: nvcr.io/nvidia/pytorch:24.01-py3
+              resources:
+                requests:
+                  cpu: "4"
+                  memory: "32Gi"
+                limits:
+                  cpu: "4"
+                  memory: "32Gi"
+                  nvidia.com/gpu: "1"
+  - name: workers
+    replicas: 4
+    template:
+      spec:
+        parallelism: 2
+        completions: 2
+        backoffLimit: 0
+        template:
+          spec:
+            containers:
+            - name: training
+              image: nvcr.io/nvidia/pytorch:24.01-py3
+              resources:
+                requests:
+                  cpu: "8"
+                  memory: "64Gi"
+                limits:
+                  cpu: "8"
+                  memory: "64Gi"
+                  nvidia.com/gpu: "4"
+status:
+  conditions:
+  - type: Completed
+    status: "False"
+  - type: Failed
+    status: "False"
+  replicatedJobsStatus:
+    - active: 4
+      failed: 0
+      name: workers
+      ready: 4
+      succeeded: 0
+      suspended: 0
+    - active: 1
+      failed: 0
+      name: leader
+      ready: 1
+      succeeded: 0
+      suspended: 0

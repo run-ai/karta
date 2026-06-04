@@ -13,14 +13,14 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var _ = Describe("docs/examples", func() {
+var _ = Describe("docs/samples", func() {
 	var examplesDir string
 	var exampleFiles []string
 
 	BeforeEach(func() {
 		_, thisFile, _, ok := runtime.Caller(0)
 		Expect(ok).To(BeTrue())
-		examplesDir = filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "..", "docs", "examples")
+		examplesDir = filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "..", "docs", "samples")
 
 		matches, err := filepath.Glob(filepath.Join(examplesDir, "*.yaml"))
 		Expect(err).NotTo(HaveOccurred())

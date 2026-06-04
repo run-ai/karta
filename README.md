@@ -171,11 +171,11 @@ Karta supports any workload type. The following are pre-built and tested Karta d
 | Milvus | Milvus |
 | DynamoGraphDeployment | NVIDIA Dynamo |
 
-See [`docs/examples/`](docs/examples/) for the full Karta definitions.
+See [`docs/examples/`](docs/samples/) for the full Karta definitions.
 
 ### Complex example: NVIDIA Dynamo
 
-The [Dynamo Karta](docs/examples/dynamo.yaml) shows Karta handling a real-world multi-service inference graph - fragmented pod specs across services, autoscaling with min/max replicas, replica selectors for multi-node workers, gang scheduling, and 6 additional child resource types (DynamoComponentDeployment, LeaderWorkerSet, PodGang, PodClique, PodCliqueSet, PodCliqueScalingGroup). A single Karta definition replaces what would otherwise require hundreds of lines of per-type controller logic.
+The [Dynamo Karta](docs/samples/dynamo.yaml) shows Karta handling a real-world multi-service inference graph - fragmented pod specs across services, autoscaling with min/max replicas, replica selectors for multi-node workers, gang scheduling, and 6 additional child resource types (DynamoComponentDeployment, LeaderWorkerSet, PodGang, PodClique, PodCliqueSet, PodCliqueScalingGroup). A single Karta definition replaces what would otherwise require hundreds of lines of per-type controller logic.
 
 ## Who Uses Karta?
 
@@ -184,7 +184,7 @@ Karta was created at [Run:ai](https://run.ai) (NVIDIA) to power workload managem
 ## Documentation
 
 - [Technical Guide](docs/Technical%20Guide.md) - Full Karta spec, path syntax (jq), validation rules
-- [Examples](docs/examples/) - Real-world Karta definitions for common workload types
+- [Examples](docs/samples/) - Real-world Karta definitions for common workload types
 - [API Reference](https://pkg.go.dev/github.com/run-ai/karta) — Go package documentation
 - [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute (DCO required)
 
