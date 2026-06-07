@@ -1,6 +1,6 @@
 module github.com/run-ai/karta/operator
 
-go 1.25.9
+go 1.26.3
 
 require (
 	github.com/onsi/ginkgo/v2 v2.28.1
