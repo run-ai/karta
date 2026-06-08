@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# Created suspended (spec.suspend: true). While suspended the pod template is
+# mutable, so the controller injects the managed-by label through Karta. Resume
+# with:
+#   kubectl patch job karta-demo-suspended -p '{"spec":{"suspend":false}}'
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: karta-demo-suspended
+spec:
+  suspend: true
+  parallelism: 2
+  completions: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: worker
+          image: busybox:1.36
+          command: ["sh", "-c", "echo hello from karta && sleep 10"]
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"

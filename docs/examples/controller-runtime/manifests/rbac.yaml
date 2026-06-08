@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: karta-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: generic-controller
+  namespace: karta-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: generic-controller
+rules:
+  # The workload this example manages.
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  # The Karta definition the controller reads at runtime.
+  - apiGroups: ["run.ai"]
+    resources: ["kartas"]
+    verbs: ["get", "list", "watch"]
+  # Events recorded against reconciled workloads. The controller uses the
+  # events.k8s.io API; the core group is kept for compatibility.
+  - apiGroups: ["events.k8s.io"]
+    resources: ["events"]
+    verbs: ["create", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: generic-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: generic-controller
+subjects:
+  - kind: ServiceAccount
+    name: generic-controller
+    namespace: karta-system
