@@ -20,7 +20,10 @@ object, not recompiling the controller.
 The reconcile loop in [controller.go](controller.go) does the same work for any
 workload Karta can describe:
 
-1. Load the workload structure from the cluster (the `batch-v1-job` Karta object).
+1. Discover the workload structure from the cluster by GVK: the controller lists
+   Karta objects and selects the one whose root component matches the watched
+   workload's GVK. It never hard-codes a Karta name, so it resolves a definition
+   the same way a real consumer does for an arbitrary workload type.
 2. Read a unified status (`Running`, `Completed`, `Suspended`, and so on) without
    parsing CRD-specific conditions.
 3. Read the replica count and aggregate container resource requests.
@@ -127,8 +130,9 @@ why no pod-template label was injected.
 
 ## Change the definition live
 
-The controller also watches the Karta object. Editing it re-reconciles every
-governed Job with the new structure, with no redeploy:
+The controller also watches Karta objects. Editing the one whose root component
+is `batch/v1 Job` re-reconciles every governed Job with the new structure, with
+no redeploy:
 
 ```bash
 kubectl edit karta batch-v1-job

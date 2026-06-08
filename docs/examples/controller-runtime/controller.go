@@ -53,10 +53,6 @@ var jobGVK = schema.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
 type JobReconciler struct {
 	client.Client
 	Recorder events.EventRecorder
-
-	// kartaName is the cluster-scoped Karta object that describes the workload
-	// structure (default: batch-v1-job from docs/samples/batch-job.yaml).
-	kartaName string
 }
 
 // Reconcile reacts to every change of a watched Job (and to changes of the
@@ -65,15 +61,17 @@ type JobReconciler struct {
 func (r *JobReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	logger := log.FromContext(ctx)
 
-	// Step 0: load the workload structure from the cluster. This is the Karta
-	// custom resource the user applied, not data baked into the image.
-	karta := &v1alpha1.Karta{}
-	if err := r.Get(ctx, types.NamespacedName{Name: r.kartaName}, karta); err != nil {
+	// Step 0: discover the workload structure from the cluster by GVK. The
+	// controller does not assume a Karta name: it selects the Karta whose root
+	// component matches the watched workload's GVK, the same way a real consumer
+	// resolves a definition for an arbitrary workload type.
+	karta, err := r.kartaForGVK(ctx, jobGVK)
+	if err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("Karta definition not found; apply it before workloads", "karta", r.kartaName)
+			logger.Info("no Karta describes this workload; apply one before workloads", "gvk", jobGVK.String())
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, fmt.Errorf("get Karta %q: %w", r.kartaName, err)
+		return reconcile.Result{}, err
 	}
 
 	// Step 1: fetch the workload as an unstructured object.
@@ -259,6 +257,31 @@ func injectPodTemplateLabel(ctx context.Context, root *resource.Component) (bool
 	return true, nil
 }
 
+// kartaForGVK selects the Karta whose root component describes the given GVK.
+// This mirrors how a real consumer resolves a definition for an arbitrary
+// workload type instead of hard-coding a Karta name.
+func (r *JobReconciler) kartaForGVK(ctx context.Context, gvk schema.GroupVersionKind) (*v1alpha1.Karta, error) {
+	list := &v1alpha1.KartaList{}
+	if err := r.List(ctx, list); err != nil {
+		return nil, fmt.Errorf("list Kartas: %w", err)
+	}
+	for i := range list.Items {
+		if rootGVK := rootComponentGVK(&list.Items[i]); rootGVK != nil && *rootGVK == gvk {
+			return &list.Items[i], nil
+		}
+	}
+	return nil, apierrors.NewNotFound(v1alpha1.Resource("karta"), fmt.Sprintf("for gvk %s", gvk))
+}
+
+// rootComponentGVK returns the GVK of a Karta's root component, or nil if unset.
+func rootComponentGVK(karta *v1alpha1.Karta) *schema.GroupVersionKind {
+	kind := karta.Spec.StructureDefinition.RootComponent.Kind
+	if kind == nil {
+		return nil
+	}
+	return &schema.GroupVersionKind{Group: kind.Group, Version: kind.Version, Kind: kind.Kind}
+}
+
 // SetupWithManager wires the reconciler to watch Jobs and the Karta definition.
 // A change to the Karta object re-enqueues every Job so the new structure takes
 // effect live, with no redeploy.
@@ -272,9 +295,13 @@ func (r *JobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// jobsForKarta enqueues all Jobs when the watched Karta definition changes.
+// jobsForKarta enqueues all Jobs when a Karta describing this workload changes.
 func (r *JobReconciler) jobsForKarta(ctx context.Context, obj client.Object) []reconcile.Request {
-	if obj.GetName() != r.kartaName {
+	karta, ok := obj.(*v1alpha1.Karta)
+	if !ok {
+		return nil
+	}
+	if rootGVK := rootComponentGVK(karta); rootGVK == nil || *rootGVK != jobGVK {
 		return nil
 	}
 	jobs := &unstructured.UnstructuredList{}

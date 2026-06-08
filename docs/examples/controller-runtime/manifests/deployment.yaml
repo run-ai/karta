@@ -23,8 +23,6 @@ spec:
           # Built and side-loaded with `kind load docker-image` (see README).
           image: generic-controller-example:latest
           imagePullPolicy: IfNotPresent
-          args:
-            - --karta-name=batch-v1-job
           ports:
             - name: metrics
               containerPort: 8080

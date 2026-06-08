@@ -30,9 +30,7 @@ import (
 )
 
 func main() {
-	var kartaName, metricsAddr, probeAddr string
-	flag.StringVar(&kartaName, "karta-name", "batch-v1-job",
-		"name of the cluster-scoped Karta object describing the watched workload")
+	var metricsAddr, probeAddr string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "address the metrics endpoint binds to")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "address the health probe binds to")
 	flag.Parse()
@@ -66,9 +64,8 @@ func main() {
 	}
 
 	reconciler := &JobReconciler{
-		Client:    mgr.GetClient(),
-		Recorder:  mgr.GetEventRecorder("generic-controller"),
-		kartaName: kartaName,
+		Client:   mgr.GetClient(),
+		Recorder: mgr.GetEventRecorder("generic-controller"),
 	}
 	if err := reconciler.SetupWithManager(mgr); err != nil {
 		logger.Error(err, "set up reconciler")
@@ -84,7 +81,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Info("starting controller", "karta", kartaName)
+	logger.Info("starting controller")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		logger.Error(err, "run manager")
 		os.Exit(1)
