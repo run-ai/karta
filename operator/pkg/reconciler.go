@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package internal
+package pkg
 
 import (
 	"context"
@@ -21,44 +21,48 @@ import (
 )
 
 // reconcile runs the ordered step chain for one Karta.
-func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) (ctrl.Result, error) {
+//
+// Status is patched via a deferred call so it always runs — even when a step
+// short-circuits with an error. Named return values let the defer propagate a
+// patch failure: if no step errored it becomes the returned error; if a step
+// already errored we log the patch failure and preserve the original error.
+func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) (result ctrl.Result, err error) {
 	logger := log.FromContext(ctx).WithValues("karta", karta.Name)
 	base := karta.DeepCopy()
+
+	defer func() {
+		if patchErr := r.patchStatusIfChanged(ctx, karta, base); patchErr != nil {
+			patchErr = fmt.Errorf("update status for karta %q: %w", karta.Name, patchErr)
+			if err == nil {
+				err = patchErr
+			} else {
+				logger.Error(patchErr, "failed to patch status after reconcile error")
+			}
+		}
+	}()
 
 	steps := []StepFn{
 		r.stepValidateKarta,
 		r.stepCheckCRDExists,
 		r.stepDeriveReady,
-		stepPatchStatusWith(r, base),
 		r.stepEnsureLabels,
 	}
 	for _, step := range steps {
-		if res := step(ctx, logger, karta); shortCircuit(res) {
-			return res.Result()
+		if res := step(ctx, logger, karta); res.ShortCircuit() {
+			result, err = res.Result()
+			return
 		}
 	}
-	return ctrl.Result{}, nil
-}
-
-// stepPatchStatusWith returns a step that flushes status to the cluster,
-// closing over the whole-object snapshot taken at the start of reconcile so
-// that only the fields that actually changed are sent in the patch body.
-func stepPatchStatusWith(r *Reconciler, base *kartav1alpha1.Karta) StepFn {
-	return func(ctx context.Context, _ logr.Logger, karta *kartav1alpha1.Karta) StepResult {
-		if err := r.patchStatusIfChanged(ctx, karta, base); err != nil {
-			return StopWithError(fmt.Errorf("update status for karta %q: %w", karta.Name, err))
-		}
-		return Continue()
-	}
+	return
 }
 
 // stepValidateKarta runs the Karta spec validator and writes Validated.
 func (r *Reconciler) stepValidateKarta(_ context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
 	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
 		logger.V(1).Info("Karta spec validation failed", "error", err.Error())
-		setValidated(&karta.Status, metav1.ConditionFalse)
+		setValidated(&karta.Status, metav1.ConditionFalse, err.Error())
 	} else {
-		setValidated(&karta.Status, metav1.ConditionTrue)
+		setValidated(&karta.Status, metav1.ConditionTrue, "")
 	}
 	return Continue()
 }
@@ -68,7 +72,7 @@ func (r *Reconciler) stepCheckCRDExists(ctx context.Context, logger logr.Logger,
 	gvk := rootGVK(karta)
 	if gvk == nil {
 		logger.V(1).Info("Karta has no root component kind; leaving CRDExists=False")
-		setCRDExists(&karta.Status, metav1.ConditionFalse)
+		setCRDExists(&karta.Status, metav1.ConditionFalse, "")
 		return Continue()
 	}
 
@@ -79,9 +83,11 @@ func (r *Reconciler) stepCheckCRDExists(ctx context.Context, logger logr.Logger,
 	}
 
 	if exists {
-		setCRDExists(&karta.Status, metav1.ConditionTrue)
+		setCRDExists(&karta.Status, metav1.ConditionTrue, "")
 	} else {
-		setCRDExists(&karta.Status, metav1.ConditionFalse)
+		msg := fmt.Sprintf("CRD for %s/%s not found or does not serve version %s",
+			gvk.Group, gvk.Kind, gvk.Version)
+		setCRDExists(&karta.Status, metav1.ConditionFalse, msg)
 	}
 	return Continue()
 }

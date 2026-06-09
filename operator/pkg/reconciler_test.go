@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package internal
+package pkg
 
 import (
 	"context"
@@ -421,13 +421,16 @@ var _ = Describe("Reconciler — CRD list failure does not corrupt status", func
 		Expect(err).To(HaveOccurred())
 		Expect(errors.Is(err, listErr)).To(BeTrue())
 
-		// stepPatchStatusWith and stepEnsureLabels both run after the
-		// failing step, so neither should have observed any cluster-side
-		// effect.
+		// Status is patched via defer so whatever stepValidateKarta wrote is
+		// persisted, but CRDExists is NOT set to False (stepCheckCRDExists
+		// short-circuited before calling setCRDExists).
+		// Labels are NOT stamped because stepEnsureLabels is in the step
+		// chain which was short-circuited.
 		got := &kartav1alpha1.Karta{}
 		Expect(k8s.Get(ctx, client.ObjectKey{Name: "karta-list-fail"}, got)).To(Succeed())
-		Expect(got.Status.Conditions).To(BeEmpty(),
-			"status must not be patched when stepCheckCRDExists short-circuits")
+		_, hasCRDExists := findConditionOpt(got.Status.Conditions, kartav1alpha1.ConditionCRDExists)
+		Expect(hasCRDExists).To(BeFalse(),
+			"CRDExists must not be set to False when the CRD list call failed transiently")
 		Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup),
 			"labels must not be patched when stepCheckCRDExists short-circuits")
 	})
@@ -456,6 +459,55 @@ var _ = Describe("Reconciler — CRD list failure does not corrupt status", func
 		// False because of the transient List error.
 		Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists).Status).
 			To(Equal(metav1.ConditionTrue))
+	})
+})
+
+var _ = Describe("Reconciler — detailed condition messages", func() {
+	var (
+		ctx context.Context
+		k8s client.WithWatch
+		r   *Reconciler
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		k8s = fake.NewClientBuilder().
+			WithScheme(buildScheme()).
+			WithStatusSubresource(&kartav1alpha1.Karta{}).
+			Build()
+		r = NewReconciler(k8s)
+	})
+
+	reconcileAndGet := func(name string) *kartav1alpha1.Karta {
+		GinkgoHelper()
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Name: name}})
+		Expect(err).NotTo(HaveOccurred())
+		out := &kartav1alpha1.Karta{}
+		Expect(k8s.Get(ctx, client.ObjectKey{Name: name}, out)).To(Succeed())
+		return out
+	}
+
+	It("puts the real validator error in the Validated condition message", func() {
+		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
+		// newKarta has no StatusDefinition → validator produces a descriptive error
+		Expect(k8s.Create(ctx, newKarta("karta-invalid-cond-msg", &gvk))).To(Succeed())
+		got := reconcileAndGet("karta-invalid-cond-msg")
+
+		msg := findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated).Message
+		Expect(msg).NotTo(BeEmpty())
+		Expect(msg).NotTo(Equal("Karta validation failed"),
+			"expected the real validator error, not the generic fallback")
+	})
+
+	It("puts the missing GVK detail in the CRDExists condition message", func() {
+		gvk := schema.GroupVersionKind{Group: "absent.run.ai", Version: "v1", Kind: "Missing"}
+		Expect(k8s.Create(ctx, newValidKarta("karta-no-crd-cond-msg", &gvk))).To(Succeed())
+		got := reconcileAndGet("karta-no-crd-cond-msg")
+
+		msg := findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists).Message
+		Expect(msg).To(ContainSubstring("absent.run.ai"))
+		Expect(msg).To(ContainSubstring("Missing"))
+		Expect(msg).To(ContainSubstring("v1"))
 	})
 })
 
