@@ -47,15 +47,22 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 		Expect(r.MapCRDToKartaEvent(ctx, crd)).To(BeEmpty())
 	})
 
-	It("returns no requests when Kartas exist but have no index labels (not yet reconciled)", func() {
+	It("enqueues Kartas even before their karta/gvk label is stamped (bootstrapping)", func() {
+		// The mapper now uses spec (rootGVK), not labels, so a freshly created
+		// Karta whose first reconcile hasn't run yet is still found.
 		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 		Expect(k8s.Create(ctx, newKarta("karta-unlabeled", &gvk))).To(Succeed())
 
 		crd := newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version)
-		Expect(r.MapCRDToKartaEvent(ctx, crd)).To(BeEmpty())
+		reqs := r.MapCRDToKartaEvent(ctx, crd)
+		names := make([]string, 0, len(reqs))
+		for _, req := range reqs {
+			names = append(names, req.Name)
+		}
+		Expect(names).To(ConsistOf("karta-unlabeled"))
 	})
 
-	It("enqueues all labeled Kartas sharing the CRD group+kind, regardless of version", func() {
+	It("enqueues all Kartas sharing the CRD group+kind, regardless of version", func() {
 		gvkV1 := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 		gvkV2 := schema.GroupVersionKind{Group: "test.run.ai", Version: "v2", Kind: "Foo"}
 		other := schema.GroupVersionKind{Group: "other.run.ai", Version: "v1", Kind: "Bar"}
@@ -65,8 +72,8 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 		Expect(k8s.Create(ctx, labeledKarta("karta-other", other))).To(Succeed())
 		Expect(k8s.Create(ctx, newKarta("karta-no-gvk", nil))).To(Succeed())
 
-		// CRD only serves v1, but karta-v2 still gets enqueued because we
-		// match on group+kind labels. The reconciler decides whether v2 exists.
+		// CRD only serves v1, but karta-v2 still gets enqueued because the
+		// mapper matches on group+kind from spec.
 		crd := newCRD("foos.test.run.ai", "test.run.ai", "Foo", "v1")
 		reqs := r.MapCRDToKartaEvent(ctx, crd)
 
@@ -122,8 +129,7 @@ var _ = Describe("kartaLabels helper", func() {
 	It("produces the expected label map for a GVK", func() {
 		gvk := schema.GroupVersionKind{Group: "ray.io", Version: "v1", Kind: "RayCluster"}
 		labels := kartaLabels(gvk)
-		Expect(labels[kartav1alpha1.LabelRootGroup]).To(Equal("ray.io"))
-		Expect(labels[kartav1alpha1.LabelRootVersion]).To(Equal("v1"))
-		Expect(labels[kartav1alpha1.LabelRootKind]).To(Equal("RayCluster"))
+		Expect(labels).To(HaveKey(kartav1alpha1.LabelGVK))
+		Expect(labels[kartav1alpha1.LabelGVK]).To(Equal("ray.io__v1__RayCluster"))
 	})
 })
