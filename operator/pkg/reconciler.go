@@ -101,10 +101,9 @@ func (r *Reconciler) stepDeriveReady(_ context.Context, _ logr.Logger, karta *ka
 	return Continue()
 }
 
-// stepEnsureLabels stamps the GVK-derived index labels (karta/group,
-// karta/version, karta/kind) onto the Karta metadata so that consumers and
-// the CRD event mapper can locate a Karta by GVK via a label-selector List
-// instead of fetching all Kartas.
+// stepEnsureLabels stamps the karta/gvk index label onto the Karta metadata
+// so that consumers can locate a Karta by GVK via a label-selector List.
+// The value is encoded as "group__version__kind" (see LabelGVK).
 func (r *Reconciler) stepEnsureLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
 	gvk := rootGVK(karta)
 	if gvk == nil {
@@ -112,9 +111,7 @@ func (r *Reconciler) stepEnsureLabels(ctx context.Context, logger logr.Logger, k
 	}
 
 	desired := map[string]string{
-		kartav1alpha1.LabelRootGroup:   gvk.Group,
-		kartav1alpha1.LabelRootVersion: gvk.Version,
-		kartav1alpha1.LabelRootKind:    gvk.Kind,
+		kartav1alpha1.LabelGVK: kartav1alpha1.FormatGVKLabel(gvk.Group, gvk.Version, gvk.Kind),
 	}
 
 	if labelsMatch(karta.Labels, desired) {
@@ -132,25 +129,21 @@ func (r *Reconciler) stepEnsureLabels(ctx context.Context, logger logr.Logger, k
 		return StopWithError(fmt.Errorf("patch labels for karta %q: %w", karta.Name, err))
 	}
 
-	logger.V(1).Info("Stamped GVK index labels", "group", gvk.Group, "version", gvk.Version, "kind", gvk.Kind)
+	logger.V(1).Info("Stamped GVK index label", "gvk", desired[kartav1alpha1.LabelGVK])
 	return Continue()
 }
 
-// removeIndexLabels deletes the three karta/* index labels from the Karta
-// metadata via a JSON merge-patch (setting each key to null deletes it).
-// It is a no-op when none of the labels are present.
+// removeIndexLabels deletes the karta/gvk label from the Karta metadata via a
+// JSON merge-patch (setting the key to null deletes it).
+// It is a no-op when the label is not present.
 func (r *Reconciler) removeIndexLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
-	if !hasAnyIndexLabel(karta.Labels) {
+	if _, ok := karta.Labels[kartav1alpha1.LabelGVK]; !ok {
 		return Continue()
 	}
 
 	patchBytes, err := json.Marshal(map[string]any{
 		"metadata": map[string]any{
-			"labels": map[string]any{
-				kartav1alpha1.LabelRootGroup:   nil,
-				kartav1alpha1.LabelRootVersion: nil,
-				kartav1alpha1.LabelRootKind:    nil,
-			},
+			"labels": map[string]any{kartav1alpha1.LabelGVK: nil},
 		},
 	})
 	if err != nil {
@@ -158,10 +151,10 @@ func (r *Reconciler) removeIndexLabels(ctx context.Context, logger logr.Logger, 
 	}
 
 	if err = r.Patch(ctx, karta, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
-		return StopWithError(fmt.Errorf("remove stale index labels for karta %q: %w", karta.Name, err))
+		return StopWithError(fmt.Errorf("remove stale index label for karta %q: %w", karta.Name, err))
 	}
 
-	logger.V(1).Info("Removed stale GVK index labels (root kind no longer set)")
+	logger.V(1).Info("Removed stale GVK index label (root kind no longer set)")
 	return Continue()
 }
 
@@ -173,24 +166,6 @@ func labelsMatch(current, desired map[string]string) bool {
 		}
 	}
 	return true
-}
-
-// hasAnyIndexLabel reports whether the Karta has any of the three GVK index
-// labels stamped on it.
-func hasAnyIndexLabel(labels map[string]string) bool {
-	if len(labels) == 0 {
-		return false
-	}
-	for _, k := range []string{
-		kartav1alpha1.LabelRootGroup,
-		kartav1alpha1.LabelRootVersion,
-		kartav1alpha1.LabelRootKind,
-	} {
-		if _, ok := labels[k]; ok {
-			return true
-		}
-	}
-	return false
 }
 
 // crdExistsForGVK reports whether a CRD serving the given group, version and
