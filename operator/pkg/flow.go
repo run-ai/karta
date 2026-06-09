@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package internal
+package pkg
 
 import (
 	"context"
@@ -35,18 +35,13 @@ func Continue() StepResult {
 	return StepResult{continueReconcile: true}
 }
 
-// Stop signals that reconciliation is done (no error, no requeue).
-func Stop() StepResult {
-	return StepResult{continueReconcile: false}
-}
-
 // StopWithError signals that the step failed. The manager will requeue with
 // exponential back-off.
 func StopWithError(err error) StepResult {
 	return StepResult{result: ctrl.Result{Requeue: true}, err: err, continueReconcile: false}
 }
 
-// shortCircuit returns true when the step chain should stop.
-func shortCircuit(r StepResult) bool {
+// ShortCircuit returns true when the step chain should stop.
+func (r StepResult) ShortCircuit() bool {
 	return !r.continueReconcile
 }

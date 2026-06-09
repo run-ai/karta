@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package internal
+package pkg
 
 import (
 	"context"
@@ -29,24 +29,34 @@ const (
 	msgNotReady         = "Validated and CRDExists must both be True"
 )
 
-func setValidated(status *kartav1alpha1.KartaStatus, s metav1.ConditionStatus) {
+// setValidated writes the Validated condition. msg is placed in the condition
+// message when s is False; pass an empty string to use the default message.
+func setValidated(status *kartav1alpha1.KartaStatus, s metav1.ConditionStatus, msg string) {
+	if s == metav1.ConditionFalse && msg == "" {
+		msg = msgValidationFailed
+	}
 	upsertConditions(&status.Conditions, map[kartav1alpha1.ConditionType]metav1.Condition{
 		kartav1alpha1.ConditionValidated: buildCondition(
 			kartav1alpha1.ConditionValidated,
 			s,
 			reasonForBool(s, ReasonValidationSucceeded, ReasonValidationFailed),
-			msgWhenFalse(s, msgValidationFailed),
+			msgWhenFalse(s, msg),
 		),
 	})
 }
 
-func setCRDExists(status *kartav1alpha1.KartaStatus, s metav1.ConditionStatus) {
+// setCRDExists writes the CRDExists condition. msg is placed in the condition
+// message when s is False; pass an empty string to use the default message.
+func setCRDExists(status *kartav1alpha1.KartaStatus, s metav1.ConditionStatus, msg string) {
+	if s == metav1.ConditionFalse && msg == "" {
+		msg = msgCRDNotFound
+	}
 	upsertConditions(&status.Conditions, map[kartav1alpha1.ConditionType]metav1.Condition{
 		kartav1alpha1.ConditionCRDExists: buildCondition(
 			kartav1alpha1.ConditionCRDExists,
 			s,
 			reasonForBool(s, ReasonCRDFound, ReasonCRDNotFound),
-			msgWhenFalse(s, msgCRDNotFound),
+			msgWhenFalse(s, msg),
 		),
 	})
 }

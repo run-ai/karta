@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package internal
+package pkg
 
 import (
 	"time"
@@ -22,8 +22,8 @@ type conditionInputs struct {
 
 // setConditions writes all three owned conditions at once. Used by tests.
 func setConditions(status *kartav1alpha1.KartaStatus, in conditionInputs) {
-	setValidated(status, in.validated)
-	setCRDExists(status, in.crdExists)
+	setValidated(status, in.validated, "")
+	setCRDExists(status, in.crdExists, "")
 	setReady(status, in.validated, in.crdExists)
 }
 

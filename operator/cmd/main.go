@@ -9,7 +9,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/run-ai/karta/operator/internal"
+	"github.com/run-ai/karta/operator/pkg"
 	"os"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
@@ -72,7 +72,7 @@ func run() error {
 		return fmt.Errorf("create manager: %w", err)
 	}
 
-	if err = internal.NewReconciler(mgr.GetClient()).SetupWithManager(mgr); err != nil {
+	if err = pkg.NewReconciler(mgr.GetClient()).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup karta reconciler: %w", err)
 	}
 
