@@ -9,6 +9,7 @@ import (
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -111,8 +112,8 @@ func upsertConditions(current *[]metav1.Condition, desired map[kartav1alpha1.Con
 
 // patchStatusIfChanged issues a JSON merge patch on the Karta status
 // subresource only when the in-memory status differs from the cluster-side
-// snapshot. The patch body is a delta computed by client.MergeFrom against
-// base, so fields we did not mutate are not shipped at all in the steady-state case.
+// snapshot. It also emits Warning events for conditions that transitioned to
+// False so users see the failure at the bottom of `kubectl describe karta`.
 func (r *Reconciler) patchStatusIfChanged(
 	ctx context.Context,
 	karta *kartav1alpha1.Karta,
@@ -121,10 +122,44 @@ func (r *Reconciler) patchStatusIfChanged(
 	if equality.Semantic.DeepEqual(base.Status, karta.Status) {
 		return nil
 	}
+	r.emitFalseConditionEvents(karta, &base.Status, &karta.Status)
 	if err := r.Status().Patch(ctx, karta, client.MergeFrom(base)); err != nil {
 		return fmt.Errorf("patch status: %w", err)
 	}
 	return nil
+}
+
+// emitFalseConditionEvents fires a Warning event for each owned condition that
+// transitioned to False.
+func (r *Reconciler) emitFalseConditionEvents(
+	karta *kartav1alpha1.Karta,
+	original, current *kartav1alpha1.KartaStatus,
+) {
+	watched := []kartav1alpha1.ConditionType{
+		kartav1alpha1.ConditionValidated,
+		kartav1alpha1.ConditionCRDExists,
+	}
+	for _, t := range watched {
+		if conditionStatus(current, t) != metav1.ConditionFalse {
+			continue
+		}
+		if conditionStatus(original, t) == metav1.ConditionFalse {
+			continue
+		}
+		msg := conditionMessage(current, t)
+		r.recorder.Event(karta, corev1.EventTypeWarning, string(t), msg)
+	}
+}
+
+// conditionMessage returns the Message field of the named condition, or an
+// empty string when the condition is not found.
+func conditionMessage(status *kartav1alpha1.KartaStatus, t kartav1alpha1.ConditionType) string {
+	for _, c := range status.Conditions {
+		if c.Type == string(t) {
+			return c.Message
+		}
+	}
+	return ""
 }
 
 func buildCondition(t kartav1alpha1.ConditionType, status metav1.ConditionStatus, reason, message string) metav1.Condition {

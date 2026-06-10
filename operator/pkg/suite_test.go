@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -32,11 +33,23 @@ func buildScheme() *runtime.Scheme {
 	return s
 }
 
+// defaultRLConfig is the rate-limiter config used by all test reconcilers.
+var defaultRLConfig = RateLimiterConfig{
+	BaseDelay: DefaultRateLimiterBaseDelay,
+	MaxDelay:  DefaultRateLimiterMaxDelay,
+}
+
+// newReconciler wraps NewReconciler with default config so test files don't
+// need to repeat the config on every call. Events are buffered and silently
+// discarded unless the test explicitly reads from the recorder channel.
 func newReconciler(k8s client.WithWatch) *Reconciler {
-	return NewReconciler(k8s, RateLimiterConfig{
-		BaseDelay: DefaultRateLimiterBaseDelay,
-		MaxDelay:  DefaultRateLimiterMaxDelay,
-	})
+	return NewReconciler(k8s, defaultRLConfig, record.NewFakeRecorder(64))
+}
+
+// newReconcilerWithRecorder creates a Reconciler whose events can be asserted.
+func newReconcilerWithRecorder(k8s client.WithWatch) (*Reconciler, *record.FakeRecorder) {
+	rec := record.NewFakeRecorder(64)
+	return NewReconciler(k8s, defaultRLConfig, rec), rec
 }
 
 // kartaLabels returns the index label the operator stamps for the given GVK.

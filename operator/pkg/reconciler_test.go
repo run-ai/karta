@@ -14,11 +14,25 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
+
+// drainEvents returns all events currently in the recorder buffer without blocking.
+func drainEvents(rec *record.FakeRecorder) []string {
+	var out []string
+	for {
+		select {
+		case e := <-rec.Events:
+			out = append(out, e)
+		default:
+			return out
+		}
+	}
+}
 
 var _ = Describe("Reconciler — lifecycle", func() {
 	var (
@@ -500,6 +514,74 @@ var _ = Describe("Reconciler — detailed condition messages", func() {
 		Expect(msg).To(ContainSubstring("absent.run.ai"))
 		Expect(msg).To(ContainSubstring("Missing"))
 		Expect(msg).To(ContainSubstring("v1"))
+	})
+})
+
+var _ = Describe("Reconciler — condition-transition events", func() {
+	var (
+		ctx context.Context
+		k8s client.WithWatch
+		r   *Reconciler
+		rec *record.FakeRecorder
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		k8s = fake.NewClientBuilder().
+			WithScheme(buildScheme()).
+			WithStatusSubresource(&kartav1alpha1.Karta{}).
+			Build()
+		r, rec = newReconcilerWithRecorder(k8s)
+	})
+
+	reconcile := func(name string) {
+		GinkgoHelper()
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Name: name}})
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	It("emits a Warning event for Validated=False on the first reconcile of an invalid Karta", func() {
+		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
+		// newKarta has no StatusDefinition → fails validation
+		Expect(k8s.Create(ctx, newKarta("karta-invalid-ev", &gvk))).To(Succeed())
+		reconcile("karta-invalid-ev")
+
+		events := drainEvents(rec)
+		Expect(events).To(ContainElement(ContainSubstring("Warning")))
+		Expect(events).To(ContainElement(ContainSubstring(string(kartav1alpha1.ConditionValidated))))
+	})
+
+	It("emits a Warning event for CRDExists=False when the CRD is missing", func() {
+		gvk := schema.GroupVersionKind{Group: "absent.run.ai", Version: "v1", Kind: "Missing"}
+		Expect(k8s.Create(ctx, newValidKarta("karta-no-crd-ev", &gvk))).To(Succeed())
+		reconcile("karta-no-crd-ev")
+
+		events := drainEvents(rec)
+		Expect(events).To(ContainElement(ContainSubstring(string(kartav1alpha1.ConditionCRDExists))))
+		Expect(events).To(ContainElement(ContainSubstring("absent.run.ai")))
+	})
+
+	It("does not re-emit events on a steady-state reconcile where conditions are already False", func() {
+		gvk := schema.GroupVersionKind{Group: "absent.run.ai", Version: "v1", Kind: "Missing"}
+		Expect(k8s.Create(ctx, newValidKarta("karta-stable-false", &gvk))).To(Succeed())
+
+		reconcile("karta-stable-false") // first reconcile: transition → events emitted
+		Expect(drainEvents(rec)).NotTo(BeEmpty())
+
+		reconcile("karta-stable-false") // second reconcile: already False → no new events
+		Expect(drainEvents(rec)).To(BeEmpty())
+	})
+
+	It("emits no events when Karta is fully ready", func() {
+		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
+		Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
+		Expect(k8s.Create(ctx, newValidKarta("karta-ready-ev", &gvk))).To(Succeed())
+
+		reconcile("karta-ready-ev")
+		for _, e := range drainEvents(rec) {
+			Expect(e).NotTo(ContainSubstring("Warning"),
+				"no Warning events expected when all conditions are True")
+		}
 	})
 })
 
