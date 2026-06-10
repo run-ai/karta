@@ -18,7 +18,7 @@ import (
 )
 
 // labeledKarta returns a Karta pre-stamped with the GVK index labels, as if
-// stepEnsureLabels had already run. Used to set up the label-selector tests.
+// ensureLabels had already run. Used to set up the label-selector tests.
 func labeledKarta(name string, gvk schema.GroupVersionKind) *kartav1alpha1.Karta {
 	k := newKarta(name, &gvk)
 	k.Labels = kartaLabels(gvk)

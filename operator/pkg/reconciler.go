@@ -20,12 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// reconcile runs the ordered step chain for one Karta.
-//
-// Status is patched via a deferred call so it always runs — even when a step
-// short-circuits with an error. Named return values let the defer propagate a
-// patch failure: if no step errored it becomes the returned error; if a step
-// already errored we log the patch failure and preserve the original error.
+// reconcile runs the reconciliation logic for one Karta.
 func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) (result ctrl.Result, err error) {
 	logger := log.FromContext(ctx).WithValues("karta", karta.Name)
 	base := karta.DeepCopy()
@@ -41,45 +36,40 @@ func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) 
 		}
 	}()
 
-	steps := []StepFn{
-		r.stepValidateKarta,
-		r.stepCheckCRDExists,
-		r.stepDeriveReady,
-		r.stepEnsureLabels,
+	r.validateKarta(logger, karta)
+	if err = r.checkCRDExists(ctx, logger, karta); err != nil {
+		return
 	}
-	for _, step := range steps {
-		if res := step(ctx, logger, karta); res.ShortCircuit() {
-			result, err = res.Result()
-			return
-		}
-	}
+	r.deriveReady(karta)
+	err = r.ensureLabels(ctx, logger, karta)
 	return
 }
 
-// stepValidateKarta runs the Karta spec validator and writes Validated.
-func (r *Reconciler) stepValidateKarta(_ context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
+// validateKarta runs the Karta spec validator and writes the Validated condition.
+func (r *Reconciler) validateKarta(logger logr.Logger, karta *kartav1alpha1.Karta) {
 	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
 		logger.V(1).Info("Karta spec validation failed", "error", err.Error())
 		setValidated(&karta.Status, metav1.ConditionFalse, err.Error())
 	} else {
 		setValidated(&karta.Status, metav1.ConditionTrue, "")
 	}
-	return Continue()
 }
 
-// stepCheckCRDExists looks up the referenced CRD and writes CRDExists.
-func (r *Reconciler) stepCheckCRDExists(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
+// checkCRDExists looks up the referenced CRD and writes the CRDExists condition.
+// It returns an error only on transient API failures; a missing CRD is not an
+// error — it sets CRDExists=False and returns nil.
+func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
 	gvk := rootGVK(karta)
 	if gvk == nil {
-		logger.V(1).Info("Karta has no root component kind; leaving CRDExists=False")
+		logger.V(1).Info("karta has no root component kind")
 		setCRDExists(&karta.Status, metav1.ConditionFalse, "")
-		return Continue()
+		return nil
 	}
 
 	exists, err := r.crdExistsForGVK(ctx, *gvk)
 	if err != nil {
 		logger.Error(err, "Failed to check CRD existence", "gvk", gvk.String())
-		return StopWithError(fmt.Errorf("check CRD existence for karta %q: %w", karta.Name, err))
+		return fmt.Errorf("check CRD existence for karta %q: %w", karta.Name, err)
 	}
 
 	if exists {
@@ -89,25 +79,23 @@ func (r *Reconciler) stepCheckCRDExists(ctx context.Context, logger logr.Logger,
 			gvk.Group, gvk.Kind, gvk.Version)
 		setCRDExists(&karta.Status, metav1.ConditionFalse, msg)
 	}
-	return Continue()
+	return nil
 }
 
-// stepDeriveReady sets Ready based on the Validated and CRDExists conditions
-// already written to karta.Status by the preceding steps.
-func (r *Reconciler) stepDeriveReady(_ context.Context, _ logr.Logger, karta *kartav1alpha1.Karta) StepResult {
+// deriveReady sets the Ready condition based on the Validated and CRDExists
+func (r *Reconciler) deriveReady(karta *kartav1alpha1.Karta) {
 	validated := conditionStatus(&karta.Status, kartav1alpha1.ConditionValidated)
 	crdExists := conditionStatus(&karta.Status, kartav1alpha1.ConditionCRDExists)
 	setReady(&karta.Status, validated, crdExists)
-	return Continue()
 }
 
-// stepEnsureLabels stamps the karta/gvk index label onto the Karta metadata
-// so that consumers can locate a Karta by GVK via a label-selector List.
+// ensureLabels stamps the karta/gvk index label onto the Karta metadata so
+// that consumers can locate a Karta by GVK via a label-selector List.
 // The value is encoded as "group__version__kind" (see LabelGVK).
-func (r *Reconciler) stepEnsureLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
+func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
 	gvk := rootGVK(karta)
 	if gvk == nil {
-		return r.removeIndexLabels(ctx, logger, karta)
+		return r.removeIndexLabel(ctx, logger, karta)
 	}
 
 	desired := map[string]string{
@@ -115,30 +103,29 @@ func (r *Reconciler) stepEnsureLabels(ctx context.Context, logger logr.Logger, k
 	}
 
 	if labelsMatch(karta.Labels, desired) {
-		return Continue()
+		return nil
 	}
 
 	patchBytes, err := json.Marshal(map[string]any{
 		"metadata": map[string]any{"labels": desired},
 	})
 	if err != nil {
-		return StopWithError(fmt.Errorf("marshal label patch for karta %q: %w", karta.Name, err))
+		return fmt.Errorf("marshal label patch for karta %q: %w", karta.Name, err)
 	}
 
 	if err = r.Patch(ctx, karta, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
-		return StopWithError(fmt.Errorf("patch labels for karta %q: %w", karta.Name, err))
+		return fmt.Errorf("patch labels for karta %q: %w", karta.Name, err)
 	}
 
 	logger.V(1).Info("Stamped GVK index label", "gvk", desired[kartav1alpha1.LabelGVK])
-	return Continue()
+	return nil
 }
 
-// removeIndexLabels deletes the karta/gvk label from the Karta metadata via a
-// JSON merge-patch (setting the key to null deletes it).
-// It is a no-op when the label is not present.
-func (r *Reconciler) removeIndexLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) StepResult {
+// removeIndexLabel deletes the karta/gvk label from the Karta metadata via a
+// JSON merge-patch. It is a no-op when the label is not present.
+func (r *Reconciler) removeIndexLabel(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
 	if _, ok := karta.Labels[kartav1alpha1.LabelGVK]; !ok {
-		return Continue()
+		return nil
 	}
 
 	patchBytes, err := json.Marshal(map[string]any{
@@ -147,15 +134,15 @@ func (r *Reconciler) removeIndexLabels(ctx context.Context, logger logr.Logger, 
 		},
 	})
 	if err != nil {
-		return StopWithError(fmt.Errorf("marshal label-removal patch for karta %q: %w", karta.Name, err))
+		return fmt.Errorf("marshal label-removal patch for karta %q: %w", karta.Name, err)
 	}
 
 	if err = r.Patch(ctx, karta, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
-		return StopWithError(fmt.Errorf("remove stale index label for karta %q: %w", karta.Name, err))
+		return fmt.Errorf("remove stale index label for karta %q: %w", karta.Name, err)
 	}
 
 	logger.V(1).Info("Removed stale GVK index label (root kind no longer set)")
-	return Continue()
+	return nil
 }
 
 // labelsMatch returns true when current already contains all desired key/value pairs.
