@@ -11,6 +11,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -36,14 +37,12 @@ func setValidated(status *kartav1alpha1.KartaStatus, s metav1.ConditionStatus, m
 	if s == metav1.ConditionFalse && msg == "" {
 		msg = msgValidationFailed
 	}
-	upsertConditions(&status.Conditions, map[kartav1alpha1.ConditionType]metav1.Condition{
-		kartav1alpha1.ConditionValidated: buildCondition(
-			kartav1alpha1.ConditionValidated,
-			s,
-			reasonForBool(s, ReasonValidationSucceeded, ReasonValidationFailed),
-			msgWhenFalse(s, msg),
-		),
-	})
+	apimeta.SetStatusCondition(&status.Conditions, buildCondition(
+		kartav1alpha1.ConditionValidated,
+		s,
+		reasonForBool(s, ReasonValidationSucceeded, ReasonValidationFailed),
+		msgWhenFalse(s, msg),
+	))
 }
 
 // setCRDExists writes the CRDExists condition. msg is placed in the condition
@@ -52,14 +51,12 @@ func setCRDExists(status *kartav1alpha1.KartaStatus, s metav1.ConditionStatus, m
 	if s == metav1.ConditionFalse && msg == "" {
 		msg = msgCRDNotFound
 	}
-	upsertConditions(&status.Conditions, map[kartav1alpha1.ConditionType]metav1.Condition{
-		kartav1alpha1.ConditionCRDExists: buildCondition(
-			kartav1alpha1.ConditionCRDExists,
-			s,
-			reasonForBool(s, ReasonCRDFound, ReasonCRDNotFound),
-			msgWhenFalse(s, msg),
-		),
-	})
+	apimeta.SetStatusCondition(&status.Conditions, buildCondition(
+		kartav1alpha1.ConditionCRDExists,
+		s,
+		reasonForBool(s, ReasonCRDFound, ReasonCRDNotFound),
+		msgWhenFalse(s, msg),
+	))
 }
 
 func setReady(status *kartav1alpha1.KartaStatus, validated, crdExists metav1.ConditionStatus) {
@@ -71,43 +68,9 @@ func setReady(status *kartav1alpha1.KartaStatus, validated, crdExists metav1.Con
 		readyReason = ReasonReady
 		readyMsg = ""
 	}
-	upsertConditions(&status.Conditions, map[kartav1alpha1.ConditionType]metav1.Condition{
-		kartav1alpha1.ConditionReady: buildCondition(
-			kartav1alpha1.ConditionReady, readyStatus, readyReason, readyMsg,
-		),
-	})
-}
-
-func upsertConditions(current *[]metav1.Condition, desired map[kartav1alpha1.ConditionType]metav1.Condition) {
-	if current == nil {
-		return
-	}
-
-	now := metav1.Now()
-	out := make([]metav1.Condition, 0, len(*current)+len(desired))
-
-	for _, existing := range *current {
-		incoming, owned := desired[kartav1alpha1.ConditionType(existing.Type)]
-		if !owned {
-			out = append(out, existing)
-			continue
-		}
-		if incoming.Status != existing.Status {
-			incoming.LastTransitionTime = now
-		} else {
-			incoming.LastTransitionTime = existing.LastTransitionTime
-		}
-		out = append(out, incoming)
-		delete(desired, kartav1alpha1.ConditionType(existing.Type))
-	}
-
-	// append any desired conditions that were not already in the list
-	for _, incoming := range desired {
-		incoming.LastTransitionTime = now
-		out = append(out, incoming)
-	}
-
-	*current = out
+	apimeta.SetStatusCondition(&status.Conditions, buildCondition(
+		kartav1alpha1.ConditionReady, readyStatus, readyReason, readyMsg,
+	))
 }
 
 // patchStatusIfChanged issues a JSON merge patch on the Karta status
@@ -140,26 +103,16 @@ func (r *Reconciler) emitFalseConditionEvents(
 		kartav1alpha1.ConditionCRDExists,
 	}
 	for _, t := range watched {
-		if conditionStatus(current, t) != metav1.ConditionFalse {
+		newCond := apimeta.FindStatusCondition(current.Conditions, string(t))
+		if newCond == nil || newCond.Status != metav1.ConditionFalse {
 			continue
 		}
-		if conditionStatus(original, t) == metav1.ConditionFalse {
-			continue
+		oldCond := apimeta.FindStatusCondition(original.Conditions, string(t))
+		if oldCond != nil && oldCond.Status == metav1.ConditionFalse {
+			continue // already False — not a new transition, skip
 		}
-		msg := conditionMessage(current, t)
-		r.recorder.Event(karta, corev1.EventTypeWarning, string(t), msg)
+		r.recorder.Event(karta, corev1.EventTypeWarning, string(t), newCond.Message)
 	}
-}
-
-// conditionMessage returns the Message field of the named condition, or an
-// empty string when the condition is not found.
-func conditionMessage(status *kartav1alpha1.KartaStatus, t kartav1alpha1.ConditionType) string {
-	for _, c := range status.Conditions {
-		if c.Type == string(t) {
-			return c.Message
-		}
-	}
-	return ""
 }
 
 func buildCondition(t kartav1alpha1.ConditionType, status metav1.ConditionStatus, reason, message string) metav1.Condition {
