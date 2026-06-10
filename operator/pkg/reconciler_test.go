@@ -561,15 +561,15 @@ var _ = Describe("Reconciler — condition-transition events", func() {
 		Expect(events).To(ContainElement(ContainSubstring("absent.run.ai")))
 	})
 
-	It("does not re-emit events on a steady-state reconcile where conditions are already False", func() {
+	It("re-emits events on every reconcile while conditions are False (k8s aggregator updates count)", func() {
 		gvk := schema.GroupVersionKind{Group: "absent.run.ai", Version: "v1", Kind: "Missing"}
 		Expect(k8s.Create(ctx, newValidKarta("karta-stable-false", &gvk))).To(Succeed())
 
-		reconcile("karta-stable-false") // first reconcile: transition → events emitted
+		reconcile("karta-stable-false")
 		Expect(drainEvents(rec)).NotTo(BeEmpty())
 
-		reconcile("karta-stable-false") // second reconcile: already False → no new events
-		Expect(drainEvents(rec)).To(BeEmpty())
+		reconcile("karta-stable-false") // still False → event fires again, aggregator increments count
+		Expect(drainEvents(rec)).NotTo(BeEmpty())
 	})
 
 	It("emits no events when Karta is fully ready", func() {

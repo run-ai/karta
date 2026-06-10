@@ -21,10 +21,11 @@ type conditionInputs struct {
 }
 
 // setConditions writes all three owned conditions at once. Used by tests.
+// Generation 0 is used since test objects don't have a real generation.
 func setConditions(status *kartav1alpha1.KartaStatus, in conditionInputs) {
-	setValidated(status, in.validated, "")
-	setCRDExists(status, in.crdExists, "")
-	setReady(status, in.validated, in.crdExists)
+	setValidated(status, 0, in.validated, "")
+	setCRDExists(status, 0, in.crdExists, "")
+	setReady(status, 0, in.validated, in.crdExists)
 }
 
 var _ = Describe("setConditions", func() {
