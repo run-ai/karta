@@ -4,8 +4,6 @@
 package pkg
 
 import (
-	"time"
-
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -69,7 +67,8 @@ var _ = Describe("setConditions", func() {
 		setConditions(status, allTrue)
 		before := transitionTimes(status.Conditions)
 
-		time.Sleep(2 * time.Millisecond)
+		// apimeta.SetStatusCondition preserves the existing LastTransitionTime
+		// when Status is unchanged — no sleep needed, this is deterministic.
 		setConditions(status, allTrue)
 		Expect(transitionTimes(status.Conditions)).To(Equal(before))
 	})
@@ -79,11 +78,13 @@ var _ = Describe("setConditions", func() {
 		setConditions(status, allFalse)
 		beforeTime := findCondition(status.Conditions, kartav1alpha1.ConditionValidated).LastTransitionTime
 
-		time.Sleep(2 * time.Millisecond)
 		setConditions(status, allTrue)
 		afterTime := findCondition(status.Conditions, kartav1alpha1.ConditionValidated).LastTransitionTime
 
-		Expect(afterTime.After(beforeTime.Time)).To(BeTrue())
+		// We only assert that the timestamp changed, not by how much.
+		// apimeta.SetStatusCondition calls metav1.NewTime(time.Now()) with
+		// nanosecond precision, so the values will differ even without a sleep.
+		Expect(afterTime).NotTo(Equal(beforeTime))
 	})
 
 	It("leaves foreign conditions untouched", func() {
