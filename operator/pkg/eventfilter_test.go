@@ -35,7 +35,7 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		k8s = fake.NewClientBuilder().WithScheme(buildScheme()).Build()
-		r = NewReconciler(k8s)
+		r = newReconciler(k8s)
 	})
 
 	It("returns nil when the object is not a CRD", func() {

@@ -33,7 +33,7 @@ var _ = Describe("Reconciler.Reconcile (lifecycle)", func() {
 			WithScheme(buildScheme()).
 			WithStatusSubresource(&kartav1alpha1.Karta{}).
 			Build()
-		r = NewReconciler(k8s)
+		r = newReconciler(k8s)
 	})
 
 	reconcileByName := func(name string) (ctrl.Result, error) {

@@ -27,18 +27,28 @@ const (
 	// controller-runtime metrics and logs.
 	ControllerName = "karta-operator"
 
-	rateLimiterBaseDelay = 500 * time.Millisecond
-	rateLimiterMaxDelay  = 60 * time.Second
+	// Default rate-limiter delays. Override via KARTA_RATE_LIMITER_BASE_DELAY
+	// and KARTA_RATE_LIMITER_MAX_DELAY environment variables.
+	DefaultRateLimiterBaseDelay = 500 * time.Millisecond
+	DefaultRateLimiterMaxDelay  = 60 * time.Second
 )
+
+// RateLimiterConfig holds the exponential back-off parameters for the
+// reconcile queue.
+type RateLimiterConfig struct {
+	BaseDelay time.Duration
+	MaxDelay  time.Duration
+}
 
 // Reconciler reconciles Karta CRs.
 type Reconciler struct {
 	client.Client
+	rateLimiter RateLimiterConfig
 }
 
 // NewReconciler constructs a new Reconciler.
-func NewReconciler(c client.Client) *Reconciler {
-	return &Reconciler{Client: c}
+func NewReconciler(c client.Client, rl RateLimiterConfig) *Reconciler {
+	return &Reconciler{Client: c, rateLimiter: rl}
 }
 
 // SetupWithManager registers the reconciler with the given manager.
@@ -58,7 +68,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		WithOptions(controller.Options{
 			RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[ctrl.Request](
-				rateLimiterBaseDelay, rateLimiterMaxDelay,
+				r.rateLimiter.BaseDelay, r.rateLimiter.MaxDelay,
 			),
 		}).
 		Complete(r)
