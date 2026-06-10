@@ -218,7 +218,7 @@ var _ = Describe("Reconciler — condition logic", func() {
 		})
 	})
 
-	Context("Label stamping (stepEnsureLabels)", func() {
+	Context("Label stamping (ensureLabels)", func() {
 		It("stamps the karta/gvk index label after the first reconcile", func() {
 			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 			Expect(k8s.Create(ctx, newKarta("karta-no-labels", &gvk))).To(Succeed())
@@ -375,7 +375,7 @@ var _ = Describe("Reconciler — label-patch failure does not block status", fun
 })
 
 // This test pins the "transient List failure must not corrupt status"
-// guarantee for stepCheckCRDExists: when the CRD list call fails we must
+// guarantee for checkCRDExists: when the CRD list call fails we must
 // neither overwrite CRDExists with a guess nor patch a Ready=False value
 // derived from that guess.
 var _ = Describe("Reconciler — CRD list failure does not corrupt status", func() {
@@ -414,18 +414,17 @@ var _ = Describe("Reconciler — CRD list failure does not corrupt status", func
 		Expect(err).To(HaveOccurred())
 		Expect(errors.Is(err, listErr)).To(BeTrue())
 
-		// Status is patched via defer so whatever stepValidateKarta wrote is
-		// persisted, but CRDExists is NOT set to False (stepCheckCRDExists
-		// short-circuited before calling setCRDExists).
-		// Labels are NOT stamped because stepEnsureLabels is in the step
-		// chain which was short-circuited.
+		// Status is patched via defer so whatever validateKarta wrote is
+		// persisted, but CRDExists is NOT set to False (checkCRDExists
+		// returned early before calling setCRDExists).
+		// Labels are NOT stamped because ensureLabels was not reached.
 		got := &kartav1alpha1.Karta{}
 		Expect(k8s.Get(ctx, client.ObjectKey{Name: "karta-list-fail"}, got)).To(Succeed())
 		_, hasCRDExists := findConditionOpt(got.Status.Conditions, kartav1alpha1.ConditionCRDExists)
 		Expect(hasCRDExists).To(BeFalse(),
 			"CRDExists must not be set to False when the CRD list call failed transiently")
 		Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelGVK),
-			"labels must not be patched when stepCheckCRDExists short-circuits")
+			"labels must not be patched when checkCRDExists returns early")
 	})
 
 	It("does not overwrite an existing CRDExists value with a guess", func() {

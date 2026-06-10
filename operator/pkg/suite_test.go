@@ -32,7 +32,7 @@ func buildScheme() *runtime.Scheme {
 }
 
 // kartaLabels returns the index label the operator stamps for the given GVK.
-// Mirrors the logic in stepEnsureLabels so tests can set up expected state.
+// Mirrors the logic in ensureLabels so tests can set up expected state.
 func kartaLabels(gvk schema.GroupVersionKind) map[string]string {
 	return map[string]string{
 		kartav1alpha1.LabelGVK: kartav1alpha1.FormatGVKLabel(gvk.Group, gvk.Version, gvk.Kind),
