@@ -2,7 +2,7 @@
 # Copyright (c) 2026 NVIDIA Corporation
 #
 # A normal (non-suspended) Job. The controller still inspects it through Karta
-# and writes the karta.run.ai/* annotations, but the pod template is immutable
+# and writes the karta/* annotations, but the pod template is immutable
 # once the Job is running, so the label injection is skipped and the controller
 # records a PodTemplateImmutable event instead.
 apiVersion: batch/v1

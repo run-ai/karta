@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Command controller-runtime runs a controller that manages batch/v1 Jobs
-// through a Karta definition stored in the cluster.
+// Command controller-runtime runs a controller that manages arbitrary workloads
+// through Karta definitions stored in the cluster.
 //
 // Unlike the offline quickstart example, this controller installs into a real
-// cluster (for example a Kind cluster), watches live Jobs, and reacts to every
-// change. It reads the workload structure from the Karta custom resource the
-// user applies (docs/samples/batch-job.yaml) rather than from code, so adding
-// support for a new workload type means applying a new Karta object, not
-// recompiling the controller.
+// cluster (for example a Kind cluster), watches live workloads, and reacts to
+// every change. The workload types it manages are configured at runtime with
+// the --watch-gvk flag, and each type's structure is read from its Karta custom
+// resource rather than from code. Managing a new workload type needs no code
+// change: add its GVK to --watch-gvk and apply its Karta object (and grant RBAC
+// for the new resource).
 //
 // See README.md for the end-to-end Kind walkthrough.
 package main
@@ -29,14 +30,26 @@ import (
 	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
+// defaultWatchGVKs is the out-of-the-box workload set. Override with --watch-gvk
+// to manage more types without rebuilding the controller.
+const defaultWatchGVKs = "batch/v1/Job,jobset.x-k8s.io/v1alpha2/JobSet"
+
 func main() {
-	var metricsAddr, probeAddr string
+	var metricsAddr, probeAddr, watchGVKs string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "address the metrics endpoint binds to")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "address the health probe binds to")
+	flag.StringVar(&watchGVKs, "watch-gvk", defaultWatchGVKs,
+		"comma-separated workload GVKs to manage, each as group/version/kind (core group is empty, e.g. /v1/Pod)")
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 	logger := ctrl.Log.WithName("setup")
+
+	gvks, err := parseGVKs(watchGVKs)
+	if err != nil {
+		logger.Error(err, "parse --watch-gvk")
+		os.Exit(1)
+	}
 
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
@@ -63,13 +76,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	reconciler := &JobReconciler{
-		Client:   mgr.GetClient(),
-		Recorder: mgr.GetEventRecorder("generic-controller"),
-	}
-	if err := reconciler.SetupWithManager(mgr); err != nil {
-		logger.Error(err, "set up reconciler")
-		os.Exit(1)
+	for _, gvk := range gvks {
+		reconciler := &WorkloadReconciler{
+			Client:   mgr.GetClient(),
+			Recorder: mgr.GetEventRecorder("generic-controller"),
+			GVK:      gvk,
+		}
+		if err := reconciler.SetupWithManager(mgr); err != nil {
+			logger.Error(err, "set up reconciler", "gvk", gvk.String())
+			os.Exit(1)
+		}
 	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -81,7 +97,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Info("starting controller")
+	logger.Info("starting controller", "watchGVKs", watchGVKs)
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		logger.Error(err, "run manager")
 		os.Exit(1)

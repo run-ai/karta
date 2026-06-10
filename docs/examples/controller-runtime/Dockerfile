@@ -2,9 +2,17 @@
 # Copyright (c) 2026 NVIDIA Corporation
 
 # Build from the repository root so the `replace github.com/run-ai/karta => ../../../`
-# directive in go.mod resolves:
-#   docker build -f docs/examples/controller-runtime/Dockerfile -t generic-controller-example:latest .
-FROM golang:1.26.3 AS build
+# directive in go.mod resolves. Keep GO_VERSION aligned with the `go` directive in
+# go.mod by deriving it at build time:
+#
+#   GO_VERSION=$(awk '/^go /{print $2}' docs/examples/controller-runtime/go.mod)
+#   docker build --build-arg GO_VERSION=$GO_VERSION \
+#     -f docs/examples/controller-runtime/Dockerfile -t generic-controller-example:latest .
+#
+# The default below is a fallback for a plain `docker build`; the command above is
+# the single source of truth.
+ARG GO_VERSION=1.26.3
+FROM golang:${GO_VERSION} AS build
 WORKDIR /src
 COPY . .
 WORKDIR /src/docs/examples/controller-runtime
