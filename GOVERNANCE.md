@@ -5,7 +5,7 @@ that will grow as the contributor community grows.
 
 ## Principles
 
-Karta is run as an open, vendor-neutral project. We aim to:
+Karta is run as an open, vendor-neutral project. The project aims to:
 
 - **Balance the interests of all stakeholders** — contributors, adopters, and the
   broader ecosystem — without favoring any single organization.
@@ -47,7 +47,7 @@ vendor-owned one. To keep it neutral:
 ## Project home and evolution
 
 Karta is committed to vendor-neutral governance. Over time the project intends to
-move to a neutral, community-governed home (a cloud native foundation) once the API
+move to a neutral, community-governed home (a cloud-native foundation) once the API
 group is vendor-neutral and the project demonstrates adoption across multiple
 organizations. Until then it is developed in the open under its current
 organization, accepting external contributions.

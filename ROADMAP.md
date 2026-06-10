@@ -2,7 +2,7 @@
 
 This document describes where Karta is headed. It is a **living document** — the
 direction is set by the community and reviewed regularly, so items move, change,
-or drop as we learn. Dates are intentionally avoided in favor of **Now / Next /
+or drop as the project learns. Dates are intentionally avoided in favor of **Now / Next /
 Later** horizons; concrete delivery is tracked in
 [GitHub issues](https://github.com/run-ai/karta/issues) and milestones.
 
@@ -91,8 +91,8 @@ vendor-neutral v1beta1.**
 
 - **Karta-aware tooling ecosystem.** Karta is most valuable when many tools read
   and act on the same description. Karta itself stays a thin, neutral contract;
-  richer behavior lives in separately-governed consumer projects. The tools we
-  intend to grow or integrate around the contract:
+  richer behavior lives in separately-governed consumer projects. The tools the
+  project intends to grow or integrate around the contract:
   - **CLI** — read-only visibility: list and drill into any Karta-described
     workload from the command line.
   - **Headlamp plugin** — the GUI face of visibility, built on the CNCF
@@ -104,7 +104,7 @@ vendor-neutral v1beta1.**
     (filter / condition / action) applied to Karta-described workloads, including
     descheduling and rebalancing.
 
-  We will document clear integration patterns so anyone can build their own
+  Clear integration patterns will be documented so anyone can build their own
   Karta-aware tool.
 - **Community engagement with related projects.** Engage the relevant upstream
   communities (workload and scheduling SIGs/TAGs, queueing and gang-scheduling
@@ -114,7 +114,7 @@ vendor-neutral v1beta1.**
 
 ---
 
-## What we are *not* doing
+## Non-goals
 
 Karta deliberately stays narrow. It describes workload **structure**; it does not
 schedule, queue, autoscale, or own a workload's lifecycle. Those belong to the
