@@ -33,7 +33,7 @@ var _ = Describe("Reconciler — lifecycle", func() {
 			WithScheme(buildScheme()).
 			WithStatusSubresource(&kartav1alpha1.Karta{}).
 			Build()
-		r = NewReconciler(k8s)
+		r = newReconciler(k8s)
 	})
 
 	reconcile := func(name string) (ctrl.Result, error) {
@@ -77,7 +77,7 @@ var _ = Describe("Reconciler — condition logic", func() {
 			WithScheme(buildScheme()).
 			WithStatusSubresource(&kartav1alpha1.Karta{}).
 			Build()
-		r = NewReconciler(k8s)
+		r = newReconciler(k8s)
 	})
 
 	reconcileAndGet := func(name string) *kartav1alpha1.Karta {
@@ -346,7 +346,7 @@ var _ = Describe("Reconciler — label-patch failure does not block status", fun
 				},
 			}).
 			Build()
-		r = NewReconciler(k8s)
+		r = newReconciler(k8s)
 	})
 
 	It("persists status conditions and returns the label-patch error", func() {
@@ -403,7 +403,7 @@ var _ = Describe("Reconciler — CRD list failure does not corrupt status", func
 				},
 			}).
 			Build()
-		r = NewReconciler(k8s)
+		r = newReconciler(k8s)
 	})
 
 	It("returns the list error and does not patch status or labels", func() {
@@ -467,7 +467,7 @@ var _ = Describe("Reconciler — detailed condition messages", func() {
 			WithScheme(buildScheme()).
 			WithStatusSubresource(&kartav1alpha1.Karta{}).
 			Build()
-		r = NewReconciler(k8s)
+		r = newReconciler(k8s)
 	})
 
 	reconcileAndGet := func(name string) *kartav1alpha1.Karta {

@@ -9,9 +9,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/run-ai/karta/operator/pkg"
 	"os"
+	"time"
 
+	"github.com/run-ai/karta/operator/pkg"
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -72,7 +73,13 @@ func run() error {
 		return fmt.Errorf("create manager: %w", err)
 	}
 
-	if err = pkg.NewReconciler(mgr.GetClient()).SetupWithManager(mgr); err != nil {
+	rl := pkg.RateLimiterConfig{
+		BaseDelay: envDuration("KARTA_RATE_LIMITER_BASE_DELAY", pkg.DefaultRateLimiterBaseDelay),
+		MaxDelay:  envDuration("KARTA_RATE_LIMITER_MAX_DELAY", pkg.DefaultRateLimiterMaxDelay),
+	}
+	logger.Info("Rate limiter configured", "baseDelay", rl.BaseDelay, "maxDelay", rl.MaxDelay)
+
+	if err = pkg.NewReconciler(mgr.GetClient(), rl).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup karta reconciler: %w", err)
 	}
 
@@ -88,4 +95,21 @@ func run() error {
 		return fmt.Errorf("manager exited: %w", err)
 	}
 	return nil
+}
+
+// envDuration reads a duration from an environment variable. If the variable
+// is unset or cannot be parsed, the provided default is returned.
+func envDuration(key string, defaultVal time.Duration) time.Duration {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return defaultVal
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		ctrl.Log.WithName("setup").Error(err,
+			"Invalid duration in env var, using default",
+			"env", key, "value", raw, "default", defaultVal)
+		return defaultVal
+	}
+	return d
 }

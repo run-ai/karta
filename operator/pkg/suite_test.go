@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestOperator(t *testing.T) {
@@ -29,6 +30,13 @@ func buildScheme() *runtime.Scheme {
 	Expect(kartav1alpha1.AddToScheme(s)).To(Succeed())
 	Expect(apiextensionsv1.AddToScheme(s)).To(Succeed())
 	return s
+}
+
+func newReconciler(k8s client.WithWatch) *Reconciler {
+	return NewReconciler(k8s, RateLimiterConfig{
+		BaseDelay: DefaultRateLimiterBaseDelay,
+		MaxDelay:  DefaultRateLimiterMaxDelay,
+	})
 }
 
 // kartaLabels returns the index label the operator stamps for the given GVK.
