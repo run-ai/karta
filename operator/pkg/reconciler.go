@@ -40,7 +40,7 @@ func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) 
 	if err = r.checkCRDExists(ctx, logger, karta); err != nil {
 		return
 	}
-	r.deriveReady(karta)
+	r.deriveReady(logger, karta)
 	err = r.ensureLabels(ctx, logger, karta)
 	return
 }
@@ -48,9 +48,10 @@ func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) 
 // validateKarta runs the Karta spec validator and writes the Validated condition.
 func (r *Reconciler) validateKarta(logger logr.Logger, karta *kartav1alpha1.Karta) {
 	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
-		logger.V(1).Info("Karta spec validation failed", "error", err.Error())
+		logger.Info("Karta spec validation failed", "error", err.Error())
 		setValidated(&karta.Status, metav1.ConditionFalse, err.Error())
 	} else {
+		logger.V(1).Info("Karta spec validated")
 		setValidated(&karta.Status, metav1.ConditionTrue, "")
 	}
 }
@@ -73,20 +74,25 @@ func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, kar
 	}
 
 	if exists {
+		logger.V(1).Info("CRD found", "gvk", gvk.String())
 		setCRDExists(&karta.Status, metav1.ConditionTrue, "")
 	} else {
 		msg := fmt.Sprintf("CRD for %s/%s not found or does not serve version %s",
 			gvk.Group, gvk.Kind, gvk.Version)
+		logger.V(1).Info("CRD not found", "gvk", gvk.String())
 		setCRDExists(&karta.Status, metav1.ConditionFalse, msg)
 	}
 	return nil
 }
 
 // deriveReady sets the Ready condition based on the Validated and CRDExists
-func (r *Reconciler) deriveReady(karta *kartav1alpha1.Karta) {
+// conditions already written to karta.Status by the preceding calls.
+func (r *Reconciler) deriveReady(logger logr.Logger, karta *kartav1alpha1.Karta) {
 	validated := conditionStatus(&karta.Status, kartav1alpha1.ConditionValidated)
 	crdExists := conditionStatus(&karta.Status, kartav1alpha1.ConditionCRDExists)
 	setReady(&karta.Status, validated, crdExists)
+	ready := conditionStatus(&karta.Status, kartav1alpha1.ConditionReady)
+	logger.V(1).Info("Derived Ready condition", "ready", ready)
 }
 
 // ensureLabels stamps the karta/gvk index label onto the Karta metadata so
@@ -162,6 +168,7 @@ func (r *Reconciler) crdExistsForGVK(ctx context.Context, gvk schema.GroupVersio
 	if err := r.List(ctx, crds); err != nil {
 		return false, fmt.Errorf("list CRDs: %w", err)
 	}
+
 	for i := range crds.Items {
 		if crdMatchesGVK(&crds.Items[i], gvk) {
 			return true, nil

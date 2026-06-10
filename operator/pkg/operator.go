@@ -82,6 +82,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	logger.V(1).Info("Reconciling Karta")
+	logger.Info("Reconciling Karta")
 	return r.reconcile(ctx, karta)
 }
