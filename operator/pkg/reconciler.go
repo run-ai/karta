@@ -11,7 +11,8 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
 	"github.com/go-logr/logr"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apis
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -47,15 +48,17 @@ func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) 
 }
 
 // validateKarta runs the Karta spec validator and writes the Validated condition.
+// A Warning event is emitted on every reconcile where validation fails so that
+// `kubectl describe karta` always shows a fresh, counted event.
 func (r *Reconciler) validateKarta(logger logr.Logger, karta *kartav1alpha1.Karta) {
 	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
 		logger.Info("Karta spec validation failed", "error", err.Error())
-		setValidated(&karta.Status, metav1.ConditionFalse, err.Error())
+		r.recorder.Event(karta, corev1.EventTypeWarning, ReasonValidationFailed, err.Error())
+		setValidated(&karta.Status, karta.Generation, metav1.ConditionFalse, err.Error())
 		return
 	}
 	logger.V(1).Info("Karta spec validated")
-	setValidated(&karta.Status, metav1.ConditionTrue, "")
-
+	setValidated(&karta.Status, karta.Generation, metav1.ConditionTrue, "")
 }
 
 // checkCRDExists looks up the referenced CRD and writes the CRDExists condition.
@@ -65,7 +68,7 @@ func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, kar
 	gvk := rootGVK(karta)
 	if gvk == nil {
 		logger.V(1).Info("karta has no root component kind")
-		setCRDExists(&karta.Status, metav1.ConditionFalse, "")
+		setCRDExists(&karta.Status, karta.Generation, metav1.ConditionFalse, "")
 		return nil
 	}
 
@@ -77,12 +80,13 @@ func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, kar
 
 	if exists {
 		logger.V(1).Info("CRD found", "gvk", gvk.String())
-		setCRDExists(&karta.Status, metav1.ConditionTrue, "")
+		setCRDExists(&karta.Status, karta.Generation, metav1.ConditionTrue, "")
 	} else {
 		msg := fmt.Sprintf("CRD for %s/%s not found or does not serve version %s",
 			gvk.Group, gvk.Kind, gvk.Version)
 		logger.V(1).Info("CRD not found", "gvk", gvk.String())
-		setCRDExists(&karta.Status, metav1.ConditionFalse, msg)
+		r.recorder.Event(karta, corev1.EventTypeWarning, ReasonCRDNotFound, msg)
+		setCRDExists(&karta.Status, karta.Generation, metav1.ConditionFalse, msg)
 	}
 	return nil
 }
@@ -96,7 +100,7 @@ func (r *Reconciler) deriveReady(logger logr.Logger, karta *kartav1alpha1.Karta)
 		}
 		return metav1.ConditionFalse
 	}
-	setReady(&karta.Status, statusOf(kartav1alpha1.ConditionValidated), statusOf(kartav1alpha1.ConditionCRDExists))
+	setReady(&karta.Status, karta.Generation, statusOf(kartav1alpha1.ConditionValidated), statusOf(kartav1alpha1.ConditionCRDExists))
 	logger.V(1).Info("Derived Ready condition", "ready", statusOf(kartav1alpha1.ConditionReady))
 }
 
