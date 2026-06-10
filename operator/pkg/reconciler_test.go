@@ -548,7 +548,7 @@ var _ = Describe("Reconciler — condition-transition events", func() {
 
 		events := drainEvents(rec)
 		Expect(events).To(ContainElement(ContainSubstring("Warning")))
-		Expect(events).To(ContainElement(ContainSubstring(string(kartav1alpha1.ConditionValidated))))
+		Expect(events).To(ContainElement(ContainSubstring(ReasonValidationFailed)))
 	})
 
 	It("emits a Warning event for CRDExists=False when the CRD is missing", func() {
@@ -557,7 +557,7 @@ var _ = Describe("Reconciler — condition-transition events", func() {
 		reconcile("karta-no-crd-ev")
 
 		events := drainEvents(rec)
-		Expect(events).To(ContainElement(ContainSubstring(string(kartav1alpha1.ConditionCRDExists))))
+		Expect(events).To(ContainElement(ContainSubstring(ReasonCRDNotFound)))
 		Expect(events).To(ContainElement(ContainSubstring("absent.run.ai")))
 	})
 
