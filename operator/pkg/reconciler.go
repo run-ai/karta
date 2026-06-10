@@ -12,7 +12,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apis
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -128,9 +128,12 @@ func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta
 		return fmt.Errorf("marshal label patch for karta %q: %w", karta.Name, err)
 	}
 
-	if err = r.Patch(ctx, karta, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
+	patchTarget := karta.DeepCopy()
+	if err = r.Patch(ctx, patchTarget, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
 		return fmt.Errorf("patch labels for karta %q: %w", karta.Name, err)
 	}
+	karta.Labels = patchTarget.Labels
+	karta.ResourceVersion = patchTarget.ResourceVersion
 
 	logger.V(1).Info("Stamped GVK index label", "gvk", desired[kartav1alpha1.LabelGVK])
 	return nil
@@ -152,9 +155,13 @@ func (r *Reconciler) removeIndexLabel(ctx context.Context, logger logr.Logger, k
 		return fmt.Errorf("marshal label-removal patch for karta %q: %w", karta.Name, err)
 	}
 
-	if err = r.Patch(ctx, karta, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
+	// Patch a copy — see note in ensureLabels.
+	patchTarget := karta.DeepCopy()
+	if err = r.Patch(ctx, patchTarget, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
 		return fmt.Errorf("remove stale index label for karta %q: %w", karta.Name, err)
 	}
+	karta.Labels = patchTarget.Labels
+	karta.ResourceVersion = patchTarget.ResourceVersion
 
 	logger.V(1).Info("Removed stale GVK index label (root kind no longer set)")
 	return nil
