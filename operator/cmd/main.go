@@ -79,7 +79,7 @@ func run() error {
 	}
 	logger.Info("Rate limiter configured", "baseDelay", rl.BaseDelay, "maxDelay", rl.MaxDelay)
 
-	if err = pkg.NewReconciler(mgr.GetClient(), rl).SetupWithManager(mgr); err != nil {
+	if err = pkg.NewReconciler(mgr.GetClient(), rl, mgr.GetEventRecorderFor(pkg.ControllerName)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup karta reconciler: %w", err)
 	}
 

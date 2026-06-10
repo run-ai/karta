@@ -50,10 +50,11 @@ func (r *Reconciler) validateKarta(logger logr.Logger, karta *kartav1alpha1.Kart
 	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
 		logger.Info("Karta spec validation failed", "error", err.Error())
 		setValidated(&karta.Status, metav1.ConditionFalse, err.Error())
-	} else {
-		logger.V(1).Info("Karta spec validated")
-		setValidated(&karta.Status, metav1.ConditionTrue, "")
+		return
 	}
+	logger.V(1).Info("Karta spec validated")
+	setValidated(&karta.Status, metav1.ConditionTrue, "")
+
 }
 
 // checkCRDExists looks up the referenced CRD and writes the CRDExists condition.

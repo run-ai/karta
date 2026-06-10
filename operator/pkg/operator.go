@@ -12,6 +12,7 @@ import (
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -44,11 +45,12 @@ type RateLimiterConfig struct {
 type Reconciler struct {
 	client.Client
 	rateLimiter RateLimiterConfig
+	recorder    record.EventRecorder
 }
 
 // NewReconciler constructs a new Reconciler.
-func NewReconciler(c client.Client, rl RateLimiterConfig) *Reconciler {
-	return &Reconciler{Client: c, rateLimiter: rl}
+func NewReconciler(c client.Client, rl RateLimiterConfig, recorder record.EventRecorder) *Reconciler {
+	return &Reconciler{Client: c, rateLimiter: rl, recorder: recorder}
 }
 
 // SetupWithManager registers the reconciler with the given manager.
