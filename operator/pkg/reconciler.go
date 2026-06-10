@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -89,11 +90,14 @@ func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, kar
 // deriveReady sets the Ready condition based on the Validated and CRDExists
 // conditions already written to karta.Status by the preceding calls.
 func (r *Reconciler) deriveReady(logger logr.Logger, karta *kartav1alpha1.Karta) {
-	validated := conditionStatus(&karta.Status, kartav1alpha1.ConditionValidated)
-	crdExists := conditionStatus(&karta.Status, kartav1alpha1.ConditionCRDExists)
-	setReady(&karta.Status, validated, crdExists)
-	ready := conditionStatus(&karta.Status, kartav1alpha1.ConditionReady)
-	logger.V(1).Info("Derived Ready condition", "ready", ready)
+	statusOf := func(t kartav1alpha1.ConditionType) metav1.ConditionStatus {
+		if c := apimeta.FindStatusCondition(karta.Status.Conditions, string(t)); c != nil {
+			return c.Status
+		}
+		return metav1.ConditionFalse
+	}
+	setReady(&karta.Status, statusOf(kartav1alpha1.ConditionValidated), statusOf(kartav1alpha1.ConditionCRDExists))
+	logger.V(1).Info("Derived Ready condition", "ready", statusOf(kartav1alpha1.ConditionReady))
 }
 
 // ensureLabels stamps the karta/gvk index label onto the Karta metadata so
@@ -188,15 +192,4 @@ func crdMatchesGVK(crd *apiextensionsv1.CustomResourceDefinition, gvk schema.Gro
 		}
 	}
 	return false
-}
-
-// conditionStatus reads the current Status of the named condition from the
-// Karta status, returning ConditionFalse when not found.
-func conditionStatus(status *kartav1alpha1.KartaStatus, t kartav1alpha1.ConditionType) metav1.ConditionStatus {
-	for _, c := range status.Conditions {
-		if c.Type == string(t) {
-			return c.Status
-		}
-	}
-	return metav1.ConditionFalse
 }
