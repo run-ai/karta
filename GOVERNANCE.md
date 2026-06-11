@@ -39,7 +39,7 @@ vendor-owned one. To keep it neutral:
   Go library. The API group and the library follow a documented versioning and
   deprecation policy so that any downstream project — regardless of vendor — can
   depend on Karta with predictable upgrade expectations. (This is why the roadmap
-  prioritizes moving off a vendor-prefixed API group before the API stabilizes.)
+  includes moving off a vendor-prefixed API group before the API stabilizes.)
 - **Open contribution and review.** Contributors and adopters get a fair
   opportunity to reach consensus on features and PRs through the public review
   process, without one organization's priorities overriding the community's.
