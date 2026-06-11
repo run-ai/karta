@@ -46,34 +46,28 @@ of the roadmap is itself public and reviewable.
   #67–#72 (core logic, conditions, packaging, end-to-end tests).
 - **Validated, non-rotting examples.** Automated tests that check the bundled
   Karta definitions against the upstream CRDs they target, so the
-  [`docs/examples/`](docs/examples/) set stays correct as upstream APIs evolve.
+  [`docs/samples/`](docs/samples/) set stays correct as upstream APIs evolve.
   Tracked by [#79](https://github.com/run-ai/karta/issues/79).
 - **Workload visibility.** Tooling to render and explore the structure of any
-  Karta-described workload — the most approachable on-ramp to the project.
-  Tracked by [#32](https://github.com/run-ai/karta/issues/32).
-
-## Next
-
-**Theme: deepen the contract — discovery, hierarchy, breadth — on the path to a
-vendor-neutral v1beta1.**
-
-- **Workload tree / hierarchy.** First-class representation and traversal of a
-  workload's full resource tree — root component down through child components to
-  the pods — so consumers can reason about and render the whole structure, not
-  just individual fields. This is the structural backbone the visibility tooling
-  renders.
+  Karta-described workload — the most approachable on-ramp to the project. This
+  rests on a first-class workload tree: traversal of a workload's full resource
+  tree, from the root component down through child components to the pods, so
+  consumers can reason about and render the whole structure rather than individual
+  fields. Tracked by [#32](https://github.com/run-ai/karta/issues/32).
 - **Karta as a registry.** A discoverable catalog of Karta definitions, so the
   community can publish, find, and reuse descriptions for common workload types
   instead of every consumer re-bundling its own copies. Turns the bundled
-  `docs/examples/` set into a shared, versioned source the ecosystem can pull from.
+  `docs/samples/` set into a shared, versioned source the ecosystem can pull from.
+
+## Next
+
+**Theme: deepen the contract — breadth and richer expressions — on the path to a
+vendor-neutral v1beta1.**
+
 - **Broader, tested workload coverage.** Expand the pre-built, tested example set
   and keep pace with upstream APIs of the workloads Karta describes — including
   **Kubeflow Trainer v2** and Dynamo `v1beta1`
   ([#78](https://github.com/run-ai/karta/issues/78)).
-- **Vendor-neutral API group.** Move the Karta API off the current
-  `run.ai`-prefixed group to a neutral group **before** the API stabilizes, so
-  adopters never have to migrate a vendor-prefixed group later. This is a
-  prerequisite for vendor-neutral governance (see [GOVERNANCE.md](GOVERNANCE.md)).
 - **API versioning toward v1beta1.** A documented versioning and deprecation
   policy, and graduation of the CRD from `v1alpha1` toward `v1beta1` as the
   schema settles.
@@ -89,6 +83,10 @@ vendor-neutral v1beta1.**
 
 *Later items are directional, not commitments — order and shape will change with community input.*
 
+- **Vendor-neutral API group.** Move the Karta API off the current
+  `run.ai`-prefixed group to a neutral group **before** the API stabilizes, so
+  adopters never have to migrate a vendor-prefixed group later. This is a
+  prerequisite for vendor-neutral governance (see [GOVERNANCE.md](GOVERNANCE.md)).
 - **Karta-aware tooling ecosystem.** Karta is most valuable when many tools read
   and act on the same description. Karta itself stays a thin, neutral contract;
   richer behavior lives in separately-governed consumer projects. The tools the
@@ -126,7 +124,7 @@ it stay vendor-neutral and broadly adoptable.
 - Browse [open issues](https://github.com/run-ai/karta/issues) and look for
   `good first issue` and `help wanted` labels.
 - Have a workload type Karta should describe? Open an issue or contribute an
-  example to [`docs/examples/`](docs/examples/).
+  example to [`docs/samples/`](docs/samples/).
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) to get started (DCO sign-off required).
 
 *This roadmap is reviewed regularly and updated as priorities shift with
