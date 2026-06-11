@@ -32,7 +32,7 @@ manifests: controller-gen ## Generate CRD manifests
 
 .PHONY: generate
 generate: controller-gen ## Generate DeepCopy methods
-	$(CONTROLLER_GEN) object paths="./..."
+	$(CONTROLLER_GEN) object paths="./pkg/..."
 
 .PHONY: generate-mocks
 generate-mocks: ## Generate mocks using go generate
