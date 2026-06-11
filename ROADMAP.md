@@ -16,6 +16,10 @@ any Kubernetes workload** — so that schedulers, controllers, dashboards, and
 platforms can inspect, modify, and manage any workload type without writing
 bespoke per-CRD code.
 
+This removes the burden on workload-agnostic tools of diving into the internals
+of each workload type's operator. A tested, verified Karta encodes that structure
+once, so every consumer relies on the same vetted description.
+
 Success looks like: a workload type (built-in, Kubeflow, Ray, KServe, a custom
 CRD, or one that does not exist yet) can be described once with a Karta, and any
 Karta-aware tool understands it for free.
@@ -58,6 +62,7 @@ of the roadmap is itself public and reviewable.
   community can publish, find, and reuse descriptions for common workload types
   instead of every consumer re-bundling its own copies. Turns the bundled
   `docs/samples/` set into a shared, versioned source the ecosystem can pull from.
+  Tracked by [#86](https://github.com/run-ai/karta/issues/86).
 
 ## Next
 
@@ -89,8 +94,8 @@ vendor-neutral v1beta1.**
   prerequisite for vendor-neutral governance (see [GOVERNANCE.md](GOVERNANCE.md)).
 - **Karta-aware tooling ecosystem.** Karta is most valuable when many tools read
   and act on the same description. Karta itself stays a thin, neutral contract;
-  richer behavior lives in separately-governed consumer projects. The tools the
-  project intends to grow or integrate around the contract:
+  richer behavior lives in separate projects across the Karta ecosystem. Examples
+  of such ecosystem projects that read and act on the contract:
   - **CLI** — read-only visibility: list and drill into any Karta-described
     workload from the command line.
   - **Headlamp plugin** — the GUI face of visibility, built on the CNCF
