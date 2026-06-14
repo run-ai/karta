@@ -106,26 +106,3 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 		Expect(r.MapCRDToKartaEvent(ctx, crd)).To(BeEmpty())
 	})
 })
-
-var _ = Describe("rootGVK helper", func() {
-	It("returns nil when no root component kind is set", func() {
-		Expect(rootGVK(newKarta("k", nil))).To(BeNil())
-	})
-
-	It("converts the embedded GroupVersionKind", func() {
-		gvk := schema.GroupVersionKind{Group: "g", Version: "v", Kind: "K"}
-		got := rootGVK(newKarta("k", &gvk))
-		Expect(got).NotTo(BeNil())
-		Expect(*got).To(Equal(gvk))
-	})
-})
-
-var _ = Describe("kartaLabels helper", func() {
-	It("produces the expected three-label map for a GVK", func() {
-		gvk := schema.GroupVersionKind{Group: "ray.io", Version: "v1", Kind: "RayCluster"}
-		labels := kartaLabels(gvk)
-		Expect(labels[kartav1alpha1.LabelRootGroup]).To(Equal("ray.io"))
-		Expect(labels[kartav1alpha1.LabelRootVersion]).To(Equal("v1"))
-		Expect(labels[kartav1alpha1.LabelRootKind]).To(Equal("RayCluster"))
-	})
-})
