@@ -21,9 +21,6 @@ rules:
   - apiGroups: ["leaderworkerset.x-k8s.io"]
     resources: ["leaderworkersets"]
     verbs: ["get", "list", "watch", "update", "patch"]
-  - apiGroups: [ "jobset.x-k8s.io" ]
-    resources: [ "jobsets" ]
-    verbs: [ "get", "list", "watch", "update", "patch" ]
   # The Karta definition the controller reads at runtime.
   - apiGroups: ["run.ai"]
     resources: ["kartas"]
