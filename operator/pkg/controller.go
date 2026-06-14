@@ -187,17 +187,19 @@ func (r *Reconciler) deriveReady(logger logr.Logger, karta *kartav1alpha1.Karta)
 	logger.V(1).Info("Derived Ready condition", "ready", statusOf(kartav1alpha1.ConditionReady))
 }
 
-// ensureLabels stamps the karta/gvk index label onto the Karta metadata so
-// that consumers can locate a Karta by GVK via a label-selector List.
-// The value is encoded as "group__version__kind" (see LabelGVK).
+// ensureLabels stamps the three GVK index labels (run.ai/karta-group,
+// run.ai/karta-version, run.ai/karta-kind) onto the Karta metadata so that
+// consumers can locate a Karta by GVK via a label-selector List.
 func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
 	gvk := rootGVK(karta)
 	if gvk == nil {
-		return r.removeIndexLabel(ctx, logger, karta)
+		return r.removeIndexLabels(ctx, logger, karta)
 	}
 
 	desired := map[string]string{
-		kartav1alpha1.LabelGVK: kartav1alpha1.FormatGVKLabel(gvk.Group, gvk.Version, gvk.Kind),
+		kartav1alpha1.LabelRootGroup:   gvk.Group,
+		kartav1alpha1.LabelRootVersion: gvk.Version,
+		kartav1alpha1.LabelRootKind:    gvk.Kind,
 	}
 
 	if labelsMatch(karta.Labels, desired) {
@@ -218,20 +220,26 @@ func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta
 	karta.Labels = patchTarget.Labels
 	karta.ResourceVersion = patchTarget.ResourceVersion
 
-	logger.V(1).Info("Stamped GVK index label", "gvk", desired[kartav1alpha1.LabelGVK])
+	logger.V(1).Info("Stamped GVK index labels",
+		"group", gvk.Group, "version", gvk.Version, "kind", gvk.Kind)
 	return nil
 }
 
-// removeIndexLabel deletes the karta/gvk label from the Karta metadata via a
-// JSON merge-patch. It is a no-op when the label is not present.
-func (r *Reconciler) removeIndexLabel(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
-	if _, ok := karta.Labels[kartav1alpha1.LabelGVK]; !ok {
+// removeIndexLabels deletes the three GVK index labels from the Karta metadata
+// via a JSON merge-patch (setting each key to null removes it).
+// It is a no-op when none of the labels are present.
+func (r *Reconciler) removeIndexLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
+	if !hasAnyIndexLabel(karta.Labels) {
 		return nil
 	}
 
 	patchBytes, err := json.Marshal(map[string]any{
 		"metadata": map[string]any{
-			"labels": map[string]any{kartav1alpha1.LabelGVK: nil},
+			"labels": map[string]any{
+				kartav1alpha1.LabelRootGroup:   nil,
+				kartav1alpha1.LabelRootVersion: nil,
+				kartav1alpha1.LabelRootKind:    nil,
+			},
 		},
 	})
 	if err != nil {
@@ -241,12 +249,12 @@ func (r *Reconciler) removeIndexLabel(ctx context.Context, logger logr.Logger, k
 	// Patch a copy — see note in ensureLabels.
 	patchTarget := karta.DeepCopy()
 	if err = r.Patch(ctx, patchTarget, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
-		return fmt.Errorf("remove stale index label for karta %q: %w", karta.Name, err)
+		return fmt.Errorf("remove stale index labels for karta %q: %w", karta.Name, err)
 	}
 	karta.Labels = patchTarget.Labels
 	karta.ResourceVersion = patchTarget.ResourceVersion
 
-	logger.V(1).Info("Removed stale GVK index label (root kind no longer set)")
+	logger.V(1).Info("Removed stale GVK index labels (root kind no longer set)")
 	return nil
 }
 
@@ -258,6 +266,37 @@ func labelsMatch(current, desired map[string]string) bool {
 		}
 	}
 	return true
+}
+
+// hasAnyIndexLabel reports whether the Karta has any of the three GVK index labels.
+func hasAnyIndexLabel(labels map[string]string) bool {
+	if len(labels) == 0 {
+		return false
+	}
+	for _, k := range []string{
+		kartav1alpha1.LabelRootGroup,
+		kartav1alpha1.LabelRootVersion,
+		kartav1alpha1.LabelRootKind,
+	} {
+		if _, ok := labels[k]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+// rootGVK extracts the GroupVersionKind of the Karta root component, or nil
+// when the Karta has no root component kind defined.
+func rootGVK(karta *kartav1alpha1.Karta) *schema.GroupVersionKind {
+	kind := karta.Spec.StructureDefinition.RootComponent.Kind
+	if kind == nil {
+		return nil
+	}
+	return &schema.GroupVersionKind{
+		Group:   kind.Group,
+		Version: kind.Version,
+		Kind:    kind.Kind,
+	}
 }
 
 // crdExistsForGVK reports whether a CRD serving the given group, version and

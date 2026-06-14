@@ -52,11 +52,13 @@ func newReconcilerWithRecorder(k8s client.WithWatch) (*Reconciler, *record.FakeR
 	return NewReconciler(k8s, defaultRLConfig, rec), rec
 }
 
-// kartaLabels returns the index label the operator stamps for the given GVK.
+// kartaLabels returns the three GVK index labels the operator stamps for the given GVK.
 // Mirrors the logic in ensureLabels so tests can set up expected state.
 func kartaLabels(gvk schema.GroupVersionKind) map[string]string {
 	return map[string]string{
-		kartav1alpha1.LabelGVK: kartav1alpha1.FormatGVKLabel(gvk.Group, gvk.Version, gvk.Kind),
+		kartav1alpha1.LabelRootGroup:   gvk.Group,
+		kartav1alpha1.LabelRootVersion: gvk.Version,
+		kartav1alpha1.LabelRootKind:    gvk.Kind,
 	}
 }
 
@@ -73,18 +75,6 @@ func newKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Karta {
 			Group:   gvk.Group,
 			Version: gvk.Version,
 			Kind:    gvk.Kind,
-		}
-	}
-	return k
-}
-
-// newValidKarta builds a Karta that passes KartaValidator.Validate(): it has
-// a root component with a full GVK and a minimal StatusDefinition.
-func newValidKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Karta {
-	k := newKarta(name, gvk)
-	if gvk != nil {
-		k.Spec.StructureDefinition.RootComponent.StatusDefinition = &kartav1alpha1.StatusDefinition{
-			StatusMappings: kartav1alpha1.StatusMappings{},
 		}
 	}
 	return k

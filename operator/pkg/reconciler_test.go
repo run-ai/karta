@@ -233,16 +233,17 @@ var _ = Describe("Reconciler — condition logic", func() {
 	})
 
 	Context("Label stamping (ensureLabels)", func() {
-		It("stamps the karta/gvk index label after the first reconcile", func() {
+		It("stamps the three GVK index labels after the first reconcile", func() {
 			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 			Expect(k8s.Create(ctx, newKarta("karta-no-labels", &gvk))).To(Succeed())
 
 			got := reconcileAndGet("karta-no-labels")
-			Expect(got.Labels[kartav1alpha1.LabelGVK]).To(Equal(
-				kartav1alpha1.FormatGVKLabel(gvk.Group, gvk.Version, gvk.Kind)))
+			Expect(got.Labels[kartav1alpha1.LabelRootGroup]).To(Equal(gvk.Group))
+			Expect(got.Labels[kartav1alpha1.LabelRootVersion]).To(Equal(gvk.Version))
+			Expect(got.Labels[kartav1alpha1.LabelRootKind]).To(Equal(gvk.Kind))
 		})
 
-		It("updates the label when root GVK changes", func() {
+		It("updates labels when root GVK changes", func() {
 			oldGVK := schema.GroupVersionKind{Group: "old.run.ai", Version: "v1", Kind: "Old"}
 			k := newKarta("karta-stale-labels", &oldGVK)
 			k.Labels = kartaLabels(oldGVK)
@@ -256,8 +257,9 @@ var _ = Describe("Reconciler — condition logic", func() {
 			Expect(k8s.Update(ctx, k)).To(Succeed())
 
 			got := reconcileAndGet("karta-stale-labels")
-			Expect(got.Labels[kartav1alpha1.LabelGVK]).To(Equal(
-				kartav1alpha1.FormatGVKLabel(newGVK.Group, newGVK.Version, newGVK.Kind)))
+			Expect(got.Labels[kartav1alpha1.LabelRootGroup]).To(Equal(newGVK.Group))
+			Expect(got.Labels[kartav1alpha1.LabelRootVersion]).To(Equal(newGVK.Version))
+			Expect(got.Labels[kartav1alpha1.LabelRootKind]).To(Equal(newGVK.Kind))
 		})
 
 		It("preserves unrelated labels", func() {
@@ -268,7 +270,7 @@ var _ = Describe("Reconciler — condition logic", func() {
 
 			got := reconcileAndGet("karta-extra-labels")
 			Expect(got.Labels["custom/label"]).To(Equal("keep-me"))
-			Expect(got.Labels).To(HaveKey(kartav1alpha1.LabelGVK))
+			Expect(got.Labels).To(HaveKey(kartav1alpha1.LabelRootGroup))
 		})
 
 		It("does not patch labels when they are already correct", func() {
@@ -287,10 +289,10 @@ var _ = Describe("Reconciler — condition logic", func() {
 		It("skips label stamping when Karta has no root kind", func() {
 			Expect(k8s.Create(ctx, newKarta("karta-no-kind", nil))).To(Succeed())
 			got := reconcileAndGet("karta-no-kind")
-			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelGVK))
+			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup))
 		})
 
-		It("removes the karta/gvk label when root kind is removed from spec", func() {
+		It("removes the GVK index labels when root kind is removed from spec", func() {
 			oldGVK := schema.GroupVersionKind{Group: "old.run.ai", Version: "v1", Kind: "Old"}
 			k := newKarta("karta-lost-kind", &oldGVK)
 			k.Labels = kartaLabels(oldGVK)
@@ -301,7 +303,9 @@ var _ = Describe("Reconciler — condition logic", func() {
 			Expect(k8s.Update(ctx, k)).To(Succeed())
 
 			got := reconcileAndGet("karta-lost-kind")
-			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelGVK))
+			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup))
+			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootVersion))
+			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootKind))
 			Expect(got.Labels["custom/label"]).To(Equal("keep-me"))
 		})
 
@@ -383,8 +387,8 @@ var _ = Describe("Reconciler — label-patch failure does not block status", fun
 		Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionReady).Status).
 			To(Equal(metav1.ConditionTrue))
 
-		// And the label is still missing — the next reconcile will retry.
-		Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelGVK))
+		// And the labels are still missing — the next reconcile will retry.
+		Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup))
 	})
 })
 
@@ -437,7 +441,7 @@ var _ = Describe("Reconciler — CRD list failure does not corrupt status", func
 		_, hasCRDExists := findConditionOpt(got.Status.Conditions, kartav1alpha1.ConditionCRDExists)
 		Expect(hasCRDExists).To(BeFalse(),
 			"CRDExists must not be set to False when the CRD list call failed transiently")
-		Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelGVK),
+		Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup),
 			"labels must not be patched when checkCRDExists returns early")
 	})
 
@@ -591,4 +595,16 @@ func transitionTimes(conds []metav1.Condition) map[string]metav1.Time {
 		out[c.Type] = c.LastTransitionTime
 	}
 	return out
+}
+
+// newValidKarta builds a Karta that passes KartaValidator.Validate(): it has
+// a root component with a full GVK and a minimal StatusDefinition.
+func newValidKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Karta {
+	k := newKarta(name, gvk)
+	if gvk != nil {
+		k.Spec.StructureDefinition.RootComponent.StatusDefinition = &kartav1alpha1.StatusDefinition{
+			StatusMappings: kartav1alpha1.StatusMappings{},
+		}
+	}
+	return k
 }
