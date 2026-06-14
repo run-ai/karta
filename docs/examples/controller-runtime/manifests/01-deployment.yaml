@@ -26,7 +26,7 @@ spec:
           # Workload types to manage, as group/version/kind (core group empty).
           # Add a type here, apply its Karta object, and grant RBAC below.
           args:
-            - --watch-gvk=batch/v1/Job,jobset.x-k8s.io/v1alpha2/JobSet
+            - --watch-gvk=leaderworkerset.x-k8s.io/v1/LeaderWorkerSet,jobset.x-k8s.io/v1alpha2/JobSet
           ports:
             - name: metrics
               containerPort: 8080

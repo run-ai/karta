@@ -182,7 +182,7 @@ The [Dynamo Karta](docs/samples/dynamo.yaml) shows Karta handling a real-world m
 Two runnable examples live under [`docs/examples/`](docs/examples/):
 
 - [quickstart](docs/examples/quickstart/) - reads and mutates a JobSet and a LeaderWorkerSet offline, no cluster required. The fastest way to see the uniform API in action.
-- [controller-runtime](docs/examples/controller-runtime/) - a controller-runtime manager you install into a Kind cluster. It watches live Job and JobSet workloads, then inspects and mutates them through Karta with no per-CRD code. Adding more workload types is a flag change, not a rebuild.
+- [controller-runtime](docs/examples/controller-runtime/) - a controller-runtime manager you install into a Kind cluster. It watches live LeaderWorkerSet workloads, then inspects and mutates them through Karta with no per-CRD code. Adding more workload types is a flag change, not a rebuild.
 
 ## Who Uses Karta?
 

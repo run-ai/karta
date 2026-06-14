@@ -12,7 +12,7 @@
 apiVersion: jobset.x-k8s.io/v1alpha2
 kind: JobSet
 metadata:
-  name: karta-demo-jobset
+  name: karta-demo-jobset-suspended
 spec:
   suspend: true
   replicatedJobs:

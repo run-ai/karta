@@ -35,8 +35,7 @@ const (
 	annotationMemory   = "karta/memory-request"
 	annotationGPU      = "karta/gpu-request"
 
-	// managedByLabel is injected into pod templates. Pod templates are immutable
-	// while a workload runs, so this is applied only while it is suspended.
+	// managedByLabel is injected into every pod-bearing component's template through Karta.
 	managedByLabelKey   = "app.kubernetes.io/managed-by"
 	managedByLabelValue = "karta"
 	gpuResourceName     = "nvidia.com/gpu"
@@ -78,8 +77,8 @@ type WorkloadReconciler struct {
 
 // Reconcile reacts to every change of a watched workload (and to changes of the
 // Karta definition itself). The body contains no switch on workload kind: the
-// Karta object absorbs all structural differences, whether the pod template
-// lives on the root (Job) or in child components (JobSet).
+// Karta object absorbs all structural differences, wherever the pod templates
+// live (for a LeaderWorkerSet, in its leader and worker child components).
 func (r *WorkloadReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	logger := log.FromContext(ctx)
 
@@ -96,7 +95,8 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 		return reconcile.Result{}, err
 	}
 
-	// Step 1: fetch the workload as an unstructured object.
+	// Step 1: fetch the workload as an unstructured object. Remember the status
+	// the controller recorded last time so we can detect a transition below.
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(r.GVK)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
@@ -105,6 +105,7 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 		}
 		return reconcile.Result{}, fmt.Errorf("get %s %s: %w", r.GVK.Kind, req.NamespacedName, err)
 	}
+	previousStatus := obj.GetAnnotations()[annotationStatus]
 
 	// Step 2: the single Karta entry point for all read and write operations.
 	factory := resource.NewComponentFactoryFromObject(karta, obj)
@@ -115,34 +116,28 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 
 	// Step 3: inspect status, scale and resource requests uniformly across every
 	// component (root and children), regardless of where pods are defined.
-	summary, suspended, err := inspect(ctx, factory, components)
+	summary, err := inspect(ctx, factory, components)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Step 4: inject the managed-by label into every pod-bearing component while
-	// the workload sits in its mutable window. Pod templates are immutable while
-	// a workload runs, so for a running workload the label is skipped and an
-	// event explains why.
-	labelChanged := false
-	if suspended {
-		changed, err := injectPodTemplateLabels(ctx, components)
+	// Step 4: inject the managed-by label into every pod-bearing component
+	// through Karta. Karta routes each update to the right path in the workload.
+	labelChanged, err := injectPodTemplateLabels(ctx, components)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if labelChanged {
+		// GetResource hands back the full mutated object (all component updates
+		// applied); continue on it so a single Update persists both the labels
+		// and the annotations below.
+		mutated, err := factory.GetResource()
 		if err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("get mutated resource: %w", err)
 		}
-		labelChanged = changed
-		if labelChanged {
-			// GetResource hands back the full mutated object (all component
-			// updates applied); continue on it so a single Update persists both
-			// the labels and the annotations below.
-			mutated, err := factory.GetResource()
-			if err != nil {
-				return reconcile.Result{}, fmt.Errorf("get mutated resource: %w", err)
-			}
-			obj = mutated.(*unstructured.Unstructured)
-			r.Recorder.Eventf(obj, nil, corev1.EventTypeNormal, "PodTemplateLabeled", "InjectLabel",
-				"Injected pod-template label %s=%s via Karta", managedByLabelKey, managedByLabelValue)
-		}
+		obj = mutated.(*unstructured.Unstructured)
+		r.Recorder.Eventf(obj, nil, corev1.EventTypeNormal, "PodTemplateLabeled", "InjectLabel",
+			"Injected pod-template label %s=%s via Karta", managedByLabelKey, managedByLabelValue)
 	}
 
 	// Step 5: report the inspection on the workload's own metadata. Object
@@ -159,16 +154,23 @@ func (r *WorkloadReconciler) Reconcile(ctx context.Context, req reconcile.Reques
 		}
 		return reconcile.Result{}, fmt.Errorf("update %s %s: %w", r.GVK.Kind, req.NamespacedName, err)
 	}
-	if !suspended {
-		r.Recorder.Eventf(obj, nil, corev1.EventTypeNormal, "PodTemplateImmutable", "InjectLabel",
-			"Pod template is immutable while the workload runs; suspend it to inject labels")
+
+	// Emit a status event only on a real transition between two known statuses.
+	// Undefined moments are skipped (their status key was omitted), so this never reports phantom changes.
+	if newStatus := summary[annotationStatus]; newStatus != "" {
+		if previousStatus == "" {
+			r.Recorder.Eventf(obj, nil, corev1.EventTypeNormal, "StatusRecorded", "Inspect",
+				"Recorded initial workload status: %s (replicas=%s cpu=%s memory=%s gpu=%s)",
+				newStatus, summary[annotationReplicas],
+				summary[annotationCPU], summary[annotationMemory], summary[annotationGPU])
+		}
+		if previousStatus != "" && newStatus != previousStatus {
+			r.Recorder.Eventf(obj, nil, corev1.EventTypeNormal, "StatusChanged", "Inspect",
+				"Workload status changed: %s -> %s (replicas=%s cpu=%s memory=%s gpu=%s)",
+				previousStatus, newStatus, summary[annotationReplicas],
+				summary[annotationCPU], summary[annotationMemory], summary[annotationGPU])
+		}
 	}
-	r.Recorder.Eventf(obj, nil, corev1.EventTypeNormal, "Inspected", "Inspect",
-		"Karta: status=%s replicas=%s cpu=%s memory=%s gpu=%s",
-		summary[annotationStatus], summary[annotationReplicas],
-		summary[annotationCPU], summary[annotationMemory], summary[annotationGPU])
-	logger.Info("reconciled", "gvk", r.GVK.Kind, "workload", req.NamespacedName,
-		"status", summary[annotationStatus], "suspended", suspended)
 	return reconcile.Result{}, nil
 }
 
@@ -189,29 +191,20 @@ func allComponents(factory *resource.ComponentFactory) ([]*resource.Component, e
 
 // inspect reads the unified status from the root and aggregates replica counts
 // and resource requests across all components. It returns the annotation summary
-// and whether the workload is currently suspended (its pod-template mutable
-// window).
-func inspect(ctx context.Context, factory *resource.ComponentFactory, components []*resource.Component) (map[string]string, bool, error) {
+// to write back to the workload.
+func inspect(ctx context.Context, factory *resource.ComponentFactory, components []*resource.Component) (map[string]string, error) {
 	root, err := factory.GetRootComponent()
 	if err != nil {
-		return nil, false, fmt.Errorf("get root component: %w", err)
+		return nil, fmt.Errorf("get root component: %w", err)
 	}
 	status, err := root.GetStatus(ctx)
 	if err != nil {
-		return nil, false, fmt.Errorf("get status: %w", err)
+		return nil, fmt.Errorf("get status: %w", err)
 	}
 
-	suspended := false
-	statuses := make([]string, 0, len(status.MatchedStatuses))
+	matched := make(map[v1alpha1.ResourceStatus]bool, len(status.MatchedStatuses))
 	for _, s := range status.MatchedStatuses {
-		statuses = append(statuses, string(s))
-		if s == v1alpha1.SuspendedStatus {
-			suspended = true
-		}
-	}
-	statusText := strings.Join(statuses, ",")
-	if statusText == "" {
-		statusText = string(v1alpha1.UndefinedStatus)
+		matched[s] = true
 	}
 
 	replicas := int32(0)
@@ -219,7 +212,7 @@ func inspect(ctx context.Context, factory *resource.ComponentFactory, components
 	for _, comp := range components {
 		scales, err := comp.GetScale(ctx)
 		if err != nil {
-			return nil, false, fmt.Errorf("get scale for %s: %w", comp.Name(), err)
+			return nil, fmt.Errorf("get scale for %s: %w", comp.Name(), err)
 		}
 		for _, scale := range scales {
 			if scale.Replicas != nil {
@@ -232,7 +225,7 @@ func inspect(ctx context.Context, factory *resource.ComponentFactory, components
 		}
 		podTemplateSpecs, err := comp.GetPodTemplateSpec(ctx)
 		if err != nil {
-			return nil, false, fmt.Errorf("get pod template spec for %s: %w", comp.Name(), err)
+			return nil, fmt.Errorf("get pod template spec for %s: %w", comp.Name(), err)
 		}
 		for _, pts := range podTemplateSpecs {
 			for _, c := range pts.Spec.Containers {
@@ -249,13 +242,42 @@ func inspect(ctx context.Context, factory *resource.ComponentFactory, components
 	}
 
 	summary := map[string]string{
-		annotationStatus:   statusText,
 		annotationReplicas: fmt.Sprintf("%d", replicas),
 		annotationCPU:      cpu.String(),
 		annotationMemory:   mem.String(),
 		annotationGPU:      gpu.String(),
 	}
-	return summary, suspended, nil
+	// Record a single canonical status. When no mapping matches (an undefined
+	// moment between real states) the status key is omitted, so the controller
+	// keeps the last known status instead of flapping through "Undefined".
+	if canonical := canonicalStatus(matched); canonical != "" {
+		summary[annotationStatus] = canonical
+	}
+	return summary, nil
+}
+
+// statusPriority orders Karta statuses from most to least significant. A
+// workload can match several mappings at once; the controller reports only the
+// highest-priority one so callers see a single, stable phase.
+var statusPriority = []v1alpha1.ResourceStatus{
+	v1alpha1.FailedStatus,
+	v1alpha1.CompletedStatus,
+	v1alpha1.RunningStatus,
+	v1alpha1.InitializingStatus,
+	v1alpha1.SuspendedStatus,
+	v1alpha1.SuspendingStatus,
+	v1alpha1.DegradedStatus,
+}
+
+// canonicalStatus returns the highest-priority matched status, or "" when none
+// matched.
+func canonicalStatus(matched map[v1alpha1.ResourceStatus]bool) string {
+	for _, s := range statusPriority {
+		if matched[s] {
+			return string(s)
+		}
+	}
+	return ""
 }
 
 // applyAnnotations writes the summary onto the object and reports whether any

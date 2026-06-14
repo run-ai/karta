@@ -32,7 +32,7 @@ import (
 
 // defaultWatchGVKs is the out-of-the-box workload set. Override with --watch-gvk
 // to manage more types without rebuilding the controller.
-const defaultWatchGVKs = "batch/v1/Job,jobset.x-k8s.io/v1alpha2/JobSet"
+const defaultWatchGVKs = "leaderworkerset.x-k8s.io/v1/LeaderWorkerSet"
 
 func main() {
 	var metricsAddr, probeAddr, watchGVKs string

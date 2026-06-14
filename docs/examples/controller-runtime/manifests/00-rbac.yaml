@@ -16,13 +16,14 @@ kind: ClusterRole
 metadata:
   name: generic-controller
 rules:
-  # The workloads this example manages.
-  - apiGroups: ["batch"]
-    resources: ["jobs"]
+  # The workload this example manages. Add a rule here for each extra type you
+  # configure via --watch-gvk.
+  - apiGroups: ["leaderworkerset.x-k8s.io"]
+    resources: ["leaderworkersets"]
     verbs: ["get", "list", "watch", "update", "patch"]
-  - apiGroups: ["jobset.x-k8s.io"]
-    resources: ["jobsets"]
-    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: [ "jobset.x-k8s.io" ]
+    resources: [ "jobsets" ]
+    verbs: [ "get", "list", "watch", "update", "patch" ]
   # The Karta definition the controller reads at runtime.
   - apiGroups: ["run.ai"]
     resources: ["kartas"]
