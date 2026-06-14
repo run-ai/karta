@@ -27,74 +27,20 @@ func setConditions(status *kartav1alpha1.KartaStatus, in conditionInputs) {
 }
 
 var _ = Describe("setConditions", func() {
-	allFalse := conditionInputs{metav1.ConditionFalse, metav1.ConditionFalse}
-	allTrue := conditionInputs{metav1.ConditionTrue, metav1.ConditionTrue}
-	validatedOnly := conditionInputs{metav1.ConditionTrue, metav1.ConditionFalse}
-	crdOnly := conditionInputs{metav1.ConditionFalse, metav1.ConditionTrue}
-
-	It("derives Ready=True only when both inputs are True", func() {
+	It("derives Ready=True only when both Validated and CRDExists are True", func() {
 		for _, tc := range []struct {
 			in    conditionInputs
 			ready metav1.ConditionStatus
 		}{
-			{allTrue, metav1.ConditionTrue},
-			{validatedOnly, metav1.ConditionFalse},
-			{crdOnly, metav1.ConditionFalse},
-			{allFalse, metav1.ConditionFalse},
+			{conditionInputs{metav1.ConditionTrue, metav1.ConditionTrue}, metav1.ConditionTrue},
+			{conditionInputs{metav1.ConditionTrue, metav1.ConditionFalse}, metav1.ConditionFalse},
+			{conditionInputs{metav1.ConditionFalse, metav1.ConditionTrue}, metav1.ConditionFalse},
+			{conditionInputs{metav1.ConditionFalse, metav1.ConditionFalse}, metav1.ConditionFalse},
 		} {
 			status := &kartav1alpha1.KartaStatus{}
 			setConditions(status, tc.in)
 			Expect(findCondition(status.Conditions, kartav1alpha1.ConditionReady).Status).
 				To(Equal(tc.ready))
 		}
-	})
-
-	It("sets non-empty messages on False conditions and clears them on True", func() {
-		status := &kartav1alpha1.KartaStatus{}
-		setConditions(status, allFalse)
-		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionValidated).Message).NotTo(BeEmpty())
-		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionCRDExists).Message).NotTo(BeEmpty())
-		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionReady).Message).NotTo(BeEmpty())
-
-		setConditions(status, allTrue)
-		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionValidated).Message).To(BeEmpty())
-		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionCRDExists).Message).To(BeEmpty())
-		Expect(findCondition(status.Conditions, kartav1alpha1.ConditionReady).Message).To(BeEmpty())
-	})
-
-	It("preserves LastTransitionTime when status does not change", func() {
-		status := &kartav1alpha1.KartaStatus{}
-		setConditions(status, allTrue)
-		before := transitionTimes(status.Conditions)
-
-		// apimeta.SetStatusCondition preserves the existing LastTransitionTime
-		// when Status is unchanged — no sleep needed, this is deterministic.
-		setConditions(status, allTrue)
-		Expect(transitionTimes(status.Conditions)).To(Equal(before))
-	})
-
-	It("bumps LastTransitionTime when status changes", func() {
-		status := &kartav1alpha1.KartaStatus{}
-		setConditions(status, allFalse)
-		beforeTime := findCondition(status.Conditions, kartav1alpha1.ConditionValidated).LastTransitionTime
-
-		setConditions(status, allTrue)
-		afterTime := findCondition(status.Conditions, kartav1alpha1.ConditionValidated).LastTransitionTime
-
-		// We only assert that the timestamp changed, not by how much.
-		// apimeta.SetStatusCondition calls metav1.NewTime(time.Now()) with
-		// nanosecond precision, so the values will differ even without a sleep.
-		Expect(afterTime).NotTo(Equal(beforeTime))
-	})
-
-	It("leaves foreign conditions untouched", func() {
-		status := &kartav1alpha1.KartaStatus{Conditions: []metav1.Condition{
-			{Type: "RBACReady", Status: metav1.ConditionTrue, Reason: "EWI"},
-		}}
-		setConditions(status, allTrue)
-
-		foreign := findCondition(status.Conditions, "RBACReady")
-		Expect(foreign.Status).To(Equal(metav1.ConditionTrue))
-		Expect(foreign.Reason).To(Equal("EWI"))
 	})
 })

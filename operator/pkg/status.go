@@ -36,12 +36,13 @@ func setValidated(status *kartav1alpha1.KartaStatus, generation int64, s metav1.
 	if s == metav1.ConditionFalse && msg == "" {
 		msg = msgValidationFailed
 	}
-	apimeta.SetStatusCondition(&status.Conditions, buildCondition(
-		kartav1alpha1.ConditionValidated, generation,
-		s,
-		reasonForBool(s, ReasonValidationSucceeded, ReasonValidationFailed),
-		msgWhenFalse(s, msg),
-	))
+	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
+		Type:               string(kartav1alpha1.ConditionValidated),
+		Status:             s,
+		Reason:             reasonForBool(s, ReasonValidationSucceeded, ReasonValidationFailed),
+		Message:            msgWhenFalse(s, msg),
+		ObservedGeneration: generation,
+	})
 }
 
 // setCRDExists writes the CRDExists condition. msg is placed in the condition
@@ -50,12 +51,13 @@ func setCRDExists(status *kartav1alpha1.KartaStatus, generation int64, s metav1.
 	if s == metav1.ConditionFalse && msg == "" {
 		msg = msgCRDNotFound
 	}
-	apimeta.SetStatusCondition(&status.Conditions, buildCondition(
-		kartav1alpha1.ConditionCRDExists, generation,
-		s,
-		reasonForBool(s, ReasonCRDFound, ReasonCRDNotFound),
-		msgWhenFalse(s, msg),
-	))
+	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
+		Type:               string(kartav1alpha1.ConditionCRDExists),
+		Status:             s,
+		Reason:             reasonForBool(s, ReasonCRDFound, ReasonCRDNotFound),
+		Message:            msgWhenFalse(s, msg),
+		ObservedGeneration: generation,
+	})
 }
 
 func setReady(status *kartav1alpha1.KartaStatus, generation int64, validated, crdExists metav1.ConditionStatus) {
@@ -67,9 +69,13 @@ func setReady(status *kartav1alpha1.KartaStatus, generation int64, validated, cr
 		readyReason = ReasonReady
 		readyMsg = ""
 	}
-	apimeta.SetStatusCondition(&status.Conditions, buildCondition(
-		kartav1alpha1.ConditionReady, generation, readyStatus, readyReason, readyMsg,
-	))
+	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
+		Type:               string(kartav1alpha1.ConditionReady),
+		Status:             readyStatus,
+		Reason:             readyReason,
+		Message:            readyMsg,
+		ObservedGeneration: generation,
+	})
 }
 
 // patchStatusIfChanged issues a JSON merge patch on the Karta status
@@ -87,16 +93,6 @@ func (r *Reconciler) patchStatusIfChanged(
 		return fmt.Errorf("patch status: %w", err)
 	}
 	return nil
-}
-
-func buildCondition(t kartav1alpha1.ConditionType, observedGeneration int64, status metav1.ConditionStatus, reason, message string) metav1.Condition {
-	return metav1.Condition{
-		Type:               string(t),
-		Status:             status,
-		Reason:             reason,
-		Message:            message,
-		ObservedGeneration: observedGeneration,
-	}
 }
 
 // reasonForBool returns trueReason when status is True, falseReason otherwise.
