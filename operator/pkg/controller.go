@@ -5,7 +5,6 @@ package pkg
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
@@ -17,7 +16,6 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -81,24 +79,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	logger.Info("Reconciling Karta")
-	return r.reconcile(ctx, karta)
+
+	base := karta.DeepCopy()
+	err := r.reconcile(ctx, karta, base)
+	if patchErr := r.patchStatusIfChanged(ctx, karta, base); patchErr != nil {
+		patchErr = fmt.Errorf("update status for karta %q: %w", karta.Name, patchErr)
+		if err == nil {
+			err = patchErr
+		} else {
+			logger.Error(patchErr, "failed to patch status after reconcile error")
+		}
+	}
+	return ctrl.Result{}, err
 }
 
 // reconcile runs the reconciliation logic for one Karta.
-func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta) (result ctrl.Result, err error) {
+func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta, base *kartav1alpha1.Karta) (err error) {
 	logger := log.FromContext(ctx).WithValues("karta", karta.Name)
-	base := karta.DeepCopy()
-
-	defer func() {
-		if patchErr := r.patchStatusIfChanged(ctx, karta, base); patchErr != nil {
-			patchErr = fmt.Errorf("update status for karta %q: %w", karta.Name, patchErr)
-			if err == nil {
-				err = patchErr
-			} else {
-				logger.Error(patchErr, "failed to patch status after reconcile error")
-			}
-		}
-	}()
 
 	r.validateKarta(logger, karta)
 	if err = r.checkCRDExists(ctx, logger, karta); err != nil {
@@ -185,19 +182,20 @@ func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta
 		return nil
 	}
 
-	patchBytes, err := json.Marshal(map[string]any{
-		"metadata": map[string]any{"labels": desired},
-	})
-	if err != nil {
-		return fmt.Errorf("marshal label patch for karta %q: %w", karta.Name, err)
+	base := karta.DeepCopy()
+	updated := karta.DeepCopy()
+	if updated.Labels == nil {
+		updated.Labels = map[string]string{}
+	}
+	for k, v := range desired {
+		updated.Labels[k] = v
 	}
 
-	patchTarget := karta.DeepCopy()
-	if err = r.Patch(ctx, patchTarget, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
+	if err := r.Patch(ctx, updated, client.MergeFrom(base)); err != nil {
 		return fmt.Errorf("patch labels for karta %q: %w", karta.Name, err)
 	}
-	karta.Labels = patchTarget.Labels
-	karta.ResourceVersion = patchTarget.ResourceVersion
+	karta.Labels = updated.Labels
+	karta.ResourceVersion = updated.ResourceVersion
 
 	logger.V(1).Info("Stamped GVK index labels",
 		"group", gvk.Group, "version", gvk.Version, "kind", gvk.Kind)
@@ -212,26 +210,19 @@ func (r *Reconciler) removeIndexLabels(ctx context.Context, logger logr.Logger, 
 		return nil
 	}
 
-	patchBytes, err := json.Marshal(map[string]any{
-		"metadata": map[string]any{
-			"labels": map[string]any{
-				kartav1alpha1.LabelRootGroup:   nil,
-				kartav1alpha1.LabelRootVersion: nil,
-				kartav1alpha1.LabelRootKind:    nil,
-			},
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("marshal label-removal patch for karta %q: %w", karta.Name, err)
-	}
+	base := karta.DeepCopy()
+	updated := karta.DeepCopy()
+	// Deleting the keys makes client.MergeFrom emit null for them, which
+	// removes them per the JSON merge-patch spec (RFC 7386).
+	delete(updated.Labels, kartav1alpha1.LabelRootGroup)
+	delete(updated.Labels, kartav1alpha1.LabelRootVersion)
+	delete(updated.Labels, kartav1alpha1.LabelRootKind)
 
-	// Patch a copy — see note in ensureLabels.
-	patchTarget := karta.DeepCopy()
-	if err = r.Patch(ctx, patchTarget, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
+	if err := r.Patch(ctx, updated, client.MergeFrom(base)); err != nil {
 		return fmt.Errorf("remove stale index labels for karta %q: %w", karta.Name, err)
 	}
-	karta.Labels = patchTarget.Labels
-	karta.ResourceVersion = patchTarget.ResourceVersion
+	karta.Labels = updated.Labels
+	karta.ResourceVersion = updated.ResourceVersion
 
 	logger.V(1).Info("Removed stale GVK index labels (root kind no longer set)")
 	return nil
