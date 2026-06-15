@@ -368,10 +368,12 @@ func rootComponentGVK(karta *v1alpha1.Karta) *schema.GroupVersionKind {
 func (r *WorkloadReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	workloadType := &unstructured.Unstructured{}
 	workloadType.SetGroupVersionKind(r.GVK)
-
+	controllerName := strings.ToLower(strings.Trim(
+		fmt.Sprintf("%s-%s-%s", r.GVK.Group, r.GVK.Version, r.GVK.Kind), "-",
+	))
 	return ctrl.NewControllerManagedBy(mgr).
 		For(workloadType).
-		Named(strings.ToLower(r.GVK.Kind)).
+		Named(controllerName).
 		Watches(&v1alpha1.Karta{}, handler.EnqueueRequestsFromMapFunc(r.workloadsForKarta)).
 		Complete(r)
 }
@@ -389,6 +391,8 @@ func (r *WorkloadReconciler) workloadsForKarta(ctx context.Context, obj client.O
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(r.GVK.GroupVersion().WithKind(r.GVK.Kind + "List"))
 	if err := r.List(ctx, list); err != nil {
+		log.FromContext(ctx).Error(err, "list workloads for Karta change",
+			"gvk", r.GVK.String(), "karta", karta.GetName())
 		return nil
 	}
 	requests := make([]reconcile.Request, 0, len(list.Items))

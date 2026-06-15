@@ -209,7 +209,7 @@ adding one never touches the Go code. To also manage, say, JobSet:
    ```
 6. Resume the Job and watch the injected label reach the pods:
    ```bash
-   kubectl patch jobset karta-demo-jobset --type=merge -p '{"spec":{"suspend":false}}'
+   kubectl patch jobset karta-demo-jobset-suspended --type=merge -p '{"spec":{"suspend":false}}'
    kubectl get pods -l app.kubernetes.io/managed-by=karta
    ```
 
