@@ -33,23 +33,17 @@ func buildScheme() *runtime.Scheme {
 	return s
 }
 
-// defaultRLConfig is the rate-limiter config used by all test reconcilers.
-var defaultRLConfig = RateLimiterConfig{
-	BaseDelay: DefaultRateLimiterBaseDelay,
-	MaxDelay:  DefaultRateLimiterMaxDelay,
-}
-
-// newReconciler wraps NewReconciler with default config so test files don't
-// need to repeat the config on every call. Events are buffered and silently
-// discarded unless the test explicitly reads from the recorder channel.
+// newReconciler wraps NewReconciler so test files don't need to repeat the
+// recorder on every call. Events are buffered and silently discarded unless
+// the test explicitly reads from the recorder channel.
 func newReconciler(k8s client.WithWatch) *Reconciler {
-	return NewReconciler(k8s, defaultRLConfig, record.NewFakeRecorder(64))
+	return NewReconciler(k8s, record.NewFakeRecorder(64))
 }
 
 // newReconcilerWithRecorder creates a Reconciler whose events can be asserted.
 func newReconcilerWithRecorder(k8s client.WithWatch) (*Reconciler, *record.FakeRecorder) {
 	rec := record.NewFakeRecorder(64)
-	return NewReconciler(k8s, defaultRLConfig, rec), rec
+	return NewReconciler(k8s, rec), rec
 }
 
 // kartaLabels returns the three GVK index labels the operator stamps for the given GVK.

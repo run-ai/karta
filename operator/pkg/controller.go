@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
@@ -20,11 +19,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -34,30 +31,17 @@ const (
 	// ControllerName is the name used to identify this controller in
 	// controller-runtime metrics and logs.
 	ControllerName = "karta-controller"
-
-	// Default rate-limiter delays. Override via KARTA_RATE_LIMITER_BASE_DELAY
-	// and KARTA_RATE_LIMITER_MAX_DELAY environment variables.
-	DefaultRateLimiterBaseDelay = 500 * time.Millisecond
-	DefaultRateLimiterMaxDelay  = 60 * time.Second
 )
-
-// RateLimiterConfig holds the exponential back-off parameters for the
-// reconcile queue.
-type RateLimiterConfig struct {
-	BaseDelay time.Duration
-	MaxDelay  time.Duration
-}
 
 // Reconciler reconciles Karta CRs.
 type Reconciler struct {
 	client.Client
-	rateLimiter RateLimiterConfig
-	recorder    record.EventRecorder
+	recorder record.EventRecorder
 }
 
 // NewReconciler constructs a new Reconciler.
-func NewReconciler(c client.Client, rl RateLimiterConfig, recorder record.EventRecorder) *Reconciler {
-	return &Reconciler{Client: c, rateLimiter: rl, recorder: recorder}
+func NewReconciler(c client.Client, recorder record.EventRecorder) *Reconciler {
+	return &Reconciler{Client: c, recorder: recorder}
 }
 
 // SetupWithManager registers the reconciler with the given manager.
@@ -75,11 +59,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.MapCRDToKartaEvent),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
-		WithOptions(controller.Options{
-			RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[ctrl.Request](
-				r.rateLimiter.BaseDelay, r.rateLimiter.MaxDelay,
-			),
-		}).
 		Complete(r)
 }
 

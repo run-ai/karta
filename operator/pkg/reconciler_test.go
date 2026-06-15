@@ -21,6 +21,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
+// The tests in this file call Reconcile directly on purpose: they inject
+// faults (List/Patch errors) or capture emitted events synchronously, neither
+// of which can be reproduced against the real apiserver that envtest runs.
+// Happy-path reconcile behavior is covered end-to-end in controller_test.go.
+
+// newValidKarta builds a Karta that passes KartaValidator.Validate(): it has
+// a root component with a full GVK and a minimal StatusDefinition. Shared with
+// the envtest suite in controller_test.go.
+func newValidKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Karta {
+	k := newKarta(name, gvk)
+	if gvk != nil {
+		k.Spec.StructureDefinition.RootComponent.StatusDefinition = &kartav1alpha1.StatusDefinition{
+			StatusMappings: kartav1alpha1.StatusMappings{},
+		}
+	}
+	return k
+}
+
 // drainEvents returns all events currently in the recorder buffer without blocking.
 func drainEvents(rec *record.FakeRecorder) []string {
 	var out []string
@@ -34,7 +52,10 @@ func drainEvents(rec *record.FakeRecorder) []string {
 	}
 }
 
-var _ = Describe("Reconciler — lifecycle", func() {
+// These early-return guards can't be exercised deterministically under
+// envtest (a create immediately races the reconcile), so they call Reconcile
+// directly against a fake client.
+var _ = Describe("Reconciler — control-flow guards", func() {
 	var (
 		ctx context.Context
 		k8s client.WithWatch
@@ -50,292 +71,24 @@ var _ = Describe("Reconciler — lifecycle", func() {
 		r = newReconciler(k8s)
 	})
 
-	reconcile := func(name string) (ctrl.Result, error) {
-		return r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Name: name}})
-	}
-
-	get := func(name string) *kartav1alpha1.Karta {
-		out := &kartav1alpha1.Karta{}
-		ExpectWithOffset(1, k8s.Get(ctx, client.ObjectKey{Name: name}, out)).To(Succeed())
-		return out
-	}
-
-	It("returns no error when Karta does not exist", func() {
-		_, err := reconcile("missing")
+	It("returns no error when the Karta does not exist", func() {
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Name: "missing"}})
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("skips reconciliation and leaves status empty while Karta is being deleted", func() {
+	It("skips reconciliation and leaves status empty while the Karta is being deleted", func() {
 		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 		k := newValidKarta("karta-deleting", &gvk)
 		k.Finalizers = []string{"keep.test/finalizer"}
 		Expect(k8s.Create(ctx, k)).To(Succeed())
 		Expect(k8s.Delete(ctx, k)).To(Succeed())
 
-		_, err := reconcile(k.Name)
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Name: k.Name}})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(get(k.Name).Status.Conditions).To(BeEmpty())
-	})
-})
 
-var _ = Describe("Reconciler — condition logic", func() {
-	var (
-		ctx context.Context
-		k8s client.WithWatch
-		r   *Reconciler
-	)
-
-	BeforeEach(func() {
-		ctx = context.Background()
-		k8s = fake.NewClientBuilder().
-			WithScheme(buildScheme()).
-			WithStatusSubresource(&kartav1alpha1.Karta{}).
-			Build()
-		r = newReconciler(k8s)
-	})
-
-	reconcileAndGet := func(name string) *kartav1alpha1.Karta {
-		GinkgoHelper()
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Name: name}})
-		Expect(err).NotTo(HaveOccurred())
-		out := &kartav1alpha1.Karta{}
-		Expect(k8s.Get(ctx, client.ObjectKey{Name: name}, out)).To(Succeed())
-		return out
-	}
-
-	Context("Story 1.2 — Validated", func() {
-		It("sets Validated=False when root component has no StatusDefinition", func() {
-			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
-			Expect(k8s.Create(ctx, newKarta("karta-invalid", &gvk))).To(Succeed())
-
-			got := reconcileAndGet("karta-invalid")
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated).Status).
-				To(Equal(metav1.ConditionFalse))
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated).Reason).
-				To(Equal(ReasonValidationFailed))
-		})
-
-		It("sets Validated=True when spec is valid", func() {
-			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
-			Expect(k8s.Create(ctx, newValidKarta("karta-valid", &gvk))).To(Succeed())
-
-			got := reconcileAndGet("karta-valid")
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated).Status).
-				To(Equal(metav1.ConditionTrue))
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated).Reason).
-				To(Equal(ReasonValidationSucceeded))
-		})
-	})
-
-	Context("Story 1.3 — CRDExists", func() {
-		It("sets CRDExists=False when Karta has no root kind", func() {
-			Expect(k8s.Create(ctx, newKarta("karta-no-gvk", nil))).To(Succeed())
-
-			got := reconcileAndGet("karta-no-gvk")
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists).Status).
-				To(Equal(metav1.ConditionFalse))
-		})
-
-		It("sets CRDExists=False when referenced CRD does not exist", func() {
-			gvk := schema.GroupVersionKind{Group: "absent.run.ai", Version: "v1", Kind: "Missing"}
-			Expect(k8s.Create(ctx, newValidKarta("karta-no-crd", &gvk))).To(Succeed())
-
-			got := reconcileAndGet("karta-no-crd")
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists).Status).
-				To(Equal(metav1.ConditionFalse))
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists).Reason).
-				To(Equal(ReasonCRDNotFound))
-		})
-
-		It("sets CRDExists=False when CRD exists but does not list the referenced version", func() {
-			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, "v2"))).To(Succeed())
-			Expect(k8s.Create(ctx, newValidKarta("karta-wrong-ver", &gvk))).To(Succeed())
-
-			got := reconcileAndGet("karta-wrong-ver")
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists).Status).
-				To(Equal(metav1.ConditionFalse))
-		})
-
-		It("sets CRDExists=True when the CRD lists the referenced version", func() {
-			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
-			Expect(k8s.Create(ctx, newValidKarta("karta-crd-ok", &gvk))).To(Succeed())
-
-			got := reconcileAndGet("karta-crd-ok")
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists).Status).
-				To(Equal(metav1.ConditionTrue))
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists).Reason).
-				To(Equal(ReasonCRDFound))
-		})
-
-		It("sets CRDExists=True even when the version is not the storage version", func() {
-			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-			// v2 is storage, v1 is not — but Karta references v1
-			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, "v2", gvk.Version))).To(Succeed())
-			Expect(k8s.Create(ctx, newValidKarta("karta-non-storage-ver", &gvk))).To(Succeed())
-
-			got := reconcileAndGet("karta-non-storage-ver")
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists).Status).
-				To(Equal(metav1.ConditionTrue))
-		})
-	})
-
-	Context("Story 1.4 — Ready (derived)", func() {
-		It("sets Ready=False when Validated=False regardless of CRDExists", func() {
-			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
-			Expect(k8s.Create(ctx, newKarta("karta-invalid-crd-ok", &gvk))).To(Succeed())
-
-			got := reconcileAndGet("karta-invalid-crd-ok")
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionReady).Status).
-				To(Equal(metav1.ConditionFalse))
-		})
-
-		It("sets Ready=False when CRDExists=False regardless of Validated", func() {
-			gvk := schema.GroupVersionKind{Group: "absent.run.ai", Version: "v1", Kind: "Missing"}
-			Expect(k8s.Create(ctx, newValidKarta("karta-valid-no-crd", &gvk))).To(Succeed())
-
-			got := reconcileAndGet("karta-valid-no-crd")
-			Expect(findCondition(got.Status.Conditions, kartav1alpha1.ConditionReady).Status).
-				To(Equal(metav1.ConditionFalse))
-		})
-
-		It("sets Ready=True when both Validated and CRDExists are True", func() {
-			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
-			Expect(k8s.Create(ctx, newValidKarta("karta-all-good", &gvk))).To(Succeed())
-
-			got := reconcileAndGet("karta-all-good")
-			ready := findCondition(got.Status.Conditions, kartav1alpha1.ConditionReady)
-			Expect(ready.Status).To(Equal(metav1.ConditionTrue))
-			Expect(ready.Reason).To(Equal(ReasonReady))
-			Expect(ready.Message).To(BeEmpty())
-		})
-	})
-
-	Context("Idempotency", func() {
-		It("does not change LastTransitionTime on a second reconcile when nothing changed", func() {
-			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
-			Expect(k8s.Create(ctx, newValidKarta("karta-stable", &gvk))).To(Succeed())
-
-			first := reconcileAndGet("karta-stable")
-			firstTimes := transitionTimes(first.Status.Conditions)
-
-			second := reconcileAndGet("karta-stable")
-			secondTimes := transitionTimes(second.Status.Conditions)
-
-			Expect(secondTimes).To(Equal(firstTimes))
-		})
-	})
-
-	Context("Label stamping (ensureLabels)", func() {
-		It("stamps the three GVK index labels after the first reconcile", func() {
-			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-			Expect(k8s.Create(ctx, newKarta("karta-no-labels", &gvk))).To(Succeed())
-
-			got := reconcileAndGet("karta-no-labels")
-			Expect(got.Labels[kartav1alpha1.LabelRootGroup]).To(Equal(gvk.Group))
-			Expect(got.Labels[kartav1alpha1.LabelRootVersion]).To(Equal(gvk.Version))
-			Expect(got.Labels[kartav1alpha1.LabelRootKind]).To(Equal(gvk.Kind))
-		})
-
-		It("updates labels when root GVK changes", func() {
-			oldGVK := schema.GroupVersionKind{Group: "old.run.ai", Version: "v1", Kind: "Old"}
-			k := newKarta("karta-stale-labels", &oldGVK)
-			k.Labels = kartaLabels(oldGVK)
-			Expect(k8s.Create(ctx, k)).To(Succeed())
-
-			// Simulate someone updating the root GVK in spec
-			newGVK := schema.GroupVersionKind{Group: "new.run.ai", Version: "v2", Kind: "New"}
-			k.Spec.StructureDefinition.RootComponent.Kind = &kartav1alpha1.GroupVersionKind{
-				Group: newGVK.Group, Version: newGVK.Version, Kind: newGVK.Kind,
-			}
-			Expect(k8s.Update(ctx, k)).To(Succeed())
-
-			got := reconcileAndGet("karta-stale-labels")
-			Expect(got.Labels[kartav1alpha1.LabelRootGroup]).To(Equal(newGVK.Group))
-			Expect(got.Labels[kartav1alpha1.LabelRootVersion]).To(Equal(newGVK.Version))
-			Expect(got.Labels[kartav1alpha1.LabelRootKind]).To(Equal(newGVK.Kind))
-		})
-
-		It("preserves unrelated labels", func() {
-			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-			k := newKarta("karta-extra-labels", &gvk)
-			k.Labels = map[string]string{"custom/label": "keep-me"}
-			Expect(k8s.Create(ctx, k)).To(Succeed())
-
-			got := reconcileAndGet("karta-extra-labels")
-			Expect(got.Labels["custom/label"]).To(Equal("keep-me"))
-			Expect(got.Labels).To(HaveKey(kartav1alpha1.LabelRootGroup))
-		})
-
-		It("does not patch labels when they are already correct", func() {
-			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-			k := newKarta("karta-correct-labels", &gvk)
-			k.Labels = kartaLabels(gvk)
-			Expect(k8s.Create(ctx, k)).To(Succeed())
-
-			// reconcile twice and check the resource version doesn't change
-			// (no patch was issued the second time)
-			first := reconcileAndGet("karta-correct-labels")
-			second := reconcileAndGet("karta-correct-labels")
-			Expect(second.ResourceVersion).To(Equal(first.ResourceVersion))
-		})
-
-		It("skips label stamping when Karta has no root kind", func() {
-			Expect(k8s.Create(ctx, newKarta("karta-no-kind", nil))).To(Succeed())
-			got := reconcileAndGet("karta-no-kind")
-			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup))
-		})
-
-		It("removes the GVK index labels when root kind is removed from spec", func() {
-			oldGVK := schema.GroupVersionKind{Group: "old.run.ai", Version: "v1", Kind: "Old"}
-			k := newKarta("karta-lost-kind", &oldGVK)
-			k.Labels = kartaLabels(oldGVK)
-			k.Labels["custom/label"] = "keep-me"
-			Expect(k8s.Create(ctx, k)).To(Succeed())
-
-			k.Spec.StructureDefinition.RootComponent.Kind = nil
-			Expect(k8s.Update(ctx, k)).To(Succeed())
-
-			got := reconcileAndGet("karta-lost-kind")
-			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootGroup))
-			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootVersion))
-			Expect(got.Labels).NotTo(HaveKey(kartav1alpha1.LabelRootKind))
-			Expect(got.Labels["custom/label"]).To(Equal("keep-me"))
-		})
-
-		It("does not patch when root kind is absent and no index labels are present", func() {
-			// First reconcile creates conditions but stamps no labels (no root kind).
-			Expect(k8s.Create(ctx, newKarta("karta-no-kind-idempotent", nil))).To(Succeed())
-			first := reconcileAndGet("karta-no-kind-idempotent")
-
-			// Second reconcile must be a true no-op for metadata (and for status).
-			second := reconcileAndGet("karta-no-kind-idempotent")
-			Expect(second.ResourceVersion).To(Equal(first.ResourceVersion))
-		})
-	})
-
-	Context("Foreign conditions", func() {
-		It("preserves conditions set by other controllers across reconciles", func() {
-			gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-			Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
-
-			k := newValidKarta("karta-foreign", &gvk)
-			k.Status.Conditions = []metav1.Condition{
-				{Type: "RBACReady", Status: metav1.ConditionTrue, Reason: "EWI", LastTransitionTime: metav1.Now()},
-			}
-			Expect(k8s.Create(ctx, k)).To(Succeed())
-
-			got := reconcileAndGet("karta-foreign")
-			rbac := findCondition(got.Status.Conditions, "RBACReady")
-			Expect(rbac.Status).To(Equal(metav1.ConditionTrue))
-			Expect(rbac.Reason).To(Equal("EWI"))
-		})
+		got := &kartav1alpha1.Karta{}
+		Expect(k8s.Get(ctx, client.ObjectKey{Name: k.Name}, got)).To(Succeed())
+		Expect(got.Status.Conditions).To(BeEmpty())
 	})
 })
 
@@ -472,55 +225,6 @@ var _ = Describe("Reconciler — CRD list failure does not corrupt status", func
 	})
 })
 
-var _ = Describe("Reconciler — detailed condition messages", func() {
-	var (
-		ctx context.Context
-		k8s client.WithWatch
-		r   *Reconciler
-	)
-
-	BeforeEach(func() {
-		ctx = context.Background()
-		k8s = fake.NewClientBuilder().
-			WithScheme(buildScheme()).
-			WithStatusSubresource(&kartav1alpha1.Karta{}).
-			Build()
-		r = newReconciler(k8s)
-	})
-
-	reconcileAndGet := func(name string) *kartav1alpha1.Karta {
-		GinkgoHelper()
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Name: name}})
-		Expect(err).NotTo(HaveOccurred())
-		out := &kartav1alpha1.Karta{}
-		Expect(k8s.Get(ctx, client.ObjectKey{Name: name}, out)).To(Succeed())
-		return out
-	}
-
-	It("puts the real validator error in the Validated condition message", func() {
-		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-		// newKarta has no StatusDefinition → validator produces a descriptive error
-		Expect(k8s.Create(ctx, newKarta("karta-invalid-cond-msg", &gvk))).To(Succeed())
-		got := reconcileAndGet("karta-invalid-cond-msg")
-
-		msg := findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated).Message
-		Expect(msg).NotTo(BeEmpty())
-		Expect(msg).NotTo(Equal("Karta validation failed"),
-			"expected the real validator error, not the generic fallback")
-	})
-
-	It("puts the missing GVK detail in the CRDExists condition message", func() {
-		gvk := schema.GroupVersionKind{Group: "absent.run.ai", Version: "v1", Kind: "Missing"}
-		Expect(k8s.Create(ctx, newValidKarta("karta-no-crd-cond-msg", &gvk))).To(Succeed())
-		got := reconcileAndGet("karta-no-crd-cond-msg")
-
-		msg := findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists).Message
-		Expect(msg).To(ContainSubstring("absent.run.ai"))
-		Expect(msg).To(ContainSubstring("Missing"))
-		Expect(msg).To(ContainSubstring("v1"))
-	})
-})
-
 var _ = Describe("Reconciler — condition-transition events", func() {
 	var (
 		ctx context.Context
@@ -576,7 +280,7 @@ var _ = Describe("Reconciler — condition-transition events", func() {
 		Expect(drainEvents(rec)).NotTo(BeEmpty())
 	})
 
-	It("emits no events when Karta is fully ready", func() {
+	It("emits no Warning events when Karta is fully ready", func() {
 		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 		Expect(k8s.Create(ctx, newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version))).To(Succeed())
 		Expect(k8s.Create(ctx, newValidKarta("karta-ready-ev", &gvk))).To(Succeed())
@@ -588,23 +292,3 @@ var _ = Describe("Reconciler — condition-transition events", func() {
 		}
 	})
 })
-
-func transitionTimes(conds []metav1.Condition) map[string]metav1.Time {
-	out := map[string]metav1.Time{}
-	for _, c := range conds {
-		out[c.Type] = c.LastTransitionTime
-	}
-	return out
-}
-
-// newValidKarta builds a Karta that passes KartaValidator.Validate(): it has
-// a root component with a full GVK and a minimal StatusDefinition.
-func newValidKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Karta {
-	k := newKarta(name, gvk)
-	if gvk != nil {
-		k.Spec.StructureDefinition.RootComponent.StatusDefinition = &kartav1alpha1.StatusDefinition{
-			StatusMappings: kartav1alpha1.StatusMappings{},
-		}
-	}
-	return k
-}
