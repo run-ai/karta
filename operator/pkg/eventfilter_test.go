@@ -21,7 +21,11 @@ import (
 // ensureLabels had already run. Used to set up the label-selector tests.
 func labeledKarta(name string, gvk schema.GroupVersionKind) *kartav1alpha1.Karta {
 	k := newKarta(name, &gvk)
-	k.Labels = kartaLabels(gvk)
+	k.Labels = map[string]string{
+		kartav1alpha1.LabelRootGroup:   gvk.Group,
+		kartav1alpha1.LabelRootVersion: gvk.Version,
+		kartav1alpha1.LabelRootKind:    gvk.Kind,
+	}
 	return k
 }
 
@@ -68,8 +72,6 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 		Expect(k8s.Create(ctx, labeledKarta("karta-other", other))).To(Succeed())
 		Expect(k8s.Create(ctx, newKarta("karta-no-gvk", nil))).To(Succeed())
 
-		// CRD only serves v1, but karta-v2 still gets enqueued because the
-		// label-selector matches on group+kind (not version).
 		crd := newCRD("foos.test.run.ai", "test.run.ai", "Foo", "v1")
 		reqs := r.MapCRDToKartaEvent(ctx, crd)
 

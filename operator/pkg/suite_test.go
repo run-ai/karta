@@ -40,22 +40,6 @@ func newReconciler(k8s client.WithWatch) *Reconciler {
 	return NewReconciler(k8s, record.NewFakeRecorder(64))
 }
 
-// newReconcilerWithRecorder creates a Reconciler whose events can be asserted.
-func newReconcilerWithRecorder(k8s client.WithWatch) (*Reconciler, *record.FakeRecorder) {
-	rec := record.NewFakeRecorder(64)
-	return NewReconciler(k8s, rec), rec
-}
-
-// kartaLabels returns the three GVK index labels the operator stamps for the given GVK.
-// Mirrors the logic in ensureLabels so tests can set up expected state.
-func kartaLabels(gvk schema.GroupVersionKind) map[string]string {
-	return map[string]string{
-		kartav1alpha1.LabelRootGroup:   gvk.Group,
-		kartav1alpha1.LabelRootVersion: gvk.Version,
-		kartav1alpha1.LabelRootKind:    gvk.Kind,
-	}
-}
-
 // newKarta builds a Karta with the given name and optional root GVK. The root
 // component has no StatusDefinition so it will fail spec validation — use
 // newValidKarta when Validated=True is expected.
@@ -83,17 +67,6 @@ func findCondition(conds []metav1.Condition, t kartav1alpha1.ConditionType) meta
 		Fail("condition not found: " + string(t))
 	}
 	return c
-}
-
-// findConditionOpt returns the condition with the given type and whether it was
-// found, without failing the test.
-func findConditionOpt(conds []metav1.Condition, t kartav1alpha1.ConditionType) (metav1.Condition, bool) {
-	for _, c := range conds {
-		if c.Type == string(t) {
-			return c, true
-		}
-	}
-	return metav1.Condition{}, false
 }
 
 // newCRD builds a CustomResourceDefinition serving the given versions for

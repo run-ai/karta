@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
@@ -101,7 +100,8 @@ func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta, 
 	if err = r.checkCRDExists(ctx, logger, karta); err != nil {
 		return
 	}
-	r.deriveReady(logger, karta)
+	ready := setReady(&karta.Status, karta.Generation)
+	logger.V(1).Info("Derived Ready condition", "ready", ready)
 	err = r.ensureLabels(ctx, logger, karta)
 	return
 }
@@ -148,19 +148,6 @@ func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, kar
 		setCRDExists(&karta.Status, karta.Generation, metav1.ConditionFalse, msg)
 	}
 	return nil
-}
-
-// deriveReady sets the Ready condition based on the Validated and CRDExists
-// conditions already written to karta.Status by the preceding calls.
-func (r *Reconciler) deriveReady(logger logr.Logger, karta *kartav1alpha1.Karta) {
-	statusOf := func(t kartav1alpha1.ConditionType) metav1.ConditionStatus {
-		if c := apimeta.FindStatusCondition(karta.Status.Conditions, string(t)); c != nil {
-			return c.Status
-		}
-		return metav1.ConditionFalse
-	}
-	setReady(&karta.Status, karta.Generation, statusOf(kartav1alpha1.ConditionValidated), statusOf(kartav1alpha1.ConditionCRDExists))
-	logger.V(1).Info("Derived Ready condition", "ready", statusOf(kartav1alpha1.ConditionReady))
 }
 
 // ensureLabels stamps the three GVK index labels (run.ai/karta-group,

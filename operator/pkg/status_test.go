@@ -23,7 +23,7 @@ type conditionInputs struct {
 func setConditions(status *kartav1alpha1.KartaStatus, in conditionInputs) {
 	setValidated(status, 0, in.validated, "")
 	setCRDExists(status, 0, in.crdExists, "")
-	setReady(status, 0, in.validated, in.crdExists)
+	setReady(status, 0)
 }
 
 var _ = Describe("setConditions", func() {

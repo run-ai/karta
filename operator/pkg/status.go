@@ -60,11 +60,22 @@ func setCRDExists(status *kartav1alpha1.KartaStatus, generation int64, s metav1.
 	})
 }
 
-func setReady(status *kartav1alpha1.KartaStatus, generation int64, validated, crdExists metav1.ConditionStatus) {
+// setReady derives the Ready condition from the Validated and CRDExists
+// conditions already present in status (Ready is True only when both are
+// True) and returns the resulting status.
+func setReady(status *kartav1alpha1.KartaStatus, generation int64) metav1.ConditionStatus {
+	statusOf := func(t kartav1alpha1.ConditionType) metav1.ConditionStatus {
+		if c := apimeta.FindStatusCondition(status.Conditions, string(t)); c != nil {
+			return c.Status
+		}
+		return metav1.ConditionFalse
+	}
+
 	readyStatus := metav1.ConditionFalse
 	readyReason := ReasonNotReady
 	readyMsg := msgNotReady
-	if validated == metav1.ConditionTrue && crdExists == metav1.ConditionTrue {
+	if statusOf(kartav1alpha1.ConditionValidated) == metav1.ConditionTrue &&
+		statusOf(kartav1alpha1.ConditionCRDExists) == metav1.ConditionTrue {
 		readyStatus = metav1.ConditionTrue
 		readyReason = ReasonReady
 		readyMsg = ""
@@ -76,6 +87,7 @@ func setReady(status *kartav1alpha1.KartaStatus, generation int64, validated, cr
 		Message:            readyMsg,
 		ObservedGeneration: generation,
 	})
+	return readyStatus
 }
 
 // patchStatusIfChanged issues a JSON merge patch on the Karta status
