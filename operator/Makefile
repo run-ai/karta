@@ -15,6 +15,14 @@ BIN_DIR ?= $(shell pwd)/bin
 # are no tags or git is unavailable (e.g. a bare source tarball).
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 
+# Container image settings (defaults for ghcr.io/run-ai/karta OSS publishing).
+# Override any component from the command line, e.g.:
+#   make docker-build IMAGE_TAG=v1.2.3
+#   make docker-build IMAGE_REGISTRY=ghcr.io/myorg/karta
+IMAGE_REGISTRY ?= ghcr.io/run-ai/karta
+IMAGE_NAME      ?= karta-operator
+IMAGE_TAG       ?= $(VERSION)
+IMAGE           ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 
 # VERSION_PKG is the Go package path that holds the Version variable. The build
 # targets inject VERSION into the binary via -ldflags so it is available at runtime.
@@ -89,7 +97,6 @@ build-all: build-linux-amd64 build-linux-arm64 ## Cross-compile for all supporte
 
 .PHONY: docker-build
 docker-build: build-linux-amd64 ## Build Docker image for amd64
-	@test -n "$(IMAGE)" || (echo "Error: IMAGE is not set. Example: make docker-build IMAGE=ghcr.io/run-ai/karta-operator:latest" >&2; exit 1)
 	docker build \
 		--build-arg TARGETARCH=amd64 \
 		--build-arg VERSION=$(VERSION) \
@@ -98,7 +105,6 @@ docker-build: build-linux-amd64 ## Build Docker image for amd64
 
 .PHONY: docker-build-multiarch
 docker-build-multiarch: build-all ## Build and push multi-arch Docker image via BuildKit
-	@test -n "$(IMAGE)" || (echo "Error: IMAGE is not set. Example: make docker-build-multiarch IMAGE=ghcr.io/run-ai/karta-operator:latest" >&2; exit 1)
 	docker buildx build \
 		--platform linux/amd64,linux/arm64 \
 		--build-arg VERSION=$(VERSION) \
@@ -108,7 +114,6 @@ docker-build-multiarch: build-all ## Build and push multi-arch Docker image via 
 
 .PHONY: docker-push
 docker-push: ## Push the Docker image
-	@test -n "$(IMAGE)" || (echo "Error: IMAGE is not set. Example: make docker-push IMAGE=ghcr.io/run-ai/karta-operator:latest" >&2; exit 1)
 	docker push $(IMAGE)
 
 ##@ Kubernetes
@@ -135,7 +140,7 @@ $(GOLANGCI_LINT): $(LOCALBIN)
 	@[ -f "$(GOLANGCI_LINT)" ] || { \
 	set -e; \
 	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)"; \
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh \
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/$(GOLANGCI_LINT_VERSION)/install.sh \
 		| sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION); \
 	}
 
