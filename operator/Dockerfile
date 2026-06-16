@@ -1,35 +1,22 @@
-FROM runai.jfrog.io/base-containers/ubi9/ubi-minimal AS base
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
 
-# Wrap /tmp inside /temp so /tmp lands as a *child* during COPY. Docker BuildKit
-# resets the mode of any destination directory it creates to 0755, but preserves
-# modes on children.
-RUN mkdir -p /temp/tmp && \
-    chown 65532:0 /temp/tmp && \
-    chmod 770 /temp/tmp
+# Build from the repository root so the `replace github.com/run-ai/karta => ../`
+# directive in operator/go.mod resolves against the local pkg/ tree.
+# Keep GO_VERSION aligned with the `go` directive in operator/go.mod:
+#
+#   docker build \
+#     --build-arg GO_VERSION=$(awk '/^go /{print $2}' operator/go.mod) \
+#     -f operator/Dockerfile -t karta-operator:latest .
+ARG GO_VERSION=1.26.3
+FROM golang:${GO_VERSION} AS build
 
-FROM scratch
+WORKDIR /src
+COPY . .
+WORKDIR /src/operator
+RUN CGO_ENABLED=0 GO111MODULE=on go build -trimpath -o /karta-operator ./cmd
 
-ARG TARGETARCH
-ENV TARGETARCH=$TARGETARCH
-
-# Identity & Permissions
-COPY --from=base /etc/passwd /etc/passwd
-COPY --from=base /etc/group /etc/group
-
-# Networking & SSL
-COPY --from=base /etc/ssl/certs/ /etc/ssl/certs/
-COPY --from=base /etc/pki/ /etc/pki/
-
-# DNS resolution config
-COPY --from=base /etc/nsswitch.conf /etc/nsswitch.conf
-
-# Writable Filesystem: Copy /temp's contents into / so /tmp lands at /tmp as a child (mode preserved)
-COPY --from=base /temp /
-
-WORKDIR /
-
-COPY --chown=65532:0 bin/karta-operator-$TARGETARCH karta-operator
-
+FROM gcr.io/distroless/static:nonroot
+COPY --from=build /karta-operator /karta-operator
 USER 65532:65532
-
-ENTRYPOINT ["./karta-operator"]
+ENTRYPOINT ["/karta-operator"]
