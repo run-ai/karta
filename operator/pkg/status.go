@@ -4,15 +4,10 @@
 package pkg
 
 import (
-	"context"
-	"fmt"
-
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
-	"k8s.io/apimachinery/pkg/api/equality"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -88,23 +83,6 @@ func setReady(status *kartav1alpha1.KartaStatus, generation int64) metav1.Condit
 		ObservedGeneration: generation,
 	})
 	return readyStatus
-}
-
-// patchStatusIfChanged issues a JSON merge patch on the Karta status
-// subresource only when the in-memory status differs from the cluster-side
-// snapshot.
-func (r *Reconciler) patchStatusIfChanged(
-	ctx context.Context,
-	karta *kartav1alpha1.Karta,
-	base *kartav1alpha1.Karta,
-) error {
-	if equality.Semantic.DeepEqual(base.Status, karta.Status) {
-		return nil
-	}
-	if err := r.Status().Patch(ctx, karta, client.MergeFrom(base)); err != nil {
-		return fmt.Errorf("patch status: %w", err)
-	}
-	return nil
 }
 
 // reasonForBool returns trueReason when status is True, falseReason otherwise.

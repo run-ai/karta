@@ -81,7 +81,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	base := karta.DeepCopy()
 	err := r.reconcile(ctx, karta, base)
-	if patchErr := r.patchStatusIfChanged(ctx, karta, base); patchErr != nil {
+	if patchErr := r.Status().Patch(ctx, karta, client.MergeFrom(base)); patchErr != nil {
 		patchErr = fmt.Errorf("update status for karta %q: %w", karta.Name, patchErr)
 		if err == nil {
 			err = patchErr
