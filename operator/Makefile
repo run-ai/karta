@@ -107,7 +107,8 @@ docker-build: build-linux-amd64 ## Build Docker image for amd64
 		.
 
 .PHONY: docker-build-multiarch
-docker-build-multiarch: build-all ## Build and push multi-arch Docker image via BuildKit
+docker-build-multiarch: build-all ## Build and push multi-arch Docker image via BuildKit (requires Docker)
+	@[ "$(CONTAINER_TOOL)" = "docker" ] || (echo "Error: docker-build-multiarch requires CONTAINER_TOOL=docker (got '$(CONTAINER_TOOL)')" >&2; exit 1)
 	$(CONTAINER_TOOL) buildx build $(BUILD_ARGS) \
 		--platform linux/amd64,linux/arm64 \
 		--build-arg VERSION=$(VERSION) \
