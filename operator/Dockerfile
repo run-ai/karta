@@ -16,7 +16,7 @@ COPY . .
 WORKDIR /src/operator
 RUN CGO_ENABLED=0 GO111MODULE=on go build -trimpath -o /karta-operator ./cmd
 
-FROM gcr.io/distroless/static:nonroot
+FROM gcr.io/distroless/static-debian13:nonroot
 COPY --from=build /karta-operator /karta-operator
 USER 65532:65532
 ENTRYPOINT ["/karta-operator"]
