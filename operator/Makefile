@@ -69,14 +69,17 @@ check: fmt-check vet lint test ## Run all checks (fmt-check, vet, lint, test)
 
 .PHONY: build
 build: ## Build the karta-operator binary for the host OS/arch
+	mkdir -p $(BIN_DIR)
 	go build $(LDFLAGS) -o $(BIN_DIR)/karta-operator ./cmd
 
 .PHONY: build-linux-amd64
 build-linux-amd64: ## Cross-compile for linux/amd64
+	mkdir -p $(BIN_DIR)
 	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(BIN_DIR)/karta-operator-amd64 ./cmd
 
 .PHONY: build-linux-arm64
 build-linux-arm64: ## Cross-compile for linux/arm64
+	mkdir -p $(BIN_DIR)
 	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o $(BIN_DIR)/karta-operator-arm64 ./cmd
 
 .PHONY: build-all
@@ -86,6 +89,7 @@ build-all: build-linux-amd64 build-linux-arm64 ## Cross-compile for all supporte
 
 .PHONY: docker-build
 docker-build: build-linux-amd64 ## Build Docker image for amd64
+	@test -n "$(IMAGE)" || (echo "Error: IMAGE is not set. Example: make docker-build IMAGE=ghcr.io/run-ai/karta-operator:latest" >&2; exit 1)
 	docker build \
 		--build-arg TARGETARCH=amd64 \
 		--build-arg VERSION=$(VERSION) \
@@ -94,6 +98,7 @@ docker-build: build-linux-amd64 ## Build Docker image for amd64
 
 .PHONY: docker-build-multiarch
 docker-build-multiarch: build-all ## Build and push multi-arch Docker image via BuildKit
+	@test -n "$(IMAGE)" || (echo "Error: IMAGE is not set. Example: make docker-build-multiarch IMAGE=ghcr.io/run-ai/karta-operator:latest" >&2; exit 1)
 	docker buildx build \
 		--platform linux/amd64,linux/arm64 \
 		--build-arg VERSION=$(VERSION) \
@@ -103,6 +108,7 @@ docker-build-multiarch: build-all ## Build and push multi-arch Docker image via 
 
 .PHONY: docker-push
 docker-push: ## Push the Docker image
+	@test -n "$(IMAGE)" || (echo "Error: IMAGE is not set. Example: make docker-push IMAGE=ghcr.io/run-ai/karta-operator:latest" >&2; exit 1)
 	docker push $(IMAGE)
 
 ##@ Kubernetes
