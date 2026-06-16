@@ -24,6 +24,9 @@ IMAGE_NAME      ?= karta-operator
 IMAGE_TAG       ?= $(VERSION)
 IMAGE           ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 
+CONTAINER_TOOL ?= docker
+BUILD_ARGS     ?=
+
 # VERSION_PKG is the Go package path that holds the Version variable. The build
 # targets inject VERSION into the binary via -ldflags so it is available at runtime.
 VERSION_PKG = github.com/run-ai/karta/operator/pkg/version
@@ -97,7 +100,7 @@ build-all: build-linux-amd64 build-linux-arm64 ## Cross-compile for all supporte
 
 .PHONY: docker-build
 docker-build: build-linux-amd64 ## Build Docker image for amd64
-	docker build \
+	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
 		--build-arg TARGETARCH=amd64 \
 		--build-arg VERSION=$(VERSION) \
 		--tag $(IMAGE) \
@@ -105,7 +108,7 @@ docker-build: build-linux-amd64 ## Build Docker image for amd64
 
 .PHONY: docker-build-multiarch
 docker-build-multiarch: build-all ## Build and push multi-arch Docker image via BuildKit
-	docker buildx build \
+	$(CONTAINER_TOOL) buildx build $(BUILD_ARGS) \
 		--platform linux/amd64,linux/arm64 \
 		--build-arg VERSION=$(VERSION) \
 		--tag $(IMAGE) \
@@ -114,7 +117,7 @@ docker-build-multiarch: build-all ## Build and push multi-arch Docker image via 
 
 .PHONY: docker-push
 docker-push: ## Push the Docker image
-	docker push $(IMAGE)
+	$(CONTAINER_TOOL) push $(IMAGE)
 
 ##@ Kubernetes
 
