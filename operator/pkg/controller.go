@@ -78,7 +78,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger.Info("Reconciling Karta")
 
 	base := karta.DeepCopy()
-	err := r.reconcile(ctx, karta, base)
+	err := r.reconcile(ctx, logger, karta, base)
 	if patchErr := r.Status().Patch(ctx, karta, client.MergeFrom(base)); patchErr != nil {
 		patchErr = fmt.Errorf("update status for karta %q: %w", karta.Name, patchErr)
 		err = stderrors.Join(err, patchErr)
@@ -87,9 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 // reconcile runs the reconciliation logic for one Karta.
-func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta, base *kartav1alpha1.Karta) (err error) {
-	logger := log.FromContext(ctx).WithValues("karta", karta.Name)
-
+func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta, base *kartav1alpha1.Karta) (err error) {
 	r.validateKarta(logger, karta)
 	if err = r.checkCRDExists(ctx, logger, karta); err != nil {
 		return
@@ -162,19 +160,16 @@ func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta
 	}
 
 	base := karta.DeepCopy()
-	updated := karta.DeepCopy()
-	if updated.Labels == nil {
-		updated.Labels = map[string]string{}
+	if karta.Labels == nil {
+		karta.Labels = map[string]string{}
 	}
 	for k, v := range desired {
-		updated.Labels[k] = v
+		karta.Labels[k] = v
 	}
 
-	if err := r.Patch(ctx, updated, client.MergeFrom(base)); err != nil {
+	if err := r.Patch(ctx, karta, client.MergeFrom(base)); err != nil {
 		return fmt.Errorf("patch labels for karta %q: %w", karta.Name, err)
 	}
-	karta.Labels = updated.Labels
-	karta.ResourceVersion = updated.ResourceVersion
 
 	logger.V(1).Info("Stamped GVK index labels",
 		"group", gvk.Group, "version", gvk.Version, "kind", gvk.Kind)
@@ -191,8 +186,6 @@ func (r *Reconciler) removeIndexLabels(ctx context.Context, logger logr.Logger, 
 
 	base := karta.DeepCopy()
 	updated := karta.DeepCopy()
-	// Deleting the keys makes client.MergeFrom emit null for them, which
-	// removes them per the JSON merge-patch spec (RFC 7386).
 	delete(updated.Labels, kartav1alpha1.LabelRootGroup)
 	delete(updated.Labels, kartav1alpha1.LabelRootVersion)
 	delete(updated.Labels, kartav1alpha1.LabelRootKind)
