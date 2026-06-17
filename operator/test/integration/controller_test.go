@@ -4,6 +4,8 @@
 package integration
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"strings"
 	"time"
 
 	"github.com/run-ai/karta/operator/pkg"
@@ -30,7 +32,7 @@ var _ = Describe("Reconciler (envtest)", func() {
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
-			c, ok := findConditionOpt(getKarta(k).Status.Conditions, kartav1alpha1.ConditionValidated)
+			c, ok := findCondition(getKarta(k).Status.Conditions, kartav1alpha1.ConditionValidated)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(c.Status).To(Equal(metav1.ConditionFalse))
 			g.Expect(c.Reason).To(Equal(pkg.ReasonValidationFailed))
@@ -48,18 +50,18 @@ var _ = Describe("Reconciler (envtest)", func() {
 
 		Eventually(func(g Gomega) {
 			conds := getKarta(k).Status.Conditions
-			crd, ok := findConditionOpt(conds, kartav1alpha1.ConditionCRDExists)
+			crd, ok := findCondition(conds, kartav1alpha1.ConditionCRDExists)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(crd.Status).To(Equal(metav1.ConditionFalse))
 			g.Expect(crd.Message).To(ContainSubstring("absent.run.ai"))
-			ready, ok := findConditionOpt(conds, kartav1alpha1.ConditionReady)
+			ready, ok := findCondition(conds, kartav1alpha1.ConditionReady)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionFalse))
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 	})
 
 	It("sets Ready=True and stamps index labels when the CRD exists", func() {
-		crd := envtestCRD("widgets.test.run.ai", "test.run.ai", "Widget", "v1")
+		crd := buildCRD("widgets.test.run.ai", "test.run.ai", "Widget", "v1")
 		Expect(k8sClient.Create(testCtx, crd)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, crd) })
 
@@ -70,13 +72,13 @@ var _ = Describe("Reconciler (envtest)", func() {
 
 		Eventually(func(g Gomega) {
 			got := getKarta(k)
-			validated, ok := findConditionOpt(got.Status.Conditions, kartav1alpha1.ConditionValidated)
+			validated, ok := findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(validated.Status).To(Equal(metav1.ConditionTrue))
-			crdExists, ok := findConditionOpt(got.Status.Conditions, kartav1alpha1.ConditionCRDExists)
+			crdExists, ok := findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(crdExists.Status).To(Equal(metav1.ConditionTrue))
-			ready, ok := findConditionOpt(got.Status.Conditions, kartav1alpha1.ConditionReady)
+			ready, ok := findCondition(got.Status.Conditions, kartav1alpha1.ConditionReady)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionTrue))
 			g.Expect(got.Labels[kartav1alpha1.LabelRootGroup]).To(Equal(gvk.Group))
@@ -91,13 +93,11 @@ var _ = Describe("Reconciler (envtest)", func() {
 		Expect(k8sClient.Create(testCtx, k)).To(Succeed())
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
-		// Wait for the operator to write its conditions, then add a foreign one.
 		Eventually(func(g Gomega) {
-			_, ok := findConditionOpt(getKarta(k).Status.Conditions, kartav1alpha1.ConditionReady)
+			_, ok := findCondition(getKarta(k).Status.Conditions, kartav1alpha1.ConditionReady)
 			g.Expect(ok).To(BeTrue())
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
-		// Retry on conflict: the operator may patch status concurrently.
 		Eventually(func() error {
 			got := getKarta(k)
 			got.Status.Conditions = append(got.Status.Conditions, metav1.Condition{
@@ -107,7 +107,6 @@ var _ = Describe("Reconciler (envtest)", func() {
 			return k8sClient.Status().Update(testCtx, got)
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
-		// Force another reconcile by touching the spec, then verify RBACReady survives.
 		Eventually(func() error {
 			got := getKarta(k)
 			got.Spec.StructureDefinition.RootComponent.Name = "renamed-root"
@@ -115,10 +114,70 @@ var _ = Describe("Reconciler (envtest)", func() {
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
 		Consistently(func(g Gomega) {
-			rbac, ok := findConditionOpt(getKarta(k).Status.Conditions, "RBACReady")
+			rbac, ok := findCondition(getKarta(k).Status.Conditions, "RBACReady")
 			g.Expect(ok).To(BeTrue())
 			g.Expect(rbac.Status).To(Equal(metav1.ConditionTrue))
 			g.Expect(rbac.Reason).To(Equal("EWI"))
 		}, 2*time.Second, eventuallyInterval).Should(Succeed())
 	})
 })
+
+func newKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Karta {
+	k := &kartav1alpha1.Karta{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+	}
+	if gvk != nil {
+		k.Spec.StructureDefinition.RootComponent.Name = name + "-root"
+		k.Spec.StructureDefinition.RootComponent.Kind = &kartav1alpha1.GroupVersionKind{
+			Group:   gvk.Group,
+			Version: gvk.Version,
+			Kind:    gvk.Kind,
+		}
+	}
+	return k
+}
+
+func newValidKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Karta {
+	k := newKarta(name, gvk)
+	if gvk != nil {
+		k.Spec.StructureDefinition.RootComponent.StatusDefinition = &kartav1alpha1.StatusDefinition{
+			StatusMappings: kartav1alpha1.StatusMappings{},
+		}
+	}
+	return k
+}
+
+func findCondition(conds []metav1.Condition, t kartav1alpha1.ConditionType) (metav1.Condition, bool) {
+	for _, c := range conds {
+		if c.Type == string(t) {
+			return c, true
+		}
+	}
+	return metav1.Condition{}, false
+}
+
+func buildCRD(name, group, kind, version string) *apiextensionsv1.CustomResourceDefinition {
+	preserve := true
+	return &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+			Group: group,
+			Names: apiextensionsv1.CustomResourceDefinitionNames{
+				Kind:   kind,
+				Plural: strings.ToLower(kind) + "s",
+			},
+			Scope: apiextensionsv1.NamespaceScoped,
+			Versions: []apiextensionsv1.CustomResourceDefinitionVersion{{
+				Name:    version,
+				Served:  true,
+				Storage: true,
+				Schema: &apiextensionsv1.CustomResourceValidation{
+					OpenAPIV3Schema: &apiextensionsv1.JSONSchemaProps{
+						Type:                   "object",
+						XPreserveUnknownFields: &preserve,
+					},
+				},
+			}},
+		},
+	}
+}
