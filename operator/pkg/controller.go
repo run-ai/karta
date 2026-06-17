@@ -5,6 +5,7 @@ package pkg
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
@@ -25,8 +26,6 @@ import (
 )
 
 const (
-	// ControllerName is the name used to identify this controller in
-	// controller-runtime metrics and logs.
 	ControllerName = "karta-controller"
 )
 
@@ -59,7 +58,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// Reconcile is the main reconciliation entry point.
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("karta", req.Name)
 
@@ -83,11 +81,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	err := r.reconcile(ctx, karta, base)
 	if patchErr := r.Status().Patch(ctx, karta, client.MergeFrom(base)); patchErr != nil {
 		patchErr = fmt.Errorf("update status for karta %q: %w", karta.Name, patchErr)
-		if err == nil {
-			err = patchErr
-		} else {
-			logger.Error(patchErr, "failed to patch status after reconcile error")
-		}
+		err = stderrors.Join(err, patchErr)
 	}
 	return ctrl.Result{}, err
 }
@@ -107,8 +101,6 @@ func (r *Reconciler) reconcile(ctx context.Context, karta *kartav1alpha1.Karta, 
 }
 
 // validateKarta runs the Karta spec validator and writes the Validated condition.
-// A Warning event is emitted on every reconcile where validation fails so that
-// `kubectl describe karta` always shows a fresh, counted event.
 func (r *Reconciler) validateKarta(logger logr.Logger, karta *kartav1alpha1.Karta) {
 	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
 		logger.Info("Karta spec validation failed", "error", err.Error())
