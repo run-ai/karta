@@ -1,0 +1,288 @@
+# Makefile.unified — single-file alternative to the root Makefile + operator/Makefile.
+# Usage: make -f Makefile.unified <target>
+# This file is a draft for team review. Neither existing Makefile is modified.
+
+##@ Meta
+
+.PHONY: all
+all: check operator-check ## Run all checks across library and operator
+
+.DEFAULT_GOAL := help
+
+# ---------------------------------------------------------------------------
+# Shared tooling setup
+# ---------------------------------------------------------------------------
+
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
+
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+# ---------------------------------------------------------------------------
+# Repository layout
+# ---------------------------------------------------------------------------
+
+PROJECT_DIR    := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
+OPERATOR_DIR   := $(PROJECT_DIR)/operator
+KARTA_CHART_DIR := $(PROJECT_DIR)/charts/karta
+KARTA_CRDS_DIR  := $(KARTA_CHART_DIR)/crds
+
+# ---------------------------------------------------------------------------
+# Shared tool versions and paths
+# ---------------------------------------------------------------------------
+
+GOLANGCI_LINT         ?= $(LOCALBIN)/golangci-lint
+GOLANGCI_LINT_VERSION ?= v2.5.0
+
+CONTROLLER_GEN          ?= $(LOCALBIN)/controller-gen
+CONTROLLER_TOOLS_VERSION ?= v0.16.5
+
+MOCKGEN        ?= $(LOCALBIN)/mockgen
+GOMOCK_VERSION ?= v0.6.0
+
+GO_LICENSES        ?= $(LOCALBIN)/go-licenses
+GO_LICENSES_VERSION ?= v2.0.1
+
+GOROOT ?= $(shell go env GOROOT)
+PATH   := $(abspath $(LOCALBIN)):$(PATH)
+
+# ---------------------------------------------------------------------------
+# Operator-specific variables
+# ---------------------------------------------------------------------------
+
+BIN_DIR ?= $(OPERATOR_DIR)/bin
+
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+
+IMAGE_REGISTRY ?= ghcr.io/run-ai/karta
+IMAGE_NAME      ?= karta-operator
+IMAGE_TAG       ?= $(VERSION)
+IMAGE           ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
+
+CONTAINER_TOOL ?= docker
+BUILD_ARGS     ?=
+
+VERSION_PKG = github.com/run-ai/karta/operator/pkg/version
+LDFLAGS     = -ldflags "-X $(VERSION_PKG).Version=$(VERSION)"
+
+ENVTEST          ?= $(LOCALBIN)/setup-envtest
+ENVTEST_VERSION  ?= release-0.23
+ENVTEST_K8S_VERSION ?= 1.31.0
+
+PLATFORMS ?= linux/amd64 linux/arm64
+
+# ---------------------------------------------------------------------------
+# Helm variables
+# ---------------------------------------------------------------------------
+
+HELM_CHART_VERSION ?= 0.0.1
+
+##@ Library
+
+.PHONY: manifests
+manifests: controller-gen ## Generate CRD manifests
+	$(CONTROLLER_GEN) crd paths="./pkg/..." output:crd:artifacts:config=$(KARTA_CRDS_DIR)
+
+.PHONY: generate
+generate: controller-gen ## Generate DeepCopy methods
+	$(CONTROLLER_GEN) object paths="./..."
+
+.PHONY: generate-mocks
+generate-mocks: mockgen ## Generate mocks using go generate
+	go generate ./pkg/...
+
+.PHONY: generate-licenses
+generate-licenses: go-licenses download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES
+	echo "Updating NOTICE and THIRD_PARTY_LICENSES"
+	`@set` -e; \
+	tmp_notice=$$(mktemp); \
+	tmp_third=$$(mktemp); \
+	GOROOT=$(GOROOT) $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/notice.tpl > $$tmp_notice; \
+	GOROOT=$(GOROOT) $(GO_LICENSES) report ./... --ignore github.com/run-ai/karta --template=hack/licenses/third_party_licenses.tpl > $$tmp_third; \
+	mv $$tmp_notice NOTICE; \
+	mv $$tmp_third THIRD_PARTY_LICENSES
+
+.PHONY: download-dependencies
+download-dependencies: ## Download Go module dependencies for the root library
+	go mod download
+
+.PHONY: operator-download-dependencies
+operator-download-dependencies: ## Download Go module dependencies for the operator
+	cd $(OPERATOR_DIR) && go mod download
+
+.PHONY: test
+test: generate-mocks ## Run library tests
+	go test ./...
+
+.PHONY: lint
+lint: golangci-lint ## Run golangci-lint on the library
+	echo "Running golangci linter"
+	$(GOLANGCI_LINT) run -v -c .golangci.yml
+
+.PHONY: validate
+validate: generate manifests generate-mocks generate-licenses ## Validate generated files are up to date
+	@git diff --exit-code
+
+.PHONY: install-crd
+install-crd: manifests ## Install CRDs into the cluster
+	kubectl apply --server-side -f $(KARTA_CRDS_DIR)
+
+.PHONY: uninstall-crd
+uninstall-crd: ## Uninstall CRDs from the cluster
+	kubectl delete -f $(KARTA_CRDS_DIR) --ignore-not-found
+
+.PHONY: check
+check: download-dependencies validate test lint ## Run all library checks
+
+##@ Operator
+
+.PHONY: fmt
+fmt: ## Run go fmt on the operator (fixes files in place)
+	cd $(OPERATOR_DIR) && go fmt ./...
+
+.PHONY: fmt-check
+fmt-check: ## Check operator formatting without modifying files (CI)
+	@test -z "$(shell cd $(OPERATOR_DIR) && gofmt -l .)" || \
+		(echo "go fmt required:"; cd $(OPERATOR_DIR) && gofmt -l .; exit 1)
+
+.PHONY: vet
+vet: ## Run go vet on the operator
+	cd $(OPERATOR_DIR) && go vet ./...
+
+.PHONY: operator-lint
+operator-lint: golangci-lint ## Run golangci-lint on the operator
+	cd $(OPERATOR_DIR) && $(GOLANGCI_LINT) run -v -c $(PROJECT_DIR)/.golangci.yml ./...
+
+.PHONY: operator-test-unit
+operator-test-unit: ## Run operator unit tests (no envtest binaries required)
+	cd $(OPERATOR_DIR) && go test -coverprofile=cover-unit.out ./pkg/... ./cmd/...
+
+.PHONY: operator-test-integration
+operator-test-integration: envtest ## Run operator envtest integration tests
+	cd $(OPERATOR_DIR) && KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
+		go test -coverprofile=cover-integration.out ./test/integration/...
+
+.PHONY: operator-test
+operator-test: operator-test-unit operator-test-integration ## Run all operator tests
+
+.PHONY: operator-check
+operator-check: operator-download-dependencies fmt-check vet operator-lint operator-test ## Run all operator checks
+
+.PHONY: build
+build: ## Build the karta-operator binary for the host OS/arch
+	mkdir -p $(BIN_DIR)
+	cd $(OPERATOR_DIR) && go build $(LDFLAGS) -o $(BIN_DIR)/karta-operator ./cmd
+
+.PHONY: build-linux-amd64
+build-linux-amd64: ## Cross-compile operator for linux/amd64
+	mkdir -p $(BIN_DIR)
+	cd $(OPERATOR_DIR) && GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(BIN_DIR)/karta-operator-amd64 ./cmd
+
+.PHONY: build-linux-arm64
+build-linux-arm64: ## Cross-compile operator for linux/arm64
+	mkdir -p $(BIN_DIR)
+	cd $(OPERATOR_DIR) && GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o $(BIN_DIR)/karta-operator-arm64 ./cmd
+
+.PHONY: build-all
+build-all: build-linux-amd64 build-linux-arm64 ## Cross-compile operator for all supported platforms
+
+.PHONY: docker-build
+docker-build: build-linux-amd64 ## Build Docker image for amd64
+	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
+		--build-arg TARGETARCH=amd64 \
+		--build-arg VERSION=$(VERSION) \
+		--tag $(IMAGE) \
+		$(OPERATOR_DIR)
+
+.PHONY: docker-build-multiarch
+docker-build-multiarch: build-all ## Build and push multi-arch Docker image via BuildKit (requires Docker)
+	@[ "$(CONTAINER_TOOL)" = "docker" ] || \
+		(echo "Error: docker-build-multiarch requires CONTAINER_TOOL=docker (got '$(CONTAINER_TOOL)')" >&2; exit 1)
+	$(CONTAINER_TOOL) buildx build $(BUILD_ARGS) \
+		--platform linux/amd64,linux/arm64 \
+		--build-arg VERSION=$(VERSION) \
+		--tag $(IMAGE) \
+		--push \
+		$(OPERATOR_DIR)
+
+.PHONY: docker-push
+docker-push: ## Push the Docker image
+	$(CONTAINER_TOOL) push $(IMAGE)
+
+.PHONY: deploy
+deploy: ## Deploy the operator to the cluster in the current kubeconfig context
+	kubectl apply -f $(OPERATOR_DIR)/config/
+
+.PHONY: undeploy
+undeploy: ## Remove the operator from the cluster
+	kubectl delete -f $(OPERATOR_DIR)/config/ --ignore-not-found
+
+##@ Helm
+
+.PHONY: helm-build
+helm-build: ## Build the Helm chart
+	helm package $(KARTA_CHART_DIR) --version $(HELM_CHART_VERSION) --app-version $(HELM_CHART_VERSION)
+
+.PHONY: helm-lint
+helm-lint: ## Lint the Helm chart
+	helm lint $(KARTA_CHART_DIR)
+
+.PHONY: helm-validate
+helm-validate: ## Validate the Helm chart renders
+	helm template $(KARTA_CHART_DIR)
+
+##@ Tools
+
+.PHONY: golangci-lint
+golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary
+$(GOLANGCI_LINT): $(LOCALBIN)
+	@[ -f "$(GOLANGCI_LINT)" ] || { \
+	set -e; \
+	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)"; \
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/$(GOLANGCI_LINT_VERSION)/install.sh \
+		| sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION); \
+	}
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download setup-envtest locally if necessary
+$(ENVTEST): $(LOCALBIN)
+	@[ -f "$(ENVTEST)" ] || \
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
+
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary
+$(CONTROLLER_GEN): $(LOCALBIN)
+	@[ -f "$(CONTROLLER_GEN)" ] || { \
+	set -e; \
+	echo "Downloading controller-gen@$(CONTROLLER_TOOLS_VERSION)"; \
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION); \
+	}
+
+.PHONY: mockgen
+mockgen: $(MOCKGEN) ## Download mockgen locally if necessary
+$(MOCKGEN): $(LOCALBIN)
+	@[ -f "$(MOCKGEN)" ] || { \
+	set -e; \
+	echo "Downloading mockgen@$(GOMOCK_VERSION)"; \
+	GOBIN=$(LOCALBIN) go install go.uber.org/mock/mockgen@$(GOMOCK_VERSION); \
+	}
+
+.PHONY: go-licenses
+go-licenses: $(GO_LICENSES) ## Download go-licenses locally if necessary
+$(GO_LICENSES): $(LOCALBIN)
+	@[ -f "$(GO_LICENSES)" ] || { \
+	set -e; \
+	echo "Downloading go-licenses@$(GO_LICENSES_VERSION)"; \
+	GOBIN=$(LOCALBIN) go install github.com/google/go-licenses/v2@$(GO_LICENSES_VERSION); \
+	}
+
+.PHONY: help
+help: ## Show this help
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make -f Makefile.unified \033[36m<target>\033[0m\n"} \
+	/^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2 } \
+	/^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) }' $(MAKEFILE_LIST)
