@@ -111,8 +111,6 @@ func (r *Reconciler) validateKarta(logger logr.Logger, karta *kartav1alpha1.Kart
 }
 
 // checkCRDExists looks up the referenced CRD and writes the CRDExists condition.
-// It returns an error only on transient API failures; a missing CRD is not an
-// error — it sets CRDExists=False and returns nil.
 func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
 	gvk := rootGVK(karta)
 	if gvk == nil {

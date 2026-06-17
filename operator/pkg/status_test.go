@@ -44,3 +44,25 @@ var _ = Describe("setConditions", func() {
 		}
 	})
 })
+
+// findCondition returns the condition with the given type, failing the test
+// when not found.
+func findCondition(conds []metav1.Condition, t kartav1alpha1.ConditionType) metav1.Condition {
+	GinkgoHelper()
+	c, found := findConditionOpt(conds, t)
+	if !found {
+		Fail("condition not found: " + string(t))
+	}
+	return c
+}
+
+// findConditionOpt returns the condition with the given type and whether it was
+// found, without failing the test.
+func findConditionOpt(conds []metav1.Condition, t kartav1alpha1.ConditionType) (metav1.Condition, bool) {
+	for _, c := range conds {
+		if c.Type == string(t) {
+			return c, true
+		}
+	}
+	return metav1.Condition{}, false
+}

@@ -18,11 +18,6 @@ import (
 // MapCRDToKartaEvent maps a CRD event to reconcile requests for every Karta
 // whose root component references the same group and kind as that CRD,
 // regardless of version.
-//
-// The run.ai/karta-group and run.ai/karta-kind labels are used for an
-// efficient label-selector query. Kartas that have not yet been reconciled
-// (no labels stamped) will not be found here, but their own create event
-// already triggered a reconcile that will stamp the labels for future events.
 func (r *Reconciler) MapCRDToKartaEvent(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
 

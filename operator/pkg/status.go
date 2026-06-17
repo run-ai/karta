@@ -25,8 +25,6 @@ const (
 	msgNotReady         = "Validated and CRDExists must both be True"
 )
 
-// setValidated writes the Validated condition. msg is placed in the condition
-// message when s is False; pass an empty string to use the default message.
 func setValidated(status *kartav1alpha1.KartaStatus, generation int64, s metav1.ConditionStatus, msg string) {
 	if s == metav1.ConditionFalse && msg == "" {
 		msg = msgValidationFailed
@@ -40,8 +38,6 @@ func setValidated(status *kartav1alpha1.KartaStatus, generation int64, s metav1.
 	})
 }
 
-// setCRDExists writes the CRDExists condition. msg is placed in the condition
-// message when s is False; pass an empty string to use the default message.
 func setCRDExists(status *kartav1alpha1.KartaStatus, generation int64, s metav1.ConditionStatus, msg string) {
 	if s == metav1.ConditionFalse && msg == "" {
 		msg = msgCRDNotFound
@@ -55,9 +51,6 @@ func setCRDExists(status *kartav1alpha1.KartaStatus, generation int64, s metav1.
 	})
 }
 
-// setReady derives the Ready condition from the Validated and CRDExists
-// conditions already present in status (Ready is True only when both are
-// True) and returns the resulting status.
 func setReady(status *kartav1alpha1.KartaStatus, generation int64) metav1.ConditionStatus {
 	statusOf := func(t kartav1alpha1.ConditionType) metav1.ConditionStatus {
 		if c := apimeta.FindStatusCondition(status.Conditions, string(t)); c != nil {
@@ -85,7 +78,6 @@ func setReady(status *kartav1alpha1.KartaStatus, generation int64) metav1.Condit
 	return readyStatus
 }
 
-// reasonForBool returns trueReason when status is True, falseReason otherwise.
 func reasonForBool(status metav1.ConditionStatus, trueReason, falseReason string) string {
 	if status == metav1.ConditionTrue {
 		return trueReason
@@ -93,7 +85,6 @@ func reasonForBool(status metav1.ConditionStatus, trueReason, falseReason string
 	return falseReason
 }
 
-// msgWhenFalse returns the fallback message when status is False, empty otherwise.
 func msgWhenFalse(status metav1.ConditionStatus, fallback string) string {
 	if status == metav1.ConditionTrue {
 		return ""
