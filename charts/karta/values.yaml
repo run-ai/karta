@@ -1,0 +1,83 @@
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
+
+# Default values for the karta operator chart.
+# Override any of these with --set key=value or -f my-values.yaml.
+
+# Override the base name used for resources. Empty = use the chart name ("karta").
+nameOverride: ""
+# Override the full resource name outright. Empty = "<name>-operator".
+fullnameOverride: ""
+
+# Number of operator replicas. Keep this at 1 unless leaderElection.enabled is
+# true; without leader election multiple replicas would reconcile concurrently.
+replicaCount: 1
+
+# Leader election lets you run more than one replica safely (active/passive):
+# only the replica holding the lease reconciles. When enabled, the chart also
+# creates a namespaced Role/RoleBinding granting access to the lease object.
+leaderElection:
+  enabled: false
+  # Name of the Lease object used to coordinate leadership.
+  id: karta-operator.run.ai
+
+image:
+  # Container registry + image name. Defaults to the published OSS image.
+  repository: ghcr.io/run-ai/karta/karta-operator
+  # Image tag. When empty, the chart falls back to .Chart.AppVersion,
+  # so the chart version and image version stay in lockstep.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Optional image pull secrets for private registries (list of {name: ...}).
+imagePullSecrets: []
+
+# Annotations applied to the operator pod template (e.g. Prometheus scrape hints).
+podAnnotations: {}
+
+serviceAccount:
+  # When true, the chart creates the ServiceAccount. Set false to use an
+  # externally managed one (then set the name below).
+  create: true
+  # Leave empty to use the chart's default name.
+  name: ""
+
+# Flags passed to the operator binary.
+args:
+  - --metrics-bind-address=:8080
+  - --health-probe-bind-address=:8081
+  - --zap-log-level=info
+
+# Container ports exposed by the operator.
+ports:
+  metrics: 8080
+  health: 8081
+
+# Pod-level security context.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 0
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container-level security context.
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+# Optional scheduling controls.
+nodeSelector: {}
+tolerations: []
+affinity: {}
