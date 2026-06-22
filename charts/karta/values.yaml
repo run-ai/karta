@@ -5,7 +5,6 @@
 # Override with --set key=value or -f my-values.yaml.
 
 # Overrides for resource names. Rarely needed.
-nameOverride: ""
 fullnameOverride: ""
 
 # Keep at 1 unless leaderElection.enabled is true; without leader election
@@ -34,16 +33,18 @@ podAnnotations: {}
 serviceAccount:
   # Set false to use an externally managed ServiceAccount (set name below).
   create: true
+  # Only used when create: false — name of the externally managed SA.
   name: ""
-
-args:
-  - --metrics-bind-address=:8080
-  - --health-probe-bind-address=:8081
-  - --zap-log-level=info
 
 ports:
   metrics: 8080
   health: 8081
+
+logLevel: info
+
+# Extra flags appended after the chart's default args. Use this to add flags
+# without replacing the defaults entirely.
+extraArgs: []
 
 podSecurityContext:
   runAsNonRoot: true

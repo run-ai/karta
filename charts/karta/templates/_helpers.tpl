@@ -42,13 +42,13 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{/*
-Name of the ServiceAccount to use. Honors serviceAccount.name when set,
-otherwise derives from the fullname.
+Name of the ServiceAccount to use. When create=true the chart owns the name
+(karta.fullname). When create=false the caller must supply serviceAccount.name.
 */}}
 {{- define "karta.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create -}}
-{{- default (include "karta.fullname" .) .Values.serviceAccount.name -}}
+{{- include "karta.fullname" . -}}
 {{- else -}}
-+{{- required "serviceAccount.name must be set when serviceAccount.create=false" .Values.serviceAccount.name -}}
+{{- required "serviceAccount.name is required when serviceAccount.create is false" .Values.serviceAccount.name -}}
 {{- end -}}
 {{- end -}}

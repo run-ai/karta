@@ -38,10 +38,15 @@ spec:
           image: "{{ required "image.repository is required" .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
-            {{- toYaml .Values.args | nindent 12 }}
             {{- if .Values.leaderElection.enabled }}
             - --leader-elect
             - --leader-election-id={{ .Values.leaderElection.id }}
+            {{- end }}
+            - --metrics-bind-address=:{{ .Values.ports.metrics }}
+            - --health-probe-bind-address=:{{ .Values.ports.health }}
+            - --zap-log-level={{ .Values.logLevel }}
+            {{- with .Values.extraArgs }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           ports:
             - name: metrics
