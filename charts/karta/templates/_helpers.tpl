@@ -1,7 +1,5 @@
-{{/*
-Copyright 2025 NVIDIA CORPORATION
-SPDX-License-Identifier: Apache-2.0
-*/}}
+# Copyright 2025 NVIDIA CORPORATION
+# SPDX-License-Identifier: Apache-2.0
 
 {{/*
 Base name for resources. Defaults to the chart name, overridable via nameOverride.
