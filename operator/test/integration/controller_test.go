@@ -19,12 +19,6 @@ import (
 )
 
 var _ = Describe("Reconciler (envtest)", func() {
-	getKarta := func(k *kartav1alpha1.Karta) *kartav1alpha1.Karta {
-		out := &kartav1alpha1.Karta{}
-		Expect(k8sClient.Get(testCtx, client.ObjectKeyFromObject(k), out)).To(Succeed())
-		return out
-	}
-
 	It("sets Validated=False with the real validator error for an invalid Karta", func() {
 		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 		k := newKarta("envtest-invalid", &gvk) // no StatusDefinition → invalid
@@ -32,7 +26,7 @@ var _ = Describe("Reconciler (envtest)", func() {
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
-			c, ok := findCondition(getKarta(k).Status.Conditions, kartav1alpha1.ConditionValidated)
+			c, ok := findCondition(getKarta(k.Name).Status.Conditions, kartav1alpha1.ConditionValidated)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(c.Status).To(Equal(metav1.ConditionFalse))
 			g.Expect(c.Reason).To(Equal(pkg.ReasonValidationFailed))
@@ -49,7 +43,7 @@ var _ = Describe("Reconciler (envtest)", func() {
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
-			conds := getKarta(k).Status.Conditions
+			conds := getKarta(k.Name).Status.Conditions
 			crd, ok := findCondition(conds, kartav1alpha1.ConditionCRDExists)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(crd.Status).To(Equal(metav1.ConditionFalse))
@@ -71,7 +65,7 @@ var _ = Describe("Reconciler (envtest)", func() {
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
-			got := getKarta(k)
+			got := getKarta(k.Name)
 			validated, ok := findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(validated.Status).To(Equal(metav1.ConditionTrue))
@@ -94,12 +88,12 @@ var _ = Describe("Reconciler (envtest)", func() {
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
-			_, ok := findCondition(getKarta(k).Status.Conditions, kartav1alpha1.ConditionReady)
+			_, ok := findCondition(getKarta(k.Name).Status.Conditions, kartav1alpha1.ConditionReady)
 			g.Expect(ok).To(BeTrue())
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
 		Eventually(func() error {
-			got := getKarta(k)
+			got := getKarta(k.Name)
 			got.Status.Conditions = append(got.Status.Conditions, metav1.Condition{
 				Type: "RBACReady", Status: metav1.ConditionTrue, Reason: "EWI",
 				LastTransitionTime: metav1.Now(),
@@ -108,13 +102,13 @@ var _ = Describe("Reconciler (envtest)", func() {
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
 		Eventually(func() error {
-			got := getKarta(k)
+			got := getKarta(k.Name)
 			got.Spec.StructureDefinition.RootComponent.Name = "renamed-root"
 			return k8sClient.Update(testCtx, got)
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
 		Consistently(func(g Gomega) {
-			rbac, ok := findCondition(getKarta(k).Status.Conditions, "RBACReady")
+			rbac, ok := findCondition(getKarta(k.Name).Status.Conditions, "RBACReady")
 			g.Expect(ok).To(BeTrue())
 			g.Expect(rbac.Status).To(Equal(metav1.ConditionTrue))
 			g.Expect(rbac.Reason).To(Equal("EWI"))
@@ -128,7 +122,7 @@ var _ = Describe("Reconciler (envtest)", func() {
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
-			got := getKarta(k)
+			got := getKarta(k.Name)
 			crd, ok := findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(crd.Status).To(Equal(metav1.ConditionFalse))
@@ -144,7 +138,7 @@ var _ = Describe("Reconciler (envtest)", func() {
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, crd) })
 
 		Eventually(func(g Gomega) {
-			conds := getKarta(k).Status.Conditions
+			conds := getKarta(k.Name).Status.Conditions
 			crdExists, ok := findCondition(conds, kartav1alpha1.ConditionCRDExists)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(crdExists.Status).To(Equal(metav1.ConditionTrue))
@@ -170,7 +164,7 @@ var _ = Describe("Reconciler (envtest)", func() {
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
-			ready, ok := findCondition(getKarta(k).Status.Conditions, kartav1alpha1.ConditionReady)
+			ready, ok := findCondition(getKarta(k.Name).Status.Conditions, kartav1alpha1.ConditionReady)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionTrue))
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
@@ -179,7 +173,7 @@ var _ = Describe("Reconciler (envtest)", func() {
 		crdDeleted = true
 
 		Eventually(func(g Gomega) {
-			conds := getKarta(k).Status.Conditions
+			conds := getKarta(k.Name).Status.Conditions
 			crdExists, ok := findCondition(conds, kartav1alpha1.ConditionCRDExists)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(crdExists.Status).To(Equal(metav1.ConditionFalse))
@@ -201,7 +195,7 @@ var _ = Describe("Reconciler (envtest)", func() {
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
-			conds := getKarta(k).Status.Conditions
+			conds := getKarta(k.Name).Status.Conditions
 			validated, ok := findCondition(conds, kartav1alpha1.ConditionValidated)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(validated.Status).To(Equal(metav1.ConditionTrue))
@@ -215,7 +209,7 @@ var _ = Describe("Reconciler (envtest)", func() {
 		})
 
 		Eventually(func(g Gomega) {
-			conds := getKarta(k).Status.Conditions
+			conds := getKarta(k.Name).Status.Conditions
 			validated, ok := findCondition(conds, kartav1alpha1.ConditionValidated)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(validated.Status).To(Equal(metav1.ConditionFalse))
@@ -237,7 +231,7 @@ var _ = Describe("Reconciler (envtest)", func() {
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
-			conds := getKarta(k).Status.Conditions
+			conds := getKarta(k.Name).Status.Conditions
 			validated, ok := findCondition(conds, kartav1alpha1.ConditionValidated)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(validated.Status).To(Equal(metav1.ConditionTrue))
@@ -263,10 +257,10 @@ var _ = Describe("Reconciler (envtest)", func() {
 
 		var baselineA metav1.Time
 		Eventually(func(g Gomega) {
-			readyA, ok := findCondition(getKarta(kA).Status.Conditions, kartav1alpha1.ConditionReady)
+			readyA, ok := findCondition(getKarta(kA.Name).Status.Conditions, kartav1alpha1.ConditionReady)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(readyA.Status).To(Equal(metav1.ConditionFalse))
-			readyB, ok := findCondition(getKarta(kB).Status.Conditions, kartav1alpha1.ConditionReady)
+			readyB, ok := findCondition(getKarta(kB.Name).Status.Conditions, kartav1alpha1.ConditionReady)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(readyB.Status).To(Equal(metav1.ConditionFalse))
 			baselineA = readyA.LastTransitionTime
@@ -277,19 +271,25 @@ var _ = Describe("Reconciler (envtest)", func() {
 		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, crd) })
 
 		Eventually(func(g Gomega) {
-			ready, ok := findCondition(getKarta(kB).Status.Conditions, kartav1alpha1.ConditionReady)
+			ready, ok := findCondition(getKarta(kB.Name).Status.Conditions, kartav1alpha1.ConditionReady)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionTrue))
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
 		Consistently(func(g Gomega) {
-			ready, ok := findCondition(getKarta(kA).Status.Conditions, kartav1alpha1.ConditionReady)
+			ready, ok := findCondition(getKarta(kA.Name).Status.Conditions, kartav1alpha1.ConditionReady)
 			g.Expect(ok).To(BeTrue())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionFalse))
 			g.Expect(ready.LastTransitionTime).To(Equal(baselineA))
 		}, 2*time.Second, eventuallyInterval).Should(Succeed())
 	})
 })
+
+func getKarta(name string) *kartav1alpha1.Karta {
+	out := &kartav1alpha1.Karta{}
+	Expect(k8sClient.Get(testCtx, client.ObjectKey{Name: name}, out)).To(Succeed())
+	return out
+}
 
 func newKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Karta {
 	k := &kartav1alpha1.Karta{

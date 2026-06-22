@@ -78,7 +78,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger.Info("Reconciling Karta")
 
 	base := karta.DeepCopy()
-	err := r.reconcile(ctx, logger, karta, base)
+	err := r.reconcile(ctx, logger, karta)
 	if patchErr := r.Status().Patch(ctx, karta, client.MergeFrom(base)); patchErr != nil {
 		patchErr = fmt.Errorf("failed to update status for karta %q: %w", karta.Name, patchErr)
 		err = stderrors.Join(err, patchErr)
@@ -87,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 // reconcile runs the reconciliation logic for one Karta.
-func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta, base *kartav1alpha1.Karta) (err error) {
+func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) (err error) {
 	r.validateKarta(logger, karta)
 	if err = r.checkCRDExists(ctx, logger, karta); err != nil {
 		return

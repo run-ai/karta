@@ -8,6 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -43,18 +44,9 @@ func setConditions(status *kartav1alpha1.KartaStatus, in conditionInputs) {
 
 func findCondition(conds []metav1.Condition, t kartav1alpha1.ConditionType) metav1.Condition {
 	GinkgoHelper()
-	c, found := getCondition(conds, t)
-	if !found {
+	c := apimeta.FindStatusCondition(conds, string(t))
+	if c == nil {
 		Fail("condition not found: " + string(t))
 	}
-	return c
-}
-
-func getCondition(conds []metav1.Condition, t kartav1alpha1.ConditionType) (metav1.Condition, bool) {
-	for _, c := range conds {
-		if c.Type == string(t) {
-			return c, true
-		}
-	}
-	return metav1.Condition{}, false
+	return *c
 }

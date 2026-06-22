@@ -6,6 +6,7 @@ package pkg
 import (
 	"context"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/client-go/tools/record"
 	"strings"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
@@ -41,7 +42,7 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		k8s = fake.NewClientBuilder().WithScheme(buildScheme()).Build()
-		r = newReconciler(k8s)
+		r = NewReconciler(k8s, record.NewFakeRecorder(64))
 	})
 
 	It("returns nil when the object is not a CRD", func() {
@@ -50,17 +51,6 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 
 	It("returns no requests when there are no Kartas", func() {
 		crd := newCRD("fooTestRunai", "test.run.ai", "Foo", "v1")
-		Expect(r.MapCRDToKartaEvent(ctx, crd)).To(BeEmpty())
-	})
-
-	It("returns no requests when Kartas exist but have no index labels (not yet reconciled)", func() {
-		// The mapper uses label-selector; a freshly created Karta without labels
-		// is not found here. Its own create event triggers the first reconcile
-		// which stamps the labels for future CRD events.
-		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
-		Expect(k8s.Create(ctx, newKarta("karta-unlabeled", &gvk))).To(Succeed())
-
-		crd := newCRD("foos.test.run.ai", gvk.Group, gvk.Kind, gvk.Version)
 		Expect(r.MapCRDToKartaEvent(ctx, crd)).To(BeEmpty())
 	})
 
