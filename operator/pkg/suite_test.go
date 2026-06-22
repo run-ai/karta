@@ -21,8 +21,6 @@ func TestOperator(t *testing.T) {
 	RunSpecs(t, "Karta Operator Suite")
 }
 
-// buildScheme builds a runtime.Scheme populated with the API types this
-// operator interacts with. Used by every test that creates a fake client.
 func buildScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
 	Expect(kartav1alpha1.AddToScheme(s)).To(Succeed())
@@ -30,9 +28,6 @@ func buildScheme() *runtime.Scheme {
 	return s
 }
 
-// newReconciler wraps NewReconciler so test files don't need to repeat the
-// recorder on every call. Events are buffered and silently discarded unless
-// the test explicitly reads from the recorder channel.
 func newReconciler(k8s client.WithWatch) *Reconciler {
 	return NewReconciler(k8s, record.NewFakeRecorder(64))
 }
