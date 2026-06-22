@@ -144,7 +144,7 @@ func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, kar
 func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
 	gvk := rootGVK(karta)
 	if gvk == nil {
-		return r.removeIndexLabels(ctx, logger, karta)
+		return nil
 	}
 
 	desired := map[string]string{
@@ -174,30 +174,6 @@ func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta
 	return nil
 }
 
-// removeIndexLabels deletes the three GVK index labels from the Karta metadata
-// via a JSON merge-patch (setting each key to null removes it).
-// It is a no-op when none of the labels are present.
-func (r *Reconciler) removeIndexLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
-	if !hasAnyIndexLabel(karta.Labels) {
-		return nil
-	}
-
-	base := karta.DeepCopy()
-	updated := karta.DeepCopy()
-	delete(updated.Labels, kartav1alpha1.LabelRootGroup)
-	delete(updated.Labels, kartav1alpha1.LabelRootVersion)
-	delete(updated.Labels, kartav1alpha1.LabelRootKind)
-
-	if err := r.Patch(ctx, updated, client.MergeFrom(base)); err != nil {
-		return fmt.Errorf("remove stale index labels for karta %q: %w", karta.Name, err)
-	}
-	karta.Labels = updated.Labels
-	karta.ResourceVersion = updated.ResourceVersion
-
-	logger.V(1).Info("Removed stale GVK index labels (root kind no longer set)")
-	return nil
-}
-
 // labelsMatch returns true when current already contains all desired key/value pairs.
 func labelsMatch(current, desired map[string]string) bool {
 	for k, v := range desired {
@@ -206,23 +182,6 @@ func labelsMatch(current, desired map[string]string) bool {
 		}
 	}
 	return true
-}
-
-// hasAnyIndexLabel reports whether the Karta has any of the three GVK index labels.
-func hasAnyIndexLabel(labels map[string]string) bool {
-	if len(labels) == 0 {
-		return false
-	}
-	for _, k := range []string{
-		kartav1alpha1.LabelRootGroup,
-		kartav1alpha1.LabelRootVersion,
-		kartav1alpha1.LabelRootKind,
-	} {
-		if _, ok := labels[k]; ok {
-			return true
-		}
-	}
-	return false
 }
 
 // rootGVK extracts the GroupVersionKind of the Karta root component, or nil
