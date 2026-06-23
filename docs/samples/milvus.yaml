@@ -361,14 +361,6 @@ spec:
       scaleDefinition:
         replicasPath: .spec.dependencies.pulsar.inCluster.values.proxy.replicaCount
 
-    additionalChildKinds:
-    - group: ""
-      version: v1
-      kind: Service
-    - group: ""
-      version: v1
-      kind: ConfigMap
-
   optimizationInstructions:
     gangScheduling:
       podGroups:
