@@ -1,10 +1,6 @@
 # Copyright 2025 NVIDIA CORPORATION
 # SPDX-License-Identifier: Apache-2.0
 
-{{- define "karta.name" -}}
-{{- .Chart.Name -}}
-{{- end -}}
-
 {{/*
 Fully qualified resource name: "<chart-name>-operator" (e.g. "karta-operator").
 Override wholesale via fullnameOverride.
@@ -13,7 +9,7 @@ Override wholesale via fullnameOverride.
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-operator" (include "karta.name" .) | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-operator" .Chart.Name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
@@ -32,7 +28,7 @@ Selector labels. These must be stable across upgrades, so they intentionally
 exclude version/chart labels (which change between releases).
 */}}
 {{- define "karta.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "karta.name" . }}
+app.kubernetes.io/name: {{ .Chart.Name }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
