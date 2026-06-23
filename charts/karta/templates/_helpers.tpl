@@ -1,16 +1,13 @@
 # Copyright 2025 NVIDIA CORPORATION
 # SPDX-License-Identifier: Apache-2.0
 
-{{/*
-Base name for resources. Defaults to the chart name, overridable via nameOverride.
-*/}}
 {{- define "karta.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- .Chart.Name -}}
 {{- end -}}
 
 {{/*
-Fully qualified resource name. Defaults to "<name>-operator" (e.g. "karta-operator"),
-overridable wholesale via fullnameOverride. Truncated to 63 chars for the DNS label limit.
+Fully qualified resource name: "<chart-name>-operator" (e.g. "karta-operator").
+Override wholesale via fullnameOverride.
 */}}
 {{- define "karta.fullname" -}}
 {{- if .Values.fullnameOverride -}}
