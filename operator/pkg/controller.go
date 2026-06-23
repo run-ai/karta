@@ -25,6 +25,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
+// crdSpecGroupIndexKey indexes CustomResourceDefinitions by their spec.group
+// so the reconciler can list only CRDs in a given group.
+const crdSpecGroupIndexKey = "spec.group"
+
 const (
 	ControllerName = "karta-controller"
 )
@@ -47,6 +51,14 @@ func NewReconciler(c client.Client, recorder record.EventRecorder) *Reconciler {
 //  2. CustomResourceDefinition — events are mapped to the Kartas that
 //     reference the same group+kind.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(),
+		&apiextensionsv1.CustomResourceDefinition{}, crdSpecGroupIndexKey,
+		func(obj client.Object) []string {
+			return []string{obj.(*apiextensionsv1.CustomResourceDefinition).Spec.Group}
+		}); err != nil {
+		return fmt.Errorf("index CRDs by %s: %w", crdSpecGroupIndexKey, err)
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&kartav1alpha1.Karta{}).
@@ -87,15 +99,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 // reconcile runs the reconciliation logic for one Karta.
-func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) (err error) {
+func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
 	r.validateKarta(logger, karta)
-	if err = r.checkCRDExists(ctx, logger, karta); err != nil {
-		return
+	if err := r.checkCRDExists(ctx, logger, karta); err != nil {
+		return err
 	}
 	ready := setReady(&karta.Status, karta.Generation)
 	logger.V(1).Info("Derived Ready condition", "ready", ready)
-	err = r.ensureLabels(ctx, logger, karta)
-	return
+	err := r.ensureLabels(ctx, logger, karta)
+	return err
 }
 
 // validateKarta runs the Karta spec validator and writes the Validated condition.
@@ -202,7 +214,7 @@ func rootGVK(karta *kartav1alpha1.Karta) *schema.GroupVersionKind {
 // kind is present in the cluster.
 func (r *Reconciler) crdExistsForGVK(ctx context.Context, gvk schema.GroupVersionKind) (bool, error) {
 	crds := &apiextensionsv1.CustomResourceDefinitionList{}
-	if err := r.List(ctx, crds); err != nil {
+	if err := r.List(ctx, crds, client.MatchingFields{crdSpecGroupIndexKey: gvk.Group}); err != nil {
 		return false, fmt.Errorf("list CRDs: %w", err)
 	}
 
