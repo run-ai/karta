@@ -25,9 +25,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// crdSpecGroupIndexKey indexes CustomResourceDefinitions by their spec.group
-// so the reconciler can list only CRDs in a given group.
-const crdSpecGroupIndexKey = "spec.group"
+// crdGroupKindIndexKey indexes CustomResourceDefinitions by group and kind so
+// the reconciler can locate the CRD for a Karta root GVK directly.
+const crdGroupKindIndexKey = "spec.group+spec.names.kind"
 
 const (
 	ControllerName = "karta-controller"
@@ -52,11 +52,12 @@ func NewReconciler(c client.Client, recorder record.EventRecorder) *Reconciler {
 //     reference the same group+kind.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(),
-		&apiextensionsv1.CustomResourceDefinition{}, crdSpecGroupIndexKey,
+		&apiextensionsv1.CustomResourceDefinition{}, crdGroupKindIndexKey,
 		func(obj client.Object) []string {
-			return []string{obj.(*apiextensionsv1.CustomResourceDefinition).Spec.Group}
+			crd := obj.(*apiextensionsv1.CustomResourceDefinition)
+			return []string{schema.GroupKind{Group: crd.Spec.Group, Kind: crd.Spec.Names.Kind}.String()}
 		}); err != nil {
-		return fmt.Errorf("index CRDs by %s: %w", crdSpecGroupIndexKey, err)
+		return fmt.Errorf("index CRDs by %s: %w", crdGroupKindIndexKey, err)
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -100,6 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 // reconcile runs the reconciliation logic for one Karta.
 func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
+	setDefaultConditions(&karta.Status, karta.Generation)
 	r.validateKarta(logger, karta)
 	if err := r.checkCRDExists(ctx, logger, karta); err != nil {
 		return err
@@ -214,24 +216,23 @@ func rootGVK(karta *kartav1alpha1.Karta) *schema.GroupVersionKind {
 // kind is present in the cluster.
 func (r *Reconciler) crdExistsForGVK(ctx context.Context, gvk schema.GroupVersionKind) (bool, error) {
 	crds := &apiextensionsv1.CustomResourceDefinitionList{}
-	if err := r.List(ctx, crds, client.MatchingFields{crdSpecGroupIndexKey: gvk.Group}); err != nil {
+	if err := r.List(ctx, crds, client.MatchingFields{
+		crdGroupKindIndexKey: schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind}.String(),
+	}); err != nil {
 		return false, fmt.Errorf("list CRDs: %w", err)
 	}
 
 	for i := range crds.Items {
-		if crdMatchesGVK(&crds.Items[i], gvk) {
+		if crdServesVersion(&crds.Items[i], gvk.Version) {
 			return true, nil
 		}
 	}
 	return false, nil
 }
 
-func crdMatchesGVK(crd *apiextensionsv1.CustomResourceDefinition, gvk schema.GroupVersionKind) bool {
-	if crd.Spec.Group != gvk.Group || crd.Spec.Names.Kind != gvk.Kind {
-		return false
-	}
+func crdServesVersion(crd *apiextensionsv1.CustomResourceDefinition, version string) bool {
 	for _, v := range crd.Spec.Versions {
-		if v.Name == gvk.Version && v.Served {
+		if v.Name == version && v.Served {
 			return true
 		}
 	}

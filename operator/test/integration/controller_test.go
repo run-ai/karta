@@ -13,21 +13,31 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const testCRDLabel = "karta-integration-test"
+
 var _ = Describe("Reconciler (envtest)", func() {
+	AfterEach(func() {
+		_ = k8sClient.DeleteAllOf(testCtx, &kartav1alpha1.Karta{})
+		_ = k8sClient.DeleteAllOf(testCtx,
+			&apiextensionsv1.CustomResourceDefinition{},
+			client.MatchingLabels{testCRDLabel: "true"},
+		)
+	})
+
 	It("sets Validated=False with the real validator error for an invalid Karta", func() {
 		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Foo"}
 		k := newKarta("envtest-invalid", &gvk) // no StatusDefinition → invalid
 		Expect(k8sClient.Create(testCtx, k)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
-			c, ok := findCondition(getKarta(k.Name).Status.Conditions, kartav1alpha1.ConditionValidated)
-			g.Expect(ok).To(BeTrue())
+			c := apimeta.FindStatusCondition(getKarta(k.Name).Status.Conditions, string(kartav1alpha1.ConditionValidated))
+			g.Expect(c).NotTo(BeNil())
 			g.Expect(c.Status).To(Equal(metav1.ConditionFalse))
 			g.Expect(c.Reason).To(Equal(pkg.ReasonValidationFailed))
 			g.Expect(c.Message).NotTo(BeEmpty())
@@ -40,16 +50,15 @@ var _ = Describe("Reconciler (envtest)", func() {
 		gvk := schema.GroupVersionKind{Group: "absent.run.ai", Version: "v1", Kind: "Missing"}
 		k := newValidKarta("envtest-no-crd", &gvk)
 		Expect(k8sClient.Create(testCtx, k)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
 			conds := getKarta(k.Name).Status.Conditions
-			crd, ok := findCondition(conds, kartav1alpha1.ConditionCRDExists)
-			g.Expect(ok).To(BeTrue())
+			crd := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionCRDExists))
+			g.Expect(crd).NotTo(BeNil())
 			g.Expect(crd.Status).To(Equal(metav1.ConditionFalse))
 			g.Expect(crd.Message).To(ContainSubstring("absent.run.ai"))
-			ready, ok := findCondition(conds, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			ready := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionReady))
+			g.Expect(ready).NotTo(BeNil())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionFalse))
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 	})
@@ -57,23 +66,21 @@ var _ = Describe("Reconciler (envtest)", func() {
 	It("sets Ready=True and stamps index labels when the CRD exists", func() {
 		crd := buildCRD("test.run.ai", "Widget", "v1")
 		Expect(k8sClient.Create(testCtx, crd)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, crd) })
 
 		gvk := schema.GroupVersionKind{Group: "test.run.ai", Version: "v1", Kind: "Widget"}
 		k := newValidKarta("envtest-ready", &gvk)
 		Expect(k8sClient.Create(testCtx, k)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
 			got := getKarta(k.Name)
-			validated, ok := findCondition(got.Status.Conditions, kartav1alpha1.ConditionValidated)
-			g.Expect(ok).To(BeTrue())
+			validated := apimeta.FindStatusCondition(got.Status.Conditions, string(kartav1alpha1.ConditionValidated))
+			g.Expect(validated).NotTo(BeNil())
 			g.Expect(validated.Status).To(Equal(metav1.ConditionTrue))
-			crdExists, ok := findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists)
-			g.Expect(ok).To(BeTrue())
+			crdExists := apimeta.FindStatusCondition(got.Status.Conditions, string(kartav1alpha1.ConditionCRDExists))
+			g.Expect(crdExists).NotTo(BeNil())
 			g.Expect(crdExists.Status).To(Equal(metav1.ConditionTrue))
-			ready, ok := findCondition(got.Status.Conditions, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			ready := apimeta.FindStatusCondition(got.Status.Conditions, string(kartav1alpha1.ConditionReady))
+			g.Expect(ready).NotTo(BeNil())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionTrue))
 			g.Expect(got.Labels[kartav1alpha1.LabelRootGroup]).To(Equal(gvk.Group))
 			g.Expect(got.Labels[kartav1alpha1.LabelRootVersion]).To(Equal(gvk.Version))
@@ -85,11 +92,9 @@ var _ = Describe("Reconciler (envtest)", func() {
 		gvk := schema.GroupVersionKind{Group: "absent.run.ai", Version: "v1", Kind: "Missing"}
 		k := newValidKarta("envtest-foreign", &gvk)
 		Expect(k8sClient.Create(testCtx, k)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
-			_, ok := findCondition(getKarta(k.Name).Status.Conditions, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			g.Expect(apimeta.FindStatusCondition(getKarta(k.Name).Status.Conditions, string(kartav1alpha1.ConditionReady))).NotTo(BeNil())
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
 		Eventually(func() error {
@@ -108,8 +113,8 @@ var _ = Describe("Reconciler (envtest)", func() {
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
 		Consistently(func(g Gomega) {
-			rbac, ok := findCondition(getKarta(k.Name).Status.Conditions, "RBACReady")
-			g.Expect(ok).To(BeTrue())
+			rbac := apimeta.FindStatusCondition(getKarta(k.Name).Status.Conditions, "RBACReady")
+			g.Expect(rbac).NotTo(BeNil())
 			g.Expect(rbac.Status).To(Equal(metav1.ConditionTrue))
 			g.Expect(rbac.Reason).To(Equal("EWI"))
 		}, 2*time.Second, eventuallyInterval).Should(Succeed())
@@ -119,15 +124,14 @@ var _ = Describe("Reconciler (envtest)", func() {
 		gvk := schema.GroupVersionKind{Group: "install.run.ai", Version: "v1", Kind: "Gadget"}
 		k := newValidKarta("envtest-crd-install", &gvk)
 		Expect(k8sClient.Create(testCtx, k)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
 			got := getKarta(k.Name)
-			crd, ok := findCondition(got.Status.Conditions, kartav1alpha1.ConditionCRDExists)
-			g.Expect(ok).To(BeTrue())
+			crd := apimeta.FindStatusCondition(got.Status.Conditions, string(kartav1alpha1.ConditionCRDExists))
+			g.Expect(crd).NotTo(BeNil())
 			g.Expect(crd.Status).To(Equal(metav1.ConditionFalse))
-			ready, ok := findCondition(got.Status.Conditions, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			ready := apimeta.FindStatusCondition(got.Status.Conditions, string(kartav1alpha1.ConditionReady))
+			g.Expect(ready).NotTo(BeNil())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionFalse))
 			g.Expect(got.Labels[kartav1alpha1.LabelRootGroup]).To(Equal(gvk.Group))
 			g.Expect(got.Labels[kartav1alpha1.LabelRootKind]).To(Equal(gvk.Kind))
@@ -135,15 +139,14 @@ var _ = Describe("Reconciler (envtest)", func() {
 
 		crd := buildCRD("install.run.ai", "Gadget", "v1")
 		Expect(k8sClient.Create(testCtx, crd)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, crd) })
 
 		Eventually(func(g Gomega) {
 			conds := getKarta(k.Name).Status.Conditions
-			crdExists, ok := findCondition(conds, kartav1alpha1.ConditionCRDExists)
-			g.Expect(ok).To(BeTrue())
+			crdExists := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionCRDExists))
+			g.Expect(crdExists).NotTo(BeNil())
 			g.Expect(crdExists.Status).To(Equal(metav1.ConditionTrue))
-			ready, ok := findCondition(conds, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			ready := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionReady))
+			g.Expect(ready).NotTo(BeNil())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionTrue))
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 	})
@@ -151,35 +154,27 @@ var _ = Describe("Reconciler (envtest)", func() {
 	It("flips CRDExists and Ready to False when the referenced CRD is removed", func() {
 		crd := buildCRD("remove.run.ai", "Sprocket", "v1")
 		Expect(k8sClient.Create(testCtx, crd)).To(Succeed())
-		crdDeleted := false
-		DeferCleanup(func() {
-			if !crdDeleted {
-				_ = k8sClient.Delete(testCtx, crd)
-			}
-		})
 
 		gvk := schema.GroupVersionKind{Group: "remove.run.ai", Version: "v1", Kind: "Sprocket"}
 		k := newValidKarta("envtest-crd-remove", &gvk)
 		Expect(k8sClient.Create(testCtx, k)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
-			ready, ok := findCondition(getKarta(k.Name).Status.Conditions, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			ready := apimeta.FindStatusCondition(getKarta(k.Name).Status.Conditions, string(kartav1alpha1.ConditionReady))
+			g.Expect(ready).NotTo(BeNil())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionTrue))
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
 		Expect(k8sClient.Delete(testCtx, crd)).To(Succeed())
-		crdDeleted = true
 
 		Eventually(func(g Gomega) {
 			conds := getKarta(k.Name).Status.Conditions
-			crdExists, ok := findCondition(conds, kartav1alpha1.ConditionCRDExists)
-			g.Expect(ok).To(BeTrue())
+			crdExists := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionCRDExists))
+			g.Expect(crdExists).NotTo(BeNil())
 			g.Expect(crdExists.Status).To(Equal(metav1.ConditionFalse))
 			g.Expect(crdExists.Message).To(ContainSubstring("remove.run.ai"))
-			ready, ok := findCondition(conds, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			ready := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionReady))
+			g.Expect(ready).NotTo(BeNil())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionFalse))
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 	})
@@ -187,20 +182,18 @@ var _ = Describe("Reconciler (envtest)", func() {
 	It("flips Validated and Ready to False when the spec becomes invalid", func() {
 		crd := buildCRD("flip.run.ai", "Knob", "v1")
 		Expect(k8sClient.Create(testCtx, crd)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, crd) })
 
 		gvk := schema.GroupVersionKind{Group: "flip.run.ai", Version: "v1", Kind: "Knob"}
 		k := newValidKarta("envtest-valid-to-invalid", &gvk)
 		Expect(k8sClient.Create(testCtx, k)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
 			conds := getKarta(k.Name).Status.Conditions
-			validated, ok := findCondition(conds, kartav1alpha1.ConditionValidated)
-			g.Expect(ok).To(BeTrue())
+			validated := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionValidated))
+			g.Expect(validated).NotTo(BeNil())
 			g.Expect(validated.Status).To(Equal(metav1.ConditionTrue))
-			ready, ok := findCondition(conds, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			ready := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionReady))
+			g.Expect(ready).NotTo(BeNil())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionTrue))
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
@@ -210,12 +203,12 @@ var _ = Describe("Reconciler (envtest)", func() {
 
 		Eventually(func(g Gomega) {
 			conds := getKarta(k.Name).Status.Conditions
-			validated, ok := findCondition(conds, kartav1alpha1.ConditionValidated)
-			g.Expect(ok).To(BeTrue())
+			validated := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionValidated))
+			g.Expect(validated).NotTo(BeNil())
 			g.Expect(validated.Status).To(Equal(metav1.ConditionFalse))
 			g.Expect(validated.Reason).To(Equal(pkg.ReasonValidationFailed))
-			ready, ok := findCondition(conds, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			ready := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionReady))
+			g.Expect(ready).NotTo(BeNil())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionFalse))
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 	})
@@ -223,23 +216,21 @@ var _ = Describe("Reconciler (envtest)", func() {
 	It("sets CRDExists=False when the CRD does not serve the referenced version", func() {
 		crd := buildCRD("ver.run.ai", "Lever", "v1")
 		Expect(k8sClient.Create(testCtx, crd)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, crd) })
 
 		gvk := schema.GroupVersionKind{Group: "ver.run.ai", Version: "v2", Kind: "Lever"}
 		k := newValidKarta("envtest-wrong-version", &gvk)
 		Expect(k8sClient.Create(testCtx, k)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, k) })
 
 		Eventually(func(g Gomega) {
 			conds := getKarta(k.Name).Status.Conditions
-			validated, ok := findCondition(conds, kartav1alpha1.ConditionValidated)
-			g.Expect(ok).To(BeTrue())
+			validated := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionValidated))
+			g.Expect(validated).NotTo(BeNil())
 			g.Expect(validated.Status).To(Equal(metav1.ConditionTrue))
-			crdExists, ok := findCondition(conds, kartav1alpha1.ConditionCRDExists)
-			g.Expect(ok).To(BeTrue())
+			crdExists := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionCRDExists))
+			g.Expect(crdExists).NotTo(BeNil())
 			g.Expect(crdExists.Status).To(Equal(metav1.ConditionFalse))
-			ready, ok := findCondition(conds, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			ready := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionReady))
+			g.Expect(ready).NotTo(BeNil())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionFalse))
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 	})
@@ -248,37 +239,34 @@ var _ = Describe("Reconciler (envtest)", func() {
 		gvkA := schema.GroupVersionKind{Group: "aaa.run.ai", Version: "v1", Kind: "Alpha"}
 		kA := newValidKarta("envtest-selectivity-a", &gvkA)
 		Expect(k8sClient.Create(testCtx, kA)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, kA) })
 
 		gvkB := schema.GroupVersionKind{Group: "bbb.run.ai", Version: "v1", Kind: "Beta"}
 		kB := newValidKarta("envtest-selectivity-b", &gvkB)
 		Expect(k8sClient.Create(testCtx, kB)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, kB) })
 
 		var baselineA metav1.Time
 		Eventually(func(g Gomega) {
-			readyA, ok := findCondition(getKarta(kA.Name).Status.Conditions, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			readyA := apimeta.FindStatusCondition(getKarta(kA.Name).Status.Conditions, string(kartav1alpha1.ConditionReady))
+			g.Expect(readyA).NotTo(BeNil())
 			g.Expect(readyA.Status).To(Equal(metav1.ConditionFalse))
-			readyB, ok := findCondition(getKarta(kB.Name).Status.Conditions, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			readyB := apimeta.FindStatusCondition(getKarta(kB.Name).Status.Conditions, string(kartav1alpha1.ConditionReady))
+			g.Expect(readyB).NotTo(BeNil())
 			g.Expect(readyB.Status).To(Equal(metav1.ConditionFalse))
 			baselineA = readyA.LastTransitionTime
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
 		crd := buildCRD("bbb.run.ai", "Beta", "v1")
 		Expect(k8sClient.Create(testCtx, crd)).To(Succeed())
-		DeferCleanup(func() { _ = k8sClient.Delete(testCtx, crd) })
 
 		Eventually(func(g Gomega) {
-			ready, ok := findCondition(getKarta(kB.Name).Status.Conditions, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			ready := apimeta.FindStatusCondition(getKarta(kB.Name).Status.Conditions, string(kartav1alpha1.ConditionReady))
+			g.Expect(ready).NotTo(BeNil())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionTrue))
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 
 		Consistently(func(g Gomega) {
-			ready, ok := findCondition(getKarta(kA.Name).Status.Conditions, kartav1alpha1.ConditionReady)
-			g.Expect(ok).To(BeTrue())
+			ready := apimeta.FindStatusCondition(getKarta(kA.Name).Status.Conditions, string(kartav1alpha1.ConditionReady))
+			g.Expect(ready).NotTo(BeNil())
 			g.Expect(ready.Status).To(Equal(metav1.ConditionFalse))
 			g.Expect(ready.LastTransitionTime).To(Equal(baselineA))
 		}, 2*time.Second, eventuallyInterval).Should(Succeed())
@@ -316,15 +304,6 @@ func newValidKarta(name string, gvk *schema.GroupVersionKind) *kartav1alpha1.Kar
 	return k
 }
 
-func findCondition(conds []metav1.Condition, t kartav1alpha1.ConditionType) (metav1.Condition, bool) {
-	for _, c := range conds {
-		if c.Type == string(t) {
-			return c, true
-		}
-	}
-	return metav1.Condition{}, false
-}
-
 // updateKarta re-fetches the Karta and applies mutate, retrying on conflict
 // until the update succeeds.
 func updateKarta(k *kartav1alpha1.Karta, mutate func(*kartav1alpha1.Karta)) {
@@ -342,7 +321,10 @@ func buildCRD(group, kind, version string) *apiextensionsv1.CustomResourceDefini
 	plural := strings.ToLower(kind) + "s"
 	preserve := true
 	return &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{Name: plural + "." + group},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   plural + "." + group,
+			Labels: map[string]string{testCRDLabel: "true"},
+		},
 		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 			Group: group,
 			Names: apiextensionsv1.CustomResourceDefinitionNames{

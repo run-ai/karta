@@ -17,12 +17,14 @@ const (
 	ReasonCRDNotFound         = "CRDNotFound"
 	ReasonReady               = "Ready"
 	ReasonNotReady            = "NotReady"
+	ReasonPending             = "Pending"
 )
 
 const (
 	msgValidationFailed = "Karta validation failed"
 	msgCRDNotFound      = "CustomResourceDefinition for the root component GVK does not exist in the cluster or does not serve the referenced version"
 	msgNotReady         = "Validated and CRDExists must both be True"
+	msgPending          = "Condition has not been evaluated yet"
 )
 
 func setValidated(status *kartav1alpha1.KartaStatus, generation int64, s metav1.ConditionStatus, msg string) {
@@ -76,6 +78,25 @@ func setReady(status *kartav1alpha1.KartaStatus, generation int64) metav1.Condit
 		ObservedGeneration: generation,
 	})
 	return readyStatus
+}
+
+func setDefaultConditions(status *kartav1alpha1.KartaStatus, generation int64) {
+	for _, t := range []kartav1alpha1.ConditionType{
+		kartav1alpha1.ConditionValidated,
+		kartav1alpha1.ConditionCRDExists,
+		kartav1alpha1.ConditionReady,
+	} {
+		if apimeta.FindStatusCondition(status.Conditions, string(t)) != nil {
+			continue
+		}
+		apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
+			Type:               string(t),
+			Status:             metav1.ConditionFalse,
+			Reason:             ReasonPending,
+			Message:            msgPending,
+			ObservedGeneration: generation,
+		})
+	}
 }
 
 func reasonForBool(status metav1.ConditionStatus, trueReason, falseReason string) string {
