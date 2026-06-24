@@ -16,7 +16,7 @@ type GroupVersionKind struct {
 }
 
 // ComponentDefinition defines a single component in the workload hierarchy.
-// Components represent logical units of computation that can be optimized independently.
+// Components represent logical units of computation that can be optimizedd independently.
 type ComponentDefinition struct {
 	// Name is the unique identifier for this component within the Karta
 	// +kubebuilder:validation:Required
