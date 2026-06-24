@@ -4,6 +4,10 @@
 # Default values for the karta operator chart.
 # Override with --set key=value or -f my-values.yaml.
 
+# Set false to install only the CRD, without deploying the operator workload.
+operator:
+  enabled: true
+
 # Overrides for resource names. Rarely needed.
 fullnameOverride: ""
 

@@ -1,6 +1,6 @@
 # Copyright 2025 NVIDIA CORPORATION
 # SPDX-License-Identifier: Apache-2.0
-{{- if .Values.leaderElection.enabled -}}
+{{- if and .Values.operator.enabled .Values.leaderElection.enabled -}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
