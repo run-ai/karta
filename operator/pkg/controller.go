@@ -1,0 +1,240 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
+package pkg
+
+import (
+	"context"
+	stderrors "errors"
+	"fmt"
+
+	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/record"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+)
+
+// crdGroupKindIndexKey indexes CustomResourceDefinitions by group and kind so
+// the reconciler can locate the CRD for a Karta root GVK directly.
+const crdGroupKindIndexKey = "spec.group+spec.names.kind"
+
+const (
+	ControllerName = "karta-controller"
+)
+
+// Reconciler reconciles Karta CRs.
+type Reconciler struct {
+	client.Client
+	recorder record.EventRecorder
+}
+
+// NewReconciler constructs a new Reconciler.
+func NewReconciler(c client.Client, recorder record.EventRecorder) *Reconciler {
+	return &Reconciler{Client: c, recorder: recorder}
+}
+
+// SetupWithManager registers the reconciler with the given manager.
+//
+// Two watches are registered:
+//  1. Karta — all create/update/delete events trigger Reconcile.
+//  2. CustomResourceDefinition — events are mapped to the Kartas that
+//     reference the same group+kind.
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(),
+		&apiextensionsv1.CustomResourceDefinition{}, crdGroupKindIndexKey,
+		func(obj client.Object) []string {
+			crd := obj.(*apiextensionsv1.CustomResourceDefinition)
+			return []string{schema.GroupKind{Group: crd.Spec.Group, Kind: crd.Spec.Names.Kind}.String()}
+		}); err != nil {
+		return fmt.Errorf("index CRDs by %s: %w", crdGroupKindIndexKey, err)
+	}
+
+	return ctrl.NewControllerManagedBy(mgr).
+		Named(ControllerName).
+		For(&kartav1alpha1.Karta{}).
+		Watches(
+			&apiextensionsv1.CustomResourceDefinition{},
+			handler.EnqueueRequestsFromMapFunc(r.MapCRDToKartaEvent),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
+		).
+		Complete(r)
+}
+
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	logger := log.FromContext(ctx).WithValues("karta", req.Name)
+
+	karta := &kartav1alpha1.Karta{}
+	if err := r.Get(ctx, req.NamespacedName, karta); err != nil {
+		if errors.IsNotFound(err) {
+			logger.V(1).Info("Karta not found")
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("get karta %q: %w", req.Name, err)
+	}
+
+	if !karta.DeletionTimestamp.IsZero() {
+		logger.V(1).Info("Karta is being deleted, skipping reconciliation")
+		return ctrl.Result{}, nil
+	}
+
+	logger.Info("Reconciling Karta")
+
+	base := karta.DeepCopy()
+	err := r.reconcile(ctx, logger, karta)
+	if patchErr := r.Status().Patch(ctx, karta, client.MergeFrom(base)); patchErr != nil {
+		patchErr = fmt.Errorf("failed to update status for karta %q: %w", karta.Name, patchErr)
+		err = stderrors.Join(err, patchErr)
+	}
+	return ctrl.Result{}, err
+}
+
+// reconcile runs the reconciliation logic for one Karta.
+func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
+	setDefaultConditions(&karta.Status, karta.Generation)
+	r.validateKarta(logger, karta)
+	if err := r.checkCRDExists(ctx, logger, karta); err != nil {
+		return err
+	}
+	ready := setReady(&karta.Status, karta.Generation)
+	logger.V(1).Info("Derived Ready condition", "ready", ready)
+	err := r.ensureLabels(ctx, logger, karta)
+	return err
+}
+
+// validateKarta runs the Karta spec validator and writes the Validated condition.
+func (r *Reconciler) validateKarta(logger logr.Logger, karta *kartav1alpha1.Karta) {
+	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
+		logger.Info("Karta spec validation failed", "error", err.Error())
+		r.recorder.Event(karta, corev1.EventTypeWarning, ReasonValidationFailed, err.Error())
+		setValidated(&karta.Status, karta.Generation, metav1.ConditionFalse, err.Error())
+		return
+	}
+	logger.V(1).Info("Karta spec validated")
+	setValidated(&karta.Status, karta.Generation, metav1.ConditionTrue, "")
+}
+
+// checkCRDExists looks up the referenced CRD and writes the CRDExists condition.
+func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
+	gvk := rootGVK(karta)
+	if gvk == nil {
+		logger.V(1).Info("karta has no root component kind")
+		setCRDExists(&karta.Status, karta.Generation, metav1.ConditionFalse, "")
+		return nil
+	}
+
+	exists, err := r.crdExistsForGVK(ctx, *gvk)
+	if err != nil {
+		logger.Error(err, "Failed to check CRD existence", "gvk", gvk.String())
+		return fmt.Errorf("check CRD existence for karta %q: %w", karta.Name, err)
+	}
+
+	if exists {
+		logger.V(1).Info("CRD found", "gvk", gvk.String())
+		setCRDExists(&karta.Status, karta.Generation, metav1.ConditionTrue, "")
+	} else {
+		msg := fmt.Sprintf("CRD for %s/%s not found or does not serve version %s",
+			gvk.Group, gvk.Kind, gvk.Version)
+		logger.V(1).Info("CRD not found", "gvk", gvk.String())
+		r.recorder.Event(karta, corev1.EventTypeWarning, ReasonCRDNotFound, msg)
+		setCRDExists(&karta.Status, karta.Generation, metav1.ConditionFalse, msg)
+	}
+	return nil
+}
+
+// ensureLabels stamps the three GVK index labels (run.ai/karta-group,
+// run.ai/karta-version, run.ai/karta-kind) onto the Karta metadata so that
+// consumers can locate a Karta by GVK via a label-selector List.
+func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
+	gvk := rootGVK(karta)
+	if gvk == nil {
+		return nil
+	}
+
+	desired := map[string]string{
+		kartav1alpha1.LabelRootGroup:   gvk.Group,
+		kartav1alpha1.LabelRootVersion: gvk.Version,
+		kartav1alpha1.LabelRootKind:    gvk.Kind,
+	}
+
+	if labelsMatch(karta.Labels, desired) {
+		return nil
+	}
+
+	base := karta.DeepCopy()
+	if karta.Labels == nil {
+		karta.Labels = map[string]string{}
+	}
+	for k, v := range desired {
+		karta.Labels[k] = v
+	}
+
+	if err := r.Patch(ctx, karta, client.MergeFrom(base)); err != nil {
+		return fmt.Errorf("patch labels for karta %q: %w", karta.Name, err)
+	}
+
+	logger.V(1).Info("Stamped GVK index labels",
+		"group", gvk.Group, "version", gvk.Version, "kind", gvk.Kind)
+	return nil
+}
+
+// labelsMatch returns true when current already contains all desired key/value pairs.
+func labelsMatch(current, desired map[string]string) bool {
+	for k, v := range desired {
+		if current[k] != v {
+			return false
+		}
+	}
+	return true
+}
+
+// rootGVK extracts the GroupVersionKind of the Karta root component, or nil
+// when the Karta has no root component kind defined.
+func rootGVK(karta *kartav1alpha1.Karta) *schema.GroupVersionKind {
+	kind := karta.Spec.StructureDefinition.RootComponent.Kind
+	if kind == nil {
+		return nil
+	}
+	return &schema.GroupVersionKind{
+		Group:   kind.Group,
+		Version: kind.Version,
+		Kind:    kind.Kind,
+	}
+}
+
+// crdExistsForGVK reports whether a CRD serving the given group, version and
+// kind is present in the cluster.
+func (r *Reconciler) crdExistsForGVK(ctx context.Context, gvk schema.GroupVersionKind) (bool, error) {
+	crds := &apiextensionsv1.CustomResourceDefinitionList{}
+	if err := r.List(ctx, crds, client.MatchingFields{
+		crdGroupKindIndexKey: schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind}.String(),
+	}); err != nil {
+		return false, fmt.Errorf("list CRDs: %w", err)
+	}
+
+	for i := range crds.Items {
+		if crdServesVersion(&crds.Items[i], gvk.Version) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func crdServesVersion(crd *apiextensionsv1.CustomResourceDefinition, version string) bool {
+	for _, v := range crd.Spec.Versions {
+		if v.Name == version && v.Served {
+			return true
+		}
+	}
+	return false
+}
