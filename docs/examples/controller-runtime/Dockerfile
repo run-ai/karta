@@ -18,7 +18,7 @@ COPY . .
 WORKDIR /src/docs/examples/controller-runtime
 RUN CGO_ENABLED=0 GO111MODULE=on go build -trimpath -o /controller .
 
-FROM gcr.io/distroless/static:nonroot
+FROM gcr.io/distroless/static-debian13:nonroot
 COPY --from=build /controller /controller
 USER 65532:65532
 ENTRYPOINT ["/controller"]
