@@ -4,7 +4,7 @@
 package v1alpha1
 
 // Label keys stamped by the operator on every Karta whose root
-// component has a GVK defined. 
+// component has a GVK defined.
 const (
 	// LabelRootGroup is the API group of the root component
 	// (e.g. "ray.io", "kubeflow.org").
