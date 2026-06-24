@@ -171,11 +171,18 @@ Karta supports any workload type. The following are pre-built and tested Karta d
 | Milvus | Milvus |
 | DynamoGraphDeployment | NVIDIA Dynamo |
 
-See [`docs/examples/`](docs/samples/) for the full Karta definitions.
+See [`docs/samples/`](docs/samples/) for the full Karta definitions.
 
 ### Complex example: NVIDIA Dynamo
 
 The [Dynamo Karta](docs/samples/dynamo.yaml) shows Karta handling a real-world multi-service inference graph - fragmented pod specs across services, autoscaling with min/max replicas, replica selectors for multi-node workers, gang scheduling, and 6 additional child resource types (DynamoComponentDeployment, LeaderWorkerSet, PodGang, PodClique, PodCliqueSet, PodCliqueScalingGroup). A single Karta definition replaces what would otherwise require hundreds of lines of per-type controller logic.
+
+## Runnable examples
+
+Two runnable examples live under [`docs/examples/`](docs/examples/):
+
+- [quickstart](docs/examples/quickstart/) - reads and mutates a JobSet and a LeaderWorkerSet offline, no cluster required. The fastest way to see the uniform API in action.
+- [controller-runtime](docs/examples/controller-runtime/) - a controller-runtime manager you install into a Kind cluster. It watches live LeaderWorkerSet workloads, then inspects and mutates them through Karta with no per-CRD code. Adding more workload types is a flag change, not a rebuild.
 
 ## Who Uses Karta?
 
@@ -184,7 +191,8 @@ Karta was created at [Run:ai](https://run.ai) (NVIDIA) to power workload managem
 ## Documentation
 
 - [Technical Guide](docs/Technical%20Guide.md) - Full Karta spec, path syntax (jq), validation rules
-- [Examples](docs/samples/) - Real-world Karta definitions for common workload types
+- [Karta definitions](docs/samples/) - Real-world Karta definitions for common workload types
+- [Runnable examples](docs/examples/) - Offline quickstart and an installable controller-runtime example
 - [API Reference](https://pkg.go.dev/github.com/run-ai/karta) — Go package documentation
 - [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute (DCO required)
 
