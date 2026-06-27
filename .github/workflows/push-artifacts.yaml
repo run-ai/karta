@@ -18,11 +18,20 @@ env:
 
 jobs:
   build-and-push:
-    name: Build & Push Helm Chart
+    name: Build & Push Helm Chart and Operator Image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: operator/go.mod
+          cache-dependency-path: operator/go.sum
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Install helm
         uses: azure/setup-helm@v5
@@ -55,6 +64,10 @@ jobs:
 
       - name: Lint and validate helm chart
         run: make helm-lint helm-validate
+
+      - name: Build and push operator image
+        run: |
+          make -C operator docker-build-multiarch IMAGE_TAG=$PACKAGE_VERSION
 
       - name: Build helm chart
         run: |
