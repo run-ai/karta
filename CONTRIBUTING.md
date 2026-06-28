@@ -76,7 +76,32 @@ For more information about the DCO, please visit: https://developercertificate.o
 3. Every pull request must reference at least one open GitHub issue in its description. This ensures that all changes are tracked and linked to project requirements or bug reports.
 4. For major changes, please open an issue first to discuss the proposed changes
 
+### Development Environment Setup
 
+Karta is a Go project. To set up a local environment:
+
+```bash
+# 1. Clone your fork
+git clone https://github.com/<your-username>/karta.git
+cd karta
+
+# 2. Build the packages (uses the Go version pinned in go.mod)
+go build ./...
+
+# 3. Run the full check pipeline (codegen, manifests, licenses, and tests) -
+#    this is the same target CI runs
+make check
+
+# 4. Lint the Go code and the Helm chart
+make lint
+make helm-lint
+make helm-validate
+```
+
+CI runs `make check` along with `golangci-lint` and the Helm `lint`/`validate`
+steps on every pull request. Running `make check` and `make lint` locally first
+is the fastest way to catch issues before pushing. If you only need a quick test
+pass, `make test` runs the tests and mock generation on their own.
 
 ### Making Changes
 
@@ -99,6 +124,19 @@ For more information about the DCO, please visit: https://developercertificate.o
 2. Your pull request will be reviewed by maintainers
 3. Address any feedback or requested changes
 4. Once approved, your changes will be merged
+
+### Review Process
+
+- Who reviews: pull requests are reviewed by the project
+  [maintainers](MAINTAINERS.md). Relevant maintainers are added automatically;
+  you do not need to request reviewers manually.
+- Turnaround: maintainers aim to provide an initial response within 5
+  business days. Smaller, focused pull requests are reviewed faster.
+- Approvals: at least one maintainer approval is required before merging,
+  and all CI checks must pass.
+- Following up: if your pull request has not received a response within the
+  expected window, please leave a comment to nudge the maintainers, or mention
+  it in the related issue.
 
 ## Versioning
 

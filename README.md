@@ -2,11 +2,11 @@
 
 **A standard way to describe the structure of any Kubernetes workload type.**
 
-Karta lets you define a portable, declarative blueprint for any Kubernetes workload — whether it's a simple Deployment, a distributed PyTorchJob, or a custom CRD. Controllers and platforms can then use that blueprint to inspect, modify, and manage workloads without hard-coding knowledge of each type.
+Karta lets you define a portable, declarative blueprint for any Kubernetes workload - whether it's a simple Deployment, a distributed PyTorchJob, or a custom CRD. Controllers and platforms can then use that blueprint to inspect, modify, and manage workloads without hard-coding knowledge of each type.
 
 ## The Problem
 
-In Kubernetes, and especially in AI systems, a workload is not a standalone execution unit such as a single Pod. Instead, it is composed of multiple components organized in a complex hierarchy of resources, often exposed via custom resource definitions (CRDs) — for example: PyTorchJob, RayCluster, and MPIJob. Each of these CRDs structures the workload configuration differently, but they all share the same conceptual building blocks: pod specifications, scaling parameters, and status definitions.
+In Kubernetes, and especially in AI systems, a workload is not a standalone execution unit such as a single Pod. Instead, it is composed of multiple components organized in a complex hierarchy of resources, often exposed via custom resource definitions (CRDs) - for example: PyTorchJob, RayCluster, and MPIJob. Each of these CRDs structures the workload configuration differently, but they all share the same conceptual building blocks: pod specifications, scaling parameters, and status definitions.
 
 If you're building a controller, scheduler, or platform that needs to work with multiple workload types, you end up writing bespoke logic for each one:
 
@@ -15,7 +15,7 @@ If you're building a controller, scheduler, or platform that needs to work with 
 - Which status conditions mean "running" vs "failed"?
 - How do I modify the pod spec without breaking the workload?
 
-This doesn't scale. Every new workload type means new integration code — schedulers, controllers, and platforms all end up maintaining per-CRD adapters that implement the same patterns over and over.
+This doesn't scale. Every new workload type means new integration code - schedulers, controllers, and platforms all end up maintaining per-CRD adapters that implement the same patterns over and over.
 
 ## The Solution
 
@@ -56,7 +56,7 @@ go get github.com/run-ai/karta@latest
 
 ### Define a Karta
 
-Here's a Karta for a JobSet — a distributed training workload with master and worker groups:
+Here's a Karta for a JobSet - a distributed training workload with master and worker groups:
 
 ```yaml
 apiVersion: run.ai/v1alpha1
@@ -146,7 +146,7 @@ updates := map[string]resource.FragmentedPodSpec{
     },
 }
 
-// Apply updates — modifies the underlying unstructured object
+// Apply updates - modifies the underlying unstructured object
 err := component.UpdateFragmentedPodSpec(ctx, updates)
 
 // Get the updated object to apply back to the cluster
@@ -193,12 +193,13 @@ Karta was created at [Run:ai](https://run.ai) (NVIDIA) to power workload managem
 - [Technical Guide](docs/Technical%20Guide.md) - Full Karta spec, path syntax (jq), validation rules
 - [Karta definitions](docs/samples/) - Real-world Karta definitions for common workload types
 - [Runnable examples](docs/examples/) - Offline quickstart and an installable controller-runtime example
-- [API Reference](https://pkg.go.dev/github.com/run-ai/karta) — Go package documentation
-- [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute (DCO required)
+- [API Reference](https://pkg.go.dev/github.com/run-ai/karta) - Go package documentation
+- [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute (DCO required)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Community standards and expectations
 
 ## Status
 
-Karta is in active development (pre-1.0). The API may change between minor versions. We welcome feedback and contributions — please open an issue or start a discussion.
+Karta is in active development (pre-1.0). The API may change between minor versions. We welcome feedback and contributions - please open an issue or start a discussion.
 
 ## Third-Party Software
 
@@ -206,6 +207,6 @@ This project includes third-party software components. See the [NOTICE](NOTICE) 
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE) for the full text.
+Apache License 2.0 - see [LICENSE](LICENSE) for the full text.
 
 Copyright (c) 2026 NVIDIA Corporation.
