@@ -1,0 +1,16 @@
+{{- if and .Values.operator.enabled .Values.leaderElection.enabled -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "karta.fullname" . }}-leader-election
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "karta.labels" . | nindent 4 }}
+rules:
+  # Leader election coordinates active/passive replicas via a Lease object in
+  # the operator's own namespace. Event permissions are already granted by the
+  # ClusterRole, so they are not repeated here.
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+{{- end -}}
