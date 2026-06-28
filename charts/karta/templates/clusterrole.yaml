@@ -20,7 +20,7 @@ rules:
     verbs: ["get", "list", "watch"]
 
   # Emit Kubernetes events (Warning/Normal) on the Karta objects
-  - apiGroups: [""]
+  - apiGroups: ["events.k8s.io/v1"]
     resources: ["events"]
-    verbs: ["create", "patch"]
+    verbs: ["create", "patch", "update"]
 {{- end -}}
