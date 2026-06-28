@@ -205,6 +205,8 @@ Karta is in active development (pre-1.0). The API may change between minor versi
 
 This project includes third-party software components. See the [NOTICE](NOTICE) file for attributions and the [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) file for detailed license information.
 
+bla-bla
+תאריכים - 
 ## License
 
 Apache License 2.0 - see [LICENSE](LICENSE) for the full text.
