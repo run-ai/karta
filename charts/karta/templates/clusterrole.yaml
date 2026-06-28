@@ -1,0 +1,29 @@
+{{- if .Values.operator.enabled -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "karta.fullname" . }}
+  labels:
+    {{- include "karta.labels" . | nindent 4 }}
+rules:
+  # Reconcile Karta CRs and update their status
+  - apiGroups: ["run.ai"]
+    resources: ["kartas"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["run.ai"]
+    resources: ["kartas/status"]
+    verbs: ["get", "update", "patch"]
+
+  # Watch CRDs to trigger re-reconciliation when a referenced CRD appears or changes
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "watch"]
+
+  # Emit Kubernetes events (Warning/Normal) on the Karta objects
+  - apiGroups: [ "" ]
+    resources: [ "events" ]
+    verbs: [ "create", "patch" ]
+  - apiGroups: [ "events.k8s.io" ]
+    resources: [ "events" ]
+    verbs: [ "create", "patch", "update" ]
+{{- end -}}
