@@ -1,6 +1,3 @@
-# Copyright 2025 NVIDIA CORPORATION
-# SPDX-License-Identifier: Apache-2.0
-
 # Default values for the karta operator chart.
 # Override with --set key=value or -f my-values.yaml.
 
