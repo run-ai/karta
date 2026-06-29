@@ -88,10 +88,6 @@ vendor-neutral v1beta1.**
 
 *Later items are directional, not commitments — order and shape will change with community input.*
 
-- **Vendor-neutral API group.** Move the Karta API off the current
-  `run.ai`-prefixed group to a neutral group **before** the API stabilizes, so
-  adopters never have to migrate a vendor-prefixed group later. This is a
-  prerequisite for vendor-neutral governance (see [GOVERNANCE.md](GOVERNANCE.md)).
 - **Karta-aware tooling ecosystem.** Karta is most valuable when many tools read
   and act on the same description. Karta itself stays a thin, neutral contract;
   richer behavior lives in separate projects across the Karta ecosystem. Examples
