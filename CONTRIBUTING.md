@@ -164,7 +164,7 @@ No release-prep PR or `Chart.yaml` bump is needed - the tag is the source of tru
 
 ## Code of Conduct
 
-Please be respectful and professional in all interactions. We are committed to providing a welcoming and inclusive environment for all contributors.
+Please be respectful and professional in all interactions. We are committed to providing a welcoming and inclusive environment for all contributors. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for the full code of conduct and how to report conduct concerns.
 
 ## Questions?
 
