@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+
 # To get started with Dependabot version updates, you'll need to specify which
 # package ecosystems to update and where the package manifests are located.
 # Please see the documentation for all configuration options:
@@ -5,7 +8,42 @@
 
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: gomod
+    directories:
+      - "/"
+      - "/operator"
+      - "/docs/examples/controller-runtime"
+      - "/docs/examples/quickstart"
     schedule:
-      interval: "weekly"
+      interval: weekly
+    commit-message:
+      prefix: build
+      prefix-development: chore
+    groups:
+      go-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  # Dockerfiles
+  - package-ecosystem: docker
+    directories:
+      - "/operator"
+      - "/docs/examples/controller-runtime"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+
+  # GitHub Actions workflows
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        update-types:
+          - minor
+          - patch
