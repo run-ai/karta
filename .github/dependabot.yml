@@ -18,7 +18,6 @@ updates:
       interval: weekly
     commit-message:
       prefix: build
-      prefix-development: chore
     groups:
       go-minor-patch:
         update-types:
