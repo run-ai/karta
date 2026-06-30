@@ -38,8 +38,7 @@ vendor-owned one. To keep it neutral:
 - **Neutral, stable consumption surface.** Karta is consumed both as a CRD and as a
   Go library. The API group and the library follow a documented versioning and
   deprecation policy so that any downstream project — regardless of vendor — can
-  depend on Karta with predictable upgrade expectations. (This is why the roadmap
-  includes moving off a vendor-prefixed API group before the API stabilizes.)
+  depend on Karta with predictable upgrade expectations.
 - **Open contribution and review.** Contributors and adopters get a fair
   opportunity to reach consensus on features and PRs through the public review
   process, without one organization's priorities overriding the community's.
