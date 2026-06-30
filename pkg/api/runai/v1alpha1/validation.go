@@ -57,7 +57,10 @@ func (v *KartaValidator) initialize() []error {
 	v.rootComponent = v.karta.Spec.StructureDefinition.RootComponent
 
 	v.allComponents = make(map[string]ComponentDefinition)
-	for _, component := range append(v.karta.Spec.StructureDefinition.ChildComponents, v.karta.Spec.StructureDefinition.RootComponent) {
+	allComponents := make([]ComponentDefinition, 0, len(v.karta.Spec.StructureDefinition.ChildComponents)+1)
+	allComponents = append(allComponents, v.karta.Spec.StructureDefinition.ChildComponents...)
+	allComponents = append(allComponents, v.karta.Spec.StructureDefinition.RootComponent)
+	for _, component := range allComponents {
 		if _, ok := v.allComponents[component.Name]; ok {
 			errs = append(errs, fmt.Errorf("component name %s is not unique", component.Name))
 		}

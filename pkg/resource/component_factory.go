@@ -53,7 +53,9 @@ func NewComponentFactory(karta *v1alpha1.Karta, accessor ComponentAccessor) *Com
 	definitionsByName := make(map[string]v1alpha1.ComponentDefinition)
 
 	// Create single slice with all components (root + children)
-	allDefinitions := append(karta.Spec.StructureDefinition.ChildComponents, karta.Spec.StructureDefinition.RootComponent)
+	allDefinitions := make([]v1alpha1.ComponentDefinition, 0, len(karta.Spec.StructureDefinition.ChildComponents)+1)
+	allDefinitions = append(allDefinitions, karta.Spec.StructureDefinition.ChildComponents...)
+	allDefinitions = append(allDefinitions, karta.Spec.StructureDefinition.RootComponent)
 	for _, componentDefinition := range allDefinitions {
 		definitionsByName[componentDefinition.Name] = componentDefinition
 	}
