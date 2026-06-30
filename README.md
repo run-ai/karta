@@ -2,6 +2,12 @@
 
 **A standard way to describe the structure of any Kubernetes workload type.**
 
+[![CI](https://github.com/run-ai/karta/actions/workflows/ci.yaml/badge.svg)](https://github.com/run-ai/karta/actions/workflows/ci.yaml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/run-ai/karta.svg)](https://pkg.go.dev/github.com/run-ai/karta)
+[![Go Report Card](https://goreportcard.com/badge/github.com/run-ai/karta)](https://goreportcard.com/report/github.com/run-ai/karta)
+[![Latest release](https://img.shields.io/github/v/release/run-ai/karta)](https://github.com/run-ai/karta/releases)
+[![License](https://img.shields.io/github/license/run-ai/karta)](LICENSE)
+
 Karta lets you define a portable, declarative blueprint for any Kubernetes workload - whether it's a simple Deployment, a distributed PyTorchJob, or a custom CRD. Controllers and platforms can then use that blueprint to inspect, modify, and manage workloads without hard-coding knowledge of each type.
 
 ## The Problem
@@ -197,9 +203,13 @@ Karta was created at [Run:ai](https://run.ai) (NVIDIA) to power workload managem
 - [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute (DCO required)
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Community standards and expectations
 
+## Community
+
+Have a question, an idea, or want to show what you built with Karta? Join the conversation in [GitHub Discussions](https://github.com/run-ai/karta/discussions). For bugs and feature requests, [open an issue](https://github.com/run-ai/karta/issues).
+
 ## Status
 
-Karta is in active development (pre-1.0). The API may change between minor versions. We welcome feedback and contributions - please open an issue or start a discussion.
+Karta is in active development (pre-1.0). The API may change between minor versions. We welcome feedback and contributions - please [open an issue](https://github.com/run-ai/karta/issues) or [start a discussion](https://github.com/run-ai/karta/discussions).
 
 ## Third-Party Software
 
