@@ -27,16 +27,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// crdGroupKindIndexKey indexes CustomResourceDefinitions by group and kind so
-// the reconciler can locate the CRD for a Karta root GVK directly.
-const crdGroupKindIndexKey = "spec.group+spec.names.kind"
-
-// nativeAPIGroupSuffix marks groups reserved for Kubernetes built-in and
-// core-adjacent APIs.
-const nativeAPIGroupSuffix = ".k8s.io"
-
 const (
-	ControllerName = "karta-controller"
+	ControllerName       = "karta-controller"
+	nativeAPIGroupSuffix = ".k8s.io"
+	// crdGroupKindIndexKey indexes CustomResourceDefinitions by group and kind so
+	// the reconciler can locate the CRD for a Karta root GVK directly.
+	crdGroupKindIndexKey = "spec.group+spec.names.kind"
 )
 
 // Reconciler reconciles Karta CRs.
