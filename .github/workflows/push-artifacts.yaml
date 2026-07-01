@@ -66,8 +66,9 @@ jobs:
         run: make helm-lint helm-validate
 
       - name: Build and push operator image
+        working-directory: operator
         run: |
-          make -C operator docker-build-multiarch IMAGE_TAG=$PACKAGE_VERSION
+          make docker-build-multiarch IMAGE_TAG=$PACKAGE_VERSION
 
       - name: Build helm chart
         run: |
