@@ -5,20 +5,17 @@ package workload
 
 import (
 	"bytes"
-	"errors"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
 )
 
-// newTestTree wires the workload command under a root that registers the shared
-// namespace flag, plus a dummy runnable subcommand so the inherited
-// PersistentPreRunE actually fires.
+// newTestTree wires the workload command (which owns the required namespace
+// flag) under a bare root, plus a dummy runnable subcommand that inherits the
+// flag.
 func newTestTree() *cobra.Command {
-	cobra.EnableTraverseRunHooks = true
-
 	root := &cobra.Command{Use: "root", SilenceUsage: true, SilenceErrors: true}
-	root.PersistentFlags().StringP("namespace", "n", "", "")
 
 	wl := NewCommand()
 	wl.AddCommand(&cobra.Command{
@@ -36,14 +33,18 @@ func newTestTree() *cobra.Command {
 func TestWorkloadRequiresNamespace(t *testing.T) {
 	root := newTestTree()
 	root.SetArgs([]string{"workload", "dummy"})
-	if err := root.Execute(); !errors.Is(err, ErrNamespaceRequired) {
-		t.Fatalf("expected ErrNamespaceRequired, got %v", err)
+	err := root.Execute()
+	if err == nil {
+		t.Fatal("expected an error when namespace is omitted, got nil")
+	}
+	if !strings.Contains(err.Error(), "namespace") {
+		t.Fatalf("expected a namespace-required error, got %v", err)
 	}
 }
 
 func TestWorkloadWithNamespace(t *testing.T) {
 	root := newTestTree()
-	root.SetArgs([]string{"-n", "ml-team", "workload", "dummy"})
+	root.SetArgs([]string{"workload", "dummy", "-n", "ml-team"})
 	if err := root.Execute(); err != nil {
 		t.Fatalf("unexpected error with namespace set: %v", err)
 	}

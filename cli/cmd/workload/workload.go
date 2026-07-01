@@ -6,31 +6,22 @@
 package workload
 
 import (
-	"errors"
+	"github.com/run-ai/karta/cli/cmd/flags"
 
 	"github.com/spf13/cobra"
 )
 
-// ErrNamespaceRequired is returned when a workload command runs without a
-// namespace. The MVP is single-namespace only, so -n/--namespace is mandatory.
-var ErrNamespaceRequired = errors.New("namespace is required: set -n/--namespace")
-
-// NewCommand builds the "workload" command. Its PersistentPreRunE enforces the
-// namespace requirement for every workload subcommand via inherited run hooks.
+// NewCommand builds the "workload" command. The MVP is single-namespace only,
+// so -n/--namespace is a required persistent flag inherited by every workload
+// subcommand; cobra rejects any invocation that omits it.
 func NewCommand() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "workload",
 		Short: "Inspect workloads running in a namespace",
-		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			namespace, err := cmd.Flags().GetString("namespace")
-			if err != nil {
-				return err
-			}
-			if namespace == "" {
-				return ErrNamespaceRequired
-			}
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
+		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
 	}
+
+	flags.AddNamespace(cmd)
+
+	return cmd
 }
