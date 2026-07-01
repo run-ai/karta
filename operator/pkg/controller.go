@@ -235,10 +235,8 @@ func rootGVK(karta *kartav1alpha1.Karta) *schema.GroupVersionKind {
 func discoverNativeGVKs(dc discovery.DiscoveryInterface, logger logr.Logger) (map[schema.GroupVersionKind]bool, error) {
 	_, resourceLists, err := dc.ServerGroupsAndResources()
 	if err != nil {
-		if len(resourceLists) == 0 {
-			return nil, fmt.Errorf("list server resources: %w", err)
-		}
-		logger.Info("Partial failure discovering server resources, continuing with partial results", "error", err.Error())
+		logger.Info("Failed to discover server resources", "error", err.Error())
+		return nil, fmt.Errorf("list server resources: %w", err)
 	}
 
 	native := make(map[schema.GroupVersionKind]bool)
