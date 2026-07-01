@@ -38,7 +38,7 @@ const (
 // Reconciler reconciles Karta CRs.
 type Reconciler struct {
 	client.Client
-	recorder   record.EventRecorder
+	recorder record.EventRecorder
 	nativeGVKs map[schema.GroupVersionKind]bool
 }
 
