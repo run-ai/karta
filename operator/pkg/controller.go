@@ -38,7 +38,7 @@ const (
 // Reconciler reconciles Karta CRs.
 type Reconciler struct {
 	client.Client
-	recorder record.EventRecorder
+	recorder   record.EventRecorder
 	nativeGVKs map[schema.GroupVersionKind]bool
 }
 
@@ -231,7 +231,6 @@ func rootGVK(karta *kartav1alpha1.Karta) *schema.GroupVersionKind {
 func discoverNativeGVKs(dc discovery.DiscoveryInterface, logger logr.Logger) (map[schema.GroupVersionKind]bool, error) {
 	_, resourceLists, err := dc.ServerGroupsAndResources()
 	if err != nil {
-		logger.Info("Failed to discover server resources", "error", err.Error())
 		return nil, fmt.Errorf("list server resources: %w", err)
 	}
 
