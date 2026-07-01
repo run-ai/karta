@@ -7,6 +7,7 @@ import (
 	"context"
 	stderrors "errors"
 	"fmt"
+	"strings"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -29,6 +31,11 @@ import (
 // the reconciler can locate the CRD for a Karta root GVK directly.
 const crdGroupKindIndexKey = "spec.group+spec.names.kind"
 
+// nativeAPIGroupSuffix marks groups reserved for Kubernetes built-in and
+// core-adjacent APIs, as opposed to CRD-backed custom types, which always
+// use a distinct, non-reserved domain.
+const nativeAPIGroupSuffix = ".k8s.io"
+
 const (
 	ControllerName = "karta-controller"
 )
@@ -36,7 +43,8 @@ const (
 // Reconciler reconciles Karta CRs.
 type Reconciler struct {
 	client.Client
-	recorder record.EventRecorder
+	recorder   record.EventRecorder
+	nativeGVKs map[schema.GroupVersionKind]bool
 }
 
 // NewReconciler constructs a new Reconciler.
@@ -51,6 +59,16 @@ func NewReconciler(c client.Client, recorder record.EventRecorder) *Reconciler {
 //  2. CustomResourceDefinition — events are mapped to the Kartas that
 //     reference the same group+kind.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	dc, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
+	if err != nil {
+		return fmt.Errorf("create discovery client: %w", err)
+	}
+	native, err := discoverNativeGVKs(dc, mgr.GetLogger())
+	if err != nil {
+		return fmt.Errorf("discover native GVKs: %w", err)
+	}
+	r.nativeGVKs = native
+
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(),
 		&apiextensionsv1.CustomResourceDefinition{}, crdGroupKindIndexKey,
 		func(obj client.Object) []string {
@@ -212,9 +230,44 @@ func rootGVK(karta *kartav1alpha1.Karta) *schema.GroupVersionKind {
 	}
 }
 
-// crdExistsForGVK reports whether a CRD serving the given group, version and
-// kind is present in the cluster.
+// discoverNativeGVKs queries cluster discovery for every served
+// GroupVersionKind and returns the subset served by built-in (non-CRD) API
+// groups.
+func discoverNativeGVKs(dc discovery.DiscoveryInterface, logger logr.Logger) (map[schema.GroupVersionKind]bool, error) {
+	_, resourceLists, err := dc.ServerGroupsAndResources()
+	if err != nil {
+		if len(resourceLists) == 0 {
+			return nil, fmt.Errorf("list server resources: %w", err)
+		}
+		logger.Info("Partial failure discovering server resources, continuing with partial results", "error", err.Error())
+	}
+
+	native := make(map[schema.GroupVersionKind]bool)
+	for _, list := range resourceLists {
+		gv, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
+			continue
+		}
+		if strings.Contains(gv.Group, ".") && !strings.HasSuffix(gv.Group, nativeAPIGroupSuffix) {
+			continue // CRD-backed group: always uses a distinct, non-reserved domain
+		}
+		for _, res := range list.APIResources {
+			if strings.Contains(res.Name, "/") {
+				continue // subresource, e.g. deployments/scale
+			}
+			native[schema.GroupVersionKind{Group: gv.Group, Version: gv.Version, Kind: res.Kind}] = true
+		}
+	}
+	return native, nil
+}
+
+// crdExistsForGVK reports whether a CRD serving the given group, version
+// and kind is present in the cluster.
 func (r *Reconciler) crdExistsForGVK(ctx context.Context, gvk schema.GroupVersionKind) (bool, error) {
+	if r.nativeGVKs[gvk] {
+		return true, nil
+	}
+
 	crds := &apiextensionsv1.CustomResourceDefinitionList{}
 	if err := r.List(ctx, crds, client.MatchingFields{
 		crdGroupKindIndexKey: schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind}.String(),
