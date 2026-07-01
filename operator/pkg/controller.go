@@ -32,8 +32,7 @@ import (
 const crdGroupKindIndexKey = "spec.group+spec.names.kind"
 
 // nativeAPIGroupSuffix marks groups reserved for Kubernetes built-in and
-// core-adjacent APIs, as opposed to CRD-backed custom types, which always
-// use a distinct, non-reserved domain.
+// core-adjacent APIs.
 const nativeAPIGroupSuffix = ".k8s.io"
 
 const (
