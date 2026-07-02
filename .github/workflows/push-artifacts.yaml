@@ -65,10 +65,14 @@ jobs:
       - name: Lint and validate helm chart
         run: make helm-lint helm-validate
 
+      - name: Test operator
+        working-directory: operator
+        run: make check
+
       - name: Build and push operator image
         working-directory: operator
         run: |
-          make docker-build-multiarch IMAGE_TAG=$PACKAGE_VERSION
+          make docker-buildx-push IMAGE_TAG=$PACKAGE_VERSION
 
       - name: Build helm chart
         run: |

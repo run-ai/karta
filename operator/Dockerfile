@@ -11,10 +11,16 @@
 ARG GO_VERSION=1.26.3
 FROM golang:${GO_VERSION} AS build
 
+ARG TARGETARCH
+ARG VERSION=dev
+
 WORKDIR /src
 COPY . .
 WORKDIR /src/operator
-RUN CGO_ENABLED=0 GO111MODULE=on go build -trimpath -o /karta-operator ./cmd
+RUN CGO_ENABLED=0 GO111MODULE=on GOOS=linux GOARCH=${TARGETARCH} \
+	go build -trimpath \
+	-ldflags "-X github.com/run-ai/karta/operator/pkg/version.Version=${VERSION}" \
+	-o /karta-operator ./cmd
 
 FROM gcr.io/distroless/static-debian13:nonroot
 COPY --from=build /karta-operator /karta-operator

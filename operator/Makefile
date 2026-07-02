@@ -1,15 +1,7 @@
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
-
+# Location to install dependencies to, and to output built binaries.
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
-
-# Build output directory for binaries (expected by Dockerfile)
-BIN_DIR ?= $(shell pwd)/bin
 
 # Version is derived automatically from git. Falls back to "dev" when there
 # are no tags or git is unavailable (e.g. a bare source tarball).
@@ -33,15 +25,19 @@ VERSION_PKG = github.com/run-ai/karta/operator/pkg/version
 LDFLAGS     = -ldflags "-X $(VERSION_PKG).Version=$(VERSION)"
 
 GOLANGCI_LINT         ?= $(LOCALBIN)/golangci-lint
-GOLANGCI_LINT_VERSION ?= v2.5.0
+GOLANGCI_LINT_VERSION ?= v2.12.2
 
 ENVTEST          ?= $(LOCALBIN)/setup-envtest
 ENVTEST_VERSION  ?= release-0.23
 # Kubernetes control-plane (apiserver/etcd/kubectl) version envtest downloads.
 ENVTEST_K8S_VERSION ?= 1.31.0
 
-# Architectures to build for `make build-all`
+# Architectures to build for `make build-all` and `make docker-buildx-push`
 PLATFORMS ?= linux/amd64 linux/arm64
+empty :=
+space := $(empty) $(empty)
+comma := ,
+PLATFORMS_CSV = $(subst $(space),$(comma),$(PLATFORMS))
 
 ##@ Development
 
@@ -58,8 +54,8 @@ vet: ## Run go vet
 	go vet ./...
 
 .PHONY: lint
-lint: golangci-lint ## Run golangci-lint
-	$(GOLANGCI_LINT) run -v -c ../.golangci.yml
+lint: golangci-lint ## Run golangci-lint (set VERBOSE=1 for -v)
+	$(GOLANGCI_LINT) run $(if $(VERBOSE),-v) -c ../.golangci.yml
 
 .PHONY: test-unit
 test-unit: ## Run unit tests (no envtest binaries required)
@@ -80,18 +76,18 @@ check: fmt-check vet lint test ## Run all checks (fmt-check, vet, lint, test)
 
 .PHONY: build
 build: ## Build the karta-operator binary for the host OS/arch
-	mkdir -p $(BIN_DIR)
-	go build $(LDFLAGS) -o $(BIN_DIR)/karta-operator ./cmd
+	mkdir -p $(LOCALBIN)
+	go build $(LDFLAGS) -o $(LOCALBIN)/karta-operator ./cmd
 
 .PHONY: build-linux-amd64
 build-linux-amd64: ## Cross-compile for linux/amd64
-	mkdir -p $(BIN_DIR)
-	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(BIN_DIR)/karta-operator-amd64 ./cmd
+	mkdir -p $(LOCALBIN)
+	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(LOCALBIN)/karta-operator-amd64 ./cmd
 
 .PHONY: build-linux-arm64
 build-linux-arm64: ## Cross-compile for linux/arm64
-	mkdir -p $(BIN_DIR)
-	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o $(BIN_DIR)/karta-operator-arm64 ./cmd
+	mkdir -p $(LOCALBIN)
+	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o $(LOCALBIN)/karta-operator-arm64 ./cmd
 
 .PHONY: build-all
 build-all: build-linux-amd64 build-linux-arm64 ## Cross-compile for all supported platforms
@@ -99,18 +95,18 @@ build-all: build-linux-amd64 build-linux-arm64 ## Cross-compile for all supporte
 ##@ Docker
 
 .PHONY: docker-build
-docker-build: build-linux-amd64 ## Build Docker image for amd64
+docker-build: ## Build Docker image for the host arch
 	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
-		--build-arg TARGETARCH=amd64 \
+		--build-arg TARGETARCH=$(shell go env GOARCH) \
 		--build-arg VERSION=$(VERSION) \
 		--tag $(IMAGE) \
 		.
 
-.PHONY: docker-build-multiarch
-docker-build-multiarch: build-all ## Build and push multi-arch Docker image via BuildKit (requires Docker)
-	@[ "$(CONTAINER_TOOL)" = "docker" ] || (echo "Error: docker-build-multiarch requires CONTAINER_TOOL=docker (got '$(CONTAINER_TOOL)')" >&2; exit 1)
+.PHONY: docker-buildx-push
+docker-buildx-push: ## Build and push a multi-arch Docker image via BuildKit (requires Docker)
+	@[ "$(CONTAINER_TOOL)" = "docker" ] || (echo "Error: docker-buildx-push requires CONTAINER_TOOL=docker (got '$(CONTAINER_TOOL)')" >&2; exit 1)
 	$(CONTAINER_TOOL) buildx build $(BUILD_ARGS) \
-		--platform linux/amd64,linux/arm64 \
+		--platform $(PLATFORMS_CSV) \
 		--build-arg VERSION=$(VERSION) \
 		--tag $(IMAGE) \
 		--push \
