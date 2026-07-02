@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Package workload holds the "karta workload" command tree: operational
-// visibility into workloads running in a namespace.
+// Package workload holds the "karta workload" command tree.
 package workload
 
 import (
@@ -11,9 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewCommand builds the "workload" command. The MVP is single-namespace only,
-// so -n/--namespace is a required persistent flag inherited by every workload
-// subcommand; cobra rejects any invocation that omits it.
+// NewCommand builds the "workload" command.
 func NewCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "workload",

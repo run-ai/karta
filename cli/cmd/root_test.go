@@ -48,7 +48,11 @@ func TestOutputValidation(t *testing.T) {
 		}
 	}
 
-	if _, err := execute(t, "-o", "bogus", "noop"); err == nil {
-		t.Error("expected error for invalid output format, got nil")
+	_, err := execute(t, "-o", "bogus", "noop")
+	if err == nil {
+		t.Fatal("expected error for invalid output format, got nil")
+	}
+	if !strings.Contains(err.Error(), "must be one of table, wide, json, yaml") {
+		t.Errorf("unexpected error message: %v", err)
 	}
 }

@@ -6,6 +6,8 @@
 package flags
 
 import (
+	"strings"
+
 	"github.com/run-ai/karta/cli/internal/flagtypes"
 
 	"github.com/spf13/cobra"
@@ -20,11 +22,12 @@ func WithKubeconfig(cmd *cobra.Command) {
 // WithOutput registers the -o/--output enum persistent flag on cmd, backed by
 // flagtypes.Output, along with its shell completion.
 func WithOutput(cmd *cobra.Command) {
-	cmd.PersistentFlags().VarP(flagtypes.NewOutput(), "output", "o",
-		"Output format: one of table, wide, json, yaml")
+	out := flagtypes.NewOutput()
+	cmd.PersistentFlags().VarP(out, "output", "o",
+		"Output format: one of "+strings.Join(out.Allowed(), ", "))
 	cobra.CheckErr(cmd.RegisterFlagCompletionFunc("output",
 		func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-			return flagtypes.OutputValues, cobra.ShellCompDirectiveNoFileComp
+			return out.Allowed(), cobra.ShellCompDirectiveNoFileComp
 		}))
 }
 

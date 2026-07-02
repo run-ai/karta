@@ -6,10 +6,7 @@
 // validate, print). It starts with the output-format enum.
 package flagtypes
 
-import "fmt"
-
-// Output is the enum of supported CLI output formats. It implements pflag.Value
-// so it can back the --output flag directly, validating at parse time.
+// Output is the enum of supported CLI output formats.
 type Output string
 
 const (
@@ -19,24 +16,7 @@ const (
 	OutputYAML  Output = "yaml"
 )
 
-// OutputValues lists every valid value, for usage text and shell completion.
-var OutputValues = []string{
-	string(OutputTable), string(OutputWide), string(OutputJSON), string(OutputYAML),
+// NewOutput returns an Enum backing the -o/--output flag, defaulting to table.
+func NewOutput() *Enum[Output] {
+	return NewEnum("output", OutputTable, OutputTable, OutputWide, OutputJSON, OutputYAML)
 }
-
-func (o *Output) String() string { return string(*o) }
-
-func (o *Output) Set(v string) error {
-	switch Output(v) {
-	case OutputTable, OutputWide, OutputJSON, OutputYAML:
-		*o = Output(v)
-		return nil
-	default:
-		return fmt.Errorf("must be one of table, wide, json, yaml")
-	}
-}
-
-func (o *Output) Type() string { return "output" }
-
-// NewOutput returns an Output seeded with the default (table), for pflag's VarP.
-func NewOutput() *Output { o := OutputTable; return &o }
