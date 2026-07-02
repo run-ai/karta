@@ -21,7 +21,7 @@ func NewCommand() *cobra.Command {
 		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
 	}
 
-	flags.AddNamespace(cmd)
+	flags.WithNamespace(cmd)
 
 	return cmd
 }

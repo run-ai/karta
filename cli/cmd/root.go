@@ -24,7 +24,8 @@ func NewRootCommand() *cobra.Command {
 		SilenceUsage: true,
 	}
 
-	flags.AddGlobals(cmd)
+	flags.WithKubeconfig(cmd)
+	flags.WithOutput(cmd)
 
 	cmd.AddCommand(workload.NewCommand())
 	cmd.AddCommand(definition.NewCommand())
