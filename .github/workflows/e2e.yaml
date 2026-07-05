@@ -49,13 +49,17 @@ jobs:
 
       - name: Install kind, kubectl, helm
         run: |
-          go install sigs.k8s.io/kind@v0.30.0
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-          kubectl version --client >/dev/null 2>&1 || {
-            curl -fsSLo kubectl "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-            sudo install kubectl /usr/local/bin/kubectl
-          }
-          helm version >/dev/null 2>&1 || curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          # Pinned prebuilt binaries (cert-manager/grove/cluster-api pattern):
+          # faster than compiling kind from source and reproducible. up.sh creates
+          # the cluster itself, so only the binaries are installed here. Versions
+          # are the single source of truth in hack/e2e/versions.env.
+          source hack/e2e/versions.env
+          curl -fsSLo kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+          sudo install kind /usr/local/bin/kind
+          curl -fsSLo kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          sudo install kubectl /usr/local/bin/kubectl
+          curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" | tar -xz
+          sudo install linux-amd64/helm /usr/local/bin/helm
 
       - name: Provision cluster + operators
         run: make e2e-up WORKLOADS="${{ inputs.workloads || 'jobset lws' }}"
