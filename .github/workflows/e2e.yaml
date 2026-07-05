@@ -2,27 +2,27 @@
 # Copyright (c) 2026 NVIDIA Corporation
 #
 # End-to-end tests: provision a kind cluster with the selected operators
-# (hack/e2e/up.sh) and run the Karta e2e suite against it. Manual trigger
-# (workflow_dispatch) defaults to a small 2-operator slice; widen the
-# workloads/focus inputs (or leave workloads empty for all) to cover more.
+# (hack/e2e/up.sh) and run the Karta e2e suite against it. By default this runs
+# the FULL suite: all operators installed, all cases run. Narrow it with the
+# workflow_dispatch workloads/focus inputs for a quick manual subset.
 name: E2E
 
 on:
   # Temporary: also run on pull_request so the suite can be validated in CI
   # before this workflow lands on the default branch (workflow_dispatch is only
   # dispatchable once the file is on main). Revert to dispatch-only before merge.
-  # On pull_request the inputs below are absent, so the steps fall back to the
-  # small default slice (jobset+lws on ubuntu-latest) via `inputs.x || default`.
+  # On pull_request the inputs below are absent, so the steps install ALL
+  # operators and run ALL cases (empty workloads/focus).
   pull_request:
   workflow_dispatch:
     inputs:
       workloads:
         description: "Operators to install (space-separated); empty installs all"
-        default: "jobset lws"
+        default: ""
         type: string
       focus:
-        description: "Ginkgo focus regex selecting the cases to run"
-        default: "JobSet|LeaderWorkerSet"
+        description: "Ginkgo focus regex selecting the cases to run; empty runs all"
+        default: ""
         type: string
       runner:
         description: "Runner label. 'ubuntu-latest' handles a small subset; use a dedicated self-hosted / larger runner for the full heavy suite (grove uses a dedicated label for exactly this)."
@@ -36,7 +36,7 @@ jobs:
     # operators: milvus, kserve+knative, dynamo, nim exceed a default 2-4 vCPU
     # hosted runner). Default ubuntu-latest is fine for a small subset.
     runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,10 +62,10 @@ jobs:
           sudo install linux-amd64/helm /usr/local/bin/helm
 
       - name: Provision cluster + operators
-        run: make e2e-up WORKLOADS="${{ inputs.workloads || 'jobset lws' }}"
+        run: make e2e-up WORKLOADS="${{ inputs.workloads }}"
 
       - name: Run e2e suite
-        run: make test-e2e E2E_FOCUS="${{ inputs.focus || 'JobSet|LeaderWorkerSet' }}"
+        run: make test-e2e E2E_FOCUS="${{ inputs.focus }}"
 
       - name: Diagnostics on failure
         if: failure()
