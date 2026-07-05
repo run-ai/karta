@@ -53,7 +53,7 @@ spec:
           podTemplateSpecPath: .spec.rayClusterSpec.workerGroupSpecs[].template
         scaleDefinition:
           replicasPath: .spec.rayClusterSpec.workerGroupSpecs[].replicas // 1
-        instanceIdPath: .spec.rayClusterSpec.workerGroupSpecs[].groupName
+        instanceIdPath: .spec.workerGroupSpecs[].groupName
         podSelector:
           componentTypeSelector:
             keyPath: .metadata.labels["ray.io/node-type"]
