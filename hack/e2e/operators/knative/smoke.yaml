@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# Smoke test for the Knative Serving install: up.sh creates this Service and
+# waits for the controller to mark it Ready before the e2e suite relies on
+# Knative. If the operator is broken, up.sh fails here rather than mid-suite.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: knative-smoke
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+        - image: ghcr.io/knative/helloworld-go:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: TARGET
+              value: smoke
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi

@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# Smoke test for the LeaderWorkerSet install: up.sh creates this LeaderWorkerSet
+# and waits for the operator to bring it Available before the e2e suite relies on
+# it. The containers only sleep, so it reaches a stable state on a CPU-only node.
+apiVersion: leaderworkerset.x-k8s.io/v1
+kind: LeaderWorkerSet
+metadata:
+  name: lws-smoke
+  namespace: default
+spec:
+  replicas: 1
+  leaderWorkerTemplate:
+    size: 2
+    leaderTemplate:
+      spec:
+        containers:
+          - name: leader
+            image: busybox:1.36
+            command: ["sleep", "infinity"]
+            resources:
+              requests: {cpu: 50m, memory: 32Mi}
+    workerTemplate:
+      spec:
+        containers:
+          - name: worker
+            image: busybox:1.36
+            command: ["sleep", "infinity"]
+            resources:
+              requests: {cpu: 50m, memory: 32Mi}
