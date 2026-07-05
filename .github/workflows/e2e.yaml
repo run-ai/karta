@@ -2,12 +2,18 @@
 # Copyright (c) 2026 NVIDIA Corporation
 #
 # End-to-end tests: provision a kind cluster with the selected operators
-# (hack/e2e/up.sh) and run the Karta e2e suite against it. Manual trigger for
-# now (workflow_dispatch); defaults to a small 2-operator slice. Widen the
+# (hack/e2e/up.sh) and run the Karta e2e suite against it. Manual trigger
+# (workflow_dispatch) defaults to a small 2-operator slice; widen the
 # workloads/focus inputs (or leave workloads empty for all) to cover more.
 name: E2E
 
 on:
+  # Temporary: also run on pull_request so the suite can be validated in CI
+  # before this workflow lands on the default branch (workflow_dispatch is only
+  # dispatchable once the file is on main). Revert to dispatch-only before merge.
+  # On pull_request the inputs below are absent, so the steps fall back to the
+  # small default slice (jobset+lws on ubuntu-latest) via `inputs.x || default`.
+  pull_request:
   workflow_dispatch:
     inputs:
       workloads:
@@ -29,7 +35,7 @@ jobs:
     # Pass a dedicated self-hosted / larger runner for the full suite (many
     # operators: milvus, kserve+knative, dynamo, nim exceed a default 2-4 vCPU
     # hosted runner). Default ubuntu-latest is fine for a small subset.
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
       - name: Checkout code
@@ -52,10 +58,10 @@ jobs:
           helm version >/dev/null 2>&1 || curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
       - name: Provision cluster + operators
-        run: make e2e-up WORKLOADS="${{ inputs.workloads }}"
+        run: make e2e-up WORKLOADS="${{ inputs.workloads || 'jobset lws' }}"
 
       - name: Run e2e suite
-        run: make test-e2e E2E_FOCUS="${{ inputs.focus }}"
+        run: make test-e2e E2E_FOCUS="${{ inputs.focus || 'JobSet|LeaderWorkerSet' }}"
 
       - name: Diagnostics on failure
         if: failure()
