@@ -2,17 +2,20 @@
 # Copyright (c) 2026 NVIDIA Corporation
 #
 # End-to-end tests: provision a kind cluster with the selected operators
-# (hack/e2e/up.sh) and run the Karta e2e suite against it. By default this runs
-# the FULL suite: all operators installed, all cases run. Narrow it with the
-# workflow_dispatch workloads/focus inputs for a quick manual subset.
+# (hack/e2e/up.sh) and run the Karta e2e suite against it. On pull_request this
+# runs a light subset (jobset + lws) on ubuntu-latest that fits a hosted runner.
+# The full suite needs a bigger runner: 2 vCPU starves the Ray dashboard. Run it
+# via workflow_dispatch with runner=prod-karta-e2e-v1 and empty workloads (all).
+# See docs/design/e2e-runner-size-decision.md.
 name: E2E
 
 on:
-  # Temporary: also run on pull_request so the suite can be validated in CI
-  # before this workflow lands on the default branch (workflow_dispatch is only
-  # dispatchable once the file is on main). Revert to dispatch-only before merge.
-  # On pull_request the inputs below are absent, so the steps install ALL
-  # operators and run ALL cases (empty workloads/focus).
+  # Temporary: also run on pull_request so the suite runs in CI before this
+  # workflow lands on the default branch (workflow_dispatch is only dispatchable
+  # once the file is on main). Revert to dispatch-only before merge. On
+  # pull_request the inputs are absent, so the steps fall back to the light subset
+  # (jobset + lws) that fits ubuntu-latest; the full suite runs via dispatch on a
+  # bigger runner.
   pull_request:
   workflow_dispatch:
     inputs:
@@ -63,10 +66,10 @@ jobs:
           sudo install linux-amd64/helm /usr/local/bin/helm
 
       - name: Provision cluster + operators
-        run: make e2e-up WORKLOADS="${{ inputs.workloads }}"
+        run: make e2e-up WORKLOADS="${{ inputs.workloads || 'jobset lws' }}"
 
       - name: Run e2e suite
-        run: make test-e2e E2E_FOCUS="${{ inputs.focus }}"
+        run: make test-e2e E2E_FOCUS="${{ inputs.focus || 'JobSet|LeaderWorkerSet' }}"
 
       - name: Diagnostics on failure
         if: failure()

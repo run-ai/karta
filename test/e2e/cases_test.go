@@ -156,10 +156,6 @@ var workloadCases = []workloadCase{
 		ready:        phaseEq("SUCCEEDED", "status", "jobStatus"),
 		want:         kartav1alpha1.CompletedStatus,
 		extracts:     []extractCheck{{component: "head"}},
-		// The RayJob controller submits the entrypoint only after the Ray head's
-		// dashboard (port 8265) is reachable. On a small hosted runner (2 vCPU)
-		// under full-suite load that boot is slow, so allow generous headroom;
-		// the entrypoint itself is trivial and finishes in seconds once submitted.
-		timeout: 15 * time.Minute,
+		timeout:      6 * time.Minute,
 	},
 }
