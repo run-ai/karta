@@ -37,8 +37,11 @@ spec:
               readinessProbe:
                 tcpSocket: {port: 8265}
                 initialDelaySeconds: 15
+                # Allow ~15 min for the dashboard to open on a slow, contended
+                # hosted runner before the head is marked NotReady (keeps KubeRay
+                # from recreating the cluster mid-boot). 15 + 180*5 = 915s.
                 periodSeconds: 5
-                failureThreshold: 90
+                failureThreshold: 180
     workerGroupSpecs:
       - groupName: small
         replicas: 0
