@@ -25,16 +25,17 @@ on:
         default: ""
         type: string
       runner:
-        description: "Runner label. 'ubuntu-latest' handles a small subset; use a dedicated self-hosted / larger runner for the full heavy suite (grove uses a dedicated label for exactly this)."
+        description: "Runner label. ubuntu-latest (2 vCPU/7GB) suits a subset; for the full suite request the self-hosted runner prod-karta-e2e-v1 (8 vCPU/32GB, Docker, amd64) and pass it here. See docs/design/e2e-runner-size-decision.md."
         default: "ubuntu-latest"
         type: string
 
 jobs:
   e2e:
     name: E2E (kind)
-    # Pass a dedicated self-hosted / larger runner for the full suite (many
-    # operators: milvus, kserve+knative, dynamo, nim exceed a default 2-4 vCPU
-    # hosted runner). Default ubuntu-latest is fine for a small subset.
+    # Full-suite target: a self-hosted runner prod-karta-e2e-v1 (8 vCPU / 32 GB /
+    # 150 GB SSD, Docker, amd64), mirroring grove's prod-grove-e2e-v1. ubuntu-latest
+    # (2 vCPU) fits the install but starves the Ray dashboard under full-suite load;
+    # see docs/design/e2e-runner-size-decision.md. Pass runner=<label> to select it.
     runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 90
     steps:
