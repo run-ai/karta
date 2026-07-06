@@ -46,11 +46,13 @@ type ComponentFactory struct {
 	accessor ComponentAccessor
 
 	componentDefinitionsByName map[string]v1alpha1.ComponentDefinition
+	childNamesByParent         map[string][]string
 }
 
 // NewComponentFactory creates a new Karta-based component factory
 func NewComponentFactory(karta *v1alpha1.Karta, accessor ComponentAccessor) *ComponentFactory {
 	definitionsByName := make(map[string]v1alpha1.ComponentDefinition)
+	childNamesByParent := make(map[string][]string)
 
 	// Create single slice with all components (root + children)
 	allDefinitions := make([]v1alpha1.ComponentDefinition, 0, len(karta.Spec.StructureDefinition.ChildComponents)+1)
@@ -58,12 +60,17 @@ func NewComponentFactory(karta *v1alpha1.Karta, accessor ComponentAccessor) *Com
 	allDefinitions = append(allDefinitions, karta.Spec.StructureDefinition.RootComponent)
 	for _, componentDefinition := range allDefinitions {
 		definitionsByName[componentDefinition.Name] = componentDefinition
+		if componentDefinition.OwnerRef != nil {
+			parent := *componentDefinition.OwnerRef
+			childNamesByParent[parent] = append(childNamesByParent[parent], componentDefinition.Name)
+		}
 	}
 
 	return &ComponentFactory{
 		karta:                      karta,
 		accessor:                   accessor,
 		componentDefinitionsByName: definitionsByName,
+		childNamesByParent:         childNamesByParent,
 	}
 }
 
@@ -88,6 +95,11 @@ func (f *ComponentFactory) GetComponent(name string) (*Component, error) {
 	}, nil
 }
 
+// GetKarta returns the Karta definition the factory was built from.
+func (f *ComponentFactory) GetKarta() *v1alpha1.Karta {
+	return f.karta
+}
+
 // GetRootComponent retrieves the root component
 func (f *ComponentFactory) GetRootComponent() (*Component, error) {
 	if f.karta == nil {
@@ -95,6 +107,21 @@ func (f *ComponentFactory) GetRootComponent() (*Component, error) {
 	}
 
 	return f.GetComponent(f.karta.Spec.StructureDefinition.RootComponent.Name)
+}
+
+// GetChildComponentsOf retrieves the direct child components of the named parent,
+// resolved from the structure's OwnerRef relationships.
+func (f *ComponentFactory) GetChildComponentsOf(parentName string) ([]*Component, error) {
+	names := f.childNamesByParent[parentName]
+	children := make([]*Component, 0, len(names))
+	for _, name := range names {
+		component, err := f.GetComponent(name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get child component %s: %w", name, err)
+		}
+		children = append(children, component)
+	}
+	return children, nil
 }
 
 // GetChildComponents retrieves all child components

@@ -101,6 +101,9 @@ func JobGroupKarta() *v1alpha1.Karta {
 							ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
 								KeyPath: ".metadata.labels.job-name",
 							},
+							ComponentInstanceSelector: &v1alpha1.ComponentInstanceSelector{
+								IdPath: ".metadata.labels.job-name",
+							},
 						},
 					},
 				},
