@@ -182,24 +182,9 @@ dummy `hf-token-secret` satisfies the worker; the mocker downloads nothing.
 
 ## Adding an operator
 
-Install side (a self-contained folder under `hack/e2e/operators/<name>/`):
+Install side (the operator folder under `hack/e2e/operators/<name>/`, its version
+pin in `global.env`, and the make target) is documented in `hack/e2e/README.md`.
 
-1. Create `install.sh` as a standalone script: shebang, `set -euo pipefail`,
-   `MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"`, then
-   `source "${MODULE_DIR}/../_common.sh"` (this also loads `global.env`). Put the
-   install steps in a `main()` and call it at the end. Use the shared helpers
-   (`rollout_wait`, `apply_with_retry`, `preload_image`, `build_and_load_image`,
-   `ensure_secret`) and reference co-located config via `${MODULE_DIR}`.
-2. Fail-fast smoke: add a `smoke.yaml` and a `verify.sh` that sources `_common.sh`
-   and calls `run_smoke "${MODULE_DIR}/smoke.yaml" <target> <wait-expr> [timeout]
-   [ns]`.
-3. Pin its version(s) in `hack/e2e/global.env`, and add a `version_of` case in
-   `hack/e2e/up.sh` so it shows in the install summary.
-4. Add `<name>` to `ALL_WORKLOADS` in `hack/e2e/up.sh` (in install order), and a
-   `deps_of` entry only if it depends on another operator.
-5. Add an `e2e-up-<name>` line to the Makefile (next to the others) so
-   `make e2e-up-<name>` works and tab-completes.
-
-Test side (one entry, unchanged): add a `testdata/<name>-workload.yaml` fixture
+Test side: add a `testdata/<name>-workload.yaml` fixture
 and a `workloadCases` entry in `cases_test.go` (the sample path, the target
 state predicate, the expected `ResourceStatus`, and optional `extracts`/`builtin`).
