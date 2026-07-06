@@ -1,0 +1,260 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- Copyright (c) 2026 NVIDIA Corporation -->
+
+# Built-in Karta Catalog - Detailed Design
+
+Design for the built-in Karta defaults. Resolves issue #117; implements the catalog and
+resolver API from epic #86 and the Go-as-source-of-truth breakdown in #118.
+
+## Background
+
+A key value Karta delivers is letting platforms and controllers support any workload type
+without per-CRD adapters. Karta already ships 13 curated definitions under `docs/samples/`
+(PyTorchJob, RayCluster, RayJob, JobSet, LeaderWorkerSet, MPIJob, KServe, Knative Serving,
+NIM Service, Milvus, Dynamo, Grove PodCliqueSet, batch Job). Today they are hand-written
+YAML with two gaps:
+
+- No compile-time checking. A wrong field path, a wrong GVK, or drift from the `Karta` API
+  type (`pkg/api/runai/v1alpha1/types.go`, `pkg/api/runai/v1alpha1/structure.go`) is only
+  caught at runtime, if at all.
+- Not usable by Go callers at runtime. A platform integrating Karta cannot resolve a
+  built-in definition for a workload GVK without shipping YAML and parsing it itself.
+
+The goal is to make typed Go the single source of truth in a new `pkg/builtin/` package,
+expose a resolver API keyed by workload GVK, and generate the YAML catalog from the Go
+definitions with a CI drift check. This makes "Karta supports any workload" true on day
+zero, with no cluster access and no `go:embed`.
+
+## Settled decisions
+
+- Generated YAML catalog lives in a new `docs/builtin/` directory. `docs/samples/` stays
+  in place (see open items) and may hold example definitions outside the built-in catalog.
+- Filenames use the GVK slug `{group-slug}-{kind-lowercase}-{version}.yaml`
+  (for example `ray-io-raycluster-v1.yaml`). The slug is derived from the root component's
+  `kind`, so the generator needs no separate name field.
+- The generator is a pure-Go program under `cmd/gen-samples/`, matching the existing
+  `operator/cmd/main.go` pattern. No shell, cross-platform.
+- The catalog is immutable. `builtin` builds a `Catalog` object holding the fixed list of
+  Kartas from the Go definitions. There is no runtime registration: the only operations
+  are `Get` and `List`. Callers that need their own internal workload types compose their
+  own lookup alongside `builtin.List()` rather than mutating the catalog.
+- Code name for the concept is "catalog"; the public API verbs are `Get` and `List`.
+
+## Design
+
+### 1. The `pkg/builtin/` package
+
+One file per workload, each exposing a single constructor that returns a typed
+`*v1alpha1.Karta`. The jq-expression notes currently living in YAML comments (for example
+`docs/samples/jobset.yaml` lines 30-38) move into Go comments on the relevant fields.
+
+Wiring a workload into the catalog is a single explicit list in `catalog.go`, so it is one
+reviewable diff rather than a line buried in each file. A completeness test (see section 5)
+makes a forgotten entry fail CI, so this list cannot silently drift from the set of defined
+constructors.
+
+Representative definition, `pkg/builtin/jobset.go`:
+
+```go
+package builtin
+
+import (
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    v1alpha1 "github.com/.../pkg/api/runai/v1alpha1"
+)
+
+func jobset() *v1alpha1.Karta {
+    return &v1alpha1.Karta{
+        TypeMeta:   metav1.TypeMeta{APIVersion: "run.ai/v1alpha1", Kind: "Karta"},
+        ObjectMeta: metav1.ObjectMeta{Name: "jobset-x-k8s-io-v1alpha2-jobset"},
+        Spec: v1alpha1.KartaSpec{StructureDefinition: v1alpha1.StructureDefinition{
+            RootComponent: v1alpha1.ComponentDefinition{
+                Name: "jobset",
+                Kind: &v1alpha1.GroupVersionKind{Group: "jobset.x-k8s.io", Version: "v1alpha2", Kind: "JobSet"},
+                // ... suspendDefinition, statusDefinition
+            },
+            // ... childComponents
+        }},
+    }
+}
+```
+
+The catalog and resolver, `pkg/builtin/catalog.go`:
+
+```go
+package builtin
+
+import (
+    "fmt"
+
+    "k8s.io/apimachinery/pkg/runtime/schema"
+    v1alpha1 "github.com/.../pkg/api/runai/v1alpha1"
+)
+
+// Catalog is an immutable set of built-in Kartas indexed by their root component GVK.
+// It is built once from the Go definitions and never mutated, so it needs no locking.
+type Catalog struct {
+    byGVK map[schema.GroupVersionKind]*v1alpha1.Karta
+    all   []*v1alpha1.Karta // sorted by GVK string for deterministic List
+}
+
+var ErrNotFound = fmt.Errorf("builtin: no Karta registered for GVK")
+
+// definitions is the single wiring point for the catalog. Adding a workload means adding
+// its file plus one line here. The completeness test asserts this list matches the set of
+// constructors defined in the package, so a forgotten entry fails CI.
+var definitions = []func() *v1alpha1.Karta{
+    jobset, pytorch, raycluster, rayjob, mpijob, lws, kserve,
+    knativeServing, nimService, milvus, dynamo, grovePodCliqueSet, batchJob,
+}
+
+// New builds the catalog from the definitions list. It panics on a definition with no root
+// GVK or on a duplicate GVK, so two definitions cannot silently shadow each other. Because
+// definitions is a compile-time constant, any such panic surfaces immediately in tests.
+func New() *Catalog { /* call each def, key by root GVK, detect duplicates, sort */ }
+
+// key derives the workload identity from the root component's kind.
+func key(k *v1alpha1.Karta) (schema.GroupVersionKind, error) { /* validate non-nil root Kind */ }
+
+func (c *Catalog) Get(gvk schema.GroupVersionKind) (*v1alpha1.Karta, error) { /* lookup, ErrNotFound */ }
+func (c *Catalog) List() []*v1alpha1.Karta { /* return copy of c.all */ }
+
+// defaultCatalog is the package-global instance callers use directly.
+var defaultCatalog = New()
+
+func Get(gvk schema.GroupVersionKind) (*v1alpha1.Karta, error) { return defaultCatalog.Get(gvk) }
+func List() []*v1alpha1.Karta                                  { return defaultCatalog.List() }
+```
+
+Design notes:
+
+- The key type is the standard `schema.GroupVersionKind`, not the local
+  `v1alpha1.GroupVersionKind`. Callers already have `unstructured.GroupVersionKind()`, so
+  cluster-first fallback composes cleanly. `key()` converts the local root `Kind` to the
+  schema type internally.
+- `Get` returns the stored pointer for zero-alloc reads; the contract documents that
+  callers must `DeepCopy()` before mutating. The `Karta` type already has generated
+  DeepCopy.
+- Duplicate GVKs are detected at construction time in `New()`, not at runtime, since the
+  definition set is fixed at compile time.
+- Validation via the existing `NewKartaValidator(k).Validate()`
+  (`pkg/api/runai/v1alpha1/validation.go`) runs in tests over `List()`, keeping the catalog
+  build itself cheap.
+- There is no `Add`. The catalog is a read-only building block; callers needing their own
+  internal workload types keep a separate lookup and fall through to `builtin.Get`.
+
+Cluster-first composition stays on the caller side; the package is the building block:
+
+```go
+karta, err := clusterClient.GetKarta(ctx, name)
+if apierrors.IsNotFound(err) {
+    karta, err = builtin.Get(obj.GroupVersionKind())
+}
+```
+
+### 2. Generator `cmd/gen-samples/`
+
+A small `main.go` imports `pkg/builtin` (triggering every `init()` registration),
+iterates `builtin.List()`, marshals each definition with `sigs.k8s.io/yaml` (already a
+direct dependency, used in `pkg/api/runai/v1alpha1/examples_test.go`), and writes
+`docs/builtin/{gvk-slug}.yaml`. It clears `docs/builtin/*.yaml` first so deletions
+propagate. The slug:
+
+```
+slug = strings.ReplaceAll(group, ".", "-") + "-" + strings.ToLower(kind) + "-" + version
+```
+
+Output is deterministic: `List()` is sorted, and `sigs.k8s.io/yaml` marshals through JSON
+with stable key order from struct field order. Each file gets the SPDX and copyright YAML
+header comment prepended.
+
+### 3. Make and CI wiring
+
+Add to the `Makefile`:
+
+```make
+.PHONY: generate-samples
+generate-samples: ## Regenerate docs/builtin/ from pkg/builtin
+	go run ./cmd/gen-samples
+
+# add generate-samples to the validate chain so git diff --exit-code covers it
+validate: generate manifests generate-mocks generate-licenses generate-samples
+	@git diff --exit-code
+```
+
+`make check` already runs `validate` in CI (`.github/workflows/ci.yaml`, `make check`), so
+drift between `pkg/builtin/` and `docs/builtin/` fails the build via the existing
+`git diff --exit-code`. No new CI step is needed. This mirrors how the CRD, DeepCopy, mock,
+and license generators are already validated.
+
+### 4. Porting the 13 existing samples
+
+- Port each existing `docs/samples/*.yaml` definition to a typed Go file under
+  `pkg/builtin/`, moving inline jq comments to Go comments. The generator then produces the
+  GVK-slug-named YAML under `docs/builtin/`, and the round-trip test guarantees the Go
+  structs reproduce it.
+- `docs/samples/` is left in place; it is not moved or deleted. Whether the built-in copies
+  are then removed from `docs/samples/` (leaving only non-built-in examples there) is an
+  open item.
+- The existing sample-validation test (`pkg/api/runai/v1alpha1/examples_test.go`) keeps
+  validating `docs/samples/`; the new `pkg/builtin` tests cover `docs/builtin/`.
+- Update references that should point at the catalog (README, `docs/`, and
+  `docs/ri-studio/wasm/examples/` per issue #116) to `docs/builtin/`.
+
+### 5. Tests
+
+Under `pkg/builtin/`:
+
+- Structural validity: for every `builtin.List()` entry, run
+  `NewKartaValidator(k).Validate()` and assert `APIVersion` and `Kind`.
+- Round-trip equality: marshal each definition and assert byte-equality against the
+  committed `docs/builtin/{slug}.yaml`, matching the issue #118 acceptance and giving the
+  `git diff --exit-code` guarantee at unit-test level.
+- Catalog semantics: `Get` hit and miss (`ErrNotFound`), `List` determinism, and that
+  `New()` panics on a duplicate GVK.
+- Completeness: this is what enforces that every workload is actually in the catalog, not
+  reviewer diligence. The test parses `pkg/builtin/*.go` (excluding `_test.go` and
+  `catalog.go`) with `go/ast`, collects every top-level constructor with signature
+  `func() *v1alpha1.Karta`, and asserts that set of names equals the set wired into the
+  `definitions` list in `catalog.go`. Writing a constructor but forgetting to list it, or
+  listing a name with no constructor, makes the two sets differ and fails `make check`.
+  Combined with the duplicate-GVK check in `New()` and the round-trip YAML test, this
+  guarantees every definition is in the catalog exactly once and matches its committed YAML.
+
+Deeper contract tests (pod-spec extraction, scale, status correctness against upstream
+CRDs) are tracked by issue #79; this design leaves the seam for them.
+
+## Files to create or modify
+
+- New: `pkg/builtin/catalog.go`, `pkg/builtin/catalog_test.go`, one
+  `pkg/builtin/<workload>.go` per definition (jobset, pytorch, raycluster, rayjob, mpijob,
+  lws, kserve, knative-serving, nimservice, milvus, dynamo, grove-podcliqueset,
+  batch-job), `pkg/builtin/builtin_test.go`, and `pkg/builtin/completeness_test.go` (the
+  `go/ast` scan that enforces every constructor is wired into `definitions`).
+- New: `cmd/gen-samples/main.go`.
+- New directory: `docs/builtin/` (generated YAML). `docs/samples/` is left in place.
+- Modify: `Makefile` (add `generate-samples`, wire into `validate`).
+- Modify: docs that should reference the built-in catalog rather than samples.
+
+## Verification
+
+1. `make generate-samples`, then `git status` shows `docs/builtin/` regenerated with no
+   unexpected diff.
+2. `go test ./pkg/builtin/...` passes (structural, round-trip, catalog, completeness tests).
+3. `make check` is green. Confirm the drift guard by editing one `pkg/builtin/*.go` value
+   without regenerating and verifying `make validate` fails.
+4. Smoke a Go caller:
+   `builtin.Get(schema.GroupVersionKind{Group: "ray.io", Version: "v1", Kind: "RayCluster"})`
+   returns the RayCluster Karta; an unknown GVK returns `ErrNotFound`.
+
+## Open items to confirm during implementation
+
+- Consider using `go:embed` over YAML under `pkg/builtin/` as the source of truth, instead
+  of hand-written Go constructors that a generator marshals to YAML. This would flip the
+  direction (YAML embedded and parsed at init, no generator, catalog membership enforced by
+  the embed glob) at the cost of the compile-time field/GVK checking the Go structs give.
+  Note the `go:embed` constraint: patterns cannot use `..` or reach outside the package, so
+  the embedded YAML would have to live under `pkg/builtin/`, not `docs/`.
+- Keep `docs/samples/` where it is. It may make sense for `docs/samples/` to hold example
+  definitions that are not part of the built-in catalog, kept separate from the generated
+  `docs/builtin/` catalog.
