@@ -19,9 +19,12 @@ main() {
   done
   # Kourier is the networking layer; net-kourier tags lag serving patch releases.
   kubectl apply -f "https://github.com/knative/net-kourier/releases/download/${KOURIER_VERSION}/kourier.yaml"
-  kubectl patch configmap/config-network -n knative-serving --type merge \
+  # The Serving config-validation webhook may refuse connections for a moment after
+  # its Deployment reports Available (endpoint/cert still wiring up), so retry these
+  # configmap patches past that warmup.
+  retry 10 6 kubectl patch configmap/config-network -n knative-serving --type merge \
     -p '{"data":{"ingress-class":"kourier.ingress.networking.knative.dev"}}'
-  kubectl patch configmap/config-domain -n knative-serving --type merge \
+  retry 10 6 kubectl patch configmap/config-domain -n knative-serving --type merge \
     -p '{"data":{"127.0.0.1.sslip.io":""}}'
   rollout_wait knative-serving deploy/net-kourier-controller
   rollout_wait kourier-system deploy/3scale-kourier-gateway

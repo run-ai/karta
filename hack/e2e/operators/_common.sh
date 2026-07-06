@@ -76,6 +76,21 @@ apply_with_retry() {
   return 1
 }
 
+# retry <tries> <sleep_secs> <command...>
+# Run a command, retrying on failure past a transient (a webhook still warming up,
+# an endpoint not yet reachable). The command runs inside an if so set -e does not
+# abort on an expected transient failure.
+retry() {
+  local tries="$1" sleep_secs="$2"; shift 2
+  local i
+  for i in $(seq 1 "${tries}"); do
+    if "$@"; then return 0; fi
+    echo "    retry ${i}/${tries}: $*" >&2
+    sleep "${sleep_secs}"
+  done
+  return 1
+}
+
 # run_smoke <manifest> <target> <wait-expr> [timeout] [namespace]
 # Uniform smoke test: apply the throwaway resource (retried past webhook warmup),
 # wait for the stable state, then delete. <wait-expr> is passed to kubectl wait
