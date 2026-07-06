@@ -147,18 +147,23 @@ E2E_TIMEOUT ?= 30m
 e2e-up: ## Provision a kind cluster + operators (WORKLOADS="jobset kuberay" for a subset, or "all"; CLUSTER_NAME=<name> for an isolated parallel cluster)
 	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/up.sh $(WORKLOADS)
 
-# Per-operator convenience targets so "make e2e-up-<TAB>" completes an operator
-# name (make completes target names, not variable values). The operator list is
-# read from up.sh, so it stays in sync automatically. Use WORKLOADS on e2e-up to
-# compose several; e2e-up-all (or bare e2e-up) installs everything.
-E2E_OPERATORS := $(shell ./hack/e2e/up.sh --operators 2>/dev/null)
-
-.PHONY: e2e-up-all $(addprefix e2e-up-,$(E2E_OPERATORS))
+# Per-operator convenience targets, spelled out one rule each so shell completion
+# lists them individually: make e2e-up-<TAB> -> e2e-up-jobset, e2e-up-kserve, ...
+# Keep this list in sync with ALL_WORKLOADS in hack/e2e/up.sh. Use WORKLOADS on
+# e2e-up to compose several; e2e-up-all (or bare e2e-up) installs everything.
+.PHONY: e2e-up-all e2e-up-lws e2e-up-jobset e2e-up-kuberay e2e-up-kubeflow e2e-up-knative e2e-up-kserve e2e-up-milvus e2e-up-grove e2e-up-dynamo e2e-up-nim
 e2e-up-all: ## Provision a kind cluster + all operators
-	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/up.sh all
-
-$(addprefix e2e-up-,$(E2E_OPERATORS)):
-	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/up.sh $(@:e2e-up-%=%)
+	@$(MAKE) e2e-up WORKLOADS=all
+e2e-up-lws:      ; @$(MAKE) e2e-up WORKLOADS=lws
+e2e-up-jobset:   ; @$(MAKE) e2e-up WORKLOADS=jobset
+e2e-up-kuberay:  ; @$(MAKE) e2e-up WORKLOADS=kuberay
+e2e-up-kubeflow: ; @$(MAKE) e2e-up WORKLOADS=kubeflow
+e2e-up-knative:  ; @$(MAKE) e2e-up WORKLOADS=knative
+e2e-up-kserve:   ; @$(MAKE) e2e-up WORKLOADS=kserve
+e2e-up-milvus:   ; @$(MAKE) e2e-up WORKLOADS=milvus
+e2e-up-grove:    ; @$(MAKE) e2e-up WORKLOADS=grove
+e2e-up-dynamo:   ; @$(MAKE) e2e-up WORKLOADS=dynamo
+e2e-up-nim:      ; @$(MAKE) e2e-up WORKLOADS=nim
 
 .PHONY: e2e-down
 e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)

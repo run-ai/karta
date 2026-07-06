@@ -187,6 +187,8 @@ Install side (a self-contained folder under `hack/e2e/operators/<name>/`):
    `hack/e2e/up.sh` so it shows in the install summary.
 4. Add `<name>` to `ALL_WORKLOADS` in `hack/e2e/up.sh` (in install order), and a
    `deps_of` entry only if it depends on another operator.
+5. Add an `e2e-up-<name>` line to the Makefile (next to the others) so
+   `make e2e-up-<name>` works and tab-completes.
 
 Test side (one entry, unchanged): add a `testdata/<name>-workload.yaml` fixture
 and a `workloadCases` entry in `cases_test.go` (the sample path, the target

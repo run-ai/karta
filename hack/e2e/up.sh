@@ -194,7 +194,6 @@ main() {
   for arg in "$@"; do
     case "$arg" in
       -h | --help) usage; exit 0 ;;
-      --operators) printf '%s\n' "${ALL_WORKLOADS[*]}"; exit 0 ;; # list operators (used by the Makefile)
       --list | --plan) plan_only=true ;;
       -*) echo "unknown flag: $arg" >&2; usage; exit 2 ;;
       *) requested+=("$arg") ;;
