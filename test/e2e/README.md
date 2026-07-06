@@ -40,14 +40,6 @@ always installed. A subset auto-includes dependencies: kserve pulls in knative,
 dynamo pulls in grove. Pair this with the Ginkgo `-run` filter below to exercise
 just the matching cases.
 
-For tab-completion of operator names when calling the script directly, source the
-completion once (add it to your shell rc to keep it):
-
-```sh
-source hack/e2e/up-completion.sh
-./hack/e2e/up.sh dynamo <TAB>            # completes the next operator
-```
-
 ### Parallel / isolated clusters
 
 Set `CLUSTER_NAME` to bring up more than one cluster at a time, for example two

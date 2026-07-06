@@ -148,8 +148,6 @@ E2E_TIMEOUT ?= 30m
 #   make e2e-up WORKLOADS="jobset lws"   # a couple - one provision, deps resolved once
 #   make e2e-up-jobset                   # a single operator (tab-completes: make e2e-up-<TAB>)
 #   make e2e-up-all                      # everything, explicit
-# For tab-completed multi-select, call the script directly (after sourcing
-# hack/e2e/up-completion.sh): ./hack/e2e/up.sh jobset lws
 .PHONY: e2e-up
 e2e-up: ## Provision a kind cluster + operators (WORKLOADS="jobset kuberay" for a subset, or "all"; CLUSTER_NAME=<name> for an isolated parallel cluster)
 	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/up.sh $(WORKLOADS)
@@ -180,9 +178,9 @@ e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)
 test-e2e: ## Run the e2e suite (run e2e-up first; CLUSTER_NAME to match; E2E_FOCUS="JobSet|LWS" to run a subset)
 	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) ./... $(if $(E2E_FOCUS),-args -ginkgo.focus="$(E2E_FOCUS)")
 
-# The e2e shell scripts to shellcheck: the provisioner, teardown, completion, the
-# shared helpers, and every per-operator install.sh/verify.sh.
-E2E_SHELL := hack/e2e/up.sh hack/e2e/down.sh hack/e2e/up-completion.sh \
+# The e2e shell scripts to shellcheck: the provisioner, teardown, the shared
+# helpers, and every per-operator install.sh/verify.sh.
+E2E_SHELL := hack/e2e/up.sh hack/e2e/down.sh \
 	hack/e2e/operators/_common.sh \
 	$(wildcard hack/e2e/operators/*/install.sh) \
 	$(wildcard hack/e2e/operators/*/verify.sh)

@@ -16,7 +16,6 @@ hack/e2e/
   down.sh               tear the cluster down (and its kubeconfig for named clusters)
   global.env            single source of truth for versions and runtime defaults
   kind-config.yaml      kind cluster shape (1 control-plane + 1 worker)
-  up-completion.sh      shell completion for up.sh operator names (source to enable)
   operators/
     _common.sh          shared helpers + GitHub Actions logging, sourced by every script
     <name>/
@@ -39,13 +38,6 @@ make e2e-down                        # tear down
 The always-on base is the kind cluster, cert-manager, the fake-gpu-operator, and
 the Karta operator. Selecting a subset keeps a run light. Dependencies are added
 automatically: kserve pulls knative, dynamo pulls grove.
-
-For tab-completion of operator names when calling the script directly:
-
-```sh
-source hack/e2e/up-completion.sh
-./hack/e2e/up.sh dynamo <TAB>        # completes the next operator
-```
 
 ## How up.sh runs an operator
 
