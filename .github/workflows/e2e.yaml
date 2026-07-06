@@ -3,11 +3,12 @@
 #
 # End-to-end tests: provision a kind cluster and run the Karta e2e suite against
 # it. The full suite (13 cases, all operators) does not fit one 2 vCPU hosted
-# runner, so it is sharded across parallel ubuntu-latest jobs, each installing a
-# lighter operator subset and running the matching cases. Together the shards
-# cover every operator and case, with no self-hosted or larger runner needed.
-# This mirrors how KAI-Scheduler, volcano, and crossplane run e2e on hosted
-# runners. See docs/design/e2e-runner-size-decision.md.
+# runner, so it is split one operator per parallel ubuntu-latest job: each job
+# installs a single operator (plus its deps) and runs only that operator's cases.
+# Together the jobs cover every operator and case, with no self-hosted or larger
+# runner needed, and each job is maximally isolated (least contention, cleanest
+# per-operator pass/fail). Mirrors how KAI-Scheduler, volcano, and crossplane run
+# e2e on hosted runners. See docs/design/e2e-runner-size-decision.md.
 name: E2E
 
 on:
@@ -26,19 +27,40 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Each shard is a lighter subset that fits a 2 vCPU runner; the focus
-          # regex selects exactly the cases those operators drive. deps are auto
-          # added by up.sh (kserve->knative, dynamo->grove). BatchJob is built-in
-          # (no operator) so it rides along in the core shard.
-          - shard: core
-            workloads: "lws jobset kuberay kubeflow"
-            focus: "LeaderWorkerSet|JobSet|RayCluster|RayJob|PyTorchJob|MPIJob|BatchJob"
-          - shard: serving
-            workloads: "knative kserve milvus"
-            focus: "KnativeService|KServe|Milvus"
-          - shard: inference
-            workloads: "grove dynamo nim"
-            focus: "Grove|Dynamo|NIMService"
+          # One operator per job: workloads is a single operator (up.sh auto-adds
+          # deps: kserve->knative, dynamo->grove), focus selects exactly that
+          # operator's cases. BatchJob is built-in (no operator) so it rides along
+          # in the jobset job. Every case is covered exactly once across the jobs.
+          - shard: lws
+            workloads: "lws"
+            focus: "LeaderWorkerSet"
+          - shard: jobset
+            workloads: "jobset"
+            focus: "JobSet|BatchJob"
+          - shard: kuberay
+            workloads: "kuberay"
+            focus: "RayCluster|RayJob"
+          - shard: kubeflow
+            workloads: "kubeflow"
+            focus: "PyTorchJob|MPIJob"
+          - shard: knative
+            workloads: "knative"
+            focus: "KnativeService"
+          - shard: kserve
+            workloads: "kserve"
+            focus: "KServe"
+          - shard: milvus
+            workloads: "milvus"
+            focus: "Milvus"
+          - shard: grove
+            workloads: "grove"
+            focus: "Grove"
+          - shard: dynamo
+            workloads: "dynamo"
+            focus: "DynamoGraphDeployment"
+          - shard: nim
+            workloads: "nim"
+            focus: "NIMService"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
