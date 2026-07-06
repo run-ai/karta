@@ -126,7 +126,6 @@ setup_cluster() {
 }
 
 install_cert_manager() {
-  echo "==> cert-manager ${CERT_MANAGER_VERSION}"
   kubectl apply -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cert-manager.yaml"
   for d in cert-manager cert-manager-webhook cert-manager-cainjector; do
     rollout_wait cert-manager "deploy/${d}"
@@ -134,7 +133,6 @@ install_cert_manager() {
 }
 
 install_fake_gpu() {
-  echo "==> fake-gpu-operator ${FAKE_GPU_VERSION}"
   kubectl label node "${CLUSTER_NAME}-worker" run.ai/simulated-gpu-node-pool=default --overwrite
   helm upgrade -i fake-gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator \
     -n gpu-operator --create-namespace --version "${FAKE_GPU_VERSION}" \
@@ -142,7 +140,6 @@ install_fake_gpu() {
 }
 
 install_karta() {
-  echo "==> Karta operator"
   kubectl apply --server-side -f "${REPO_ROOT}/charts/karta/crds/"
   helm upgrade -i karta "${REPO_ROOT}/charts/karta" -n karta-system --create-namespace \
     --set image.repository="${IMAGE%%:*}" --set image.tag="${IMAGE##*:}" \
@@ -233,9 +230,9 @@ main() {
   fi
 
   require_tools
-  setup_cluster
-  install_cert_manager
-  install_fake_gpu
+  group "build image + kind cluster"; setup_cluster; endgroup
+  group "cert-manager ${CERT_MANAGER_VERSION}"; install_cert_manager; endgroup
+  group "fake-gpu-operator ${FAKE_GPU_VERSION}"; install_fake_gpu; endgroup
   if [ "${#plan[@]}" -gt 0 ]; then
     summary "### e2e install (cluster: ${CLUSTER_NAME})"
     summary ""
@@ -243,7 +240,7 @@ main() {
     summary "|---|---|---|---|"
     for w in "${plan[@]}"; do run_operator "$w"; done
   fi
-  install_karta
+  group "karta operator"; install_karta; endgroup
 
   echo "==> environment ready (cluster: ${CLUSTER_NAME})."
   if [ "${CLUSTER_NAME}" != "${DEFAULT_CLUSTER}" ]; then
