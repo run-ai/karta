@@ -4,27 +4,37 @@
 package v1alpha1
 
 type GangSchedulingInstruction struct {
-	// PodGroups defines the groups of pods that should be scheduled together
+	// PodGroups defines the alpha grouping format that KAI still supports.
+	// This is deprecated and will be removed in a future release.
+	// +kubebuilder:deprecatedversion:warning="PodGroupDefinition is deprecated; please use PodGroupDefinitionV2 instead."
+	// +kubebuilder:validation:Optional
 	// +listType=map
 	// +listMapKey=name
-	PodGroups []PodGroupDefinition `json:"podGroups"`
+	PodGroups []PodGroupDefinition `json:"podGroups,omitempty"`
+
+	// PodGroup defines the grouping, subgroup, and topology behavior used by
+	// the KAI-native Karta integration.
+	// +kubebuilder:validation:Optional
+	PodGroup *PodGroupDefinitionV2 `json:"podGroup,omitempty"`
 }
 
-// PodGroupDefinition defines a group of pods that should be scheduled together.
+// PodGroupDefinition defines the alpha grouping format that KAI still supports.
+// This is deprecated and will be removed in a future release.
 type PodGroupDefinition struct {
-	// Name is the unique identifier for this pod group
+	// Name is the unique identifier for this pod group.
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 
-	// Members defines which components belong to this pod group
+	// Members defines which components belong to this pod group.
 	// +listType=map
 	// +listMapKey=componentName
 	Members []PodGroupMemberDefinition `json:"members"`
 }
 
 // PodGroupMemberDefinition defines how to select and filter components for grouping instructions.
+// This is deprecated and will be removed in a future release.
 type PodGroupMemberDefinition struct {
-	// ComponentName references a component defined in the Karta's structureDefinition
+	// ComponentName references a component defined in the Karta structure.
 	// +kubebuilder:validation:Required
 	ComponentName string `json:"componentName"`
 
@@ -42,4 +52,46 @@ type PodGroupMemberDefinition struct {
 	// +kubebuilder:validation:Optional
 	// +listType=set
 	Filters []string `json:"filters,omitempty" jq:"validate"`
+}
+
+// PodGroupDefinitionV2 defines the KAI-native grouping format.
+type PodGroupDefinitionV2 struct {
+	// Name is the unique identifier for this pod group.
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// SubGroups defines which Karta components should become KAI SubGroups.
+	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=componentName
+	SubGroups []SubGroupDefinition `json:"subGroups,omitempty"`
+
+	// Topology defines the topology constraint for all workload pods.
+	// +kubebuilder:validation:Optional
+	Topology *TopologyConstraint `json:"topology,omitempty"`
+}
+
+type SubGroupDefinition struct {
+	// ComponentName references a component defined in the Karta structure.
+	// +kubebuilder:validation:Required
+	ComponentName string `json:"componentName"`
+
+	// Topology defines the topology constraint for this component's pods.
+	// +kubebuilder:validation:Optional
+	Topology *TopologyConstraint `json:"topology,omitempty"`
+}
+
+type TopologyConstraint struct {
+	// TopologyName is the topology resource used by the constraint.
+	// +kubebuilder:validation:Required
+	TopologyName string `json:"topologyName"`
+
+	// PreferredTopologyLevel is the preferred locality level.
+	// +kubebuilder:validation:Required
+	PreferredTopologyLevel string `json:"preferredTopologyLevel"`
+
+	// RequiredTopologyLevel is the maximal level that all matching pods must
+	// fit within.
+	// +kubebuilder:validation:Required
+	RequiredTopologyLevel string `json:"requiredTopologyLevel"`
 }

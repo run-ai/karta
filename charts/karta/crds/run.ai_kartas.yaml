@@ -58,23 +58,98 @@ spec:
                 properties:
                   gangScheduling:
                     properties:
+                      podGroup:
+                        description: |-
+                          PodGroup defines the grouping, subgroup, and topology behavior used by
+                          the KAI-native Karta integration.
+                        properties:
+                          name:
+                            description: Name is the unique identifier for this pod
+                              group.
+                            type: string
+                          subGroups:
+                            description: SubGroups defines which Karta components
+                              should become KAI SubGroups.
+                            items:
+                              properties:
+                                componentName:
+                                  description: ComponentName references a component
+                                    defined in the Karta structure.
+                                  type: string
+                                topology:
+                                  description: Topology defines the topology constraint
+                                    for this component's pods.
+                                  properties:
+                                    preferredTopologyLevel:
+                                      description: PreferredTopologyLevel is the preferred
+                                        locality level.
+                                      type: string
+                                    requiredTopologyLevel:
+                                      description: |-
+                                        RequiredTopologyLevel is the maximal level that all matching pods must
+                                        fit within.
+                                      type: string
+                                    topologyName:
+                                      description: TopologyName is the topology resource
+                                        used by the constraint.
+                                      type: string
+                                  required:
+                                  - preferredTopologyLevel
+                                  - requiredTopologyLevel
+                                  - topologyName
+                                  type: object
+                              required:
+                              - componentName
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - componentName
+                            x-kubernetes-list-type: map
+                          topology:
+                            description: Topology defines the topology constraint
+                              for all workload pods.
+                            properties:
+                              preferredTopologyLevel:
+                                description: PreferredTopologyLevel is the preferred
+                                  locality level.
+                                type: string
+                              requiredTopologyLevel:
+                                description: |-
+                                  RequiredTopologyLevel is the maximal level that all matching pods must
+                                  fit within.
+                                type: string
+                              topologyName:
+                                description: TopologyName is the topology resource
+                                  used by the constraint.
+                                type: string
+                            required:
+                            - preferredTopologyLevel
+                            - requiredTopologyLevel
+                            - topologyName
+                            type: object
+                        required:
+                        - name
+                        type: object
                       podGroups:
-                        description: PodGroups defines the groups of pods that should
-                          be scheduled together
+                        description: |-
+                          PodGroups defines the alpha grouping format that KAI still supports.
+                          This is deprecated and will be removed in a future release.
                         items:
-                          description: PodGroupDefinition defines a group of pods
-                            that should be scheduled together.
+                          description: |-
+                            PodGroupDefinition defines the alpha grouping format that KAI still supports.
+                            This is deprecated and will be removed in a future release.
                           properties:
                             members:
                               description: Members defines which components belong
-                                to this pod group
+                                to this pod group.
                               items:
-                                description: PodGroupMemberDefinition defines how
-                                  to select and filter components for grouping instructions.
+                                description: |-
+                                  PodGroupMemberDefinition defines how to select and filter components for grouping instructions.
+                                  This is deprecated and will be removed in a future release.
                                 properties:
                                   componentName:
                                     description: ComponentName references a component
-                                      defined in the Karta's structureDefinition
+                                      defined in the Karta structure.
                                     type: string
                                   filters:
                                     description: |-
@@ -104,7 +179,7 @@ spec:
                               x-kubernetes-list-type: map
                             name:
                               description: Name is the unique identifier for this
-                                pod group
+                                pod group.
                               type: string
                           required:
                           - members
@@ -114,8 +189,6 @@ spec:
                         x-kubernetes-list-map-keys:
                         - name
                         x-kubernetes-list-type: map
-                    required:
-                    - podGroups
                     type: object
                 type: object
               structureDefinition:
