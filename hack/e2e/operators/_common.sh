@@ -40,7 +40,7 @@ group() {
   if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::group::$*"; else echo "==> $*"; fi
 }
 endgroup() {
-  [ -n "${GITHUB_ACTIONS:-}" ] && echo "::endgroup::" || true
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::endgroup::"; fi
 }
 notice() {
   if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::notice::$*"; else echo "    $*"; fi
@@ -56,7 +56,7 @@ fail() {
 # Append a line to the GitHub Actions job summary (rendered on the run page).
 # A no-op when not running in Actions.
 summary() {
-  [ -n "${GITHUB_STEP_SUMMARY:-}" ] && printf '%s\n' "$*" >>"${GITHUB_STEP_SUMMARY}" || true
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then printf '%s\n' "$*" >>"${GITHUB_STEP_SUMMARY}"; fi
 }
 
 # --- cluster helpers ---------------------------------------------------------
@@ -74,8 +74,8 @@ rollout_wait() {
 # runs inside an if so set -e does not abort on an expected transient failure.
 apply_with_retry() {
   local target="$1"; shift
-  local tries="${1:-5}"; [ "$#" -gt 0 ] && shift || true
-  local sleep_secs="${1:-10}"; [ "$#" -gt 0 ] && shift || true
+  local tries="${1:-5}"; if [ "$#" -gt 0 ]; then shift; fi
+  local sleep_secs="${1:-10}"; if [ "$#" -gt 0 ]; then shift; fi
   local i
   for i in $(seq 1 "${tries}"); do
     if kubectl apply "$@" -f "${target}"; then

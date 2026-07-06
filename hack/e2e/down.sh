@@ -14,4 +14,4 @@ if [ -z "${KUBECONFIG:-}" ] && [ "${CLUSTER_NAME}" != "${DEFAULT_CLUSTER}" ]; th
   derived=1
 fi
 kind delete cluster --name "${CLUSTER_NAME}"
-[ -n "${derived}" ] && rm -f "${KUBECONFIG}" || true
+if [ -n "${derived}" ]; then rm -f "${KUBECONFIG}"; fi

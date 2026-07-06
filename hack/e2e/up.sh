@@ -225,7 +225,7 @@ main() {
   # Build the ordered plan by walking the canonical order and keeping selected ones.
   local plan=()
   for w in "${ALL_WORKLOADS[@]}"; do
-    printf '%s\n' "${selected[@]}" | grep -qxF "$w" && plan+=("$w") || true
+    if printf '%s\n' "${selected[@]}" | grep -qxF "$w"; then plan+=("$w"); fi
   done
 
   if [ "$plan_only" = true ]; then
