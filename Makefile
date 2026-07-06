@@ -143,6 +143,13 @@ endif
 # suite); override for a quick subset, e.g. E2E_TIMEOUT=20m.
 E2E_TIMEOUT ?= 30m
 
+# Pick which operators to install:
+#   make e2e-up                          # everything
+#   make e2e-up WORKLOADS="jobset lws"   # a couple - one provision, deps resolved once
+#   make e2e-up-jobset                   # a single operator (tab-completes: make e2e-up-<TAB>)
+#   make e2e-up-all                      # everything, explicit
+# For tab-completed multi-select, call the script directly (after sourcing
+# hack/e2e/up-completion.sh): ./hack/e2e/up.sh jobset lws
 .PHONY: e2e-up
 e2e-up: ## Provision a kind cluster + operators (WORKLOADS="jobset kuberay" for a subset, or "all"; CLUSTER_NAME=<name> for an isolated parallel cluster)
 	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/up.sh $(WORKLOADS)

@@ -20,9 +20,20 @@ _COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${_COMMON_DIR}/../global.env"
 
 # --- GitHub Actions logging --------------------------------------------------
-# Under $GITHUB_ACTIONS these emit workflow commands: group/endgroup collapse a
-# section in the run log, and notice/warn/fail add annotations. Run locally they
-# fall back to plain output, so the same scripts read well in a terminal.
+# Where output should go, so a run reads as a scannable report and not a wall of
+# gray logs:
+#   group/endgroup  wrap a phase's verbose command output; the run log collapses
+#                   it, leaving the group title as the scannable line.
+#   notice          a key milestone (blue annotation at the top of the run and on
+#                   the PR); use rarely, one per run at most.
+#   warn            a non-fatal problem worth surfacing (yellow annotation).
+#   fail            a failure (red annotation, top of run + PR); pair with a
+#                   non-zero exit.
+#   summary         the run's report card: a markdown table written to the run's
+#                   Summary page. This is the primary place to read results - the
+#                   logs are only for drilling into detail.
+# Under $GITHUB_ACTIONS these emit workflow commands; run locally they fall back
+# to plain output so the same scripts read well in a terminal.
 # See https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions
 
 group() {

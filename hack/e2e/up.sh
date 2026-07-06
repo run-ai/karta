@@ -164,25 +164,30 @@ run_operator() {
   local idur=$((SECONDS - t0))
   if [ "${irc}" -ne 0 ]; then
     endgroup
-    summary "| ${name} | ${ver} | fail (${idur}s) | - |"
+    echo "==> ${name}: install FAILED after ${idur}s"
+    # :x: renders as a red X in the GitHub summary; ASCII in the source.
+    summary "| :x: | ${name} | ${ver} | fail (${idur}s) | - |"
     fail "install ${name} failed (exit ${irc}, ${idur}s)"
     exit 1
   fi
-  local smoke="-"
+  local smoke="n/a" vdur=0
   if [ -f "${dir}/verify.sh" ]; then
     local t1=$SECONDS src=0
     bash "${dir}/verify.sh" || src=$?
-    local vdur=$((SECONDS - t1))
+    vdur=$((SECONDS - t1))
     if [ "${src}" -ne 0 ]; then
       endgroup
-      summary "| ${name} | ${ver} | ok (${idur}s) | fail (${vdur}s) |"
+      echo "==> ${name}: smoke FAILED after ${vdur}s"
+      summary "| :x: | ${name} | ${ver} | ${idur}s | fail (${vdur}s) |"
       fail "smoke ${name} failed (exit ${src}, ${vdur}s)"
       exit 1
     fi
-    smoke="pass (${vdur}s)"
+    smoke="${vdur}s"
   fi
   endgroup
-  summary "| ${name} | ${ver} | ok (${idur}s) | ${smoke} |"
+  # Ungrouped, so the outcome is visible without expanding the group above.
+  echo "==> ${name}: ready (install ${idur}s, smoke ${smoke})"
+  summary "| :white_check_mark: | ${name} | ${ver} | ${idur}s | ${smoke} |"
 }
 
 main() {
@@ -234,10 +239,10 @@ main() {
   group "cert-manager ${CERT_MANAGER_VERSION}"; install_cert_manager; endgroup
   group "fake-gpu-operator ${FAKE_GPU_VERSION}"; install_fake_gpu; endgroup
   if [ "${#plan[@]}" -gt 0 ]; then
-    summary "### e2e install (cluster: ${CLUSTER_NAME})"
+    summary "## E2E install: ${CLUSTER_NAME}"
     summary ""
-    summary "| Operator | Version | Install | Smoke |"
-    summary "|---|---|---|---|"
+    summary "|  | Operator | Version | Install | Smoke |"
+    summary "|---|---|---|---|---|"
     for w in "${plan[@]}"; do run_operator "$w"; done
   fi
   group "karta operator"; install_karta; endgroup
