@@ -129,9 +129,11 @@ After installing an operator, up.sh smoke-tests it (Grove's pattern): it creates
 throwaway resource and waits for the operator to drive it Ready, failing fast if
 the operator is broken rather than partway through the suite.
 
-Versions are pinned and overridable in `hack/e2e/versions.env`. Each operator's
-install lives in its own module under `hack/e2e/operators/<name>/` (an
-`install.sh` plus any co-located config and a `smoke.yaml`).
+Versions are pinned and overridable in `hack/e2e/global.env`. Each operator lives
+in its own folder under `hack/e2e/operators/<name>/`: a standalone `install.sh`
+plus any co-located config, and a `verify.sh` with a `smoke.yaml`. up.sh runs
+`install.sh` then `verify.sh` as subprocesses, so install and smoke stay separate
+and each script also runs on its own.
 
 ### The fictive NIM image
 
@@ -170,16 +172,19 @@ dummy `hf-token-secret` satisfies the worker; the mocker downloads nothing.
 
 ## Adding an operator
 
-Install side (a self-contained module under `hack/e2e/operators/<name>/`):
+Install side (a self-contained folder under `hack/e2e/operators/<name>/`):
 
-1. Create `hack/e2e/operators/<name>/install.sh` defining `operator_install()`.
-   Use the shared helpers from `_common.sh` (`rollout_wait`, `apply_with_retry`,
-   `preload_image`, `build_and_load_image`, `ensure_secret`) and reference any
-   co-located config via `${MODULE_DIR}`.
-2. Optional fail-fast smoke: drop a `smoke.yaml` in the module dir and set
-   `SMOKE_TARGET` and `SMOKE_WAIT` (and optional `SMOKE_TIMEOUT`/`SMOKE_NS`) at
-   the top of `install.sh`.
-3. Pin its version(s) in `hack/e2e/versions.env`.
+1. Create `install.sh` as a standalone script: shebang, `set -euo pipefail`,
+   `MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"`, then
+   `source "${MODULE_DIR}/../_common.sh"` (this also loads `global.env`). Put the
+   install steps in a `main()` and call it at the end. Use the shared helpers
+   (`rollout_wait`, `apply_with_retry`, `preload_image`, `build_and_load_image`,
+   `ensure_secret`) and reference co-located config via `${MODULE_DIR}`.
+2. Fail-fast smoke: add a `smoke.yaml` and a `verify.sh` that sources `_common.sh`
+   and calls `run_smoke "${MODULE_DIR}/smoke.yaml" <target> <wait-expr> [timeout]
+   [ns]`.
+3. Pin its version(s) in `hack/e2e/global.env`, and add a `version_of` case in
+   `hack/e2e/up.sh` so it shows in the install summary.
 4. Add `<name>` to `ALL_WORKLOADS` in `hack/e2e/up.sh` (in install order), and a
    `deps_of` entry only if it depends on another operator.
 

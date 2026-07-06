@@ -59,16 +59,16 @@ image by SHA digest.
 
 Adopt option 1. Replace the `go install` in `.github/workflows/e2e.yaml` with a
 curl of the pinned prebuilt kind release binary, and move the version pins into
-`hack/e2e/versions.env` so the workflow and local runs read one source of truth
+`hack/e2e/global.env` so the workflow and local runs read one source of truth
 (the pattern cert-manager and kueue both follow with a central version list).
 Keep cluster creation in `up.sh` unchanged: the whole panel agrees that keeping
 binary-install separate from cluster-creation is what lets the same command run
 locally and in CI.
 
 Concretely:
-- Add `KIND_VERSION`, `KUBECTL_VERSION`, `HELM_VERSION` to `versions.env`
+- Add `KIND_VERSION`, `KUBECTL_VERSION`, `HELM_VERSION` to `global.env`
   (overridable, next to the existing `KIND_NODE_IMAGE`).
-- The install step sources `versions.env`, then curls kind, kubectl, and helm at
+- The install step sources `global.env`, then curls kind, kubectl, and helm at
   those pinned versions. kubectl tracks the cluster's Kubernetes version
   (`KIND_NODE_IMAGE`), which removes the current unpinned `stable.txt` lookup and
   the unpinned get-helm-3 script.

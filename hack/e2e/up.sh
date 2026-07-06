@@ -13,31 +13,34 @@
 #   ./hack/e2e/up.sh --list jobset   # print the resolved install plan and exit
 #   ./hack/e2e/up.sh --help
 #
-# The always-on base (kind cluster, cert-manager, fake-gpu-operator, the Karta
-# operator) is installed regardless of selection. Selecting a subset keeps a
-# focused run light: a single worker plus the control-plane cannot hold every
-# operator and a real Milvus/Knative/KServe workload at once.
+# Each workload operator is a standalone script under hack/e2e/operators/<name>/:
+# install.sh does the install, verify.sh smoke-tests it. up.sh runs them as
+# subprocesses (install then verify), so the two concerns stay decoupled and each
+# script is runnable on its own. The always-on base (kind cluster, cert-manager,
+# fake-gpu-operator, the Karta operator) is installed regardless of selection.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+OPERATORS_DIR="${REPO_ROOT}/hack/e2e/operators"
+# Shared helpers + GitHub Actions logging. Sourcing this also loads
+# hack/e2e/global.env (version pins and the CLUSTER_NAME/IMAGE runtime defaults).
+# shellcheck source=/dev/null
+source "${OPERATORS_DIR}/_common.sh"
+
 DEFAULT_CLUSTER="karta-e2e"
-CLUSTER_NAME="${CLUSTER_NAME:-${DEFAULT_CLUSTER}}"
-IMAGE="${IMAGE:-karta-operator:e2e}"
+# CLUSTER_NAME and IMAGE come from global.env (overridable from the environment).
 # Each non-default cluster gets its own kubeconfig, so several clusters (for
 # example two CI shards installing different operators) can be provisioned in
-# parallel without racing on the shared current-context. The default cluster
-# keeps the standard kubeconfig so plain kubectl works after e2e-up. Set
-# KUBECONFIG explicitly to override either way.
+# parallel without racing on the shared current-context. The default cluster keeps
+# the standard kubeconfig so plain kubectl works after e2e-up.
 if [ -z "${KUBECONFIG:-}" ] && [ "${CLUSTER_NAME}" != "${DEFAULT_CLUSTER}" ]; then
   KUBECONFIG="${HOME}/.kube/kind-${CLUSTER_NAME}.kubeconfig"
   mkdir -p "$(dirname "${KUBECONFIG}")"
   export KUBECONFIG
 fi
-# Version pins live in one place; each stays overridable from the environment.
-source "${REPO_ROOT}/hack/e2e/versions.env"
-# Shared helpers for the per-operator modules under hack/e2e/operators/.
-OPERATORS_DIR="${REPO_ROOT}/hack/e2e/operators"
-source "${OPERATORS_DIR}/_common.sh"
+# The per-operator install.sh/verify.sh run as subprocesses; export the context
+# they need so they inherit it (version pins come from global.env via _common.sh).
+export CLUSTER_NAME IMAGE REPO_ROOT
 
 # Workload operators selectable on the command line, in canonical install order:
 # a dependency always appears before its dependents (knative before kserve,
@@ -49,6 +52,23 @@ deps_of() {
   case "$1" in
     kserve) echo "knative" ;; # KServe Serverless routes through Knative + Kourier
     dynamo) echo "grove" ;;   # Grove is Dynamo's multinode orchestrator
+  esac
+}
+
+# version_of <workload> prints its pinned version, for the job-summary table.
+version_of() {
+  case "$1" in
+    lws) echo "${LWS_VERSION}" ;;
+    jobset) echo "${JOBSET_VERSION}" ;;
+    kuberay) echo "${KUBERAY_VERSION}" ;;
+    kubeflow) echo "${KUBEFLOW_VERSION}" ;;
+    knative) echo "${KNATIVE_VERSION}" ;;
+    kserve) echo "${KSERVE_VERSION}" ;;
+    milvus) echo "${MILVUS_OPERATOR_VERSION}" ;;
+    grove) echo "${GROVE_VERSION}" ;;
+    dynamo) echo "${DYNAMO_VERSION}" ;;
+    nim) echo "${NIM_OPERATOR_VERSION}" ;;
+    *) echo "?" ;;
   esac
 }
 
@@ -109,7 +129,7 @@ install_cert_manager() {
   echo "==> cert-manager ${CERT_MANAGER_VERSION}"
   kubectl apply -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cert-manager.yaml"
   for d in cert-manager cert-manager-webhook cert-manager-cainjector; do
-    kubectl -n cert-manager rollout status "deploy/${d}" --timeout=180s
+    rollout_wait cert-manager "deploy/${d}"
   done
 }
 
@@ -127,34 +147,39 @@ install_karta() {
   helm upgrade -i karta "${REPO_ROOT}/charts/karta" -n karta-system --create-namespace \
     --set image.repository="${IMAGE%%:*}" --set image.tag="${IMAGE##*:}" \
     --set resources.limits.memory=512Mi >/dev/null
-  kubectl -n karta-system rollout status deploy/karta-operator --timeout=120s
+  rollout_wait karta-system deploy/karta-operator 120s
 }
 
 # --- selectable workload operators -------------------------------------------
 
-# --- dispatch ----------------------------------------------------------------
-
-# run_module <name>: source the operator's module, run its install hook, then run
-# its smoke test if the module ships one. A module defines operator_install() and,
-# when it has a smoke.yaml, sets SMOKE_TARGET/SMOKE_WAIT (optionally
-# SMOKE_TIMEOUT/SMOKE_NS) at source time. MODULE_DIR/SMOKE_* are locals here and
-# reach the sourced hook via bash dynamic scope, so they reset on every call.
-run_module() {
-  local name="$1"
-  local dir="${OPERATORS_DIR}/${name}"
-  [ -f "${dir}/install.sh" ] || { echo "error: no operator module at ${dir}" >&2; exit 1; }
-  local MODULE_DIR="${dir}"
-  local SMOKE_TARGET="" SMOKE_WAIT="" SMOKE_TIMEOUT="300s" SMOKE_NS="default"
-  unset -f operator_install 2>/dev/null || true
-  # shellcheck source=/dev/null
-  source "${dir}/install.sh"
-  operator_install
-  if [ -f "${dir}/smoke.yaml" ]; then
-    [ -n "${SMOKE_TARGET}" ] && [ -n "${SMOKE_WAIT}" ] ||
-      { echo "error: ${name}/smoke.yaml present but SMOKE_TARGET/SMOKE_WAIT unset" >&2; exit 1; }
-    echo "    smoke-test: ${SMOKE_TARGET}"
-    run_smoke "${dir}/smoke.yaml" "${SMOKE_TARGET}" "${SMOKE_WAIT}" "${SMOKE_TIMEOUT}" "${SMOKE_NS}"
+# run_operator <name>: run the operator's standalone install.sh then verify.sh,
+# each as a subprocess, grouped in the CI log and recording a job-summary row.
+# Exits non-zero on the first failure so a broken operator fails provisioning fast
+# rather than partway through the e2e suite.
+run_operator() {
+  local name="$1" dir="${OPERATORS_DIR}/$1" ver
+  ver="$(version_of "${name}")"
+  [ -f "${dir}/install.sh" ] || { fail "no install.sh for operator ${name}"; exit 1; }
+  group "operator: ${name} (${ver})"
+  local irc=0
+  bash "${dir}/install.sh" || irc=$?
+  if [ "${irc}" -ne 0 ]; then
+    endgroup
+    summary "| ${name} | ${ver} | fail | - |"
+    fail "install ${name} failed (exit ${irc})"
+    exit 1
   fi
+  local src=0
+  if [ -f "${dir}/verify.sh" ]; then
+    bash "${dir}/verify.sh" || src=$?
+  fi
+  endgroup
+  if [ "${src}" -ne 0 ]; then
+    summary "| ${name} | ${ver} | ok | fail |"
+    fail "smoke ${name} failed (exit ${src})"
+    exit 1
+  fi
+  summary "| ${name} | ${ver} | ok | pass |"
 }
 
 main() {
@@ -201,7 +226,11 @@ main() {
   install_cert_manager
   install_fake_gpu
   if [ "${#plan[@]}" -gt 0 ]; then
-    for w in "${plan[@]}"; do run_module "$w"; done
+    summary "### e2e install (cluster: ${CLUSTER_NAME})"
+    summary ""
+    summary "| Operator | Version | Install | Smoke |"
+    summary "|---|---|---|---|"
+    for w in "${plan[@]}"; do run_operator "$w"; done
   fi
   install_karta
 

@@ -1,18 +1,20 @@
+#!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
 # Kubeflow training-operator (github.com/kubeflow/training-operator; also serves
-# kubeflow.org/v1 MPIJob). Sourced by hack/e2e/up.sh; helpers and the module
-# contract live in hack/e2e/operators/_common.sh. Ships a smoke test.
-# shellcheck shell=bash
-# shellcheck disable=SC2154  # KUBEFLOW_VERSION is provided by the orchestrator
+# kubeflow.org/v1 MPIJob). Standalone: run via up.sh or directly (bash install.sh).
+# Sources the shared helpers, which also load global.env.
+# shellcheck disable=SC2154  # KUBEFLOW_VERSION comes from global.env via _common.sh
+set -euo pipefail
+MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "${MODULE_DIR}/../_common.sh"
 
-SMOKE_TARGET="pytorchjob/pytorch-smoke"
-SMOKE_WAIT="condition=Running"
-SMOKE_TIMEOUT="240s"
-
-operator_install() {
+main() {
   echo "==> Kubeflow training-operator ${KUBEFLOW_VERSION}"
   kubectl apply --server-side -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=${KUBEFLOW_VERSION}"
-  rollout_wait kubeflow training-operator
+  rollout_wait kubeflow deploy/training-operator
 }
+
+main "$@"

@@ -1,20 +1,20 @@
+#!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
 # k8s-nim-operator with a fictive CPU NIM image (real NIMService test, no GPU or
-# NGC token needed). Sourced by hack/e2e/up.sh; helpers and the module contract
-# live in hack/e2e/operators/_common.sh. Ships an image build context (image/)
-# and a smoke test. The operator chart is not published to a Helm/OCI registry,
-# so it is fetched at install time from the pinned upstream git tag
-# (NIM_OPERATOR_VERSION) rather than vendored in-repo.
-# shellcheck shell=bash
-# shellcheck disable=SC2154  # CLUSTER_NAME / NIM_OPERATOR_VERSION are provided by the orchestrator
+# NGC token needed). Standalone: run via up.sh or directly (bash install.sh).
+# Ships an image build context (image/). The operator chart is not published to a
+# Helm/OCI registry, so it is fetched at install time from the pinned upstream git
+# tag (NIM_OPERATOR_VERSION) rather than vendored in-repo. Sources the shared
+# helpers, which also load global.env.
+# shellcheck disable=SC2154  # NIM_OPERATOR_VERSION comes from global.env via _common.sh
+set -euo pipefail
+MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "${MODULE_DIR}/../_common.sh"
 
-SMOKE_TARGET="nimservice/nim-smoke"
-SMOKE_WAIT="jsonpath={.status.state}=Ready"
-SMOKE_TIMEOUT="300s"
-
-operator_install() {
+main() {
   echo "==> fake NIM image + k8s-nim-operator (real NIMService test)"
   build_and_load_image "${MODULE_DIR}/image" nim-cpu:e2e
   # The dev chart ships incomplete RBAC (cannot list computedomains/ingress/hpa/lws ->
@@ -38,7 +38,9 @@ operator_install() {
     helm install k8s-nim-operator "${chart}" -n nim-operator --create-namespace >/dev/null
     rm -rf "${src}"
   fi
-  rollout_wait nim-operator k8s-nim-operator
+  rollout_wait nim-operator deploy/k8s-nim-operator
   # Dummy NGC secret: the operator injects NGC_API_KEY from it; the fictive image ignores it.
   ensure_secret default ngc-secret NGC_API_KEY=dummy-not-a-real-token
 }
+
+main "$@"

@@ -76,8 +76,8 @@ jobs:
           # Pinned prebuilt binaries (cert-manager/grove/cluster-api pattern):
           # faster than compiling kind from source and reproducible. up.sh creates
           # the cluster itself, so only the binaries are installed here. Versions
-          # are the single source of truth in hack/e2e/versions.env.
-          source hack/e2e/versions.env
+          # are the single source of truth in hack/e2e/global.env.
+          source hack/e2e/global.env
           curl -fsSLo kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
           sudo install kind /usr/local/bin/kind
           curl -fsSLo kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"

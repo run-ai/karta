@@ -1,20 +1,61 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
-# Shared helpers for the per-operator e2e modules under hack/e2e/operators/.
-# Sourced by hack/e2e/up.sh, so every operator module can use these. Each module
-# is a sourced fragment that defines operator_install() and, if it ships a
-# smoke.yaml, sets SMOKE_TARGET / SMOKE_WAIT (optionally SMOKE_TIMEOUT /
-# SMOKE_NS) at source time. Reference co-located files via "${MODULE_DIR}/...".
+# Shared helpers for the per-operator e2e scripts under hack/e2e/operators/.
+# Each operator ships a standalone install.sh (and, if it has a smoke.yaml, a
+# verify.sh). Every such script sources this file once at its top:
 #
-# All helpers are bash 3.2 safe (no associative arrays, no mapfile).
+#   MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+#   source "${MODULE_DIR}/../_common.sh"
+#
+# Sourcing this file also loads hack/e2e/global.env, so the version pins and
+# runtime defaults are available without a second source. Reference co-located
+# files via "${MODULE_DIR}/...". All helpers are bash 3.2 safe (no associative
+# arrays, no mapfile).
 # shellcheck shell=bash
 
-# rollout_wait <namespace> <deployment> [timeout]
-# Wait for a Deployment to finish rolling out. Default timeout 180s.
+# Global config + version pins in one place (resolved relative to this file).
+_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "${_COMMON_DIR}/../global.env"
+
+# --- GitHub Actions logging --------------------------------------------------
+# Under $GITHUB_ACTIONS these emit workflow commands: group/endgroup collapse a
+# section in the run log, and notice/warn/fail add annotations. Run locally they
+# fall back to plain output, so the same scripts read well in a terminal.
+# See https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions
+
+group() {
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::group::$*"; else echo "==> $*"; fi
+}
+endgroup() {
+  [ -n "${GITHUB_ACTIONS:-}" ] && echo "::endgroup::" || true
+}
+notice() {
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::notice::$*"; else echo "    $*"; fi
+}
+warn() {
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::warning::$*"; else echo "    warning: $*" >&2; fi
+}
+fail() {
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::error::$*"; else echo "    error: $*" >&2; fi
+}
+
+# summary <markdown-line>
+# Append a line to the GitHub Actions job summary (rendered on the run page).
+# A no-op when not running in Actions.
+summary() {
+  [ -n "${GITHUB_STEP_SUMMARY:-}" ] && printf '%s\n' "$*" >>"${GITHUB_STEP_SUMMARY}" || true
+}
+
+# --- cluster helpers ---------------------------------------------------------
+
+# rollout_wait <namespace> <resource> [timeout]
+# Wait for a rollout to finish. <resource> includes the kind, e.g. deploy/foo or
+# statefulset/foo, so this is not limited to Deployments. Default timeout 180s.
 rollout_wait() {
-  local ns="$1" deploy="$2" timeout="${3:-180s}"
-  kubectl -n "${ns}" rollout status "deploy/${deploy}" --timeout="${timeout}"
+  local ns="$1" resource="$2" timeout="${3:-180s}"
+  kubectl -n "${ns}" rollout status "${resource}" --timeout="${timeout}"
 }
 
 # apply_with_retry <file-or-url> [tries] [sleep_secs] [extra kubectl apply args...]
