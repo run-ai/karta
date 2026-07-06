@@ -139,6 +139,9 @@ CLUSTER_NAME ?= karta-e2e
 ifneq ($(CLUSTER_NAME),karta-e2e)
 E2E_KUBECONFIG := KUBECONFIG=$(HOME)/.kube/kind-$(CLUSTER_NAME).kubeconfig
 endif
+# Overall go-test timeout. 30m fits the full suite (all operators run in one
+# suite); override for a quick subset, e.g. E2E_TIMEOUT=20m.
+E2E_TIMEOUT ?= 30m
 
 .PHONY: e2e-up
 e2e-up: ## Provision a kind cluster + operators (WORKLOADS="jobset kuberay" for a subset; CLUSTER_NAME=<name> for an isolated parallel cluster)
@@ -150,4 +153,4 @@ e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)
 
 .PHONY: test-e2e
 test-e2e: ## Run the e2e suite (run e2e-up first; CLUSTER_NAME to match; E2E_FOCUS="JobSet|LWS" to run a subset)
-	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout 20m ./... $(if $(E2E_FOCUS),-args -ginkgo.focus="$(E2E_FOCUS)")
+	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) ./... $(if $(E2E_FOCUS),-args -ginkgo.focus="$(E2E_FOCUS)")

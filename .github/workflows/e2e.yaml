@@ -1,21 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
-# End-to-end tests: provision a kind cluster with the selected operators
-# (hack/e2e/up.sh) and run the Karta e2e suite against it. On pull_request this
-# runs a light subset (jobset + lws) on ubuntu-latest that fits a hosted runner.
-# The full suite needs a bigger runner: 2 vCPU starves the Ray dashboard. Run it
-# via workflow_dispatch with runner=prod-karta-e2e-v1 and empty workloads (all).
-# See docs/design/e2e-runner-size-decision.md.
+# End-to-end tests: provision a kind cluster with all operators (hack/e2e/up.sh)
+# and run the full Karta e2e suite against it. This targets the bigger runner
+# prod-karta-e2e-v1 (8 vCPU / 32 GB): a 2 vCPU hosted runner starves the Ray
+# dashboard. See docs/design/e2e-runner-size-decision.md.
 name: E2E
 
 on:
-  # Temporary: also run on pull_request so the suite runs in CI before this
+  # Temporary: run on pull_request so the full suite runs in CI before this
   # workflow lands on the default branch (workflow_dispatch is only dispatchable
   # once the file is on main). Revert to dispatch-only before merge. On
-  # pull_request the inputs are absent, so the steps fall back to the light subset
-  # (jobset + lws) that fits ubuntu-latest; the full suite runs via dispatch on a
-  # bigger runner.
+  # pull_request the inputs are absent, so the steps install ALL operators and run
+  # ALL cases on the bigger runner (empty workloads/focus, runner fallback below).
   pull_request:
   workflow_dispatch:
     inputs:
@@ -38,8 +35,9 @@ jobs:
     # Full-suite target: a self-hosted runner prod-karta-e2e-v1 (8 vCPU / 32 GB /
     # 150 GB SSD, Docker, amd64), mirroring grove's prod-grove-e2e-v1. ubuntu-latest
     # (2 vCPU) fits the install but starves the Ray dashboard under full-suite load;
-    # see docs/design/e2e-runner-size-decision.md. Pass runner=<label> to select it.
-    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    # see docs/design/e2e-runner-size-decision.md. Pass runner=ubuntu-latest for a
+    # hosted subset run.
+    runs-on: ${{ inputs.runner || 'prod-karta-e2e-v1' }}
     timeout-minutes: 90
     steps:
       - name: Checkout code
@@ -66,10 +64,10 @@ jobs:
           sudo install linux-amd64/helm /usr/local/bin/helm
 
       - name: Provision cluster + operators
-        run: make e2e-up WORKLOADS="${{ inputs.workloads || 'jobset lws' }}"
+        run: make e2e-up WORKLOADS="${{ inputs.workloads }}"
 
       - name: Run e2e suite
-        run: make test-e2e E2E_FOCUS="${{ inputs.focus || 'JobSet|LeaderWorkerSet' }}"
+        run: make test-e2e E2E_FOCUS="${{ inputs.focus }}"
 
       - name: Diagnostics on failure
         if: failure()
