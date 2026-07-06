@@ -28,8 +28,7 @@ import (
 )
 
 const (
-	ControllerName       = "karta-controller"
-	nativeAPIGroupSuffix = ".k8s.io"
+	ControllerName = "karta-controller"
 	// crdGroupKindIndexKey indexes CustomResourceDefinitions by group and kind so
 	// the reconciler can locate the CRD for a Karta root GVK directly.
 	crdGroupKindIndexKey = "spec.group+spec.names.kind"
@@ -58,7 +57,24 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return fmt.Errorf("create discovery client: %w", err)
 	}
-	native, err := discoverNativeGVKs(dc, mgr.GetLogger())
+
+	// The manager's cached client isn't started yet during setup, so a
+	// direct, uncached client is used for this one-time read of the
+	// installed CRDs.
+	directClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme()})
+	if err != nil {
+		return fmt.Errorf("create direct client: %w", err)
+	}
+	crds := &apiextensionsv1.CustomResourceDefinitionList{}
+	if err := directClient.List(context.Background(), crds); err != nil {
+		return fmt.Errorf("list CRDs: %w", err)
+	}
+	crdBackedGroupKinds := make(map[schema.GroupKind]bool, len(crds.Items))
+	for i := range crds.Items {
+		crdBackedGroupKinds[schema.GroupKind{Group: crds.Items[i].Spec.Group, Kind: crds.Items[i].Spec.Names.Kind}] = true
+	}
+
+	native, err := discoverNativeGVKs(dc, crdBackedGroupKinds, mgr.GetLogger())
 	if err != nil {
 		return fmt.Errorf("discover native GVKs: %w", err)
 	}
@@ -226,31 +242,68 @@ func rootGVK(karta *kartav1alpha1.Karta) *schema.GroupVersionKind {
 }
 
 // discoverNativeGVKs queries cluster discovery for every served
-// GroupVersionKind and returns the subset served by built-in (non-CRD) API
-// groups.
-func discoverNativeGVKs(dc discovery.DiscoveryInterface, logger logr.Logger) (map[schema.GroupVersionKind]bool, error) {
+// GroupVersionKind and returns the subset that is built-in (non-CRD) and a
+// plausible Karta root: served but not backed by any installed CRD, and
+// supporting both list and watch. A GVK's serving mechanism is not exposed
+// by discovery, so native is derived by subtracting the CRD-backed
+// group/kinds from the served set.
+//
+// Aggregated (APIService-backed) APIs are not subtracted, so a persisted,
+// watchable aggregated API used as a root would be classified native. That
+// is accepted: the result only feeds the CRDExists status condition and no
+// watch is set up on the root, so the only effect is a stale condition on
+// an implausible root. The list+watch filter already drops the common
+// virtual aggregated APIs (metrics, authz/authn reviews).
+//
+// A partial discovery failure (ErrGroupDiscoveryFailed, e.g. an unreachable
+// or dangling aggregated apiserver) is logged and tolerated using the
+// groups that did resolve, since the failed groups are by definition not
+// native. Any other discovery error fails setup.
+func discoverNativeGVKs(dc discovery.DiscoveryInterface, crdBackedGroupKinds map[schema.GroupKind]bool, logger logr.Logger) (map[schema.GroupVersionKind]bool, error) {
 	_, resourceLists, err := dc.ServerGroupsAndResources()
 	if err != nil {
-		return nil, fmt.Errorf("list server resources: %w", err)
+		if !discovery.IsGroupDiscoveryFailedError(err) {
+			return nil, fmt.Errorf("list server resources: %w", err)
+		}
+		logger.Info("Partial discovery failure, continuing with reachable groups", "error", err.Error())
 	}
 
 	native := make(map[schema.GroupVersionKind]bool)
 	for _, list := range resourceLists {
 		gv, err := schema.ParseGroupVersion(list.GroupVersion)
 		if err != nil {
+			logger.Info("Skipping malformed GroupVersion from discovery", "groupVersion", list.GroupVersion, "error", err.Error())
 			continue
-		}
-		if strings.Contains(gv.Group, ".") && !strings.HasSuffix(gv.Group, nativeAPIGroupSuffix) {
-			continue // CRD-backed group: always uses a distinct, non-reserved domain
 		}
 		for _, res := range list.APIResources {
 			if strings.Contains(res.Name, "/") {
 				continue // subresource, e.g. deployments/scale
 			}
+			if crdBackedGroupKinds[schema.GroupKind{Group: gv.Group, Kind: res.Kind}] {
+				continue // backed by an installed CRD, not native
+			}
+			if !supportsListWatch(res.Verbs) {
+				continue // not a plausible Karta root (virtual/imperative)
+			}
 			native[schema.GroupVersionKind{Group: gv.Group, Version: gv.Version, Kind: res.Kind}] = true
 		}
 	}
 	return native, nil
+}
+
+// supportsListWatch reports whether the given discovery verbs include both
+// list and watch, which every reconcilable workload root supports.
+func supportsListWatch(verbs metav1.Verbs) bool {
+	var list, watch bool
+	for _, v := range verbs {
+		switch v {
+		case "list":
+			list = true
+		case "watch":
+			watch = true
+		}
+	}
+	return list && watch
 }
 
 // crdExistsForGVK reports whether a CRD serving the given group, version
