@@ -2,8 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
-# Knative Serving + Kourier (real operator). Standalone: run via up.sh or directly
-# (bash install.sh). Sources the shared helpers, which also load global.env.
+# Knative Serving + Kourier.
 # shellcheck disable=SC2154  # KNATIVE_VERSION/KOURIER_VERSION come from global.env via _common.sh
 set -euo pipefail
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,7 +10,7 @@ MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${MODULE_DIR}/../_common.sh"
 
 main() {
-  echo "==> Knative Serving ${KNATIVE_VERSION} + Kourier ${KOURIER_VERSION} (real operator)"
+  echo "==> Knative Serving ${KNATIVE_VERSION} + Kourier ${KOURIER_VERSION}"
   # --server-side (+ --force-conflicts) so a reused cluster does not fail on field
   # ownership, matching the other operators' apply style.
   kubectl apply --server-side --force-conflicts -f "https://github.com/knative/serving/releases/download/${KNATIVE_VERSION}/serving-crds.yaml"

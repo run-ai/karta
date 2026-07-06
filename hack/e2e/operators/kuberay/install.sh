@@ -2,8 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
-# KubeRay operator (github.com/ray-project/kuberay). Standalone: run via up.sh or
-# directly (bash install.sh). Sources the shared helpers, which also load global.env.
+# KubeRay operator (github.com/ray-project/kuberay).
 # shellcheck disable=SC2154  # KUBERAY_VERSION/RAY_VERSION come from global.env via _common.sh
 set -euo pipefail
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

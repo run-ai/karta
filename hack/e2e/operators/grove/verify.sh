@@ -3,7 +3,6 @@
 # Copyright (c) 2026 NVIDIA Corporation
 #
 # Smoke test for Grove: a throwaway PodCliqueSet must reach availableReplicas=1.
-# Run after install.sh; uses run_smoke from _common.sh (apply, wait, delete).
 set -euo pipefail
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null

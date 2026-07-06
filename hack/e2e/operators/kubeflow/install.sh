@@ -3,8 +3,7 @@
 # Copyright (c) 2026 NVIDIA Corporation
 #
 # Kubeflow training-operator (github.com/kubeflow/training-operator; also serves
-# kubeflow.org/v1 MPIJob). Standalone: run via up.sh or directly (bash install.sh).
-# Sources the shared helpers, which also load global.env.
+# kubeflow.org/v1 MPIJob).
 # shellcheck disable=SC2154  # KUBEFLOW_VERSION comes from global.env via _common.sh
 set -euo pipefail
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

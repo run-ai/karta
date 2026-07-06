@@ -2,10 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
-# kai-scheduler + Grove (real PodCliqueSet). Installed together: kai-scheduler is
-# Grove's gang-scheduler backend. Standalone: run via up.sh or directly (bash
-# install.sh). dynamo depends on this module (see deps_of in up.sh). Ships a
-# values.yaml. Sources the shared helpers, which also load global.env.
+# kai-scheduler + Grove. Installed together: kai-scheduler is Grove's gang-scheduler
+# backend. dynamo depends on this module (see deps_of in up.sh). Ships a values.yaml.
 # shellcheck disable=SC2154  # KAI_SCHEDULER_VERSION/GROVE_VERSION come from global.env via _common.sh
 set -euo pipefail
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,7 +11,7 @@ MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${MODULE_DIR}/../_common.sh"
 
 main() {
-  echo "==> kai-scheduler ${KAI_SCHEDULER_VERSION} + Grove ${GROVE_VERSION} (real PodCliqueSet)"
+  echo "==> kai-scheduler ${KAI_SCHEDULER_VERSION} + Grove ${GROVE_VERSION}"
   # Grove is Dynamo's multinode orchestrator; it publishes a multi-arch chart and
   # images (no source build needed). kai-scheduler is Grove's gang-scheduler backend.
   helm upgrade -i kai-scheduler oci://ghcr.io/kai-scheduler/kai-scheduler/kai-scheduler \

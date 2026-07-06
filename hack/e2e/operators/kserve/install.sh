@@ -2,10 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
-# KServe (real operator, Serverless on Knative + Kourier). Standalone: run via
-# up.sh or directly (bash install.sh). Depends on knative (see deps_of in up.sh).
-# Ships a config patch (disable-istio-vh.yaml). Sources the shared helpers, which
-# also load global.env.
+# KServe, Serverless on Knative + Kourier. Depends on knative (see deps_of in
+# up.sh). Ships a config patch (disable-istio-vh.yaml).
 # shellcheck disable=SC2154  # KSERVE_VERSION/KUBE_RBAC_PROXY_VERSION come from global.env via _common.sh
 set -euo pipefail
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,7 +11,7 @@ MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${MODULE_DIR}/../_common.sh"
 
 main() {
-  echo "==> KServe ${KSERVE_VERSION} (real operator, Serverless on Knative + Kourier)"
+  echo "==> KServe ${KSERVE_VERSION} (Serverless on Knative + Kourier)"
   # --force-conflicts: cert-manager-cainjector owns the webhook caBundle fields,
   # and on a reused cluster our own set-image/patch steps below already own the
   # rbac-proxy image and inferenceservice-config ingress. Reclaim them here; the

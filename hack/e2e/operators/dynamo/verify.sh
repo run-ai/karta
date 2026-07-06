@@ -3,8 +3,7 @@
 # Copyright (c) 2026 NVIDIA Corporation
 #
 # Smoke test for dynamo-platform: a throwaway DynamoGraphDeployment must reach
-# state=successful. Run after install.sh; uses run_smoke from _common.sh, which
-# retries the apply past the DGD webhook warmup.
+# state=successful. run_smoke retries the apply past the DGD webhook warmup.
 set -euo pipefail
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null

@@ -2,8 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
-# LeaderWorkerSet operator (sigs.k8s.io/lws). Standalone: run via up.sh or
-# directly (bash install.sh). Sources the shared helpers, which also load global.env.
+# LeaderWorkerSet operator (sigs.k8s.io/lws).
 # shellcheck disable=SC2154  # LWS_VERSION comes from global.env via _common.sh
 set -euo pipefail
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

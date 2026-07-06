@@ -5,8 +5,8 @@
 
 This directory provisions a local kind cluster for the Karta e2e suite: it builds
 and deploys the Karta operator, installs the dependencies the suite needs, and
-installs the upstream workload operators it exercises. The tests connect to this
-cluster, they do not create it (see `test/e2e`).
+installs the upstream workload operators it exercises. Each operator is smoke-tested
+as it installs, so a broken install fails provisioning rather than a later run.
 
 ## Layout
 
@@ -108,10 +108,5 @@ Install side (this directory):
 5. Add an `e2e-up-<name>` line to the `Makefile` (next to the others) so
    `make e2e-up-<name>` works and tab-completes.
 
-Test side (see `test/e2e/README.md`): add a `testdata/<name>-workload.yaml` fixture
-and a `workloadCases` entry in `test/e2e/cases_test.go`. If the workload needs its
-own shard in CI, add it to the matrix in `.github/workflows/e2e.yaml`.
-
-Before pushing: `make lint-shell` (shellcheck), then a local run of just that
-operator, for example `make e2e-up-<name>` followed by
-`make test-e2e E2E_FOCUS="<CaseName>"`.
+Before pushing: `make lint-shell` (shellcheck), then provision just that operator to
+confirm it installs and smoke-tests clean, for example `make e2e-up-<name>`.

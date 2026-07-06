@@ -2,9 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
-# dynamo-platform (real operator + mocker DGD). Standalone: run via up.sh or
-# directly (bash install.sh). Depends on grove (see deps_of in up.sh). Sources the
-# shared helpers, which also load global.env.
+# dynamo-platform (mocker DGD). Depends on grove (see deps_of in up.sh).
 # shellcheck disable=SC2154  # DYNAMO_VERSION comes from global.env via _common.sh
 set -euo pipefail
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -12,7 +10,7 @@ MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${MODULE_DIR}/../_common.sh"
 
 main() {
-  echo "==> dynamo-platform ${DYNAMO_VERSION} (real operator + mocker DGD)"
+  echo "==> dynamo-platform ${DYNAMO_VERSION} (mocker DGD)"
   # The platform chart is published on NGC as an https .tgz (anonymous). etcd is
   # off by default; the mocker workers need it for the distributed runtime. The
   # operator and dynamo-planner images are public and multi-arch. Fetch into a temp

@@ -3,8 +3,7 @@
 # Copyright (c) 2026 NVIDIA Corporation
 #
 # Smoke test for Knative Serving: a throwaway Knative Service must reach Ready, so
-# a broken Serving install fails fast at provision time. Run after install.sh;
-# uses run_smoke from _common.sh (apply, wait, delete).
+# a broken Serving install fails fast at provision time.
 set -euo pipefail
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null

@@ -3,9 +3,8 @@
 
 # Fictive CPU NIM image
 
-A small stand-in for an NVIDIA NIM container, used by the Karta e2e suite so the
-NIMService case can run as a real operator-driven test without a GPU or a real
-NGC token. It is a FastAPI server (see `nim_llm.py`) that answers the endpoints
+A small stand-in for an NVIDIA NIM container, used by the Karta e2e cluster so the
+k8s-nim-operator can drive a NIMService to Ready without a GPU or a real NGC token. It is a FastAPI server (see `nim_llm.py`) that answers the endpoints
 the k8s-nim-operator probes, in particular `GET /v1/health/ready`, so the
 operator drives the NIMService to `state=Ready`. It serves dummy responses only;
 it loads no model and performs no inference.
@@ -31,7 +30,7 @@ docker build -t nim-cpu:e2e hack/e2e/operators/nim/image
 kind load docker-image nim-cpu:e2e --name karta-e2e
 ```
 
-The NIMService fixture (`test/e2e/testdata/nim-workload.yaml`) references
+The NIMService smoke test (`hack/e2e/operators/nim/smoke.yaml`) references
 `nim-cpu:e2e`, and `up.sh` creates a dummy `ngc-secret` (`NGC_API_KEY`) that the
 operator requires but the image ignores.
 
