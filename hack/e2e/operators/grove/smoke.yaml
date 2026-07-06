@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# Smoke test for the Grove install: up.sh creates this PodCliqueSet and waits for
+# the operator to bring its pods up (availableReplicas) before the e2e suite
+# relies on Grove. Fails fast here if the operator is broken rather than mid-suite.
+apiVersion: grove.io/v1alpha1
+kind: PodCliqueSet
+metadata:
+  name: grove-smoke
+  namespace: default
+spec:
+  replicas: 1
+  template:
+    cliques:
+      - name: worker
+        spec:
+          roleName: worker
+          replicas: 2
+          podSpec:
+            containers:
+              - name: worker
+                image: busybox:latest
+                command: ["/bin/sh", "-c", "echo grove-ok && sleep infinity"]
+                resources:
+                  requests:
+                    cpu: 20m
+                    memory: 32Mi

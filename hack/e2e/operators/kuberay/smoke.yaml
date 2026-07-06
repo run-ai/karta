@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# Smoke test for the KubeRay install: up.sh creates this head-only RayCluster and
+# waits for KubeRay to drive it to .status.state=ready before the e2e suite relies
+# on it. Uses the ray-e2e:local image the module preloads. The head probes are a
+# permissive tcpSocket on the GCS port so the head goes Ready on a CPU-only node.
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: ray-smoke
+  namespace: default
+spec:
+  rayVersion: "2.40.0"
+  headGroupSpec:
+    rayStartParams: {}
+    template:
+      spec:
+        containers:
+          - name: ray-head
+            image: ray-e2e:local
+            imagePullPolicy: IfNotPresent
+            resources:
+              requests: {cpu: 250m, memory: 1Gi}
+              limits: {cpu: "1", memory: 2Gi}
+            readinessProbe:
+              tcpSocket: {port: 6379}
+              initialDelaySeconds: 10
+              periodSeconds: 5
+              failureThreshold: 30
+            livenessProbe:
+              tcpSocket: {port: 6379}
+              initialDelaySeconds: 30
+              periodSeconds: 10
+              failureThreshold: 30
