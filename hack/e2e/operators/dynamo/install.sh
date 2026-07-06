@@ -16,8 +16,9 @@ main() {
   # The platform chart is published on NGC as an https .tgz (anonymous). etcd is
   # off by default; the mocker workers need it for the distributed runtime. The
   # operator and dynamo-planner images are public and multi-arch. Fetch into a temp
-  # dir cleaned up on exit rather than leaving an artifact in /tmp.
-  local tmp; tmp="$(mktemp -d)"
+  # dir cleaned up on exit rather than leaving an artifact in /tmp. tmp is not local
+  # so the EXIT trap (which fires after main returns) can still resolve it under set -u.
+  tmp="$(mktemp -d)"
   trap 'rm -rf "${tmp}"' EXIT
   curl -fsSL -o "${tmp}/dynamo-platform.tgz" \
     "https://helm.ngc.nvidia.com/nvidia/ai-dynamo/charts/dynamo-platform-${DYNAMO_VERSION}.tgz"
