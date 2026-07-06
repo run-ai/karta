@@ -145,13 +145,3 @@ ensure_secret() {
   kubectl create secret generic "${name}" -n "${ns}" "${args[@]}" \
     --dry-run=client -o yaml | kubectl apply -f -
 }
-
-# arch_ray_ref <ray-version>
-# Echo the arch-native rayproject/ray image ref (the amd64 image under qemu
-# emulation crash-loops when a RayJob runs real work).
-arch_ray_ref() {
-  case "$(uname -m)" in
-    arm64 | aarch64) echo "rayproject/ray:${1}-aarch64" ;;
-    *) echo "rayproject/ray:${1}" ;;
-  esac
-}

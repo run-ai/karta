@@ -10,6 +10,16 @@ MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "${MODULE_DIR}/../_common.sh"
 
+# arch_ray_ref <ray-version>: the arch-native rayproject/ray image ref (the amd64
+# image under qemu emulation crash-loops when a RayJob runs real work). Only
+# kuberay needs the Ray image, so it lives here rather than in _common.sh.
+arch_ray_ref() {
+  case "$(uname -m)" in
+    arm64 | aarch64) echo "rayproject/ray:${1}-aarch64" ;;
+    *) echo "rayproject/ray:${1}" ;;
+  esac
+}
+
 main() {
   echo "==> KubeRay ${KUBERAY_VERSION}"
   helm repo add kuberay https://ray-project.github.io/kuberay-helm/ >/dev/null 2>&1 || true
