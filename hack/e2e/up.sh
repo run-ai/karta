@@ -75,8 +75,8 @@ version_of() {
 usage() {
   cat >&2 <<EOF
 Usage: $0 [--list] [workload...]
-  No workload args installs everything. Named args install the base plus only
-  those workload operators (and their dependencies).
+  No workload args (or "all") installs everything. Named args install the base
+  plus only those workload operators (and their dependencies).
   Workloads: ${ALL_WORKLOADS[*]}
   --list    print the resolved install plan and exit
 EOF
@@ -161,25 +161,31 @@ run_operator() {
   ver="$(version_of "${name}")"
   [ -f "${dir}/install.sh" ] || { fail "no install.sh for operator ${name}"; exit 1; }
   group "operator: ${name} (${ver})"
-  local irc=0
+  # SECONDS is a bash builtin counting elapsed seconds; diff it to time each phase.
+  local t0=$SECONDS irc=0
   bash "${dir}/install.sh" || irc=$?
+  local idur=$((SECONDS - t0))
   if [ "${irc}" -ne 0 ]; then
     endgroup
-    summary "| ${name} | ${ver} | fail | - |"
-    fail "install ${name} failed (exit ${irc})"
+    summary "| ${name} | ${ver} | fail (${idur}s) | - |"
+    fail "install ${name} failed (exit ${irc}, ${idur}s)"
     exit 1
   fi
-  local src=0
+  local smoke="-"
   if [ -f "${dir}/verify.sh" ]; then
+    local t1=$SECONDS src=0
     bash "${dir}/verify.sh" || src=$?
+    local vdur=$((SECONDS - t1))
+    if [ "${src}" -ne 0 ]; then
+      endgroup
+      summary "| ${name} | ${ver} | ok (${idur}s) | fail (${vdur}s) |"
+      fail "smoke ${name} failed (exit ${src}, ${vdur}s)"
+      exit 1
+    fi
+    smoke="pass (${vdur}s)"
   fi
   endgroup
-  if [ "${src}" -ne 0 ]; then
-    summary "| ${name} | ${ver} | ok | fail |"
-    fail "smoke ${name} failed (exit ${src})"
-    exit 1
-  fi
-  summary "| ${name} | ${ver} | ok | pass |"
+  summary "| ${name} | ${ver} | ok (${idur}s) | ${smoke} |"
 }
 
 main() {
@@ -188,6 +194,7 @@ main() {
   for arg in "$@"; do
     case "$arg" in
       -h | --help) usage; exit 0 ;;
+      --operators) printf '%s\n' "${ALL_WORKLOADS[*]}"; exit 0 ;; # list operators (used by the Makefile)
       --list | --plan) plan_only=true ;;
       -*) echo "unknown flag: $arg" >&2; usage; exit 2 ;;
       *) requested+=("$arg") ;;
@@ -195,6 +202,11 @@ main() {
   done
 
   # Resolve the selection: no names means every workload.
+  # "all" is a convenience alias for every workload (same as passing no args).
+  for w in "${requested[@]}"; do
+    [ "$w" = "all" ] && { requested=("${ALL_WORKLOADS[@]}"); break; }
+  done
+
   local selected=()
   if [ "${#requested[@]}" -eq 0 ]; then
     selected=("${ALL_WORKLOADS[@]}")

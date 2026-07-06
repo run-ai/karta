@@ -144,8 +144,21 @@ endif
 E2E_TIMEOUT ?= 30m
 
 .PHONY: e2e-up
-e2e-up: ## Provision a kind cluster + operators (WORKLOADS="jobset kuberay" for a subset; CLUSTER_NAME=<name> for an isolated parallel cluster)
+e2e-up: ## Provision a kind cluster + operators (WORKLOADS="jobset kuberay" for a subset, or "all"; CLUSTER_NAME=<name> for an isolated parallel cluster)
 	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/up.sh $(WORKLOADS)
+
+# Per-operator convenience targets so "make e2e-up-<TAB>" completes an operator
+# name (make completes target names, not variable values). The operator list is
+# read from up.sh, so it stays in sync automatically. Use WORKLOADS on e2e-up to
+# compose several; e2e-up-all (or bare e2e-up) installs everything.
+E2E_OPERATORS := $(shell ./hack/e2e/up.sh --operators 2>/dev/null)
+
+.PHONY: e2e-up-all $(addprefix e2e-up-,$(E2E_OPERATORS))
+e2e-up-all: ## Provision a kind cluster + all operators
+	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/up.sh all
+
+$(addprefix e2e-up-,$(E2E_OPERATORS)):
+	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/up.sh $(@:e2e-up-%=%)
 
 .PHONY: e2e-down
 e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)
