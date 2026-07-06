@@ -30,6 +30,8 @@ or call the script directly:
 
 ```sh
 make e2e-up WORKLOADS="jobset kuberay"   # base + only these operators
+make e2e-up-jobset                       # base + a single operator (tab-completes)
+./hack/e2e/up.sh dynamo lws              # same, calling the script directly
 ./hack/e2e/up.sh --list kserve           # print the resolved install plan, then exit
 ```
 
@@ -37,6 +39,14 @@ The base (kind cluster, cert-manager, fake-gpu-operator, Karta operator) is
 always installed. A subset auto-includes dependencies: kserve pulls in knative,
 dynamo pulls in grove. Pair this with the Ginkgo `-run` filter below to exercise
 just the matching cases.
+
+For tab-completion of operator names when calling the script directly, source the
+completion once (add it to your shell rc to keep it):
+
+```sh
+source hack/e2e/up-completion.sh
+./hack/e2e/up.sh dynamo <TAB>            # completes the next operator
+```
 
 ### Parallel / isolated clusters
 
