@@ -1,44 +1,44 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
-# End-to-end tests: provision a kind cluster with all operators (hack/e2e/up.sh)
-# and run the full Karta e2e suite against it. This targets the bigger runner
-# prod-karta-e2e-v1 (8 vCPU / 32 GB): a 2 vCPU hosted runner starves the Ray
-# dashboard. See docs/design/e2e-runner-size-decision.md.
+# End-to-end tests: provision a kind cluster and run the Karta e2e suite against
+# it. The full suite (13 cases, all operators) does not fit one 2 vCPU hosted
+# runner, so it is sharded across parallel ubuntu-latest jobs, each installing a
+# lighter operator subset and running the matching cases. Together the shards
+# cover every operator and case, with no self-hosted or larger runner needed.
+# This mirrors how KAI-Scheduler, volcano, and crossplane run e2e on hosted
+# runners. See docs/design/e2e-runner-size-decision.md.
 name: E2E
 
 on:
-  # Temporary: run on pull_request so the full suite runs in CI before this
-  # workflow lands on the default branch (workflow_dispatch is only dispatchable
-  # once the file is on main). Revert to dispatch-only before merge. On
-  # pull_request the inputs are absent, so the steps install ALL operators and run
-  # ALL cases on the bigger runner (empty workloads/focus, runner fallback below).
+  # Temporary: run on pull_request so the suite runs in CI before this workflow
+  # lands on the default branch (workflow_dispatch is only dispatchable once the
+  # file is on main). Revert to dispatch-only before merge.
   pull_request:
   workflow_dispatch:
-    inputs:
-      workloads:
-        description: "Operators to install (space-separated); empty installs all"
-        default: ""
-        type: string
-      focus:
-        description: "Ginkgo focus regex selecting the cases to run; empty runs all"
-        default: ""
-        type: string
-      runner:
-        description: "Runner label. ubuntu-latest (2 vCPU/7GB) suits a subset; for the full suite request the self-hosted runner prod-karta-e2e-v1 (8 vCPU/32GB, Docker, amd64) and pass it here. See docs/design/e2e-runner-size-decision.md."
-        default: "ubuntu-latest"
-        type: string
 
 jobs:
   e2e:
-    name: E2E (kind)
-    # Full-suite target: a self-hosted runner prod-karta-e2e-v1 (8 vCPU / 32 GB /
-    # 150 GB SSD, Docker, amd64), mirroring grove's prod-grove-e2e-v1. ubuntu-latest
-    # (2 vCPU) fits the install but starves the Ray dashboard under full-suite load;
-    # see docs/design/e2e-runner-size-decision.md. Pass runner=ubuntu-latest for a
-    # hosted subset run.
-    runs-on: ${{ inputs.runner || 'prod-karta-e2e-v1' }}
-    timeout-minutes: 90
+    name: E2E ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Each shard is a lighter subset that fits a 2 vCPU runner; the focus
+          # regex selects exactly the cases those operators drive. deps are auto
+          # added by up.sh (kserve->knative, dynamo->grove). BatchJob is built-in
+          # (no operator) so it rides along in the core shard.
+          - shard: core
+            workloads: "lws jobset kuberay kubeflow"
+            focus: "LeaderWorkerSet|JobSet|RayCluster|RayJob|PyTorchJob|MPIJob|BatchJob"
+          - shard: serving
+            workloads: "knative kserve milvus"
+            focus: "KnativeService|KServe|Milvus"
+          - shard: inference
+            workloads: "grove dynamo nim"
+            focus: "Grove|Dynamo|NIMService"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -64,10 +64,10 @@ jobs:
           sudo install linux-amd64/helm /usr/local/bin/helm
 
       - name: Provision cluster + operators
-        run: make e2e-up WORKLOADS="${{ inputs.workloads }}"
+        run: make e2e-up WORKLOADS="${{ matrix.workloads }}"
 
       - name: Run e2e suite
-        run: make test-e2e E2E_FOCUS="${{ inputs.focus }}"
+        run: make test-e2e E2E_FOCUS="${{ matrix.focus }}"
 
       - name: Diagnostics on failure
         if: failure()
@@ -80,7 +80,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-logs
+          name: e2e-logs-${{ matrix.shard }}
           path: e2e-logs
           if-no-files-found: ignore
 
