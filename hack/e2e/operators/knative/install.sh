@@ -12,13 +12,15 @@ source "${MODULE_DIR}/../_common.sh"
 
 main() {
   echo "==> Knative Serving ${KNATIVE_VERSION} + Kourier ${KOURIER_VERSION} (real operator)"
-  kubectl apply -f "https://github.com/knative/serving/releases/download/${KNATIVE_VERSION}/serving-crds.yaml"
-  kubectl apply -f "https://github.com/knative/serving/releases/download/${KNATIVE_VERSION}/serving-core.yaml"
+  # --server-side (+ --force-conflicts) so a reused cluster does not fail on field
+  # ownership, matching the other operators' apply style.
+  kubectl apply --server-side --force-conflicts -f "https://github.com/knative/serving/releases/download/${KNATIVE_VERSION}/serving-crds.yaml"
+  kubectl apply --server-side --force-conflicts -f "https://github.com/knative/serving/releases/download/${KNATIVE_VERSION}/serving-core.yaml"
   for d in activator autoscaler controller webhook; do
     rollout_wait knative-serving "deploy/$d"
   done
   # Kourier is the networking layer; net-kourier tags lag serving patch releases.
-  kubectl apply -f "https://github.com/knative/net-kourier/releases/download/${KOURIER_VERSION}/kourier.yaml"
+  kubectl apply --server-side --force-conflicts -f "https://github.com/knative/net-kourier/releases/download/${KOURIER_VERSION}/kourier.yaml"
   # The Serving config-validation webhook may refuse connections for a moment after
   # its Deployment reports Available (endpoint/cert still wiring up), so retry these
   # configmap patches past that warmup.

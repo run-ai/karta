@@ -6,7 +6,7 @@
 # up.sh or directly (bash install.sh). Depends on knative (see deps_of in up.sh).
 # Ships a config patch (disable-istio-vh.yaml). Sources the shared helpers, which
 # also load global.env.
-# shellcheck disable=SC2154  # KSERVE_VERSION comes from global.env via _common.sh
+# shellcheck disable=SC2154  # KSERVE_VERSION/KUBE_RBAC_PROXY_VERSION come from global.env via _common.sh
 set -euo pipefail
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
@@ -24,7 +24,7 @@ main() {
   # maintained image, otherwise the pod never goes Ready and the webhook has no
   # endpoints.
   kubectl set image deployment/kserve-controller-manager -n kserve \
-    kube-rbac-proxy=quay.io/brancz/kube-rbac-proxy:v0.18.0
+    kube-rbac-proxy="quay.io/brancz/kube-rbac-proxy:${KUBE_RBAC_PROXY_VERSION}"
   # Serverless KServe defaults to creating Istio VirtualServices; without Istio the
   # reconcile errors and PredictorReady/RoutesReady never go True. Route through
   # Knative/Kourier instead.

@@ -15,10 +15,13 @@ main() {
   echo "==> dynamo-platform ${DYNAMO_VERSION} (real operator + mocker DGD)"
   # The platform chart is published on NGC as an https .tgz (anonymous). etcd is
   # off by default; the mocker workers need it for the distributed runtime. The
-  # operator and dynamo-planner images are public and multi-arch.
-  curl -fsSL -o /tmp/dynamo-platform.tgz \
+  # operator and dynamo-planner images are public and multi-arch. Fetch into a temp
+  # dir cleaned up on exit rather than leaving an artifact in /tmp.
+  local tmp; tmp="$(mktemp -d)"
+  trap 'rm -rf "${tmp}"' EXIT
+  curl -fsSL -o "${tmp}/dynamo-platform.tgz" \
     "https://helm.ngc.nvidia.com/nvidia/ai-dynamo/charts/dynamo-platform-${DYNAMO_VERSION}.tgz"
-  helm upgrade -i dynamo-platform /tmp/dynamo-platform.tgz -n dynamo-system --create-namespace \
+  helm upgrade -i dynamo-platform "${tmp}/dynamo-platform.tgz" -n dynamo-system --create-namespace \
     --set global.etcd.install=true --wait --timeout 8m >/dev/null
   # Dummy HF token: the mocker references the secret but downloads no model.
   ensure_secret default hf-token-secret HF_TOKEN=dummy

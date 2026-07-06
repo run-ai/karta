@@ -44,3 +44,6 @@ jobs:
 
       - name: Validate helm chart renders
         run: make helm-validate
+
+      - name: Lint shell scripts
+        run: make lint-shell

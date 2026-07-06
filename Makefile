@@ -179,3 +179,14 @@ e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)
 .PHONY: test-e2e
 test-e2e: ## Run the e2e suite (run e2e-up first; CLUSTER_NAME to match; E2E_FOCUS="JobSet|LWS" to run a subset)
 	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) ./... $(if $(E2E_FOCUS),-args -ginkgo.focus="$(E2E_FOCUS)")
+
+# The e2e shell scripts to shellcheck: the provisioner, teardown, completion, the
+# shared helpers, and every per-operator install.sh/verify.sh.
+E2E_SHELL := hack/e2e/up.sh hack/e2e/down.sh hack/e2e/up-completion.sh \
+	hack/e2e/operators/_common.sh \
+	$(wildcard hack/e2e/operators/*/install.sh) \
+	$(wildcard hack/e2e/operators/*/verify.sh)
+
+.PHONY: lint-shell
+lint-shell: ## shellcheck the e2e shell scripts (-x follows sourced files)
+	shellcheck -x $(E2E_SHELL)

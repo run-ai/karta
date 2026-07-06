@@ -143,7 +143,7 @@ install_karta() {
   kubectl apply --server-side -f "${REPO_ROOT}/charts/karta/crds/"
   helm upgrade -i karta "${REPO_ROOT}/charts/karta" -n karta-system --create-namespace \
     --set image.repository="${IMAGE%%:*}" --set image.tag="${IMAGE##*:}" \
-    --set resources.limits.memory=512Mi >/dev/null
+    --set resources.limits.memory="${KARTA_OPERATOR_MEMORY}" >/dev/null
   rollout_wait karta-system deploy/karta-operator 120s
 }
 
