@@ -4,7 +4,7 @@
 package v1alpha1
 
 type GangSchedulingInstruction struct {
-	// PodGroups defines the alpha grouping format that KAI still supports.
+	// PodGroups defines the alpha grouping format.
 	// This is deprecated and will be removed in a future release.
 	// Deprecated: Please use gangScheduling.podGroup (PodGroupDefinitionV2) instead.
 	// +kubebuilder:validation:Optional
@@ -12,13 +12,12 @@ type GangSchedulingInstruction struct {
 	// +listMapKey=name
 	PodGroups []PodGroupDefinition `json:"podGroups,omitempty"`
 
-	// PodGroup defines the grouping, subgroup, and topology behavior used by
-	// the KAI-native Karta integration.
+	// PodGroupComponentsMapping defines the grouping, subgroup, and topology behavior.
 	// +kubebuilder:validation:Optional
-	PodGroup *PodGroupDefinitionV2 `json:"podGroup,omitempty"`
+	PodGroup *PodGroupComponentsMapping `json:"podGroup,omitempty"`
 }
 
-// PodGroupDefinition defines the alpha grouping format that KAI still supports.
+// PodGroupDefinition defines the alpha grouping format.
 // This is deprecated and will be removed in a future release.
 type PodGroupDefinition struct {
 	// Name is the unique identifier for this pod group.
@@ -54,24 +53,24 @@ type PodGroupMemberDefinition struct {
 	Filters []string `json:"filters,omitempty" jq:"validate"`
 }
 
-// PodGroupDefinitionV2 defines the KAI-native grouping format.
-type PodGroupDefinitionV2 struct {
+// PodGroupComponentsMapping defines how to create a pod group from a set of components.
+type PodGroupComponentsMapping struct {
 	// Name is the unique identifier for this pod group.
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
 
-	// SubGroups defines which Karta components should become KAI SubGroups.
+	// SubGroups defines which Karta components should become subGroups.
 	// +kubebuilder:validation:Optional
 	// +listType=map
 	// +listMapKey=componentName
-	SubGroups []SubGroupDefinition `json:"subGroups,omitempty"`
+	SubGroups []SubGroupComponentMapping `json:"subGroups,omitempty"`
 
 	// Topology defines the topology constraint for all workload pods.
 	// +kubebuilder:validation:Optional
 	Topology *TopologyConstraint `json:"topology,omitempty"`
 }
 
-type SubGroupDefinition struct {
+type SubGroupComponentMapping struct {
 	// ComponentName references a component defined in the Karta structure.
 	// +kubebuilder:validation:Required
 	ComponentName string `json:"componentName"`

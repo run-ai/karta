@@ -59,9 +59,8 @@ spec:
                   gangScheduling:
                     properties:
                       podGroup:
-                        description: |-
-                          PodGroup defines the grouping, subgroup, and topology behavior used by
-                          the KAI-native Karta integration.
+                        description: PodGroupComponentsMapping defines the grouping,
+                          subgroup, and topology behavior.
                         properties:
                           name:
                             description: Name is the unique identifier for this pod
@@ -69,7 +68,7 @@ spec:
                             type: string
                           subGroups:
                             description: SubGroups defines which Karta components
-                              should become KAI SubGroups.
+                              should become subGroups.
                             items:
                               properties:
                                 componentName:
@@ -132,11 +131,12 @@ spec:
                         type: object
                       podGroups:
                         description: |-
-                          PodGroups defines the alpha grouping format that KAI still supports.
+                          PodGroups defines the alpha grouping format.
                           This is deprecated and will be removed in a future release.
+                          Deprecated: Please use gangScheduling.podGroup (PodGroupDefinitionV2) instead.
                         items:
                           description: |-
-                            PodGroupDefinition defines the alpha grouping format that KAI still supports.
+                            PodGroupDefinition defines the alpha grouping format.
                             This is deprecated and will be removed in a future release.
                           properties:
                             members:
