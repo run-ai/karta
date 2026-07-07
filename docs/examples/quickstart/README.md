@@ -39,24 +39,24 @@ for _, comp := range children {
 }
 ```
 
-The same four-step loop in `main.go` runs over two completely different CRD types — **no `switch` on CRD kind anywhere**.
+The same code in `main.go` runs over two completely different CRD types — **no `switch` on CRD kind anywhere**.
 
 ## Run it
 
-From the repository root:
+From the `docs/examples/quickstart` directory:
 
 ```bash
 # Default — injects kai-scheduler
-go run ./docs/examples/quickstart
+go run .
 
 # Use a different scheduler
-go run ./docs/examples/quickstart --scheduler volcano
+go run . --scheduler volcano
 
 # Also print the full mutated CRD YAML
-go run ./docs/examples/quickstart --scheduler my-scheduler --print-mutated
+go run . --scheduler my-scheduler --print-mutated
 
 # Help
-go run ./docs/examples/quickstart --help
+go run . --help
 ```
 
 Default expected output:
@@ -67,7 +67,7 @@ Default expected output:
 ══════════════════════════════════════════
 
 === Workload status ===
-  Karta status: Running
+  Karta workload status: Running
 
 === Component replica counts ===
   replicatedjob[leader]        replicas=1
@@ -115,19 +115,19 @@ Default expected output:
 
 ## What the example does
 
-| Step | API call | What it shows |
-|------|----------|---------------|
-| 1 | `root.GetStatus(ctx)` | Unified `Running/Failed/Completed` — no per-CRD condition parsing |
-| 2 | `comp.GetScale(ctx)` | Replica counts regardless of where the CRD stores them; LWS worker total is computed via a JQ formula; virtual components (no GVK) are labelled |
-| 3 | `comp.GetPodTemplateSpec(ctx)` | Resource requests per container — GPUs for JobSet, CPU for LWS — same call, different CRDs |
-| 4 | `comp.GetPodTemplateSpec` → mutate → `UpdatePodTemplateSpec` | Inject scheduler name **and** a pod label in one pass via real `corev1` types |
+| Step | How | What it shows |
+|------|-----|---------------|
+| 1 | `tree.Build()` → `wt.Status.Phases` | Unified `Running/Initializing/Failed` — no per-CRD condition parsing |
+| 2 | `tree.Build()` → walk `wt.Children` | Replica counts regardless of where the CRD stores them; LWS worker total computed via a JQ formula; virtual components labelled |
+| 3 | `inst.ExtractedInstance.PodTemplateSpec` | Resource requests per container — GPUs for JobSet, CPU for LWS — same traversal, different CRDs |
+| 4 | `comp.GetPodTemplateSpec` → mutate → `UpdatePodTemplateSpec` | Inject scheduler name and a pod label in one pass via real `corev1` types |
 | 5 | `comp.GetPodTemplateSpec` read-back + `factory.GetResource()` | Confirm both mutations landed at the right paths; retrieve the object for `k8sClient.Update` |
 
 ## File layout
 
 | File | Purpose |
 |------|---------|
-| `main.go` | Controller loop — runs identically for both workload types |
+| `main.go` | Example code — runs identically for both workload types |
 | `jobset.yaml` | Sample `JobSet` workload (leader × 1, worker × 4) |
 | `lws.yaml` | Sample `LeaderWorkerSet` workload (2 groups × 4 pods) |
 | `docs/samples/jobset.yaml` | Karta definition for JobSet (loaded at runtime) |
@@ -155,11 +155,12 @@ childComponents:
       replicasPath: (.spec.replicas // 1) * ((.spec.leaderWorkerTemplate.size // 1) - 1)
 ```
 
-Your Go code never references these paths directly — it calls `comp.GetPodTemplateSpec(ctx)` and Karta handles the navigation. Adding support for a new CRD means writing a new YAML definition; the controller code is untouched.
+Your Go code never references these paths directly — Karta handles the navigation. Adding support for a new CRD means writing a new YAML definition; existing code is untouched.
 
 ## Next steps
 
 - [Technical Guide](../../Technical%20Guide.md) — full Karta specification
 - [samples](../../samples/) — ready-made definitions for PyTorchJob, RayCluster, MPIJob, KServe, and more
 - [resource](../../../pkg/resource/) — full Component API (suspend/resume, fragmented pod specs, pod querier)
+- [tree](../../../pkg/tree/) — WorkloadTree for inspecting the component hierarchy of live workloads
 - [instructions](../../../pkg/instructions/) — gang scheduling and `StructureSummary` for scheduler integrations
