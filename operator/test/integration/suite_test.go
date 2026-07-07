@@ -66,7 +66,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(pkg.NewReconciler(mgr.GetClient(),
-		mgr.GetEventRecorderFor(pkg.ControllerName)).SetupWithManager(mgr)).To(Succeed())
+		mgr.GetEventRecorderFor(pkg.ControllerName)).SetupWithManager(mgr)).To(Succeed()) //nolint:staticcheck
 
 	go func() {
 		defer GinkgoRecover()

@@ -81,7 +81,10 @@ func run() error {
 		return fmt.Errorf("create manager: %w", err)
 	}
 
-	if err = pkg.NewReconciler(mgr.GetClient(), mgr.GetEventRecorderFor(pkg.ControllerName)).SetupWithManager(mgr); err != nil {
+	// TODO: migrate to mgr.GetEventRecorder() (events.EventRecorder); it has a
+	// different method set than record.EventRecorder, so NewReconciler and its
+	// usages need to change too. Tracked separately from this PR.
+	if err = pkg.NewReconciler(mgr.GetClient(), mgr.GetEventRecorderFor(pkg.ControllerName)).SetupWithManager(mgr); err != nil { //nolint:staticcheck
 		return fmt.Errorf("setup karta reconciler: %w", err)
 	}
 
