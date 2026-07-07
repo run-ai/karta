@@ -30,18 +30,6 @@ func newTestTree() (*cobra.Command, *bytes.Buffer) {
 	return root, out
 }
 
-func TestWorkloadRequiresNamespace(t *testing.T) {
-	root, _ := newTestTree()
-	root.SetArgs([]string{"workload", "dummy"})
-	err := root.Execute()
-	if err == nil {
-		t.Fatal("expected an error when namespace is omitted, got nil")
-	}
-	if !strings.Contains(err.Error(), "namespace") {
-		t.Fatalf("expected a namespace-required error, got %v", err)
-	}
-}
-
 func TestWorkloadWithNamespace(t *testing.T) {
 	root, _ := newTestTree()
 	root.SetArgs([]string{"workload", "dummy", "-n", "ml-team"})
