@@ -254,11 +254,7 @@ func discoverNativeGVKs(ctx context.Context, dc discovery.DiscoveryInterface, re
 
 	natives := make(map[schema.GroupVersionKind]bool)
 	for _, list := range resourceLists {
-		gv, err := schema.ParseGroupVersion(list.GroupVersion)
-		if err != nil {
-			logger.Info("Skipping malformed GroupVersion from discovery", "groupVersion", list.GroupVersion, "error", err.Error())
-			continue
-		}
+		gv, _ := schema.ParseGroupVersion(list.GroupVersion)
 		for _, res := range list.APIResources {
 			if strings.Contains(res.Name, "/") {
 				continue // subresource, e.g. deployments/scale
