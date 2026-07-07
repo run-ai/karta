@@ -119,16 +119,6 @@ docker-buildx-push: ## Build and push a multi-arch Docker image via BuildKit (re
 docker-push: ## Push the Docker image
 	$(CONTAINER_TOOL) push $(IMAGE)
 
-##@ Kubernetes
-
-.PHONY: deploy
-deploy: ## Deploy the operator to the cluster in the current kubeconfig context
-	kubectl apply -f config/
-
-.PHONY: undeploy
-undeploy: ## Remove the operator from the cluster
-	kubectl delete -f config/ --ignore-not-found
-
 ##@ Tools
 
 .PHONY: envtest
