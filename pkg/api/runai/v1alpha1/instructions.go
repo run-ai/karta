@@ -6,7 +6,7 @@ package v1alpha1
 type GangSchedulingInstruction struct {
 	// PodGroups defines the alpha grouping format that KAI still supports.
 	// This is deprecated and will be removed in a future release.
-	// +kubebuilder:deprecatedversion:warning="PodGroupDefinition is deprecated; please use PodGroupDefinitionV2 instead."
+	// Deprecated: Please use gangScheduling.podGroup (PodGroupDefinitionV2) instead.
 	// +kubebuilder:validation:Optional
 	// +listType=map
 	// +listMapKey=name
