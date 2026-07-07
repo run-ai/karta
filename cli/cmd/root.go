@@ -5,10 +5,6 @@
 package cmd
 
 import (
-	"github.com/run-ai/karta/cli/cmd/definition"
-	"github.com/run-ai/karta/cli/cmd/flags"
-	"github.com/run-ai/karta/cli/cmd/workload"
-
 	"github.com/spf13/cobra"
 )
 
@@ -24,11 +20,11 @@ func NewRootCommand() *cobra.Command {
 		SilenceUsage: true,
 	}
 
-	flags.WithKubeconfig(cmd)
-	flags.WithOutput(cmd)
+	withKubeconfig(cmd)
+	withOutput(cmd)
 
-	cmd.AddCommand(workload.NewCommand())
-	cmd.AddCommand(definition.NewCommand())
+	cmd.AddCommand(newWorkloadCommand())
+	cmd.AddCommand(newDefinitionCommand())
 
 	return cmd
 }

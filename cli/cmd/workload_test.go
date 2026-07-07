@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package workload
+package cmd
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ import (
 func newTestTree() (*cobra.Command, *bytes.Buffer) {
 	root := &cobra.Command{Use: "root", SilenceUsage: true, SilenceErrors: true}
 
-	wl := NewCommand()
+	wl := newWorkloadCommand()
 	wl.AddCommand(&cobra.Command{
 		Use:  "dummy",
 		RunE: func(*cobra.Command, []string) error { return nil },
