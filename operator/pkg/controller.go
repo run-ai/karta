@@ -58,11 +58,11 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("create discovery client: %w", err)
 	}
 
-	native, err := discoverNativeGVKs(context.Background(), dc, mgr.GetAPIReader(), mgr.GetLogger())
+	natives, err := discoverNativeGVKs(context.Background(), dc, mgr.GetAPIReader(), mgr.GetLogger())
 	if err != nil {
-		return fmt.Errorf("discover native GVKs: %w", err)
+		return fmt.Errorf("discover natives GVKs: %w", err)
 	}
-	r.nativeGVKs = native
+	r.nativeGVKs = natives
 
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(),
 		&apiextensionsv1.CustomResourceDefinition{}, crdGroupKindIndexKey,
@@ -231,9 +231,10 @@ func discoverNativeGVKs(ctx context.Context, dc discovery.DiscoveryInterface, re
 	if err := reader.List(ctx, crds); err != nil {
 		return nil, fmt.Errorf("list CRDs: %w", err)
 	}
-	crdBackedGroupKinds := make(map[schema.GroupKind]bool, len(crds.Items))
+	crdGKs := make(map[schema.GroupKind]bool, len(crds.Items))
 	for i := range crds.Items {
-		crdBackedGroupKinds[schema.GroupKind{Group: crds.Items[i].Spec.Group, Kind: crds.Items[i].Spec.Names.Kind}] = true
+		crdSpec := crds.Items[i].Spec
+		crdGKs[schema.GroupKind{Group: crdSpec.Group, Kind: crdSpec.Names.Kind}] = true
 	}
 
 	_, resourceLists, err := dc.ServerGroupsAndResources()
@@ -251,7 +252,7 @@ func discoverNativeGVKs(ctx context.Context, dc discovery.DiscoveryInterface, re
 		logger.Info("Ignoring stale aggregated groups during discovery", "error", err.Error())
 	}
 
-	native := make(map[schema.GroupVersionKind]bool)
+	natives := make(map[schema.GroupVersionKind]bool)
 	for _, list := range resourceLists {
 		gv, err := schema.ParseGroupVersion(list.GroupVersion)
 		if err != nil {
@@ -262,16 +263,16 @@ func discoverNativeGVKs(ctx context.Context, dc discovery.DiscoveryInterface, re
 			if strings.Contains(res.Name, "/") {
 				continue // subresource, e.g. deployments/scale
 			}
-			if crdBackedGroupKinds[schema.GroupKind{Group: gv.Group, Kind: res.Kind}] {
+			if crdGKs[schema.GroupKind{Group: gv.Group, Kind: res.Kind}] {
 				continue
 			}
 			if !supportsListWatch(res.Verbs) {
 				continue // not a plausible Karta root (virtual/imperative)
 			}
-			native[schema.GroupVersionKind{Group: gv.Group, Version: gv.Version, Kind: res.Kind}] = true
+			natives[schema.GroupVersionKind{Group: gv.Group, Version: gv.Version, Kind: res.Kind}] = true
 		}
 	}
-	return native, nil
+	return natives, nil
 }
 
 func supportsListWatch(verbs metav1.Verbs) bool {
