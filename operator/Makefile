@@ -47,7 +47,8 @@ fmt: ## Run go fmt (fixes files in place)
 
 .PHONY: fmt-check
 fmt-check: ## Check formatting without modifying files (intended for CI)
-	@test -z "$(shell gofmt -l .)" || (echo "go fmt required:"; gofmt -l .; exit 1)
+	@test -z "$$(gofmt -l $$(go list -f '{{.Dir}}' ./...))" || \
+		(echo "go fmt required:"; gofmt -l $$(go list -f '{{.Dir}}' ./...); exit 1)
 
 .PHONY: vet
 vet: ## Run go vet
@@ -100,7 +101,8 @@ docker-build: ## Build Docker image for the host arch
 		--build-arg TARGETARCH=$(shell go env GOARCH) \
 		--build-arg VERSION=$(VERSION) \
 		--tag $(IMAGE) \
-		.
+		-f Dockerfile \
+		..
 
 .PHONY: docker-buildx-push
 docker-buildx-push: ## Build and push a multi-arch Docker image via BuildKit (requires Docker)
@@ -109,8 +111,9 @@ docker-buildx-push: ## Build and push a multi-arch Docker image via BuildKit (re
 		--platform $(PLATFORMS_CSV) \
 		--build-arg VERSION=$(VERSION) \
 		--tag $(IMAGE) \
+		-f Dockerfile \
 		--push \
-		.
+		..
 
 .PHONY: docker-push
 docker-push: ## Push the Docker image
