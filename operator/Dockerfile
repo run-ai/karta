@@ -9,15 +9,16 @@
 #     --build-arg GO_VERSION=$(awk '/^go /{print $2}' operator/go.mod) \
 #     -f operator/Dockerfile -t karta-operator:latest .
 ARG GO_VERSION=1.26.3
-FROM golang:${GO_VERSION} AS build
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS build
 
+ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION=dev
 
 WORKDIR /src
 COPY . .
 WORKDIR /src/operator
-RUN CGO_ENABLED=0 GO111MODULE=on GOOS=linux GOARCH=${TARGETARCH} \
+RUN CGO_ENABLED=0 GO111MODULE=on GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 	go build -trimpath \
 	-ldflags "-X github.com/run-ai/karta/operator/pkg/version.Version=${VERSION}" \
 	-o /karta-operator ./cmd

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+
 # Location to install dependencies to, and to output built binaries.
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
@@ -47,8 +50,10 @@ fmt: ## Run go fmt (fixes files in place)
 
 .PHONY: fmt-check
 fmt-check: ## Check formatting without modifying files (intended for CI)
-	@test -z "$$(gofmt -l $$(go list -f '{{.Dir}}' ./...))" || \
-		(echo "go fmt required:"; gofmt -l $$(go list -f '{{.Dir}}' ./...); exit 1)
+	@set -e; \
+	dirs="$$(go list -f '{{.Dir}}' ./...)"; \
+	unformatted="$$(gofmt -l $$dirs)"; \
+	test -z "$$unformatted" || (echo "go fmt required:"; echo "$$unformatted"; exit 1)
 
 .PHONY: vet
 vet: ## Run go vet

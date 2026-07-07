@@ -72,7 +72,7 @@ jobs:
       - name: Build and push operator image
         working-directory: operator
         run: |
-          make docker-buildx-push IMAGE_TAG=$PACKAGE_VERSION
+          make docker-buildx-push VERSION=$PACKAGE_VERSION
 
       - name: Build helm chart
         run: |
