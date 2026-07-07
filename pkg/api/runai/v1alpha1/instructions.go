@@ -6,7 +6,7 @@ package v1alpha1
 type GangSchedulingInstruction struct {
 	// PodGroups defines the alpha grouping format.
 	// This is deprecated and will be removed in a future release.
-	// Deprecated: Please use gangScheduling.podGroup (PodGroupDefinitionV2) instead.
+	// Deprecated: Please use gangScheduling.podGroup  instead.
 	// +kubebuilder:validation:Optional
 	// +listType=map
 	// +listMapKey=name
