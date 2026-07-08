@@ -133,7 +133,7 @@ spec:
                         description: |-
                           PodGroups defines the alpha grouping format.
                           This is deprecated and will be removed in a future release.
-                          Deprecated: Please use gangScheduling.podGroup (PodGroupDefinitionV2) instead.
+                          Deprecated: Please use gangScheduling.podGroup  instead.
                         items:
                           description: |-
                             PodGroupDefinition defines the alpha grouping format.
