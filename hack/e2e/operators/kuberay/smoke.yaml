@@ -5,13 +5,14 @@
 # waits for KubeRay to drive it to .status.state=ready before the e2e suite relies
 # on it. Uses the ray-e2e:local image the module preloads. The head probes are a
 # permissive tcpSocket on the GCS port so the head goes Ready on a CPU-only node.
+# verify.sh substitutes ${RAY_VERSION} (global.env) into rayVersion before apply.
 apiVersion: ray.io/v1
 kind: RayCluster
 metadata:
   name: ray-smoke
   namespace: default
 spec:
-  rayVersion: "2.40.0"
+  rayVersion: "${RAY_VERSION}"
   headGroupSpec:
     rayStartParams: {}
     template:

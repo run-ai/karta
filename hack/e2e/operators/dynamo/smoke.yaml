@@ -5,6 +5,7 @@
 # DynamoGraphDeployment and waits for the operator to drive it to
 # state=successful (Frontend + a mocker decode worker, CPU-only) before the e2e
 # suite relies on Dynamo. Fails fast here if the operator is broken.
+# verify.sh substitutes ${DYNAMO_VERSION} (global.env) into the image tag before apply.
 apiVersion: nvidia.com/v1alpha1
 kind: DynamoGraphDeployment
 metadata:
@@ -17,7 +18,7 @@ spec:
       replicas: 1
       extraPodSpec:
         mainContainer:
-          image: nvcr.io/nvidia/ai-dynamo/dynamo-planner:1.2.1
+          image: "nvcr.io/nvidia/ai-dynamo/dynamo-planner:${DYNAMO_VERSION}"
           imagePullPolicy: IfNotPresent
     decode:
       envFromSecret: hf-token-secret
@@ -26,7 +27,7 @@ spec:
       replicas: 1
       extraPodSpec:
         mainContainer:
-          image: nvcr.io/nvidia/ai-dynamo/dynamo-planner:1.2.1
+          image: "nvcr.io/nvidia/ai-dynamo/dynamo-planner:${DYNAMO_VERSION}"
           imagePullPolicy: IfNotPresent
           workingDir: /workspace
           command: ["python3", "-m", "dynamo.mocker"]

@@ -28,13 +28,21 @@ main() {
     # The operator chart is not published to a Helm/OCI registry, only in-repo,
     # so fetch it from the pinned upstream tag at install time instead of
     # vendoring it. The tag tarball extracts to k8s-nim-operator-<version>/.
-    local src chart
+    # src is not local so the EXIT trap can resolve it under set -u (cleans up even
+    # if a step below fails).
+    local chart="" d
     src="$(mktemp -d)"
+    trap 'rm -rf "${src}"' EXIT
     curl -fsSL "https://github.com/NVIDIA/k8s-nim-operator/archive/refs/tags/${NIM_OPERATOR_VERSION}.tar.gz" \
       | tar -xz -C "${src}"
-    chart="$(ls -d "${src}"/k8s-nim-operator-*/deployments/helm/k8s-nim-operator)"
+    for d in "${src}"/k8s-nim-operator-*/deployments/helm/k8s-nim-operator; do
+      [ -d "${d}" ] && chart="${d}"
+    done
+    if [ -z "${chart}" ]; then
+      echo "error: k8s-nim-operator Helm chart not found in the ${NIM_OPERATOR_VERSION} tarball (upstream layout changed?)" >&2
+      exit 1
+    fi
     helm install k8s-nim-operator "${chart}" -n nim-operator --create-namespace >/dev/null
-    rm -rf "${src}"
   fi
   rollout_wait nim-operator deploy/k8s-nim-operator
   # Dummy NGC secret: the operator injects NGC_API_KEY from it; the fictive image ignores it.

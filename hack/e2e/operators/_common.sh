@@ -74,8 +74,11 @@ rollout_wait() {
 # runs inside an if so set -e does not abort on an expected transient failure.
 apply_with_retry() {
   local target="$1"; shift
-  local tries="${1:-5}"; if [ "$#" -gt 0 ]; then shift; fi
-  local sleep_secs="${1:-10}"; if [ "$#" -gt 0 ]; then shift; fi
+  # tries and sleep_secs are optional; consume a leading arg only if it is numeric,
+  # so a caller can pass kubectl flags directly (apply_with_retry <url> --server-side).
+  local tries=5 sleep_secs=10
+  case "${1:-}" in '' | *[!0-9]*) ;; *) tries="$1"; shift ;; esac
+  case "${1:-}" in '' | *[!0-9]*) ;; *) sleep_secs="$1"; shift ;; esac
   local i
   for i in $(seq 1 "${tries}"); do
     if kubectl apply "$@" -f "${target}"; then
@@ -108,13 +111,14 @@ retry() {
 # --for=, so it handles both "condition=Ready" and "jsonpath={.status.x}=y".
 run_smoke() {
   local manifest="$1" target="$2" wait_expr="$3" timeout="${4:-300s}" ns="${5:-default}"
-  apply_with_retry "${manifest}" 6 10
-  # Capture the wait result so the throwaway resource is always cleaned up, and so
-  # a failed smoke propagates regardless of how run_smoke is called (a bare call
-  # under set -e, or in an if condition where set -e would not fire).
+  # Capture each step's result so the resource is always deleted (even if the apply
+  # exhausts its retries) and the failure still propagates under set -e.
   local rc=0
-  kubectl wait --for="${wait_expr}" "${target}" -n "${ns}" --timeout="${timeout}" || rc=$?
-  kubectl delete -f "${manifest}" --wait=false || true
+  apply_with_retry "${manifest}" 6 10 || rc=$?
+  if [ "${rc}" -eq 0 ]; then
+    kubectl wait --for="${wait_expr}" "${target}" -n "${ns}" --timeout="${timeout}" || rc=$?
+  fi
+  kubectl delete -f "${manifest}" --wait=false --ignore-not-found || true
   return "${rc}"
 }
 

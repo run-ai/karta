@@ -12,7 +12,9 @@ source "${MODULE_DIR}/../_common.sh"
 
 main() {
   echo "==> Kubeflow training-operator ${KUBEFLOW_VERSION}"
-  kubectl apply --server-side -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=${KUBEFLOW_VERSION}"
+  # --force-conflicts: a reused cluster can hit field-ownership conflicts on rerun
+  # (matches the other operators' applies).
+  kubectl apply --server-side --force-conflicts -k "github.com/kubeflow/training-operator/manifests/overlays/standalone?ref=${KUBEFLOW_VERSION}"
   rollout_wait kubeflow deploy/training-operator
 }
 

@@ -88,7 +88,7 @@ EOF
 # rather than erroring cryptically partway through provisioning.
 require_tools() {
   local missing=()
-  for t in docker kind kubectl helm curl; do
+  for t in docker kind kubectl helm curl tar; do
     command -v "$t" >/dev/null 2>&1 || missing+=("$t")
   done
   if [ "${#missing[@]}" -gt 0 ]; then
@@ -133,16 +133,20 @@ install_cert_manager() {
 }
 
 install_fake_gpu() {
-  kubectl label node "${CLUSTER_NAME}-worker" run.ai/simulated-gpu-node-pool=default --overwrite
+  # Label every worker (by role selector, not a hardcoded node name) so this still
+  # works if kind-config.yaml grows more workers.
+  kubectl label nodes -l '!node-role.kubernetes.io/control-plane' \
+    run.ai/simulated-gpu-node-pool=default --overwrite
+  # --wait so later steps do not race a not-yet-ready operator.
   helm upgrade -i fake-gpu-operator oci://ghcr.io/run-ai/fake-gpu-operator/fake-gpu-operator \
     -n gpu-operator --create-namespace --version "${FAKE_GPU_VERSION}" \
-    --set computeDomainDraPlugin.enabled=true >/dev/null
+    --set computeDomainDraPlugin.enabled=true --wait --timeout 3m >/dev/null
 }
 
 install_karta() {
   kubectl apply --server-side -f "${REPO_ROOT}/charts/karta/crds/"
   helm upgrade -i karta "${REPO_ROOT}/charts/karta" -n karta-system --create-namespace \
-    --set image.repository="${IMAGE%%:*}" --set image.tag="${IMAGE##*:}" \
+    --set image.repository="${IMAGE%:*}" --set image.tag="${IMAGE##*:}" \
     --set resources.limits.memory="${KARTA_OPERATOR_MEMORY}" >/dev/null
   rollout_wait karta-system deploy/karta-operator 120s
 }

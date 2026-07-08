@@ -20,7 +20,7 @@ spec:
           podSpec:
             containers:
               - name: worker
-                image: busybox:latest
+                image: busybox:1.36
                 command: ["/bin/sh", "-c", "echo grove-ok && sleep infinity"]
                 resources:
                   requests:

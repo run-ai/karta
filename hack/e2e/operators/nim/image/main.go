@@ -41,7 +41,15 @@ func main() {
 
 	addr := ":" + port
 	log.Printf("fictive NIM listening on %s (model %s, latency %s)", addr, modelName, requestLatency)
-	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		// WriteTimeout must exceed NIM_REQUEST_LATENCY (the chat handler sleeps).
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
 	log.Fatal(srv.ListenAndServe())
 }
 
