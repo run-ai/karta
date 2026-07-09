@@ -7,6 +7,7 @@ import (
 	"context"
 	stderrors "errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
@@ -18,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -38,7 +38,7 @@ const (
 // Reconciler reconciles Karta CRs.
 type Reconciler struct {
 	client.Client
-	recorder   record.EventRecorder
+	recorder   events.EventRecorder
 	nativeGVKs map[schema.GroupVersionKind]bool
 }
 
@@ -147,7 +147,7 @@ func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, kar
 		return nil
 	}
 
-	exists, err := r.crdExistsForGVK(ctx, *gvk)
+	exists, err := r.checkGVKServed(ctx, *gvk)
 	if err != nil {
 		logger.Error(err, "Failed to check CRD existence", "gvk", gvk.String())
 		return fmt.Errorf("check CRD existence for karta %q: %w", karta.Name, err)
@@ -240,22 +240,19 @@ func discoverNativeGVKs(ctx context.Context, dc discovery.DiscoveryInterface, re
 
 	_, resourceLists, err := dc.ServerGroupsAndResources()
 	if err != nil {
-		failed, ok := discovery.GroupDiscoveryFailedErrorGroups(err)
-		if !ok {
+		if !discovery.IsGroupDiscoveryFailedError(err) {
 			return nil, fmt.Errorf("list server resources: %w", err)
 		}
-		for gv, cause := range failed {
-			var stale discovery.StaleGroupVersionError
-			if !stderrors.As(cause, &stale) {
-				return nil, fmt.Errorf("discover group %s: %w", gv, cause)
-			}
-		}
-		logger.Info("Ignoring stale aggregated groups during discovery", "error", err.Error())
+		logger.Info("Ignoring failed groups during discovery", "error", err.Error())
 	}
 
 	natives := make(map[schema.GroupVersionKind]bool)
 	for _, list := range resourceLists {
-		gv, _ := schema.ParseGroupVersion(list.GroupVersion)
+		gv, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
+			logger.Info("Skipping malformed GroupVersion from discovery", "groupVersion", list.GroupVersion, "error", err.Error())
+			continue
+		}
 		for _, res := range list.APIResources {
 			if strings.Contains(res.Name, "/") {
 				continue // subresource, e.g. deployments/scale
@@ -263,7 +260,7 @@ func discoverNativeGVKs(ctx context.Context, dc discovery.DiscoveryInterface, re
 			if crdGKs[schema.GroupKind{Group: gv.Group, Kind: res.Kind}] {
 				continue
 			}
-			if !supportsListWatch(res.Verbs) {
+			if !(slices.Contains(res.Verbs, "list") && slices.Contains(res.Verbs, "watch")) {
 				continue // not a plausible Karta root (virtual/imperative)
 			}
 			natives[schema.GroupVersionKind{Group: gv.Group, Version: gv.Version, Kind: res.Kind}] = true
@@ -272,22 +269,9 @@ func discoverNativeGVKs(ctx context.Context, dc discovery.DiscoveryInterface, re
 	return natives, nil
 }
 
-func supportsListWatch(verbs metav1.Verbs) bool {
-	var list, watch bool
-	for _, v := range verbs {
-		switch v {
-		case "list":
-			list = true
-		case "watch":
-			watch = true
-		}
-	}
-	return list && watch
-}
-
-// crdExistsForGVK reports whether a CRD serving the given group, version
-// and kind is present in the cluster.
-func (r *Reconciler) crdExistsForGVK(ctx context.Context, gvk schema.GroupVersionKind) (bool, error) {
+// checkGVKServed reports whether the given group, version and kind is served
+// by the cluster, either as a built-in (native) type or by a CRD.
+func (r *Reconciler) checkGVKServed(ctx context.Context, gvk schema.GroupVersionKind) (bool, error) {
 	if r.nativeGVKs[gvk] {
 		return true, nil
 	}
