@@ -12,6 +12,7 @@ import (
 	"os"
 
 	"github.com/run-ai/karta/operator/pkg"
+	"github.com/run-ai/karta/operator/pkg/version"
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -43,6 +44,7 @@ func run() error {
 		probeAddr            string
 		enableLeaderElection bool
 		leaderElectionID     string
+		printVersion         bool
 	)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080",
@@ -53,10 +55,17 @@ func run() error {
 		"Enable leader election for controller manager.")
 	flag.StringVar(&leaderElectionID, "leader-election-id", "karta-operator.run.ai",
 		"Name of the resource used for leader election.")
+	flag.BoolVar(&printVersion, "version", false,
+		"Print the operator version and exit.")
 
 	zapOpts := zap.Options{Development: false}
 	zapOpts.BindFlags(flag.CommandLine)
 	flag.Parse()
+
+	if printVersion {
+		fmt.Println(version.Version)
+		return nil
+	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOpts)))
 	logger := ctrl.Log.WithName("setup")
@@ -72,7 +81,7 @@ func run() error {
 		return fmt.Errorf("create manager: %w", err)
 	}
 
-	if err = pkg.NewReconciler(mgr.GetClient(), mgr.GetEventRecorderFor(pkg.ControllerName)).SetupWithManager(mgr); err != nil {
+	if err = pkg.NewReconciler(mgr.GetClient(), mgr.GetEventRecorder(pkg.ControllerName)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup karta reconciler: %w", err)
 	}
 
@@ -83,7 +92,7 @@ func run() error {
 		return fmt.Errorf("register readyz: %w", err)
 	}
 
-	logger.Info("Starting Karta operator manager")
+	logger.Info("Starting Karta operator manager", "version", version.Version)
 	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		return fmt.Errorf("manager exited: %w", err)
 	}

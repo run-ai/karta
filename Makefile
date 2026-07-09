@@ -22,8 +22,9 @@ GO_LICENCE_DETECTOR ?= $(LOCALBIN)/go-licence-detector
 
 # Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
-GOLANGCI_LINT_VERSION ?= v2.12.2
 GO_LICENCE_DETECTOR_VERSION ?= v0.10.0
+# GOLANGCI_LINT_VERSION is defined in hack/tools.mk (shared with operator/Makefile).
+include hack/tools.mk
 PATH := $(abspath $(LOCALBIN)):$(PATH)
 
 .PHONY: manifests

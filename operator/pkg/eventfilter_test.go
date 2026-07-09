@@ -5,9 +5,10 @@ package pkg
 
 import (
 	"context"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/client-go/tools/record"
 	"strings"
+
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/client-go/tools/events"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
@@ -42,7 +43,7 @@ var _ = Describe("Reconciler.MapCRDToKartaEvent", func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		k8s = fake.NewClientBuilder().WithScheme(buildScheme()).Build()
-		r = NewReconciler(k8s, record.NewFakeRecorder(64))
+		r = NewReconciler(k8s, events.NewFakeRecorder(64))
 	})
 
 	It("returns nil when the object is not a CRD", func() {
