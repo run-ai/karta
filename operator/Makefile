@@ -28,7 +28,10 @@ VERSION_PKG = github.com/run-ai/karta/operator/pkg/version
 LDFLAGS     = -ldflags "-X $(VERSION_PKG).Version=$(VERSION)"
 
 GOLANGCI_LINT         ?= $(LOCALBIN)/golangci-lint
-GOLANGCI_LINT_VERSION ?= v2.12.2
+# GOLANGCI_LINT_VERSION is defined in ../hack/tools.mk (shared with the root
+# Makefile) so the linter version has a single source of truth. This Makefile is
+# always run from the operator/ directory (see the ../.golangci.yml reference).
+include ../hack/tools.mk
 
 ENVTEST          ?= $(LOCALBIN)/setup-envtest
 ENVTEST_VERSION  ?= release-0.23
@@ -138,7 +141,7 @@ $(GOLANGCI_LINT): $(LOCALBIN)
 	@[ -f "$(GOLANGCI_LINT)" ] || { \
 	set -e; \
 	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)"; \
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/$(GOLANGCI_LINT_VERSION)/install.sh \
+	curl -sSfL https://golangci-lint.run/install.sh \
 		| sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION); \
 	}
 
