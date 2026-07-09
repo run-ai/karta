@@ -260,7 +260,7 @@ func discoverNativeGVKs(ctx context.Context, dc discovery.DiscoveryInterface, re
 			if crdGKs[schema.GroupKind{Group: gv.Group, Kind: res.Kind}] {
 				continue
 			}
-			if !(slices.Contains(res.Verbs, "list") && slices.Contains(res.Verbs, "watch")) {
+			if !slices.Contains(res.Verbs, "list") || !slices.Contains(res.Verbs, "watch") {
 				continue // not a plausible Karta root (virtual/imperative)
 			}
 			natives[schema.GroupVersionKind{Group: gv.Group, Version: gv.Version, Kind: res.Kind}] = true
