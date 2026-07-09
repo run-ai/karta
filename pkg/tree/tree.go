@@ -16,8 +16,8 @@ import (
 type WorkloadTree struct {
 	// Status is nil when no status was evaluated, e.g. an offline pre-submission
 	// tree built from a manifest that has not reached the cluster.
-	Status   *WorkloadStatus
-	Children []ComponentNode
+	Status   *WorkloadStatus `json:"status,omitempty"`
+	Children []ComponentNode `json:"children,omitempty"`
 }
 
 // WorkloadStatus holds the normalized statuses extracted from the root component.
@@ -25,7 +25,7 @@ type WorkloadStatus struct {
 	// Phases holds all ResourceStatus values that matched the workload's StatusMappings.
 	// Status mappings are not mutually exclusive, so there can be multiple matches
 	// (e.g. ["Running", "Degraded"]). Empty means no match (Undefined).
-	Phases []string
+	Phases []string `json:"phases,omitempty"`
 }
 
 // ComponentNode represents one component in the hierarchy.
@@ -36,11 +36,11 @@ type WorkloadStatus struct {
 // component -> instance -> component - so consumers can walk the tree without
 // special-casing single- versus multi-instance components.
 type ComponentNode struct {
-	Name string
+	Name string `json:"name"`
 	// Kind is nil for logical grouping components (those without a Kind in the definition).
-	Kind             *metav1.GroupVersionKind
-	HasPodDefinition bool
-	Instances        []InstanceNode
+	Kind             *metav1.GroupVersionKind `json:"kind,omitempty"`
+	HasPodDefinition bool                     `json:"hasPodDefinition"`
+	Instances        []InstanceNode           `json:"instances,omitempty"`
 }
 
 // InstanceNode represents one instance of a component.
@@ -48,9 +48,9 @@ type ComponentNode struct {
 // ReplicaKey is nil when no ReplicaSelector is defined on the component.
 // Both axes are orthogonal and can co-exist.
 type InstanceNode struct {
-	InstanceKey       *string
-	ReplicaKey        *string
-	Scale             *resource.Scale
-	ExtractedInstance *resource.ExtractedInstance
-	Children          []ComponentNode
+	InstanceKey       *string                     `json:"instanceKey,omitempty"`
+	ReplicaKey        *string                     `json:"replicaKey,omitempty"`
+	Scale             *resource.Scale             `json:"scale,omitempty"`
+	ExtractedInstance *resource.ExtractedInstance `json:"extractedInstance,omitempty"`
+	Children          []ComponentNode             `json:"children,omitempty"`
 }

@@ -41,6 +41,19 @@ generate-mocks: ## Generate mocks using go generate
 .PHONY: test
 test: generate-mocks ## Run tests with mock generation
 	go test ./...
+	cd operator && go test ./pkg/...
+
+.PHONY: plugin-wasm
+plugin-wasm: ## Build the Headlamp plugin WebAssembly tree engine
+	cd headlamp-plugin/wasm && GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o karta.wasm .
+	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" headlamp-plugin/wasm/wasm_exec.js
+
+.PHONY: plugin-build
+plugin-build: plugin-wasm ## Build the Headlamp plugin (requires Node.js >= 22)
+	npm --prefix headlamp-plugin ci
+	npm --prefix headlamp-plugin run lint
+	npm --prefix headlamp-plugin run tsc
+	npm --prefix headlamp-plugin run build
 
 lint-go: golangci-lint
 	echo "Running golangci linter"
