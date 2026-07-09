@@ -32,7 +32,7 @@ jobs:
         run: make check
 
       - name: Get golangci-lint version
-        run: echo "GOLANGCI_LINT_VERSION=$(grep '^GOLANGCI_LINT_VERSION' Makefile | cut -d'=' -f2 | tr -d ' ')" >> $GITHUB_ENV
+        run: echo "GOLANGCI_LINT_VERSION=$(grep '^GOLANGCI_LINT_VERSION' hack/tools.mk | cut -d'=' -f2 | tr -d ' ')" >> $GITHUB_ENV
 
       - name: Lint Go
         uses: golangci/golangci-lint-action@v9

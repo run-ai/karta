@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +43,7 @@ type Reconciler struct {
 }
 
 // NewReconciler constructs a new Reconciler.
-func NewReconciler(c client.Client, recorder record.EventRecorder) *Reconciler {
+func NewReconciler(c client.Client, recorder events.EventRecorder) *Reconciler {
 	return &Reconciler{Client: c, recorder: recorder}
 }
 
@@ -129,7 +130,7 @@ func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *k
 func (r *Reconciler) validateKarta(logger logr.Logger, karta *kartav1alpha1.Karta) {
 	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
 		logger.Info("Karta spec validation failed", "error", err.Error())
-		r.recorder.Event(karta, corev1.EventTypeWarning, ReasonValidationFailed, err.Error())
+		r.recorder.Eventf(karta, nil, corev1.EventTypeWarning, ReasonValidationFailed, "Validating", "%s", err.Error())
 		setValidated(&karta.Status, karta.Generation, metav1.ConditionFalse, err.Error())
 		return
 	}
@@ -159,7 +160,7 @@ func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, kar
 		msg := fmt.Sprintf("CRD for %s/%s not found or does not serve version %s",
 			gvk.Group, gvk.Kind, gvk.Version)
 		logger.V(1).Info("CRD not found", "gvk", gvk.String())
-		r.recorder.Event(karta, corev1.EventTypeWarning, ReasonCRDNotFound, msg)
+		r.recorder.Eventf(karta, nil, corev1.EventTypeWarning, ReasonCRDNotFound, "CheckingCRD", "%s", msg)
 		setCRDExists(&karta.Status, karta.Generation, metav1.ConditionFalse, msg)
 	}
 	return nil
