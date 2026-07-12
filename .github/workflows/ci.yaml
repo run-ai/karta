@@ -19,6 +19,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+          cache-dependency-path: |
+            go.sum
+            operator/go.sum
 
       - name: Cache bin tools
         uses: actions/cache@v6
@@ -44,3 +47,7 @@ jobs:
 
       - name: Validate helm chart renders
         run: make helm-validate
+
+      - name: Run operator checks
+        working-directory: operator
+        run: make check

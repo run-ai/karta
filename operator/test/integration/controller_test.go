@@ -64,6 +64,22 @@ var _ = Describe("Reconciler (envtest)", func() {
 		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
 	})
 
+	It("sets CRDExists=True for a built-in GVK with no backing CRD", func() {
+		gvk := schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
+		k := newValidKarta("envtest-builtin-gvk", &gvk)
+		Expect(k8sClient.Create(testCtx, k)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			conds := getKarta(k.Name).Status.Conditions
+			crd := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionCRDExists))
+			g.Expect(crd).NotTo(BeNil())
+			g.Expect(crd.Status).To(Equal(metav1.ConditionTrue))
+			ready := apimeta.FindStatusCondition(conds, string(kartav1alpha1.ConditionReady))
+			g.Expect(ready).NotTo(BeNil())
+			g.Expect(ready.Status).To(Equal(metav1.ConditionTrue))
+		}, eventuallyTimeout, eventuallyInterval).Should(Succeed())
+	})
+
 	It("sets Ready=True and stamps index labels when the CRD exists", func() {
 		crd := buildCRD("test.run.ai", "Widget", "v1")
 		Expect(k8sClient.Create(testCtx, crd)).To(Succeed())
