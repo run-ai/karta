@@ -42,17 +42,28 @@ jobs:
       - name: Regenerate generated files
         run: make generate manifests generate-mocks generate-licenses
 
-      - name: Commit and push if changed
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_REF: ${{ github.head_ref }}
+      - name: Check for drift
+        id: drift
         run: |
           git add -A
           if git diff --cached --quiet; then
-            echo "No drift"
-            exit 0
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -s -m "build: regenerate files for dependency bump"
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" "HEAD:${HEAD_REF}"
+
+      # A plain `git push` commit is unsigned and blocked by the
+      # required-signatures rule on main. Committing through the GitHub API
+      # (GraphQL createCommitOnBranch) makes GitHub sign the commit, so it
+      # is marked verified. The Signed-off-by trailer replaces `commit -s`.
+      - name: Commit and push if changed
+        if: steps.drift.outputs.changed == 'true'
+        uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
+        with:
+          commit_message: |-
+            build: regenerate files for dependency bump
+            Signed-off-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          repo: ${{ github.repository }}
+          branch: ${{ github.head_ref }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
