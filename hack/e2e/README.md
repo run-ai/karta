@@ -15,7 +15,7 @@ hack/e2e/
   up.sh                 orchestrator: base + selected operators (install then verify)
   down.sh               tear the cluster down (and its kubeconfig for named clusters)
   global.env            single source of truth for versions and runtime defaults
-  kind-config.yaml      kind cluster shape (1 control-plane + 1 worker)
+  kind-config.yaml      kind cluster shape (1 control-plane + 2 workers)
   operators/
     _common.sh          shared helpers + GitHub Actions logging, sourced by every script
     <name>/
@@ -42,10 +42,11 @@ automatically: kserve pulls knative, dynamo pulls grove.
 ## How up.sh runs an operator
 
 For each selected operator, up.sh runs `operators/<name>/install.sh` then
-`operators/<name>/verify.sh` as subprocesses. It groups each operator in the CI
-log (`::group::`) and writes an install summary table to the run's Summary page
-(operator, version, install time, smoke time). A failing install or smoke fails
-provisioning fast, rather than partway through the suite.
+`operators/<name>/verify.sh` as `bash <script>` subprocesses. The only contract is
+the exit code: any non-zero exit is a failed install/smoke and fails provisioning
+fast (the `main()` wrapper in the scripts is just convention). up.sh groups each
+operator in the CI log (`::group::`) and writes an install summary table to the run's
+Summary page (operator, version, install time, smoke time).
 
 ## Shared helpers (`operators/_common.sh`)
 

@@ -3,21 +3,9 @@
 # Copyright (c) 2026 NVIDIA Corporation
 #
 # Provision a local kind cluster for the Karta e2e suite: builds and deploys the
-# Karta operator, then installs the dependencies the suite needs (cert-manager,
-# the fake-gpu-operator) and the upstream workload operators it exercises. Each
-# operator is smoke-tested as it installs, so a broken install fails provisioning.
-#
-# Usage:
-#   ./hack/e2e/up.sh                 # install everything (default)
-#   ./hack/e2e/up.sh jobset kuberay  # install only the named workload operators
-#   ./hack/e2e/up.sh --list jobset   # print the resolved install plan and exit
-#   ./hack/e2e/up.sh --help
-#
-# Each workload operator is a standalone script under hack/e2e/operators/<name>/:
-# install.sh does the install, verify.sh smoke-tests it. up.sh runs them as
-# subprocesses (install then verify), so the two concerns stay decoupled and each
-# script is runnable on its own. The always-on base (kind cluster, cert-manager,
-# fake-gpu-operator, the Karta operator) is installed regardless of selection.
+# Karta operator, installs the base dependencies (cert-manager, fake-gpu-operator),
+# and installs the selected upstream workload operators, smoke-testing each one as
+# it installs. Run with --help for usage; see hack/e2e/README.md for the details.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -50,8 +38,8 @@ ALL_WORKLOADS=(lws jobset kuberay kubeflow knative kserve milvus grove dynamo ni
 # deps_of <workload> prints the workload operators that must be installed first.
 deps_of() {
   case "$1" in
-    kserve) echo "knative" ;; # KServe Serverless routes through Knative + Kourier
-    dynamo) echo "grove" ;;   # Grove is Dynamo's multinode orchestrator
+    kserve) echo "knative" ;;
+    dynamo) echo "grove" ;;
   esac
 }
 
@@ -119,10 +107,6 @@ setup_cluster() {
   echo "==> load operator image"
   kind load docker-image "${IMAGE}" --name "${CLUSTER_NAME}"
   kubectl wait --for=condition=Ready nodes --all --timeout=120s
-  # Untaint the control-plane so its capacity is schedulable: the single worker
-  # cannot hold every operator plus a real Milvus/Knative/KServe workload at once.
-  kubectl taint nodes "${CLUSTER_NAME}-control-plane" \
-    node-role.kubernetes.io/control-plane:NoSchedule- 2>/dev/null || true
 }
 
 install_cert_manager() {
@@ -158,7 +142,8 @@ install_karta() {
 # Exits non-zero on the first failure so a broken operator fails provisioning fast
 # rather than partway through the e2e suite.
 run_operator() {
-  local name="$1" dir="${OPERATORS_DIR}/$1" ver
+  local name="$1" dir="${OPERATORS_DIR}/$1"
+  local ver
   ver="$(version_of "${name}")"
   [ -f "${dir}/install.sh" ] || { fail "no install.sh for operator ${name}"; exit 1; }
   group "operator: ${name} (${ver})"
@@ -200,17 +185,19 @@ main() {
   for arg in "$@"; do
     case "$arg" in
       -h | --help) usage; exit 0 ;;
-      --list | --plan) plan_only=true ;;
+      --list) plan_only=true ;;
       -*) echo "unknown flag: $arg" >&2; usage; exit 2 ;;
       *) requested+=("$arg") ;;
     esac
   done
 
-  # Resolve the selection: no names means every workload.
-  # "all" is a convenience alias for every workload (same as passing no args).
-  for w in "${requested[@]}"; do
-    [ "$w" = "all" ] && { requested=("${ALL_WORKLOADS[@]}"); break; }
-  done
+  # "all" is an alias for every workload (same as passing no args). Guard the
+  # expansion so bare "up.sh" does not trip set -u on the empty array (bash 3.2).
+  if [ "${#requested[@]}" -gt 0 ]; then
+    for w in "${requested[@]}"; do
+      [ "$w" = "all" ] && { requested=("${ALL_WORKLOADS[@]}"); break; }
+    done
+  fi
 
   local selected=()
   if [ "${#requested[@]}" -eq 0 ]; then

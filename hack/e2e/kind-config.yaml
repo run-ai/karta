@@ -1,7 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
+#
+# The control-plane stays tainted (kube default) so workloads never compete with the
+# API server; two workers give the suite enough room without untainting it.
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
   - role: control-plane
+  - role: worker
   - role: worker
