@@ -102,7 +102,8 @@ $(GO_LICENCE_DETECTOR): $(LOCALBIN)
 generate-licenses: go-licence-detector download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
 	@set -eu; \
 	echo "Generating NOTICE and THIRD_PARTY_LICENSES files from current dependencies using go-licence-detector"; \
-	go mod download -json | $(GO_LICENCE_DETECTOR) \
+	go mod download -json > $(LOCALBIN)/deps.json; \
+	$(GO_LICENCE_DETECTOR) -in $(LOCALBIN)/deps.json \
 		-noticeTemplate=hack/licenses/notice.tpl \
 		-noticeOut=NOTICE \
 		-depsTemplate=hack/licenses/third_party_licenses.tpl \
