@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+
+# Dependabot cannot run repo scripts, so rerun the generators from
+# `make validate` (deepcopy, CRDs, mocks, license files) and push any
+# drift back to its PR branch.
+name: Dependabot Codegen
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dependabot-codegen-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          # Codegen executes dependency code (go generate); keep the write
+          # token out of its reach and inject it only in the push step.
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+          cache-dependency-path: |
+            go.sum
+            operator/go.sum
+
+      - name: Regenerate generated files
+        run: make generate manifests generate-mocks generate-licenses
+
+      - name: Commit and push if changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No drift"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -s -m "build: regenerate files for dependency bump"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" "HEAD:${HEAD_REF}"
