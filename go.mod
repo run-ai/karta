@@ -3,7 +3,7 @@ module github.com/run-ai/karta
 go 1.26.3
 
 require (
-	github.com/itchyny/gojq v0.12.19
+	github.com/itchyny/gojq v0.12.20
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.40.0
 	github.com/samber/lo v1.53.0
