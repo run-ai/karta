@@ -11,9 +11,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newTestTree wires the workload command (which owns the required namespace
-// flag) under a bare root, plus a dummy runnable subcommand that inherits the
-// flag.
+// newTestTree wires the workload command (which owns the namespace flag) under
+// a bare root, plus a dummy runnable subcommand that inherits the flag.
 func newTestTree() (*cobra.Command, *bytes.Buffer) {
 	root := &cobra.Command{Use: "root", SilenceUsage: true, SilenceErrors: true}
 

@@ -29,9 +29,8 @@ func withOutput(cmd *cobra.Command) {
 		}))
 }
 
-// withNamespace registers the required -n/--namespace persistent flag on cmd.
+// withNamespace registers the -n/--namespace persistent flag on cmd.
 func withNamespace(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringP("namespace", "n", "",
-		"Namespace scope for workload commands (required)")
-	cobra.CheckErr(cmd.MarkPersistentFlagRequired("namespace"))
+		"Namespace scope for workload commands")
 }
