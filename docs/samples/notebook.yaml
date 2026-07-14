@@ -1,0 +1,46 @@
+apiVersion: run.ai/v1alpha1
+kind: Karta
+metadata:
+  name: kubeflow-org-notebook-v1beta1
+spec:
+  structureDefinition:
+    rootComponent:
+      name: notebook
+      kind:
+        group: kubeflow.org
+        version: v1beta1
+        kind: Notebook
+      specDefinition:
+        podTemplateSpecPath: .spec.template
+      statusDefinition:
+        conditionsDefinition:
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          reasonFieldName: reason
+          messageFieldName: message
+        statusMappings:
+          initializing:
+          - byConditions:
+              - type: Created
+                status: "True"
+          running:
+          - byConditions:
+              - type: Running
+                status: "True"
+          completed:
+          - byConditions:
+              - type: Succeeded
+                status: "True"
+          failed:
+          - byConditions:
+              - type: Failed
+                status: "True"
+          suspended:
+          - byConditions:
+              - type: Suspended
+                status: "True"
+          suspending:
+          - byExpression:
+              expression: .spec.runPolicy.suspend == true and (.status.replicaStatuses // {} | to_entries | map(.value.active // 0) | add // 0) > 0
+              expectedResult: "true"

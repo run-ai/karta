@@ -1,0 +1,44 @@
+apiVersion: run.ai/v1alpha1
+kind: Karta
+metadata:
+  name: batch-cronjob-v1
+spec:
+  structureDefinition:
+    rootComponent:
+      name: cronjob
+      kind:
+        group: batch
+        version: v1
+        kind: CronJob
+      scaleDefinition:
+        replicasPath: .spec.jobTemplate.spec.parallelism // 1
+      specDefinition:
+        podTemplateSpecPath: .spec.jobTemplate.spec.template
+      suspendDefinition:
+        suspendActions:
+          - path: .spec.suspend
+            value: "true"
+        resumeActions:
+          - path: .spec.suspend
+            value: "false"
+      statusDefinition:
+        statusMappings:
+          running:
+          - byExpression:
+              expression: (.status.active // [] | length) > 0
+              expectedResult: "true"
+          suspended:
+          - byExpression:
+              expression: .spec.suspend == true and ((.status.active // [] | length) == 0)
+              expectedResult: "true"
+          suspending:
+          - byExpression:
+              expression: .spec.suspend == true and ((.status.active // [] | length) > 0)
+              expectedResult: "true"
+    childComponents:
+      - name: job
+        kind:
+          group: batch
+          version: v1
+          kind: Job
+        ownerRef: cronjob

@@ -1,15 +1,15 @@
 apiVersion: run.ai/v1alpha1
 kind: Karta
 metadata:
-  name: kubeflow-org-mpijob-v1
+  name: kubeflow-org-xgboostjob-v1
 spec:
   structureDefinition:
     rootComponent:
-      name: mpijob
+      name: xgboostjob
       kind:
         group: kubeflow.org
         version: v1
-        kind: MPIJob
+        kind: XGBoostJob
       suspendDefinition:
         suspendActions:
           - path: .spec.runPolicy.suspend
@@ -22,22 +22,17 @@ spec:
           path: .status.conditions
           typeFieldName: type
           statusFieldName: status
+          reasonFieldName: reason
           messageFieldName: message
         statusMappings:
           initializing:
           - byConditions:
               - type: Created
                 status: "True"
-              - type: Running
-                status: "False"
           running:
           - byConditions:
               - type: Running
                 status: "True"
-              - type: Succeeded
-                status: "False"
-              - type: Failed
-                status: "False"
           completed:
           - byConditions:
               - type: Succeeded
@@ -55,45 +50,42 @@ spec:
               expression: .spec.runPolicy.suspend == true and (.status.replicaStatuses // {} | to_entries | map(.value.active // 0) | add // 0) > 0
               expectedResult: "true"
     childComponents:
-      - name: launcher
+      - name: Master
         kind:
           group: ""
           version: v1
           kind: Pod
-        ownerRef: mpijob
+        ownerRef: xgboostjob
         specDefinition:
-          podTemplateSpecPath: .spec.mpiReplicaSpecs.Launcher.template
+          podTemplateSpecPath: .spec.xgbReplicaSpecs.Master.template
         scaleDefinition:
-          replicasPath: .spec.mpiReplicaSpecs.Launcher.replicas // 1
+          replicasPath: .spec.xgbReplicaSpecs.Master.replicas // 1
         podSelector:
           componentTypeSelector:
             keyPath: .metadata.labels["training.kubeflow.org/replica-type"]
-            value: launcher
-      - name: worker
+            value: Master
+      - name: Worker
         kind:
           group: ""
           version: v1
           kind: Pod
-        ownerRef: mpijob
+        ownerRef: xgboostjob
         specDefinition:
-          podTemplateSpecPath: .spec.mpiReplicaSpecs.Worker.template
+          podTemplateSpecPath: .spec.xgbReplicaSpecs.Worker.template
         scaleDefinition:
-          replicasPath: .spec.mpiReplicaSpecs.Worker.replicas // 1
+          replicasPath: .spec.xgbReplicaSpecs.Worker.replicas // 1
         podSelector:
           componentTypeSelector:
             keyPath: .metadata.labels["training.kubeflow.org/replica-type"]
-            value: worker
-  
-  # Optimization instructions
+            value: Worker
   optimizationInstructions:
-    # Gang scheduling for distributed training coordination
     gangScheduling:
       podGroups:
         - name: job
           members:
-            - componentName: launcher
+            - componentName: Master
               groupByKeyPaths:
                 - .metadata.labels["training.kubeflow.org/job-name"]
-            - componentName: worker
+            - componentName: Worker
               groupByKeyPaths:
                 - .metadata.labels["training.kubeflow.org/job-name"]

@@ -1,0 +1,28 @@
+apiVersion: run.ai/v1alpha1
+kind: Karta
+metadata:
+  name: kubeflow-org-scheduledworkflow-v1alpha1
+spec:
+  structureDefinition:
+    rootComponent:
+      name: scheduledworkflow
+      kind:
+        group: kubeflow.org
+        version: v1alpha1
+        kind: ScheduledWorkflow
+      scaleDefinition:
+        replicasPath: "1"
+      specDefinition:
+        podTemplateSpecPath: .spec.workflow
+      statusDefinition:
+        conditionsDefinition:
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          reasonFieldName: reason
+          messageFieldName: message
+        statusMappings:
+          running:
+          - byConditions:
+              - type: Enabled
+                status: "True"

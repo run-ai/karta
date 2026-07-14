@@ -1,55 +1,30 @@
 apiVersion: run.ai/v1alpha1
 kind: Karta
 metadata:
-  name: ray-io-rayjob-v1
+  name: ray-io-rayservice-v1
 spec:
   structureDefinition:
     rootComponent:
-      name: rayjob
+      name: rayservice
       kind:
         group: ray.io
         version: v1
-        kind: RayJob
-      suspendDefinition:
-        suspendActions:
-          - path: .spec.suspend
-            value: "true"
-        resumeActions:
-          - path: .spec.suspend
-            value: "false"
+        kind: RayService
       statusDefinition:
         phaseDefinition:
-          path: .status.jobStatus
-        conditionsDefinition:
-          path: .status.conditions
-          typeFieldName: type
-          statusFieldName: status
-          messageFieldName: message
-          reasonFieldName: null
+          path: .status.state
         statusMappings:
-          initializing:
-          - byPhase: PENDING
           running:
-          - byPhase: RUNNING
-          completed:
-          - byPhase: SUCCEEDED
+          - byPhase: ready
           failed:
-          - byPhase: FAILED
-          suspended:
-          - byExpression:
-              expression: .status.jobDeploymentStatus == "Suspended"
-              expectedResult: "true"
-          suspending:
-          - byExpression:
-              expression: .status.jobDeploymentStatus == "Suspending"
-              expectedResult: "true"
+          - byPhase: failed
     childComponents:
       - name: head
         kind:
           group: ""
           version: v1
           kind: Pod
-        ownerRef: rayjob
+        ownerRef: rayservice
         specDefinition:
           podTemplateSpecPath: .spec.rayClusterSpec.headGroupSpec.template
         scaleDefinition:
@@ -63,7 +38,7 @@ spec:
           group: ""
           version: v1
           kind: Pod
-        ownerRef: rayjob
+        ownerRef: rayservice
         specDefinition:
           podTemplateSpecPath: .spec.rayClusterSpec.workerGroupSpecs[].template
         scaleDefinition:
@@ -78,7 +53,7 @@ spec:
   optimizationInstructions:
     gangScheduling:
       podGroups:
-        - name: job
+        - name: service
           members:
             - componentName: head
               groupByKeyPaths:

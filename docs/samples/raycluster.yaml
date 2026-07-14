@@ -18,6 +18,14 @@ spec:
           - byPhase: ready
           failed:
           - byPhase: failed
+          suspended:
+          - byExpression:
+              expression: .spec.suspend == true and (.status.state == "suspended" or (.status.state | not))
+              expectedResult: "true"
+          suspending:
+          - byExpression:
+              expression: .spec.suspend == true and .status.state != null and .status.state != "suspended"
+              expectedResult: "true"
     childComponents:
       - name: head
         kind:
