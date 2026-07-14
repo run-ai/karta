@@ -37,6 +37,14 @@ func TestWorkloadWithNamespace(t *testing.T) {
 	}
 }
 
+func TestWorkloadRejectsArgs(t *testing.T) {
+	root, _ := newTestTree()
+	root.SetArgs([]string{"workload", "bogus"})
+	if err := root.Execute(); err == nil {
+		t.Fatal("expected error for unknown argument, got nil")
+	}
+}
+
 // The workload parent command with a namespace but no subcommand prints help
 // rather than erroring.
 func TestWorkloadParentShowsHelp(t *testing.T) {

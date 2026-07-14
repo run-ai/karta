@@ -12,6 +12,7 @@ func newWorkloadCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "workload",
 		Short: "Inspect workloads running in a namespace",
+		Args:  cobra.NoArgs,
 		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
 	}
 
