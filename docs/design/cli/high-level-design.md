@@ -226,19 +226,19 @@ The CLI, web dashboard, and MCP all need the same underlying data - a workload's
 
 Beyond the visibility tool, this tree can serve as a shared language between components. The Run:ai External Workload Integrator (EWI) already builds a similar tree for its complex workload structure feature (tracking hierarchies like Dynamo with multi-instance components and nested children) - it could adopt `WorkloadTree` as its foundation. A user submitting a workload could use the same tree structure to set desired topology or other instructions pre-submission.
 
-The model is split into two layers: `WorkloadTree` is the raw data produced by the Karta library (structure, scale, specs, matched pods - no computation). `WorkloadView` is the display layer built on top of it by the CLI (resource aggregation, ready counts, pod details).
+The model is split into two layers: `WorkloadTree` is the raw data produced by the Karta library (desired structure, scale, specs, status - no live pods, no computation). `WorkloadView` is the display layer built on top of it by the CLI (resource aggregation, ready counts, pod details).
 
 ### `WorkloadTree` - shared utility (`pkg/tree/`)
 
-A generic tree built from a Karta definition + workload object + matched pods. Contains the raw Karta-extracted data - structure, scale, extracted specs, status, and which pods belong where. This lives in `pkg/` so any consumer can use it.
+A generic tree built from a Karta definition + workload object. Contains the raw Karta-extracted data - the desired structure, scale, extracted specs, and status, derived entirely from the workload spec. This lives in `pkg/` so any consumer can use it.
 
 The structure was designed with the Run:ai External Workload Integrator (EWI) as a reference consumer - recently a feature was added to the EWI that builds complex hierarchical trees for workloads like Dynamo (multi-instance components with nested children per instance). The `WorkloadTree` is shaped so the EWI could adopt it as its tree-building foundation and add its own persistence layer on top.
 
 ```go
 // WorkloadTree is the raw tree produced by the shared builder.
 type WorkloadTree struct {
-    Status     WorkloadStatus              // from root component GetStatus()
-    Children   []ComponentNode             // root-level components
+    Status   WorkloadStatus                // from root component GetStatus()
+    Children []ComponentNode               // root-level components
 }
 
 type WorkloadStatus struct {
@@ -246,9 +246,9 @@ type WorkloadStatus struct {
 }
 
 type ComponentNode struct {
-    Name       string
-    Kind       *GroupVersionKind            // nil for logical grouping components
-    Instances  []InstanceNode              // always at least one (see below)
+    Name      string
+    Kind      *GroupVersionKind             // nil for logical grouping components
+    Instances []InstanceNode               // always at least one (see below)
 }
 
 // InstanceNode represents one instance of a component.
@@ -262,7 +262,6 @@ type InstanceNode struct {
     ReplicaKey        *string              // nil = not replicated
     Scale             *Scale               // from Component.GetScale()
     ExtractedInstance *ExtractedInstance    // from Component.GetExtractedInstances() - pod specs, metadata
-    Pods              []*corev1.Pod         // live pods matched to this instance
     Children          []ComponentNode       // child components under this instance
 }
 
@@ -273,19 +272,28 @@ type Scale struct {
 }
 ```
 
+Each pod-bearing component carries its desired scale over the scale envelope via `Scale` (`MinReplicas`, `MaxReplicas`, and `Replicas`), read directly from the workload spec; a consumer that needs a desired pod count computes it from the scale. The tree carries no live pods; pod-level data (resource usage, phase, node, readiness) is gathered separately by the consumer, not from the tree.
+
 ### Tree builder (`pkg/tree/builder.go`)
+
+```go
+func Build(ctx context.Context, karta *v1alpha1.Karta, factory *resource.ComponentFactory) (*WorkloadTree, error)
+```
+
+The builder works top-down, component by component, reading the desired structure entirely from the workload spec. Each component is expanded into instances from its `InstanceIdPath` (for example the JobSet `replicatedJobs[].name` or Dynamo service keys); a component with no instance id path has a single unnamed instance. Each instance then recurses into its child components.
+
+
+### Pod matching (live consumers)
+
+Mapping live pods onto the tree is a separate step from building it. Building stays spec-only so it has no cluster dependency; a consumer that needs per-pod status (phase, node, readiness) or the per-replica breakdown fetches the pods itself and matches them onto the tree. The matching strategy is decoupled behind a `PodMatcher` so each consumer can plug in its own logic via the `pkg/resource` pod selectors (`ReplicaSelector.KeyPath`, `ComponentInstanceSelector`):
 
 ```go
 type PodMatcher interface {
     Matches(ctx context.Context, pod *corev1.Pod, node *ComponentNode) (bool, error)
 }
-
-func Build(ctx context.Context, ri *ResourceInterface, workload client.Object, pods []corev1.Pod, matcher PodMatcher) (*WorkloadTree, error)
 ```
 
-The `PodMatcher` decouples the tree structure from the matching strategy. Each consumer provides its own matching logic - the builder just asks "does this pod belong here?" and places it accordingly.
-
-The builder works top-down, component by component. At each component, it uses the matcher to find which pods belong to it or its descendants, then distributes them across instances. Each instance passes only its pods down to child components, narrowing the set at each level until pods reach their leaf component.
+Matching walks top-down, component by component. At each component the matcher claims the pods that belong to it or its descendants, then distributes them across instances; each instance passes only its pods down to child components, narrowing the set at each level until pods reach their leaf component.
 
 Example for a PyTorchJob with 5 pods (master-0, worker-0..3):
 

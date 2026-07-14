@@ -27,6 +27,41 @@ pull request. Where consensus cannot be reached, maintainers resolve the matter 
 a simple majority. No single organization is the deciding authority for the
 project.
 
+## Becoming a maintainer
+
+Maintainership is earned through sustained, high-quality contribution, and the
+ladder is open to contributors from any organization.
+
+- **Contributor** - anyone who opens issues or pull requests. No prior status is
+  required; see [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+- **Reviewer** - a contributor with a track record of quality contributions and
+  review feedback in an area of the project. Reviewers are expected to help triage
+  issues and review pull requests in their area.
+- **Maintainer** - a reviewer who has demonstrated sustained ownership and sound
+  technical judgment. Maintainers carry merge rights and share responsibility for
+  direction, reviews, and releases.
+
+A contributor is nominated for reviewer or maintainer by an existing maintainer,
+typically after a consistent history of merged contributions. The nomination is
+made in a public pull request that adds the person to [MAINTAINERS.md](MAINTAINERS.md)
+(and `OWNERS` where applicable), and is confirmed by lazy consensus of the current
+maintainers. Promotion is based on contribution and judgment, not affiliation; the
+project actively wants maintainers from more than one organization.
+
+## Stepping down and emeritus
+
+Maintainers may step down at any time by opening a pull request that removes them
+from [MAINTAINERS.md](MAINTAINERS.md) and `OWNERS`. Maintainers who are no longer
+active may be moved to emeritus status: they are recognized for their past
+contributions and are welcome to return, but they no longer carry active
+maintainer responsibilities or merge rights.
+
+A maintainer who is inactive for an extended period, or who is unable to uphold
+these responsibilities, may be moved to emeritus by lazy consensus of the
+remaining maintainers via a public pull request. The intent is to keep the active
+maintainer list an accurate reflection of who is currently stewarding the project,
+not to penalize anyone.
+
 ## Vendor neutrality
 
 Karta originated at Run:ai (NVIDIA) but is intended as a community standard, not a

@@ -22,8 +22,9 @@ GO_LICENCE_DETECTOR ?= $(LOCALBIN)/go-licence-detector
 
 # Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
-GOLANGCI_LINT_VERSION ?= v2.12.2
 GO_LICENCE_DETECTOR_VERSION ?= v0.10.0
+# GOLANGCI_LINT_VERSION is defined in hack/tools.mk (shared with operator/Makefile).
+include hack/tools.mk
 PATH := $(abspath $(LOCALBIN)):$(PATH)
 
 .PHONY: manifests
@@ -101,7 +102,8 @@ $(GO_LICENCE_DETECTOR): $(LOCALBIN)
 generate-licenses: go-licence-detector download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
 	@set -eu; \
 	echo "Generating NOTICE and THIRD_PARTY_LICENSES files from current dependencies using go-licence-detector"; \
-	go mod download -json | $(GO_LICENCE_DETECTOR) \
+	go mod download -json > $(LOCALBIN)/deps.json; \
+	$(GO_LICENCE_DETECTOR) -in $(LOCALBIN)/deps.json \
 		-noticeTemplate=hack/licenses/notice.tpl \
 		-noticeOut=NOTICE \
 		-depsTemplate=hack/licenses/third_party_licenses.tpl \

@@ -19,6 +19,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+          cache-dependency-path: |
+            go.sum
+            operator/go.sum
 
       - name: Cache bin tools
         uses: actions/cache@v6
@@ -32,7 +35,7 @@ jobs:
         run: make check
 
       - name: Get golangci-lint version
-        run: echo "GOLANGCI_LINT_VERSION=$(grep '^GOLANGCI_LINT_VERSION' Makefile | cut -d'=' -f2 | tr -d ' ')" >> $GITHUB_ENV
+        run: echo "GOLANGCI_LINT_VERSION=$(grep '^GOLANGCI_LINT_VERSION' hack/tools.mk | cut -d'=' -f2 | tr -d ' ')" >> $GITHUB_ENV
 
       - name: Lint Go
         uses: golangci/golangci-lint-action@v9
@@ -44,3 +47,7 @@ jobs:
 
       - name: Validate helm chart renders
         run: make helm-validate
+
+      - name: Run operator checks
+        working-directory: operator
+        run: make check
