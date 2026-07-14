@@ -139,30 +139,10 @@ CLUSTER_NAME ?= karta-e2e
 
 # Pick which operators to install:
 #   make e2e-up                          # everything
-#   make e2e-up WORKLOADS="jobset lws"   # a couple - one provision, deps resolved once
-#   make e2e-up-jobset                   # a single operator (tab-completes: make e2e-up-<TAB>)
-#   make e2e-up-all                      # everything, explicit
+#   make e2e-up WORKLOADS="jobset lws"   # a subset - one provision, deps resolved once
 .PHONY: e2e-up
 e2e-up: ## Provision a kind cluster + operators (WORKLOADS="jobset kuberay" for a subset, or "all"; CLUSTER_NAME=<name> for an isolated parallel cluster)
 	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/up.sh $(WORKLOADS)
-
-# Per-operator convenience targets, spelled out one rule each so shell completion
-# lists them individually: make e2e-up-<TAB> -> e2e-up-jobset, e2e-up-kserve, ...
-# Keep this list in sync with ALL_WORKLOADS in hack/e2e/up.sh. Use WORKLOADS on
-# e2e-up to compose several; e2e-up-all (or bare e2e-up) installs everything.
-.PHONY: e2e-up-all e2e-up-lws e2e-up-jobset e2e-up-kuberay e2e-up-kubeflow e2e-up-knative e2e-up-kserve e2e-up-milvus e2e-up-grove e2e-up-dynamo e2e-up-nim
-e2e-up-all: ## Provision a kind cluster + all operators
-	@$(MAKE) e2e-up WORKLOADS=all
-e2e-up-lws:      ; @$(MAKE) e2e-up WORKLOADS=lws
-e2e-up-jobset:   ; @$(MAKE) e2e-up WORKLOADS=jobset
-e2e-up-kuberay:  ; @$(MAKE) e2e-up WORKLOADS=kuberay
-e2e-up-kubeflow: ; @$(MAKE) e2e-up WORKLOADS=kubeflow
-e2e-up-knative:  ; @$(MAKE) e2e-up WORKLOADS=knative
-e2e-up-kserve:   ; @$(MAKE) e2e-up WORKLOADS=kserve
-e2e-up-milvus:   ; @$(MAKE) e2e-up WORKLOADS=milvus
-e2e-up-grove:    ; @$(MAKE) e2e-up WORKLOADS=grove
-e2e-up-dynamo:   ; @$(MAKE) e2e-up WORKLOADS=dynamo
-e2e-up-nim:      ; @$(MAKE) e2e-up WORKLOADS=nim
 
 .PHONY: e2e-down
 e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)

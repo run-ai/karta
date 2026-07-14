@@ -30,7 +30,7 @@ hack/e2e/
 ```sh
 make e2e-up                          # base + all operators
 make e2e-up WORKLOADS="jobset lws"   # base + a subset (one provision, deps resolved once)
-make e2e-up-jobset                   # base + a single operator (tab-completes: make e2e-up-<TAB>)
+make e2e-up WORKLOADS="jobset"       # base + a single operator
 make e2e-down                        # tear down
 ./hack/e2e/up.sh --list dynamo       # print the resolved plan and exit (dynamo pulls grove)
 ```
@@ -106,8 +106,6 @@ Install side (this directory):
    the operator shows in the install summary.
 4. Add `<name>` to `ALL_WORKLOADS` in `up.sh` (in install order), and a `deps_of`
    entry only if it depends on another operator.
-5. Add an `e2e-up-<name>` line to the `Makefile` (next to the others) so
-   `make e2e-up-<name>` works and tab-completes.
 
 Before pushing: `make lint-shell` (shellcheck), then provision just that operator to
-confirm it installs and smoke-tests clean, for example `make e2e-up-<name>`.
+confirm it installs and smoke-tests clean, for example `make e2e-up WORKLOADS=<name>`.

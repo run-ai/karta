@@ -49,7 +49,7 @@ version_of() {
     lws) echo "${LWS_VERSION}" ;;
     jobset) echo "${JOBSET_VERSION}" ;;
     kuberay) echo "${KUBERAY_VERSION}" ;;
-    kubeflow) echo "${KUBEFLOW_VERSION}" ;;
+    kubeflow) echo "${KUBEFLOW_VERSION}+mpi${MPI_OPERATOR_VERSION}" ;;
     knative) echo "${KNATIVE_VERSION}" ;;
     kserve) echo "${KSERVE_VERSION}" ;;
     milvus) echo "${MILVUS_OPERATOR_VERSION}" ;;
