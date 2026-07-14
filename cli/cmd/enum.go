@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package cliflag
+package cmd
 
 import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/run-ai/karta/cli/pkg/generator"
 )
 
 // ErrInvalidValue is wrapped by Enum.Set when a value is not one of the allowed
@@ -52,4 +54,11 @@ func (e *Enum[T]) Allowed() []string {
 		out[i] = string(a)
 	}
 	return out
+}
+
+// NewOutputFlag returns an Enum backing the -o/--output flag, defaulting to
+// table.
+func NewOutputFlag() *Enum[generator.Output] {
+	return NewEnum("output", generator.OutputTable,
+		generator.OutputTable, generator.OutputWide, generator.OutputJSON, generator.OutputYAML)
 }

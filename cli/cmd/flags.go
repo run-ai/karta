@@ -6,8 +6,6 @@ package cmd
 import (
 	"strings"
 
-	"github.com/run-ai/karta/cli/pkg/cliflag"
-
 	"github.com/spf13/cobra"
 )
 
@@ -18,9 +16,9 @@ func withKubeconfig(cmd *cobra.Command) {
 }
 
 // withOutput registers the -o/--output enum persistent flag on cmd, backed by
-// cliflag.Output, along with its shell completion.
+// generator.Output, along with its shell completion.
 func withOutput(cmd *cobra.Command) {
-	out := cliflag.NewOutput()
+	out := NewOutputFlag()
 	cmd.PersistentFlags().VarP(out, "output", "o",
 		"Output format: one of "+strings.Join(out.Allowed(), ", "))
 	cobra.CheckErr(cmd.RegisterFlagCompletionFunc("output",
