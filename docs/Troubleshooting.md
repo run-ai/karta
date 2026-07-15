@@ -49,9 +49,24 @@ expression that failed, so search your definition for that string.
 | `failed to compile JQ expression '<expr>': ...` | The expression parses but cannot compile, for example it references an unknown function. | Use only standard jq builtins. Re-check function names and argument counts. |
 | `JQ execution error for expression '<expr>': ...` | The expression compiled but failed while running against real data, often a null traversal. | Make the path null-safe. Supply defaults with `//`, for example `(.status.active // 0)` or `.spec.parallelism // 1`. |
 
+Karta also validates every expression statically before running it. The
+validator walks the parsed jq AST and rejects anything that mutates or can
+produce unbounded output: assignment and update operators (`=`, `|=`, `+=`,
+and the rest), the `del` function, the recursive descent operator `..`, and
+unbounded builtins such as `range`, `paths`, `recurse`, `walk`, and `repeat`.
+
+| Error message | Cause | Fix |
+|---|---|---|
+| `JQ expression '<expr>' at '<path>' failed validation: modifying operator '<op>' is not allowed` | The expression uses an assignment or update operator. | Karta paths read state; they never write. Rewrite the expression so it only reads. |
+| `... failed validation: del function is not allowed` | The expression deletes fields. | Same as above: read, do not modify. |
+| `... failed validation: recursive descent operator '..' is not allowed` | The expression uses `..`, which walks the whole document. | Spell out the absolute path to the field instead. |
+| `... failed validation: function '<name>' may produce excessive output and is not allowed` | The expression uses an unbounded builtin (`range`, `paths`, `recurse`, `walk`, `repeat`). | Use a bounded expression that addresses the fields directly. |
+
 Tip: test an expression against a real workload manifest with the `jq` CLI
 before putting it in a definition. `kubectl get <resource> -o json | jq '<expr>'`
-reproduces what Karta evaluates.
+reproduces what Karta evaluates. The official jq playground at
+[play.jqlang.org](https://play.jqlang.org/) works too, without leaving the
+browser.
 
 ## Accessor errors at runtime
 
@@ -69,9 +84,11 @@ These pass validation but lead to wrong status, missing pods, or no effect. They
 are worth checking first when a definition "works" but behaves incorrectly.
 
 - Using `ownerName` instead of `ownerRef`. The API field is `ownerRef`. A child
-  written with `ownerName` parses with no owner set and then fails validation
-  with `child component '<name>' has no owner ref`, or silently behaves as
-  unowned. Use `ownerRef`.
+  written with `ownerName` decodes with no owner set. The validator rejects it
+  with `child component '<name>' has no owner ref`, but validation runs only
+  where `KartaValidator` is invoked, so a code path that skips validation sees
+  a silently unowned child. Use `ownerRef`, and run the validator when loading
+  definitions.
 - Expecting a `referencedComponents` field. The structure has only
   `rootComponent`, `childComponents`, and `additionalChildKinds`. There is no
   `referencedComponents`. Model owned resources as child components and list
@@ -85,9 +102,6 @@ are worth checking first when a definition "works" but behaves incorrectly.
   Paths in `podSelector` and `optimizationInstructions` run against pod
   manifests. A selector that points at a field on the workload object instead of
   the pod will match nothing.
-- Non-null-safe paths. A path that traverses an optional field without a `//`
-  default raises a `JQExecutionError` the first time the field is absent. Add
-  defaults to every path that can hit a missing field.
 - Listing an explicitly defined component's kind under `additionalChildKinds`.
   `additionalChildKinds` is only for managed kinds that are not already a child
   component. Duplicating a defined kind is redundant and flagged by the

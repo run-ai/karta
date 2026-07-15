@@ -86,6 +86,12 @@ logic). A `byExpression` rule evaluates a jq expression and compares it to an
 expected result, which is useful when a workload reports state through status
 fields rather than conditions. A Job uses both.
 
+Rules under the same status are ORed: the status matches when any one of its
+rules matches, so mixing `byConditions` and `byExpression` rules under one
+status means either can resolve it. A workload can match several statuses at
+once; each match is returned in `MatchedStatuses`. When no rule matches, the
+status resolves to `Undefined`.
+
 ```yaml
       statusDefinition:
         conditionsDefinition:
@@ -151,25 +157,26 @@ its replica count.
 Again the `// 1` default keeps the path null-safe: `parallelism` is optional and
 defaults to 1 when unset.
 
-## Step 6 (optional): Add scheduling instructions
+## Step 6 (optional, experimental): Add scheduling instructions
 
 `optimizationInstructions` is optional and used by schedulers. For gang
-scheduling you declare which pods form a group. For a Job, all pods group by the
-Job name label.
+scheduling you declare a pod group and map the workload's components onto it.
+The current format is `podGroup`: the group gets a name, each listed component
+becomes a subgroup, and topology constraints can be set per subgroup or for
+the whole group.
 
 ```yaml
   optimizationInstructions:
     gangScheduling:
-      podGroups:
-        - name: job
-          members:
-            - componentName: job
-              groupByKeyPaths:
-                - .metadata.labels["batch.kubernetes.io/job-name"]
+      podGroup:
+        name: job
+        subGroups:
+          - componentName: job
 ```
 
-Remember these paths are evaluated against pod manifests, not the Job object.
-Every `componentName` here must match a component you defined above.
+Every `componentName` here must match a component you defined above. This part
+of the API is experimental and may change. The older `podGroups` list format
+still appears in some samples; it is deprecated in favor of `podGroup`.
 
 ## Step 7: Validate against the checklist
 
@@ -204,6 +211,11 @@ go run ./docs/examples/quickstart --print-mutated
 
 The quickstart ships with JobSet and LeaderWorkerSet definitions. Use it as the
 pattern for loading and exercising the Job definition you just wrote.
+
+To see the definition working in a live environment, install the
+[controller-runtime example](./examples/controller-runtime/) into a Kind
+cluster and add your new Karta to its watched types. It inspects and mutates
+live workloads through the same uniform API, with no per-CRD code.
 
 ## Where to go next
 
