@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# Smoke test for the JobSet install: up.sh creates this JobSet whose single Job
+# runs `true` and completes, so the operator drives it to a Completed condition
+# before the e2e suite relies on it. Fails fast here if the operator is broken.
+apiVersion: jobset.x-k8s.io/v1alpha2
+kind: JobSet
+metadata:
+  name: jobset-smoke
+  namespace: default
+spec:
+  replicatedJobs:
+    - name: workers
+      replicas: 1
+      template:
+        spec:
+          parallelism: 1
+          completions: 1
+          backoffLimit: 0
+          template:
+            spec:
+              restartPolicy: Never
+              containers:
+                - name: worker
+                  image: busybox:1.36
+                  command: ["true"]
+                  resources:
+                    requests: {cpu: 50m, memory: 32Mi}

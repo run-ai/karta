@@ -130,3 +130,31 @@ helm-lint: ## Lint the helm chart
 .PHONY: helm-validate
 helm-validate: ## Validate the helm chart renders
 	helm template $(KARTA_CHART_DIR)
+
+##@ E2E
+
+# Cluster name for the e2e targets. Override to run isolated clusters in parallel,
+# e.g. make e2e-up CLUSTER_NAME=shard-a WORKLOADS="jobset kuberay"
+CLUSTER_NAME ?= karta-e2e
+
+# Pick which operators to install:
+#   make e2e-up                          # everything
+#   make e2e-up WORKLOADS="jobset lws"   # a subset - one provision, deps resolved once
+.PHONY: e2e-up
+e2e-up: ## Provision a kind cluster + operators (WORKLOADS="jobset kuberay" for a subset, or "all"; CLUSTER_NAME=<name> for an isolated parallel cluster)
+	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/up.sh $(WORKLOADS)
+
+.PHONY: e2e-down
+e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)
+	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/down.sh
+
+# The e2e shell scripts to shellcheck: the provisioner, teardown, the shared
+# helpers, and every per-operator install.sh/verify.sh.
+E2E_SHELL := hack/e2e/up.sh hack/e2e/down.sh \
+	hack/e2e/operators/_common.sh \
+	$(wildcard hack/e2e/operators/*/install.sh) \
+	$(wildcard hack/e2e/operators/*/verify.sh)
+
+.PHONY: lint-shell
+lint-shell: ## shellcheck the e2e shell scripts (-x follows sourced files)
+	shellcheck -x $(E2E_SHELL)
