@@ -12,6 +12,9 @@ spec:
         kind: NIMCache
       scaleDefinition:
         replicasPath: "1"
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          resourcesPath: '{requests: .spec.resources}'
       statusDefinition:
         phaseDefinition:
           path: .status.state
