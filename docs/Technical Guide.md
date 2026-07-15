@@ -14,7 +14,7 @@ rootComponent:
   statusDefinition:
     statusMappings:
       running:
-        byConditions:
+      - byConditions:
         - type: "Running"
           status: "True"
 ```
@@ -28,7 +28,7 @@ For resources owned by the root component:
 ```YAML
 childComponents:
 - name: "worker"
-  ownerName: "pytorchjob"
+  ownerRef: "pytorchjob"
   kind:
     group: "apps"
     version: "v1"
@@ -426,15 +426,15 @@ rootComponent:
   statusDefinition:
     statusMappings:
       running:
-        byConditions:
+      - byConditions:
         - type: "Running"
           status: "True"
       completed:
-        byConditions:
+      - byConditions:
         - type: "Complete"
           status: "True"
       failed:
-        byConditions:
+      - byConditions:
         - type: "Failed"
           status: "True"
 
@@ -455,13 +455,13 @@ rootComponent:
   statusDefinition:
     statusMappings:
       running:
-        byConditions:
+      - byConditions:
         - type: "Available"
           status: "True"
 
 childComponents:
 - name: "replicaset"
-  ownerName: "deployment"
+  ownerRef: "deployment"
   kind:
     group: "apps"
     version: "v1"
@@ -482,21 +482,21 @@ rootComponent:
   statusDefinition:
     statusMappings:
       running:
-        byConditions:
+      - byConditions:
         - type: "Running"
           status: "True"
       completed:
-        byConditions:
+      - byConditions:
         - type: "Succeeded"
           status: "True"
       failed:
-        byConditions:
+      - byConditions:
         - type: "Failed"
           status: "True"
 
 childComponents:
 - name: "master"
-  ownerName: "pytorchjob"
+  ownerRef: "pytorchjob"
   kind:
     group: "apps"
     version: "v1"
@@ -509,7 +509,7 @@ childComponents:
       value: "master"
 
 - name: "worker"
-  ownerName: "pytorchjob"
+  ownerRef: "pytorchjob"
   kind:
     group: "apps"
     version: "v1"
@@ -523,7 +523,7 @@ childComponents:
 ```
 
 ### Template: Inference Service (Knative)
-Workload that references an external component (Revision).
+Workload that owns a secondary component (Revision).
 
 ```YAML
 rootComponent:
@@ -535,22 +535,19 @@ rootComponent:
   statusDefinition:
     statusMappings:
       running:
-        byConditions:
+      - byConditions:
         - type: "Ready"
           status: "True"
 
-referencedComponents:
+childComponents:
 - name: "revision"
+  ownerRef: "service"
   kind:
     group: "serving.knative.dev"
     version: "v1"
     kind: "Revision"
-  statusDefinition:
-    statusMappings:
-      running:
-        byConditions:
-        - type: "Ready"
-          status: "True"
+  specDefinition:
+    podTemplateSpecPath: ".spec.template"
 ```
 
 ## Minimum requirements for defining a Karta
@@ -568,7 +565,7 @@ rootComponent:
   statusDefinition:
     statusMappings:
       running:
-        byConditions:
+      - byConditions:
         - type: "Running"
           status: "True"
 ```
