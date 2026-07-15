@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# Smoke test for the k8s-nim-operator install: up.sh creates this NIMService
+# backed by the fictive CPU image (nim-cpu:e2e) the module builds, and waits for
+# the operator to drive it to state=Ready before the e2e suite relies on it. Uses
+# the dummy ngc-secret the module creates. Fails fast here if the operator is broken.
+apiVersion: apps.nvidia.com/v1alpha1
+kind: NIMService
+metadata:
+  name: nim-smoke
+  namespace: default
+spec:
+  image:
+    repository: nim-cpu
+    tag: e2e
+    pullPolicy: IfNotPresent
+  authSecret: ngc-secret
+  storage:
+    pvc:
+      create: true
+      size: 1Gi
+      volumeAccessMode: ReadWriteOnce
+  replicas: 1
+  expose:
+    service:
+      type: ClusterIP
+      port: 8000
+  env:
+    - name: NIM_REQUEST_LATENCY
+      value: "2"

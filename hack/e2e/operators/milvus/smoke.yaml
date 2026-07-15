@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# Smoke test for the milvus-operator install: up.sh creates this standalone
+# Milvus and waits for the operator to drive it to MilvusReady (etcd + MinIO +
+# the standalone pod) before the e2e suite relies on it. Fails fast here if the
+# operator is broken rather than mid-suite.
+apiVersion: milvus.io/v1beta1
+kind: Milvus
+metadata:
+  name: milvus-smoke
+  namespace: default
+spec:
+  mode: standalone
+  dependencies:
+    etcd:
+      inCluster:
+        values:
+          replicaCount: 1
+    storage:
+      inCluster:
+        values:
+          mode: standalone
+          resources:
+            requests:
+              memory: 256Mi
+  components:
+    standalone:
+      replicas: 1
+      resources:
+        requests:
+          cpu: 250m
+          memory: 1Gi

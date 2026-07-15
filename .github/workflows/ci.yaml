@@ -51,3 +51,6 @@ jobs:
       - name: Run operator checks
         working-directory: operator
         run: make check
+
+      - name: Lint shell scripts
+        run: make lint-shell

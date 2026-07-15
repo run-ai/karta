@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# Grove operator values for the e2e cluster: enable only the scheduler backends
+# actually installed (the built-in default-scheduler and kai-scheduler). The
+# chart default also lists volcano and lpx, whose CRDs are absent here, which
+# crashes the operator at startup while initializing those backends.
+config:
+  server:
+    # Enable the operator health probes (off by default in the chart). Its /readyz
+    # gates on the webhook server being started and its certs being ready, so
+    # `helm --wait` blocks until the validating/defaulting webhook actually serves;
+    # without this the smoke PodCliqueSet races a not-yet-ready webhook.
+    healthProbes:
+      enable: true
+  scheduler:
+    profiles:
+      - name: default-scheduler
+      - name: kai-scheduler
+    defaultProfileName: default-scheduler
