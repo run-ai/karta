@@ -46,13 +46,6 @@ spec:
             - byConditions:
                 - status: "True"
                   type: Suspended
-          suspending:
-            - byConditions:
-                - status: "False"
-                  type: Suspended
-              byExpression:
-                expectedResult: "true"
-                expression: .spec.suspend == true and (.status.ready // 0) > 0
       suspendDefinition:
         resumeActions:
           - path: .spec.suspend

@@ -1,0 +1,30 @@
+apiVersion: run.ai/v1alpha1
+kind: Karta
+metadata:
+  name: apps-statefulset-v1
+spec:
+  structureDefinition:
+    rootComponent:
+      name: statefulset
+      kind:
+        group: apps
+        version: v1
+        kind: StatefulSet
+      scaleDefinition:
+        replicasPath: .spec.replicas // 1
+      specDefinition:
+        podTemplateSpecPath: .spec.template
+      statusDefinition:
+        statusMappings:
+          running:
+          - byExpression:
+              expression: (.status.observedGeneration // 0) == (.metadata.generation // 0) and (.status.readyReplicas // 0) == (.spec.replicas // 1) and (.status.updatedReplicas // 0) == (.spec.replicas // 1) and (.status.currentRevision == .status.updateRevision)
+              expectedResult: "true"
+          degraded:
+          - byExpression:
+              expression: (.status.readyReplicas // 0) > 0 and (.status.readyReplicas // 0) < (.spec.replicas // 1) and (.status.updatedReplicas // 0) == (.spec.replicas // 1) and (.status.currentRevision == .status.updateRevision) and (.status.observedGeneration // 0) == (.metadata.generation // 0)
+              expectedResult: "true"
+          initializing:
+          - byExpression:
+              expression: (.spec.replicas // 1) > 0 and ((.status.observedGeneration // 0) != (.metadata.generation // 0) or (.status.readyReplicas // 0) == 0 or (.status.updatedReplicas // 0) != (.spec.replicas // 1) or (.status.currentRevision != .status.updateRevision))
+              expectedResult: "true"

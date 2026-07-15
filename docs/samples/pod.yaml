@@ -1,0 +1,34 @@
+apiVersion: run.ai/v1alpha1
+kind: Karta
+metadata:
+  name: core-pod-v1
+spec:
+  structureDefinition:
+    rootComponent:
+      name: pod
+      kind:
+        group: ""
+        version: v1
+        kind: Pod
+      scaleDefinition:
+        replicasPath: "1"
+      specDefinition:
+        podTemplateSpecPath: .
+      statusDefinition:
+        phaseDefinition:
+          path: .status.phase
+        conditionsDefinition:
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          reasonFieldName: reason
+          messageFieldName: message
+        statusMappings:
+          initializing:
+          - byPhase: Pending
+          running:
+          - byPhase: Running
+          completed:
+          - byPhase: Succeeded
+          failed:
+          - byPhase: Failed

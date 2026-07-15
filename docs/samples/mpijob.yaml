@@ -1,36 +1,38 @@
 apiVersion: run.ai/v1alpha1
 kind: Karta
 metadata:
-  name: kubeflow-org-mpijob-v1
+  name: kubeflow-org-mpijob-v2beta1
 spec:
   structureDefinition:
     rootComponent:
       name: mpijob
       kind:
         group: kubeflow.org
-        version: v1
+        version: v2beta1
         kind: MPIJob
+      suspendDefinition:
+        suspendActions:
+          - path: .spec.runPolicy.suspend
+            value: "true"
+        resumeActions:
+          - path: .spec.runPolicy.suspend
+            value: "false"
       statusDefinition:
         conditionsDefinition:
           path: .status.conditions
           typeFieldName: type
           statusFieldName: status
+          reasonFieldName: reason
           messageFieldName: message
         statusMappings:
           initializing:
           - byConditions:
               - type: Created
                 status: "True"
-              - type: Running
-                status: "False"
           running:
           - byConditions:
               - type: Running
                 status: "True"
-              - type: Succeeded
-                status: "False"
-              - type: Failed
-                status: "False"
           completed:
           - byConditions:
               - type: Succeeded
@@ -38,6 +40,10 @@ spec:
           failed:
           - byConditions:
               - type: Failed
+                status: "True"
+          suspended:
+          - byConditions:
+              - type: Suspended
                 status: "True"
     childComponents:
       - name: launcher
@@ -52,7 +58,7 @@ spec:
           replicasPath: .spec.mpiReplicaSpecs.Launcher.replicas // 1
         podSelector:
           componentTypeSelector:
-            keyPath: .metadata.labels["training.kubeflow.org/replica-type"]
+            keyPath: .metadata.labels["training.kubeflow.org/job-role"]
             value: launcher
       - name: worker
         kind:
@@ -66,12 +72,9 @@ spec:
           replicasPath: .spec.mpiReplicaSpecs.Worker.replicas // 1
         podSelector:
           componentTypeSelector:
-            keyPath: .metadata.labels["training.kubeflow.org/replica-type"]
+            keyPath: .metadata.labels["training.kubeflow.org/job-role"]
             value: worker
-  
-  # Optimization instructions
   optimizationInstructions:
-    # Gang scheduling for distributed training coordination
     gangScheduling:
       podGroups:
         - name: job

@@ -1,53 +1,55 @@
 apiVersion: run.ai/v1alpha1
 kind: Karta
 metadata:
-  name: ray-io-rayjob-v1
+  name: ray-io-rayservice-v1
 spec:
   structureDefinition:
     rootComponent:
-      name: rayjob
+      name: rayservice
       kind:
         group: ray.io
         version: v1
-        kind: RayJob
-      suspendDefinition:
-        suspendActions:
-          - path: .spec.suspend
-            value: "true"
-        resumeActions:
-          - path: .spec.suspend
-            value: "false"
+        kind: RayService
       statusDefinition:
-        phaseDefinition:
-          path: .status.jobStatus
         conditionsDefinition:
           path: .status.conditions
           typeFieldName: type
           statusFieldName: status
+          reasonFieldName: reason
           messageFieldName: message
-          reasonFieldName: null
         statusMappings:
-          initializing:
-          - byPhase: PENDING
           running:
-          - byPhase: RUNNING
-          completed:
-          - byPhase: SUCCEEDED
+          - byConditions:
+              - type: Ready
+                status: "True"
+          initializing:
+          - byConditions:
+              - type: Ready
+                status: "False"
+                reason: Initializing
+          degraded:
+          - byConditions:
+              - type: Ready
+                status: "False"
+                reason: ZeroServeEndpoints
           failed:
-          - byPhase: FAILED
-          suspended:
-          - byExpression:
-              expression: .status.jobDeploymentStatus == "Suspended"
-              expectedResult: "true"
+          - byConditions:
+              - type: Ready
+                status: "False"
+                reason: InitializingTimeout
+          - byConditions:
+              - type: Ready
+                status: "False"
+                reason: ValidationFailed
     childComponents:
       - name: head
         kind:
           group: ""
           version: v1
           kind: Pod
-        ownerRef: rayjob
+        ownerRef: rayservice
         specDefinition:
-          podTemplateSpecPath: .spec.rayClusterSpec.headGroupSpec.template
+          podTemplateSpecPath: .spec.rayClusterConfig.headGroupSpec.template
         scaleDefinition:
           replicasPath: "1"
         podSelector:
@@ -59,12 +61,12 @@ spec:
           group: ""
           version: v1
           kind: Pod
-        ownerRef: rayjob
+        ownerRef: rayservice
         specDefinition:
-          podTemplateSpecPath: .spec.rayClusterSpec.workerGroupSpecs[].template
+          podTemplateSpecPath: .spec.rayClusterConfig.workerGroupSpecs[].template
         scaleDefinition:
-          replicasPath: .spec.rayClusterSpec.workerGroupSpecs[].replicas // 1
-        instanceIdPath: .spec.rayClusterSpec.workerGroupSpecs[].groupName
+          replicasPath: .spec.rayClusterConfig.workerGroupSpecs[].replicas // 1
+        instanceIdPath: .spec.rayClusterConfig.workerGroupSpecs[].groupName
         podSelector:
           componentTypeSelector:
             keyPath: .metadata.labels["ray.io/node-type"]
@@ -74,7 +76,7 @@ spec:
   optimizationInstructions:
     gangScheduling:
       podGroups:
-        - name: job
+        - name: service
           members:
             - componentName: head
               groupByKeyPaths:
