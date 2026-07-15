@@ -11,13 +11,36 @@ spec:
         version: v1
         kind: RayService
       statusDefinition:
-        phaseDefinition:
-          path: .status.state
+        conditionsDefinition:
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          reasonFieldName: reason
+          messageFieldName: message
         statusMappings:
           running:
-          - byPhase: ready
+          - byConditions:
+              - type: Ready
+                status: "True"
+          initializing:
+          - byConditions:
+              - type: Ready
+                status: "False"
+                reason: Initializing
+          degraded:
+          - byConditions:
+              - type: Ready
+                status: "False"
+                reason: ZeroServeEndpoints
           failed:
-          - byPhase: failed
+          - byConditions:
+              - type: Ready
+                status: "False"
+                reason: InitializingTimeout
+          - byConditions:
+              - type: Ready
+                status: "False"
+                reason: ValidationFailed
     childComponents:
       - name: head
         kind:
@@ -26,7 +49,7 @@ spec:
           kind: Pod
         ownerRef: rayservice
         specDefinition:
-          podTemplateSpecPath: .spec.rayClusterSpec.headGroupSpec.template
+          podTemplateSpecPath: .spec.rayClusterConfig.headGroupSpec.template
         scaleDefinition:
           replicasPath: "1"
         podSelector:
@@ -40,10 +63,10 @@ spec:
           kind: Pod
         ownerRef: rayservice
         specDefinition:
-          podTemplateSpecPath: .spec.rayClusterSpec.workerGroupSpecs[].template
+          podTemplateSpecPath: .spec.rayClusterConfig.workerGroupSpecs[].template
         scaleDefinition:
-          replicasPath: .spec.rayClusterSpec.workerGroupSpecs[].replicas // 1
-        instanceIdPath: .spec.rayClusterSpec.workerGroupSpecs[].groupName
+          replicasPath: .spec.rayClusterConfig.workerGroupSpecs[].replicas // 1
+        instanceIdPath: .spec.rayClusterConfig.workerGroupSpecs[].groupName
         podSelector:
           componentTypeSelector:
             keyPath: .metadata.labels["ray.io/node-type"]

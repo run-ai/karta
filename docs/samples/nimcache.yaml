@@ -26,6 +26,8 @@ spec:
           messageFieldName: message
         statusMappings:
           initializing:
+          - byPhase: Pending
+          - byPhase: NotReady
           - byPhase: PVC-Created
           - byPhase: Started
           - byConditions:
