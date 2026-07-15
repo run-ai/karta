@@ -39,10 +39,6 @@ spec:
           - byExpression:
               expression: .status.jobDeploymentStatus == "Suspended"
               expectedResult: "true"
-          suspending:
-          - byExpression:
-              expression: .status.jobDeploymentStatus == "Suspending"
-              expectedResult: "true"
     childComponents:
       - name: head
         kind:

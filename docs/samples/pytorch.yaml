@@ -45,10 +45,6 @@ spec:
           - byConditions:
               - type: Suspended
                 status: "True"
-          suspending:
-          - byConditions:
-              - type: Suspending
-                status: "True"
     childComponents:
       - name: master
         kind:

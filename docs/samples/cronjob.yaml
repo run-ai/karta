@@ -31,10 +31,6 @@ spec:
           - byExpression:
               expression: .spec.suspend == true and ((.status.active // [] | length) == 0)
               expectedResult: "true"
-          suspending:
-          - byExpression:
-              expression: .spec.suspend == true and ((.status.active // [] | length) > 0)
-              expectedResult: "true"
     childComponents:
       - name: job
         kind:
