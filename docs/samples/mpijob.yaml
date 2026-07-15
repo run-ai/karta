@@ -58,7 +58,7 @@ spec:
           replicasPath: .spec.mpiReplicaSpecs.Launcher.replicas // 1
         podSelector:
           componentTypeSelector:
-            keyPath: .metadata.labels["training.kubeflow.org/replica-type"]
+            keyPath: .metadata.labels["training.kubeflow.org/job-role"]
             value: launcher
       - name: worker
         kind:
@@ -72,7 +72,7 @@ spec:
           replicasPath: .spec.mpiReplicaSpecs.Worker.replicas // 1
         podSelector:
           componentTypeSelector:
-            keyPath: .metadata.labels["training.kubeflow.org/replica-type"]
+            keyPath: .metadata.labels["training.kubeflow.org/job-role"]
             value: worker
   optimizationInstructions:
     gangScheduling:
