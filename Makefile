@@ -136,6 +136,14 @@ helm-validate: ## Validate the helm chart renders
 # Cluster name for the e2e targets. Override to run isolated clusters in parallel,
 # e.g. make e2e-up CLUSTER_NAME=shard-a WORKLOADS="jobset kuberay"
 CLUSTER_NAME ?= karta-e2e
+# A non-default cluster gets its own kubeconfig (matching hack/e2e/up.sh) so
+# parallel clusters do not race on the shared current-context.
+ifneq ($(CLUSTER_NAME),karta-e2e)
+E2E_KUBECONFIG := KUBECONFIG=$(HOME)/.kube/kind-$(CLUSTER_NAME).kubeconfig
+endif
+# Overall go-test timeout. 30m fits the full suite (all operators run in one
+# suite); override for a quick subset, e.g. E2E_TIMEOUT=20m.
+E2E_TIMEOUT ?= 30m
 
 # Pick which operators to install:
 #   make e2e-up                          # everything
@@ -147,6 +155,10 @@ e2e-up: ## Provision a kind cluster + operators (WORKLOADS="jobset kuberay" for 
 .PHONY: e2e-down
 e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)
 	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/down.sh
+
+.PHONY: test-e2e
+test-e2e: ## Run the e2e suite (run e2e-up first; CLUSTER_NAME to match; E2E_FOCUS="JobSet|LWS" to run a subset)
+	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) ./... $(if $(E2E_FOCUS),-args -ginkgo.focus="$(E2E_FOCUS)")
 
 # The e2e shell scripts to shellcheck: the provisioner, teardown, the shared
 # helpers, and every per-operator install.sh/verify.sh.

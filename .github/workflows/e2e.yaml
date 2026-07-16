@@ -1,0 +1,111 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# End-to-end tests: provision a kind cluster and run the Karta e2e suite against
+# it. The full suite (13 cases, all operators) does not fit one 2 vCPU hosted
+# runner, so it is split one operator per parallel ubuntu-latest job: each job
+# installs a single operator (plus its deps) and runs only that operator's cases.
+# Together the jobs cover every operator and case, with no self-hosted or larger
+# runner needed, and each job is maximally isolated (least contention, cleanest
+# per-operator pass/fail). Mirrors how KAI-Scheduler, volcano, and crossplane run
+# e2e on hosted runners. See docs/design/e2e-runner-size-decision.md.
+name: E2E
+
+on:
+  # Temporary: run on pull_request so the suite runs in CI before this workflow
+  # lands on the default branch (workflow_dispatch is only dispatchable once the
+  # file is on main). Revert to dispatch-only before merge.
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: E2E ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # One operator per job: workloads is a single operator (up.sh auto-adds
+          # deps: kserve->knative, dynamo->grove), focus selects exactly that
+          # operator's cases. BatchJob is built-in (no operator) so it rides along
+          # in the jobset job. Every case is covered exactly once across the jobs.
+          - shard: lws
+            workloads: "lws"
+            focus: "LeaderWorkerSet"
+          - shard: jobset
+            workloads: "jobset"
+            focus: "JobSet|BatchJob"
+          - shard: kuberay
+            workloads: "kuberay"
+            focus: "RayCluster|RayJob"
+          - shard: kubeflow
+            workloads: "kubeflow"
+            focus: "PyTorchJob|MPIJob"
+          - shard: knative
+            workloads: "knative"
+            focus: "KnativeService"
+          - shard: kserve
+            workloads: "kserve"
+            focus: "KServe"
+          - shard: milvus
+            workloads: "milvus"
+            focus: "Milvus"
+          - shard: grove
+            workloads: "grove"
+            focus: "Grove"
+          - shard: dynamo
+            workloads: "dynamo"
+            focus: "DynamoGraphDeployment"
+          - shard: nim
+            workloads: "nim"
+            focus: "NIMService"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install kind, kubectl, helm
+        run: |
+          # Pinned prebuilt binaries (cert-manager/grove/cluster-api pattern):
+          # faster than compiling kind from source and reproducible. up.sh creates
+          # the cluster itself, so only the binaries are installed here. Versions
+          # are the single source of truth in hack/e2e/global.env.
+          source hack/e2e/global.env
+          curl -fsSLo kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+          sudo install kind /usr/local/bin/kind
+          curl -fsSLo kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          sudo install kubectl /usr/local/bin/kubectl
+          curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" | tar -xz
+          sudo install linux-amd64/helm /usr/local/bin/helm
+
+      - name: Provision cluster + operators
+        run: make e2e-up WORKLOADS="${{ matrix.workloads }}"
+
+      - name: Run e2e suite
+        run: make test-e2e E2E_FOCUS="${{ matrix.focus }}"
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          kubectl get pods -A || true
+          kubectl get events -A --sort-by=.lastTimestamp | tail -50 || true
+          kind export logs ./e2e-logs --name karta-e2e || true
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-logs-${{ matrix.shard }}
+          path: e2e-logs
+          if-no-files-found: ignore
+
+      - name: Tear down
+        if: always()
+        run: make e2e-down
