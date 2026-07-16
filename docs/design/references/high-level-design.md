@@ -1,7 +1,7 @@
-<!-- SPDX-License-Identifier: Apache-2.0 -->
+# Karta Resource References - High-Level Design
+## Background
+A Karta definition describes a workload by reading its manifest. Every value Karta extracts - pod spec, scale, status, pod selectors - is a JQ expression evaluated against a single root object: the workload CR itself. This works as long as everything Karta needs lives inside that one object.
 
-<!-- Copyright (c) 2026 NVIDIA Corporation -->
-# Karta Resource References - High-Level Design ## Background A Karta definition describes a workload by reading its manifest. Every value Karta extracts - pod spec, scale, status, pod selectors - is a JQ expression evaluated against a single root object: the workload CR itself. This works as long as everything Karta needs lives inside that one object.
 It often does not.
 
 Kubeflow Trainer v2 is the clearest example. A `TrainJob` points at a `ClusterTrainingRuntime` through `spec.runtimeRef`, and the runtime holds the base pod template - the containers and resources a job runs with. For example:
@@ -45,9 +45,9 @@ There is a second, related gap. Sometimes a value cannot be read from any single
 
 We want to enrich a Karta definition by letting it draw on other cluster resources - a specific object or a set of them - in the same JQ expressions, in a generic way.
 ## Concept
-A reference is a named pointer to another cluster resource, or set of resources, that Karta exposes to a definition's JQ expressions as the variable `$<Name>`. In this proposal, a Karta definition declares its references at the structure level. Each reference is resolved against the workload object itself (the root custom resource the definition describes, for example the `TrainJob`) - the expressions that pick the name, namespace, and labels run with that object as their input - and then fetched once from the cluster. Its result is in scope for the JQ expressions of every component. To the author it is just another input: where `.spec...` reads the workload object, `$trainingRuntime.spec...` reads a referenced one.
+A reference is a definition's way of reaching another resource in the cluster. A reference lets it name another resource - or a set of them - and use that resource's values too.
 
-Declaring references once, for the whole workload, means the same value - the runtime, or the pod set - can be read by any number of components without being fetched again.
+Concretely, a reference is a named pointer to another cluster resource, or set of resources, that Karta exposes to a definition's JQ expressions as the variable `$<Name>`. In this proposal, a Karta definition declares its references at the structure level. Each reference could be resolved against the workload object itself (the root custom resource the definition describes, for example the `TrainJob`) - the expressions that pick the name, namespace, and labels run with that object as their input - and then fetched once from the cluster. Its value can then be used anywhere in the Karta definition - in the JQ expressions of any component. To the author it is just another input: where `.spec...` reads the workload object, `$trainingRuntime.spec...` reads a referenced one.
 
 Karta stays declarative: it still fetches nothing itself. Resolving references is the consumer's job, and it adds one more input - the fetched values - to what the consumer passes when it evaluates a Karta definition.
 
