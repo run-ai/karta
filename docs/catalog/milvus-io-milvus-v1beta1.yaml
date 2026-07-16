@@ -1,0 +1,359 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+apiVersion: run.ai/v1alpha1
+kind: Karta
+metadata:
+  name: milvus-io-milvus-v1beta1
+spec:
+  optimizationInstructions:
+    gangScheduling:
+      podGroups:
+      - members:
+        - componentName: querynode
+          groupByKeyPaths:
+          - .metadata.labels["app.kubernetes.io/instance"]
+        - componentName: datanode
+          groupByKeyPaths:
+          - .metadata.labels["app.kubernetes.io/instance"]
+        - componentName: streamingnode
+          groupByKeyPaths:
+          - .metadata.labels["app.kubernetes.io/instance"]
+        name: cluster
+  structureDefinition:
+    childComponents:
+    - kind:
+        group: apps
+        kind: Deployment
+        version: v1
+      name: standalone
+      ownerRef: milvus
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["app.kubernetes.io/component"]
+          value: standalone
+      scaleDefinition:
+        replicasPath: .spec.components.standalone.replicas
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          annotationsPath: .spec.components.standalone.podAnnotations
+          labelsPath: .spec.components.standalone.podLabels
+          nodeAffinityPath: .spec.components.standalone.affinity.nodeAffinity
+          podAffinityPath: .spec.components.standalone.affinity.podAffinity
+          priorityClassNamePath: .spec.components.standalone.priorityClassName
+          resourcesPath: .spec.components.standalone.resources
+          schedulerNamePath: .spec.components.standalone.schedulerName
+    - kind:
+        group: apps
+        kind: Deployment
+        version: v1
+      name: proxy
+      ownerRef: milvus
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["app.kubernetes.io/component"]
+          value: proxy
+      scaleDefinition:
+        replicasPath: .spec.components.proxy.replicas
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          annotationsPath: .spec.components.proxy.podAnnotations
+          labelsPath: .spec.components.proxy.podLabels
+          nodeAffinityPath: .spec.components.proxy.affinity.nodeAffinity
+          podAffinityPath: .spec.components.proxy.affinity.podAffinity
+          priorityClassNamePath: .spec.components.proxy.priorityClassName
+          resourcesPath: .spec.components.proxy.resources
+          schedulerNamePath: .spec.components.proxy.schedulerName
+    - kind:
+        group: apps
+        kind: Deployment
+        version: v1
+      name: mixcoord
+      ownerRef: milvus
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["app.kubernetes.io/component"]
+          value: mixcoord
+      scaleDefinition:
+        replicasPath: .spec.components.mixCoord.replicas
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          annotationsPath: .spec.components.mixCoord.podAnnotations
+          labelsPath: .spec.components.mixCoord.podLabels
+          nodeAffinityPath: .spec.components.mixCoord.affinity.nodeAffinity
+          podAffinityPath: .spec.components.mixCoord.affinity.podAffinity
+          priorityClassNamePath: .spec.components.mixCoord.priorityClassName
+          resourcesPath: .spec.components.mixCoord.resources
+          schedulerNamePath: .spec.components.mixCoord.schedulerName
+    - kind:
+        group: apps
+        kind: Deployment
+        version: v1
+      name: datanode
+      ownerRef: milvus
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["app.kubernetes.io/component"]
+          value: datanode
+      scaleDefinition:
+        replicasPath: .spec.components.dataNode.replicas
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          annotationsPath: .spec.components.dataNode.podAnnotations
+          labelsPath: .spec.components.dataNode.podLabels
+          nodeAffinityPath: .spec.components.dataNode.affinity.nodeAffinity
+          podAffinityPath: .spec.components.dataNode.affinity.podAffinity
+          priorityClassNamePath: .spec.components.dataNode.priorityClassName
+          resourcesPath: .spec.components.dataNode.resources
+          schedulerNamePath: .spec.components.dataNode.schedulerName
+    - kind:
+        group: apps
+        kind: Deployment
+        version: v1
+      name: querynode
+      ownerRef: milvus
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["app.kubernetes.io/component"]
+          value: querynode
+      scaleDefinition:
+        replicasPath: .spec.components.queryNode.replicas
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          annotationsPath: .spec.components.queryNode.podAnnotations
+          labelsPath: .spec.components.queryNode.podLabels
+          nodeAffinityPath: .spec.components.queryNode.affinity.nodeAffinity
+          podAffinityPath: .spec.components.queryNode.affinity.podAffinity
+          priorityClassNamePath: .spec.components.queryNode.priorityClassName
+          resourcesPath: .spec.components.queryNode.resources
+          schedulerNamePath: .spec.components.queryNode.schedulerName
+    - kind:
+        group: apps
+        kind: Deployment
+        version: v1
+      name: streamingnode
+      ownerRef: milvus
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["app.kubernetes.io/component"]
+          value: streamingnode
+      scaleDefinition:
+        replicasPath: .spec.components.streamingNode.replicas
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          annotationsPath: .spec.components.streamingNode.podAnnotations
+          labelsPath: .spec.components.streamingNode.podLabels
+          nodeAffinityPath: .spec.components.streamingNode.affinity.nodeAffinity
+          podAffinityPath: .spec.components.streamingNode.affinity.podAffinity
+          priorityClassNamePath: .spec.components.streamingNode.priorityClassName
+          resourcesPath: .spec.components.streamingNode.resources
+          schedulerNamePath: .spec.components.streamingNode.schedulerName
+    - kind:
+        group: apps
+        kind: Deployment
+        version: v1
+      name: indexnode
+      ownerRef: milvus
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["app.kubernetes.io/component"]
+          value: indexnode
+      scaleDefinition:
+        replicasPath: .spec.components.indexNode.replicas
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          annotationsPath: .spec.components.indexNode.podAnnotations
+          labelsPath: .spec.components.indexNode.podLabels
+          nodeAffinityPath: .spec.components.indexNode.affinity.nodeAffinity
+          podAffinityPath: .spec.components.indexNode.affinity.podAffinity
+          priorityClassNamePath: .spec.components.indexNode.priorityClassName
+          resourcesPath: .spec.components.indexNode.resources
+          schedulerNamePath: .spec.components.indexNode.schedulerName
+    - kind:
+        group: apps
+        kind: Deployment
+        version: v1
+      name: rootcoord
+      ownerRef: milvus
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["app.kubernetes.io/component"]
+          value: rootcoord
+      scaleDefinition:
+        replicasPath: .spec.components.rootCoord.replicas
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          annotationsPath: .spec.components.rootCoord.podAnnotations
+          labelsPath: .spec.components.rootCoord.podLabels
+          nodeAffinityPath: .spec.components.rootCoord.affinity.nodeAffinity
+          podAffinityPath: .spec.components.rootCoord.affinity.podAffinity
+          priorityClassNamePath: .spec.components.rootCoord.priorityClassName
+          resourcesPath: .spec.components.rootCoord.resources
+          schedulerNamePath: .spec.components.rootCoord.schedulerName
+    - kind:
+        group: apps
+        kind: Deployment
+        version: v1
+      name: datacoord
+      ownerRef: milvus
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["app.kubernetes.io/component"]
+          value: datacoord
+      scaleDefinition:
+        replicasPath: .spec.components.dataCoord.replicas
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          annotationsPath: .spec.components.dataCoord.podAnnotations
+          labelsPath: .spec.components.dataCoord.podLabels
+          nodeAffinityPath: .spec.components.dataCoord.affinity.nodeAffinity
+          podAffinityPath: .spec.components.dataCoord.affinity.podAffinity
+          priorityClassNamePath: .spec.components.dataCoord.priorityClassName
+          resourcesPath: .spec.components.dataCoord.resources
+          schedulerNamePath: .spec.components.dataCoord.schedulerName
+    - kind:
+        group: apps
+        kind: Deployment
+        version: v1
+      name: querycoord
+      ownerRef: milvus
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["app.kubernetes.io/component"]
+          value: querycoord
+      scaleDefinition:
+        replicasPath: .spec.components.queryCoord.replicas
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          annotationsPath: .spec.components.queryCoord.podAnnotations
+          labelsPath: .spec.components.queryCoord.podLabels
+          nodeAffinityPath: .spec.components.queryCoord.affinity.nodeAffinity
+          podAffinityPath: .spec.components.queryCoord.affinity.podAffinity
+          priorityClassNamePath: .spec.components.queryCoord.priorityClassName
+          resourcesPath: .spec.components.queryCoord.resources
+          schedulerNamePath: .spec.components.queryCoord.schedulerName
+    - kind:
+        group: apps
+        kind: Deployment
+        version: v1
+      name: indexcoord
+      ownerRef: milvus
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["app.kubernetes.io/component"]
+          value: indexcoord
+      scaleDefinition:
+        replicasPath: .spec.components.indexCoord.replicas
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          annotationsPath: .spec.components.indexCoord.podAnnotations
+          labelsPath: .spec.components.indexCoord.podLabels
+          nodeAffinityPath: .spec.components.indexCoord.affinity.nodeAffinity
+          podAffinityPath: .spec.components.indexCoord.affinity.podAffinity
+          priorityClassNamePath: .spec.components.indexCoord.priorityClassName
+          resourcesPath: .spec.components.indexCoord.resources
+          schedulerNamePath: .spec.components.indexCoord.schedulerName
+    - kind:
+        group: apps
+        kind: Deployment
+        version: v1
+      name: cdc
+      ownerRef: milvus
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["app.kubernetes.io/component"]
+          value: cdc
+      scaleDefinition:
+        replicasPath: .spec.components.cdc.replicas
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          annotationsPath: .spec.components.cdc.podAnnotations
+          labelsPath: .spec.components.cdc.podLabels
+          nodeAffinityPath: .spec.components.cdc.affinity.nodeAffinity
+          podAffinityPath: .spec.components.cdc.affinity.podAffinity
+          priorityClassNamePath: .spec.components.cdc.priorityClassName
+          resourcesPath: .spec.components.cdc.resources
+          schedulerNamePath: .spec.components.cdc.schedulerName
+    - kind:
+        group: apps
+        kind: StatefulSet
+        version: v1
+      name: etcd
+      ownerRef: milvus
+      scaleDefinition:
+        replicasPath: .spec.dependencies.etcd.inCluster.values.replicaCount
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          resourcesPath: .spec.dependencies.etcd.inCluster.values.resources
+    - kind:
+        group: apps
+        kind: StatefulSet
+        version: v1
+      name: minio
+      ownerRef: milvus
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          resourcesPath: .spec.dependencies.storage.inCluster.values.resources
+    - kind:
+        group: apps
+        kind: StatefulSet
+        version: v1
+      name: pulsar-zookeeper
+      ownerRef: milvus
+      scaleDefinition:
+        replicasPath: .spec.dependencies.pulsar.inCluster.values.zookeeper.replicaCount
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          resourcesPath: .spec.dependencies.pulsar.inCluster.values.zookeeper.resources
+    - kind:
+        group: apps
+        kind: StatefulSet
+        version: v1
+      name: pulsar-bookkeeper
+      ownerRef: milvus
+      scaleDefinition:
+        replicasPath: .spec.dependencies.pulsar.inCluster.values.bookkeeper.replicaCount
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          resourcesPath: .spec.dependencies.pulsar.inCluster.values.bookkeeper.resources
+    - kind:
+        group: apps
+        kind: StatefulSet
+        version: v1
+      name: pulsar-broker
+      ownerRef: milvus
+      scaleDefinition:
+        replicasPath: .spec.dependencies.pulsar.inCluster.values.broker.replicaCount
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          resourcesPath: .spec.dependencies.pulsar.inCluster.values.broker.resources
+    - kind:
+        group: apps
+        kind: StatefulSet
+        version: v1
+      name: pulsar-proxy
+      ownerRef: milvus
+      scaleDefinition:
+        replicasPath: .spec.dependencies.pulsar.inCluster.values.proxy.replicaCount
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          resourcesPath: .spec.dependencies.pulsar.inCluster.values.proxy.resources
+    rootComponent:
+      kind:
+        group: milvus.io
+        kind: Milvus
+        version: v1beta1
+      name: milvus
+      statusDefinition:
+        conditionsDefinition:
+          path: .status.conditions
+          statusFieldName: status
+          typeFieldName: type
+        phaseDefinition:
+          path: .status.status
+        statusMappings:
+          degraded:
+          - byPhase: Unhealthy
+          initializing:
+          - byPhase: Pending
+          running:
+          - byPhase: Healthy

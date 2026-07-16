@@ -15,7 +15,7 @@ import (
 )
 
 // Milvus is a status-only root with pod-bearing StatefulSet children under
-// .spec.components. Mirrors docs/samples/milvus.yaml.
+// .spec.components. Mirrors docs/catalog/milvus-io-milvus-v1beta1.yaml.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type Milvus struct {
 	metav1.TypeMeta   `json:",inline"`
