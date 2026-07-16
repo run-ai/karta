@@ -219,7 +219,7 @@ Karta supports any workload type. The following are pre-built and tested Karta d
 | DynamoGraphDeployment | NVIDIA Dynamo |
 | PodCliqueSet | Grove |
 
-See [`docs/samples/`](docs/samples/) for the full Karta definitions.
+See [`docs/catalog/`](docs/catalog/) for the full Karta definitions.
 
 ### Complex example: NVIDIA Dynamo
 
@@ -243,7 +243,7 @@ See [ADOPTERS.md](ADOPTERS.md) for the full list of adopters. If you use Karta, 
 ## Documentation
 
 - [Technical Guide](docs/Technical%20Guide.md) - Full Karta spec, path syntax (jq), validation rules
-- [Karta definitions](docs/samples/) - Real-world Karta definitions for common workload types
+- [Karta definitions](docs/catalog/) - Real-world Karta definitions for common workload types
 - [Runnable examples](docs/examples/) - Offline quickstart and an installable controller-runtime example
 - [API Reference](https://pkg.go.dev/github.com/run-ai/karta) - Go package documentation
 - [CONTRIBUTING.md](CONTRIBUTING.md) - How to contribute (DCO required)

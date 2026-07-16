@@ -160,7 +160,7 @@ Your Go code never references these paths directly — Karta handles the navigat
 ## Next steps
 
 - [Technical Guide](../../Technical%20Guide.md) — full Karta specification
-- [samples](../../samples/) — ready-made definitions for PyTorchJob, RayCluster, MPIJob, KServe, and more
+- [catalog](../../catalog/) — ready-made definitions for PyTorchJob, RayCluster, MPIJob, KServe, and more
 - [resource](../../../pkg/resource/) — full Component API (suspend/resume, fragmented pod specs, pod querier)
 - [tree](../../../pkg/tree/) — WorkloadTree for inspecting the component hierarchy of live workloads
 - [instructions](../../../pkg/instructions/) — gang scheduling and `StructureSummary` for scheduler integrations
