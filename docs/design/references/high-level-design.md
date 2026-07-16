@@ -157,12 +157,16 @@ spec:
               operator: Exists
 ```
 
-Any component's paths then read each variable by its shape - the variable is in scope for every component, so the two examples below can live on different components. A `lookup` is read like any object; a `list` is iterated.
+Any component's paths then read each variable by its shape - the variable is in scope for every component, so the examples below can live on different components. A `lookup` is read like any object; a `list` is iterated.
 
 ```yaml
-# the base pod template comes from the runtime; the TrainJob's overrides, read from
-# the root object, are layered on top in the same expression:
-podTemplateSpecPath: $trainingRuntime.spec.template.spec.replicatedJobs[0].template.spec.template
+# The base pod spec lives in the runtime; the TrainJob's overrides sit on the root
+# object. Rather than one merged path, the effective value is built per-field with a
+# JQ fallback (override // base) via the fragmented pod spec - prefer the TrainJob's
+# value, fall back to the runtime's:
+fragmentedPodSpecDefinition:
+  imagePath: '.spec.trainer.image // $trainingRuntime.spec.template.spec.replicatedJobs[0].template.spec.template.spec.containers[0].image'
+  resourcesPath: '.spec.trainer.resourcesPerNode // $trainingRuntime.spec.template.spec.replicatedJobs[0].template.spec.template.spec.containers[0].resources'
 # an aggregate over the matched pods:
 runningPodsPath: '[ $pods[] | select(.status.phase == "Running") ] | length'
 ```
