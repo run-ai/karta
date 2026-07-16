@@ -110,7 +110,7 @@ func main() {
 		},
 		{
 			name:         "LeaderWorkerSet",
-			kartaPath:    "../../samples/lws.yaml",
+			kartaPath:    "../../catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml",
 			workloadYAML: lwsWorkloadYAML,
 		},
 	}

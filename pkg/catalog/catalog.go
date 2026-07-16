@@ -43,6 +43,11 @@ var definitions = []func() *v1alpha1.Karta{
 	kartas.Raycluster,
 	kartas.Rayjob,
 	kartas.RayService,
+	kartas.LWS,
+	kartas.KServe,
+	kartas.KnativeServing,
+	kartas.NIMService,
+	kartas.NIMCache,
 }
 
 // Catalog is an immutable set of built-in Kartas indexed by their root component GVK.
