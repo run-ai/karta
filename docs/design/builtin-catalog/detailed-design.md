@@ -126,7 +126,7 @@ var definitions = []func() *v1alpha1.Karta{
 func New() *Catalog { /* call each def, key by root GVK, detect duplicates, sort */ }
 
 // key derives the workload identity from the root component's kind.
-func key(k *v1alpha1.Karta) (schema.GroupVersionKind, error) { /* validate non-nil root Kind */ }
+func key(k *v1alpha1.Karta) (schema.GroupVersionKind, error) { /* require root Kind with version and kind (group may be empty) */ }
 
 func (c *Catalog) Get(gvk schema.GroupVersionKind) (*v1alpha1.Karta, error) { /* lookup, ErrNotFound */ }
 func (c *Catalog) List() []*v1alpha1.Karta { /* return copy of c.all */ }
@@ -144,9 +144,9 @@ Design notes:
   `v1alpha1.GroupVersionKind`. Callers already have `unstructured.GroupVersionKind()`, so
   cluster-first fallback composes cleanly. `key()` converts the local root `Kind` to the
   schema type internally.
-- `Get` returns the stored pointer for zero-alloc reads; the contract documents that
-  callers must `DeepCopy()` before mutating. The `Karta` type already has generated
-  DeepCopy.
+- `Get` and `List` return deep copies of the stored definitions, so a caller cannot mutate
+  the immutable package-global catalog and affect later resolutions. The `Karta` type already
+  has generated DeepCopy.
 - Duplicate GVKs are detected at construction time in `New()`, not at runtime, since the
   definition set is fixed at compile time.
 - Validation via the existing `NewKartaValidator(k).Validate()`
