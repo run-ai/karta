@@ -222,10 +222,10 @@ live workloads through the same uniform API, with no per-CRD code.
 - Add child components for workloads that own other resources. Each child needs
   an `ownerRef`. See the multi-component samples such as
   [`docs/samples/kserve.yaml`](./samples/kserve.yaml) and
-  [`docs/samples/pytorch.yaml`](./samples/pytorch.yaml).
+  [`docs/catalog/kubeflow-org-pytorchjob-v1.yaml`](./catalog/kubeflow-org-pytorchjob-v1.yaml).
 - Handle workloads with repeated roles or instances (for example the replicated
   jobs of a JobSet) with `instanceIdPath` and a matching component instance
-  selector. See [`docs/samples/jobset.yaml`](./samples/jobset.yaml).
+  selector. See [`docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml`](./catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml).
 - Consume a definition from a controller with the Go Component API. See
   [`docs/examples/controller-runtime/`](./examples/controller-runtime/).
 - Read the full field reference in the [Technical Guide](./Technical%20Guide.md).

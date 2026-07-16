@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+apiVersion: run.ai/v1alpha1
+kind: Karta
+metadata:
+  name: jobset-x-k8s-io-jobset-v1alpha2
+spec:
+  optimizationInstructions:
+    gangScheduling:
+      podGroups:
+      - members:
+        - componentName: replicatedjob
+          groupByKeyPaths:
+          - .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]
+        name: job
+  structureDefinition:
+    childComponents:
+    - instanceIdPath: .spec.replicatedJobs[].name
+      kind:
+        group: batch
+        kind: Job
+        version: v1
+      name: replicatedjob
+      ownerRef: jobset
+      podSelector:
+        componentInstanceSelector:
+          idPath: .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]
+      scaleDefinition:
+        replicasPath: .spec.replicatedJobs[] | .replicas * .template.spec.parallelism
+      specDefinition:
+        podTemplateSpecPath: .spec.replicatedJobs[].template.spec.template
+    rootComponent:
+      kind:
+        group: jobset.x-k8s.io
+        kind: JobSet
+        version: v1alpha2
+      name: jobset
+      statusDefinition:
+        conditionsDefinition:
+          messageFieldName: message
+          path: .status.conditions
+          reasonFieldName: reason
+          statusFieldName: status
+          typeFieldName: type
+        statusMappings:
+          completed:
+          - byConditions:
+            - status: "True"
+              type: Completed
+          failed:
+          - byConditions:
+            - status: "True"
+              type: Failed
+          initializing:
+          - byExpression:
+              expectedResult: "true"
+              expression: (.status.replicatedJobsStatus // []) | any(.active > 0 and
+                (.ready // 0) == 0) and all(.failed == 0)
+          running:
+          - byExpression:
+              expectedResult: "true"
+              expression: (.status.replicatedJobsStatus // []) | any(.ready > 0 and
+                .active > 0) and all(.failed == 0)
+          suspended:
+          - byConditions:
+            - status: "True"
+              type: Suspended
+      suspendDefinition:
+        resumeActions:
+        - path: .spec.suspend
+          value: "false"
+        suspendActions:
+        - path: .spec.suspend
+          value: "true"
+status: {}

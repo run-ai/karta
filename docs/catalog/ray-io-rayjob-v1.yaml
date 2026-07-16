@@ -1,0 +1,87 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+apiVersion: run.ai/v1alpha1
+kind: Karta
+metadata:
+  name: ray-io-rayjob-v1
+spec:
+  optimizationInstructions:
+    gangScheduling:
+      podGroups:
+      - members:
+        - componentName: head
+          groupByKeyPaths:
+          - .metadata.labels["ray.io/cluster"]
+        - componentName: worker
+          groupByKeyPaths:
+          - .metadata.labels["ray.io/cluster"]
+        name: job
+  structureDefinition:
+    childComponents:
+    - kind:
+        group: ""
+        kind: Pod
+        version: v1
+      name: head
+      ownerRef: rayjob
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["ray.io/node-type"]
+          value: head
+      scaleDefinition:
+        replicasPath: "1"
+      specDefinition:
+        podTemplateSpecPath: .spec.rayClusterSpec.headGroupSpec.template
+    - instanceIdPath: .spec.rayClusterSpec.workerGroupSpecs[].groupName
+      kind:
+        group: ""
+        kind: Pod
+        version: v1
+      name: worker
+      ownerRef: rayjob
+      podSelector:
+        componentInstanceSelector:
+          idPath: .metadata.labels["ray.io/group"]
+        componentTypeSelector:
+          keyPath: .metadata.labels["ray.io/node-type"]
+          value: worker
+      scaleDefinition:
+        replicasPath: .spec.rayClusterSpec.workerGroupSpecs[].replicas // 1
+      specDefinition:
+        podTemplateSpecPath: .spec.rayClusterSpec.workerGroupSpecs[].template
+    rootComponent:
+      kind:
+        group: ray.io
+        kind: RayJob
+        version: v1
+      name: rayjob
+      statusDefinition:
+        conditionsDefinition:
+          messageFieldName: message
+          path: .status.conditions
+          reasonFieldName: null
+          statusFieldName: status
+          typeFieldName: type
+        phaseDefinition:
+          path: .status.jobStatus
+        statusMappings:
+          completed:
+          - byPhase: SUCCEEDED
+          failed:
+          - byPhase: FAILED
+          initializing:
+          - byPhase: PENDING
+          running:
+          - byPhase: RUNNING
+          suspended:
+          - byExpression:
+              expectedResult: "true"
+              expression: .status.jobDeploymentStatus == "Suspended"
+      suspendDefinition:
+        resumeActions:
+        - path: .spec.suspend
+          value: "false"
+        suspendActions:
+        - path: .spec.suspend
+          value: "true"
+status: {}

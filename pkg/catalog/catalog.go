@@ -37,6 +37,12 @@ var definitions = []func() *v1alpha1.Karta{
 	kartas.Deployment,
 	kartas.StatefulSet,
 	kartas.Pod,
+	kartas.Jobset,
+	kartas.Pytorch,
+	kartas.Mpijob,
+	kartas.Raycluster,
+	kartas.Rayjob,
+	kartas.RayService,
 }
 
 // Catalog is an immutable set of built-in Kartas indexed by their root component GVK.
