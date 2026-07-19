@@ -196,6 +196,8 @@ Karta was created at [Run:ai](https://run.ai) (NVIDIA) to power workload managem
 
 [KAI Scheduler](https://github.com/kai-scheduler/KAI-Scheduler), a CNCF sandbox open-source Kubernetes scheduler for AI and GPU workloads, uses Karta as the generic fallback plugin in its pod grouper ([kai-scheduler/KAI-Scheduler#1527](https://github.com/kai-scheduler/KAI-Scheduler/issues/1527)). A Karta definition gives any CRD correct pod grouping and gang scheduling in KAI, with no scheduler plugin to write and no KAI release to wait for. Native in-tree plugins keep precedence; Karta handles the long tail.
 
+See [ADOPTERS.md](ADOPTERS.md) for the full list of adopters. If you use Karta, add yourself with a pull request.
+
 ## Documentation
 
 - [Technical Guide](docs/Technical%20Guide.md) - Full Karta spec, path syntax (jq), validation rules

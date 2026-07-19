@@ -1,0 +1,14 @@
+<!--
+SPDX-License-Identifier: Apache-2.0
+Copyright (c) 2026 NVIDIA Corporation
+-->
+
+# Adopters
+
+Projects and organizations using Karta.
+
+To add your project or organization, open a pull request that adds a row to the table below. Include a link to a public record showing Karta usage or explicit permission from the adopter to name it. If you use Karta but cannot share details publicly, contact the maintainers.
+
+| Adopter | Type | How Karta is used |
+|---------|------|-------------------|
+| [KAI Scheduler](https://github.com/kai-scheduler/KAI-Scheduler) | Open-source Kubernetes GPU scheduler | Pod-grouper fallback plugin: gang scheduling for any workload type through Karta workload descriptions. Native plugins take precedence; Karta is the generic fallback. Merged 2026-07-13 in [KAI PR #1877](https://github.com/kai-scheduler/KAI-Scheduler/pull/1877). |
