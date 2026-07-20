@@ -67,7 +67,7 @@ func stripCRDSchemas(i any) (any, error) {
 	}, nil
 }
 
-var _ toolscache.TransformFunc = stripCRDSchemas
+var _ toolscache.TransformFunc = stripCRDSchemas // compile-time signature check
 
 func run() error {
 	var (
