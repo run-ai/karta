@@ -167,8 +167,14 @@ Any component's paths then read each variable by its shape - the variable is in 
 fragmentedPodSpecDefinition:
   imagePath: '.spec.trainer.image // $trainingRuntime.spec.template.spec.replicatedJobs[0].template.spec.template.spec.containers[0].image'
   resourcesPath: '.spec.trainer.resourcesPerNode // $trainingRuntime.spec.template.spec.replicatedJobs[0].template.spec.template.spec.containers[0].resources'
-# an aggregate over the matched pods:
-runningPodsPath: '[ $pods[] | select(.status.phase == "Running") ] | length'
+# an aggregate over the matched pods, feeding the status mapping - the workload is
+# Running when at least one of its pods is:
+statusDefinition:
+  statusMappings:
+    running:
+      - byExpression:
+          expression: '[ $pods[] | select(.status.phase == "Running") ] | length > 0'
+          expectedResult: "true"
 ```
 
 The one-of rules - one of `lookup`/`list`, one of `value`/`expression`, and unique reference names - are enforced by Karta's existing validation function, alongside the JQ validation that already checks every expression field.
