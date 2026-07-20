@@ -186,13 +186,15 @@ References add a small, opt-in surface to the Karta library. A consumer that use
 ```go
 // ReferenceValue is the fetched value of one reference.
 type ReferenceValue struct {
-    Object map[string]any   // set for a lookup
-    List   []map[string]any // set for a list
+    Object *unstructured.Unstructured  // set for a lookup; nil when the object was not found
+    List   []unstructured.Unstructured // set for a list; possibly empty
 }
 
 // ResolvedReferences maps each reference name to its fetched value.
 type ResolvedReferences map[string]ReferenceValue
 ```
+
+The values are `unstructured` - the same shape a `Get` or `List` of an arbitrary kind returns, so the fetch path needs no conversion, and a missing `lookup` is encoded naturally as a nil `Object` (which binds to JQ as null). A consumer building the map from its own store wraps each object with `unstructured.Unstructured{Object: m}`.
 
 `Resolve` fetches them. It lives in a new package, `pkg/references` - a new domain that owns reference resolution and is the one place in Karta that depends on a Kubernetes client; the types and `WithReferences` stay in the client-free `pkg/resource`. Given a reader, the Karta definition, and the workload object, it evaluates each reference's expressions against the workload, performs the `Get` (for a `lookup`) or `List` (for a `list`), and returns the map.
 
