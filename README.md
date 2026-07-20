@@ -46,6 +46,56 @@ In addition to the CRD, Karta provides a **Go package** that performs the core p
 └────────────┴────────────┴────────────┴───────────┘
 ```
 
+## From YAML to Workload Tree
+
+Here is a distributed training job the way a user submits it - a Kubeflow PyTorchJob:
+
+```yaml
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: demo
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      template:
+        spec:
+          containers:
+          - name: pytorch
+            image: ghcr.io/example/train:latest
+            resources:
+              limits:
+                nvidia.com/gpu: 1
+    Worker:
+      replicas: 4
+      template:
+        spec:
+          containers:
+          - name: pytorch
+            image: ghcr.io/example/train:latest
+            resources:
+              limits:
+                nvidia.com/gpu: 8
+```
+
+The roles, replica counts, GPU requests, and status conditions are all in there, but nested in fields that only PyTorchJob-aware code knows how to find. RayCluster, JobSet, and every other workload type nests the same information differently.
+
+With the pre-built [PyTorchJob Karta definition](docs/samples/pytorch.yaml), any tool can resolve that object and its live pods into a uniform structural view:
+
+```
+PyTorchJob/demo [Running]
+├─ master  (1/1 replicas)  1/1 ready  gpu: 1   node-01
+│  └─ Pod/demo-master-0    Running    gpu: 1   node-01
+└─ worker  (4/4 replicas)  4/4 ready  gpu: 32  node-02,node-03,node-04,node-05
+   ├─ Pod/demo-worker-0    Running    gpu: 8   node-02
+   ├─ Pod/demo-worker-1    Running    gpu: 8   node-03
+   ├─ Pod/demo-worker-2    Running    gpu: 8   node-04
+   └─ Pod/demo-worker-3    Running    gpu: 8   node-05
+```
+
+Everything in this view comes from Karta path expressions: the master and worker components, their replica counts, the per-pod GPU counts, and the workload status mapped from PyTorchJob conditions to a common vocabulary. None of it is PyTorchJob-specific code. Point the same code at a RayCluster or a JobSet with their Karta definitions and the view keeps working. The same definition also carries gang-scheduling instructions, so a scheduler consuming Karta knows these five pods must be placed together.
+
 ## Quick Start
 
 ### Install the CRD
