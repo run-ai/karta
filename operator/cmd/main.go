@@ -41,9 +41,9 @@ func main() {
 	}
 }
 
-// stripCRDSchemas projects each CRD down to only the fields the reconciler
+// trimCRDFields trims each CRD down to only the fields the reconciler
 // reads, so that unrelated fields are never retained in the cache.
-func stripCRDSchemas(i any) (any, error) {
+func trimCRDFields(i any) (any, error) {
 	crd, ok := i.(*apiextensionsv1.CustomResourceDefinition)
 	if !ok {
 		return i, nil
@@ -67,7 +67,7 @@ func stripCRDSchemas(i any) (any, error) {
 	}, nil
 }
 
-var _ toolscache.TransformFunc = stripCRDSchemas // compile-time signature check
+var _ toolscache.TransformFunc = trimCRDFields // compile-time signature check
 
 func run() error {
 	var (
@@ -110,7 +110,7 @@ func run() error {
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				&apiextensionsv1.CustomResourceDefinition{}: {
-					Transform: stripCRDSchemas,
+					Transform: trimCRDFields,
 				},
 			},
 		},
