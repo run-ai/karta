@@ -42,8 +42,7 @@ func main() {
 }
 
 // stripCRDSchemas projects each CRD down to only the fields the reconciler
-// reads, so that unrelated heavy fields (OpenAPI schemas, printer columns,
-// conversion webhooks, status, etc.) are never retained in the cache.
+// reads, so that unrelated fields are never retained in the cache.
 func stripCRDSchemas(i any) (any, error) {
 	crd, ok := i.(*apiextensionsv1.CustomResourceDefinition)
 	if !ok {
