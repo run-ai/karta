@@ -83,16 +83,7 @@ The roles, replica counts, GPU requests, and status conditions are all in there,
 
 With the pre-built [PyTorchJob Karta definition](docs/samples/pytorch.yaml), any tool can resolve that object and its live pods into a uniform structural view:
 
-```
-PyTorchJob/demo [Running]
-├─ master  (1/1 replicas)  1/1 ready  gpu: 1   node-01
-│  └─ Pod/demo-master-0    Running    gpu: 1   node-01
-└─ worker  (4/4 replicas)  4/4 ready  gpu: 32  node-02,node-03,node-04,node-05
-   ├─ Pod/demo-worker-0    Running    gpu: 8   node-02
-   ├─ Pod/demo-worker-1    Running    gpu: 8   node-03
-   ├─ Pod/demo-worker-2    Running    gpu: 8   node-04
-   └─ Pod/demo-worker-3    Running    gpu: 8   node-05
-```
+![Workload tree derived from the PyTorchJob: demo (Running, 5 pods, 33 GPUs, gang scheduled) with a master component (1/1 ready, 1 GPU) and a workers component (4/4 ready, 8 GPUs per pod, 32 total), each resolved to its pods and nodes](docs/assets/pytorch-workload-tree.svg)
 
 Everything in this view comes from Karta path expressions: the master and worker components, their replica counts, the per-pod GPU counts, and the workload status mapped from PyTorchJob conditions to a common vocabulary. None of it is PyTorchJob-specific code. Point the same code at a RayCluster or a JobSet with their Karta definitions and the view keeps working. The same definition also carries gang-scheduling instructions, so a scheduler consuming Karta knows these five pods must be placed together.
 
