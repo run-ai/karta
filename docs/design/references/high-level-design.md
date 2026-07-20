@@ -179,7 +179,7 @@ statusDefinition:
 
 The one-of rules - one of `lookup`/`list`, one of `value`/`expression`, and unique reference names - are enforced by Karta's existing validation function, alongside the JQ validation that already checks every expression field.
 ### Library API
-References add a small, opt-in surface to the Karta library. A consumer that uses none of it is unaffected, and a definition with no `references` behaves exactly as today. Three pieces cover the feature.
+References add a new surface to the Karta library. It is backward compatible - existing code keeps compiling, and a definition with no `references` behaves exactly as today - but it is opt-in only for a consumer that controls its own definitions. A consumer that accepts arbitrary Karta definitions must treat references as part of the definition contract: implement resolution, or explicitly reject definitions that declare them. Three pieces cover the feature.
 
 `ResolvedReferences` is what a reference resolves to - an object for a `lookup`, a list for a `list`, keyed by name:
 
@@ -193,8 +193,6 @@ type ReferenceValue struct {
 // ResolvedReferences maps each reference name to its fetched value.
 type ResolvedReferences map[string]ReferenceValue
 ```
-
-The values are `unstructured` - the same shape a `Get` or `List` of an arbitrary kind returns, so the fetch path needs no conversion, and a missing `lookup` is encoded naturally as a nil `Object` (which binds to JQ as null). A consumer building the map from its own store wraps each object with `unstructured.Unstructured{Object: m}`.
 
 `Resolve` fetches them. It lives in a new package, `pkg/references` - a new domain that owns reference resolution and is the one place in Karta that depends on a Kubernetes client; the types and `WithReferences` stay in the client-free `pkg/resource`. Given a reader, the Karta definition, and the workload object, it evaluates each reference's expressions against the workload, performs the `Get` (for a `lookup`) or `List` (for a `list`), and returns the map.
 
@@ -210,6 +208,50 @@ factory := resource.NewComponentFactoryFromObject(karta, workload, resource.With
 ```
 
 If a definition declares a reference that is not provided to the factory, evaluating an expression that reads `$<Name>` errors instead of silently resolving to null.
+### Integration options
+Three shapes are possible for the Go-level integration, from most convenient to most control. They stack rather than compete: option 1 is sugar over options 2 and 3, and all can be offered together.
+### Option 1: a reader in a new constructor
+```go
+factory, err := references.NewComponentFactory(ctx, reader, karta, workload)
+```
+
+A convenience constructor in `pkg/references` resolves and binds in one call. The expected path for a controller that already holds a client. Backward compatible because it is purely additive: the existing `resource.NewComponentFactoryFromObject` is untouched, and placing the new constructor in `pkg/references` keeps `pkg/resource` free of any client dependency.
+### Option 2: a Karta-owned reader interface
+```go
+type ResourceReader interface {
+    // Get returns the object's content, or ErrNotFound if it does not exist.
+    Get(ctx context.Context, gvk GroupVersionKind, namespace, name string) (*unstructured.Unstructured, error)
+    // List returns every object of gvk matching the query.
+    List(ctx context.Context, gvk GroupVersionKind, query ListQuery) ([]unstructured.Unstructured, error)
+}
+
+// ListQuery describes which objects List returns. New capabilities (field
+// selectors, limits) are added as fields, so the interface never breaks.
+type ListQuery struct {
+    Namespace string
+    Selector  labels.Selector
+}
+```
+
+The reader everywhere - in `Resolve` and in option 1's constructor - is this minimal `ResourceReader`, not controller-runtime's `client.Reader`: two methods, plain arguments, a sentinel not-found error. Cluster consumers bridge with one call, non-cluster consumers implement the two methods directly:
+
+```go
+// controller with a cluster: adapt the client it already holds
+factory, err := references.NewComponentFactory(ctx, references.FromClient(mgr.GetAPIReader()), karta, workload)
+
+// no cluster: any implementation of the two methods
+factory, err := references.NewComponentFactory(ctx, myStore, karta, workload)
+```
+
+Benefits: a consumer without a cluster implements two straightforward methods over its own store (an in-memory reader is a map and a label match), and the controller-runtime client dependency is confined to the `FromClient` adapter.
+### Option 3: the consumer wires the values into the factory
+```go
+factory := resource.NewComponentFactoryFromObject(karta, workload, resource.WithReferences(refs))
+```
+
+The consumer skips resolution entirely, builds the `ResolvedReferences` map from wherever its data lives - its own client, caching, batching, or no Kubernetes at all - and passes it to the existing factory constructor. Backward compatible because the option is variadic: existing call sites compile unchanged. Karta only sees the finished values.
+
+Anything built on top of the factory inherits references for free. The planned `WorkloadTree` builder, for example, should accept a constructed factory rather than building its own - the `$<Name>` variables are already bound, so tree extraction over referenced values just works and the tree stays reference-agnostic.
 ## Caveats
 A few points are worth calling out because they change the contract or carry real cost.
 
