@@ -18,7 +18,10 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	toolscache "k8s.io/client-go/tools/cache"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -37,6 +40,35 @@ func main() {
 		os.Exit(1)
 	}
 }
+
+// stripCRDSchemas projects each CRD down to only the fields the reconciler
+// reads, so that unrelated heavy fields (OpenAPI schemas, printer columns,
+// conversion webhooks, status, etc.) are never retained in the cache.
+func stripCRDSchemas(i any) (any, error) {
+	crd, ok := i.(*apiextensionsv1.CustomResourceDefinition)
+	if !ok {
+		return i, nil
+	}
+	versions := make([]apiextensionsv1.CustomResourceDefinitionVersion, len(crd.Spec.Versions))
+	for j, v := range crd.Spec.Versions {
+		versions[j] = apiextensionsv1.CustomResourceDefinitionVersion{
+			Name:   v.Name,
+			Served: v.Served,
+		}
+	}
+	return &apiextensionsv1.CustomResourceDefinition{
+		ObjectMeta: crd.ObjectMeta,
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
+			Group: crd.Spec.Group,
+			Names: apiextensionsv1.CustomResourceDefinitionNames{
+				Kind: crd.Spec.Names.Kind,
+			},
+			Versions: versions,
+		},
+	}, nil
+}
+
+var _ toolscache.TransformFunc = stripCRDSchemas
 
 func run() error {
 	var (
@@ -76,6 +108,13 @@ func run() error {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       leaderElectionID,
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&apiextensionsv1.CustomResourceDefinition{}: {
+					Transform: stripCRDSchemas,
+				},
+			},
+		},
 	})
 	if err != nil {
 		return fmt.Errorf("create manager: %w", err)
