@@ -83,7 +83,7 @@ With the pre-built [LeaderWorkerSet Karta definition](docs/samples/lws.yaml), an
 
 ![Workload tree derived from the LeaderWorkerSet: demo (Running, 4 pods, 32 GPUs, gang scheduled per group) with two groups, each 2/2 ready with a leader pod and a worker pod at 8 GPUs each, resolved to their nodes](docs/assets/lws-workload-tree.svg)
 
-Everything in this view comes from Karta path expressions: the group, leader, and worker components, their replica counts, the per-pod GPU counts, and the workload status mapped from LeaderWorkerSet conditions to a common vocabulary. None of it is LeaderWorkerSet-specific code. Point the same code at a RayCluster or a JobSet with their Karta definitions and the view keeps working. The same definition also carries gang-scheduling instructions, so a scheduler consuming Karta knows each group's pods must be placed together.
+Everything in this view comes from Karta path expressions: the group, leader, and worker components, their replica counts, the per-pod GPU counts, and the workload status mapped from LeaderWorkerSet conditions to a common vocabulary. None of it is LeaderWorkerSet-specific code. Point the same code at a RayCluster or a JobSet with their Karta definitions and the view keeps working. The same definition also carries gang-scheduling instructions: each group's pods form one gang, so a scheduler consuming Karta admits them all-or-nothing.
 
 ## Quick Start
 

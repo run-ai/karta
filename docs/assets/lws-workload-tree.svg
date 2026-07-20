@@ -46,7 +46,7 @@
     <rect x="278" y="200" width="30" height="20" rx="10" fill="#ddf4ff"/>
     <text x="293" y="214" text-anchor="middle" font-size="11" font-weight="600" fill="#0969da">x2</text>
     <text x="202" y="240" font-size="12.5" fill="#57606a">2/2 ready &#183; 8 GPUs per pod &#183; 16 total</text>
-    <text x="202" y="262" font-size="12.5" fill="#57606a">leader + worker &#183; placed together</text>
+    <text x="202" y="262" font-size="12.5" fill="#57606a">leader + worker &#183; one gang</text>
   </g>
 
   <!-- group card: group[1] -->
@@ -57,7 +57,7 @@
     <rect x="748" y="200" width="30" height="20" rx="10" fill="#ddf4ff"/>
     <text x="763" y="214" text-anchor="middle" font-size="11" font-weight="600" fill="#0969da">x2</text>
     <text x="672" y="240" font-size="12.5" fill="#57606a">2/2 ready &#183; 8 GPUs per pod &#183; 16 total</text>
-    <text x="672" y="262" font-size="12.5" fill="#57606a">leader + worker &#183; placed together</text>
+    <text x="672" y="262" font-size="12.5" fill="#57606a">leader + worker &#183; one gang</text>
   </g>
 
   <!-- pod card: group 0 leader -->
