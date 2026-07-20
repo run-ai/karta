@@ -48,44 +48,42 @@ In addition to the CRD, Karta provides a **Go package** that performs the core p
 
 ## From YAML to Workload Tree
 
-Here is a distributed training job the way a user submits it - a Kubeflow PyTorchJob:
+Here is a multi-node inference workload the way a user submits it - a LeaderWorkerSet serving two model replicas, each sharded across a leader and a worker node:
 
 ```yaml
-apiVersion: kubeflow.org/v1
-kind: PyTorchJob
+apiVersion: leaderworkerset.x-k8s.io/v1
+kind: LeaderWorkerSet
 metadata:
   name: demo
 spec:
-  pytorchReplicaSpecs:
-    Master:
-      replicas: 1
-      template:
-        spec:
-          containers:
-          - name: pytorch
-            image: ghcr.io/example/train:latest
-            resources:
-              limits:
-                nvidia.com/gpu: 1
-    Worker:
-      replicas: 4
-      template:
-        spec:
-          containers:
-          - name: pytorch
-            image: ghcr.io/example/train:latest
-            resources:
-              limits:
-                nvidia.com/gpu: 8
+  replicas: 2        # two groups, one per model replica
+  leaderWorkerTemplate:
+    size: 2          # pods per group: 1 leader + 1 worker
+    leaderTemplate:
+      spec:
+        containers:
+        - name: inference-leader
+          image: ghcr.io/example/inference:latest
+          resources:
+            limits:
+              nvidia.com/gpu: 8
+    workerTemplate:
+      spec:
+        containers:
+        - name: inference-worker
+          image: ghcr.io/example/inference:latest
+          resources:
+            limits:
+              nvidia.com/gpu: 8
 ```
 
-The roles, replica counts, GPU requests, and status conditions are all in there, but nested in fields that only PyTorchJob-aware code knows how to find. RayCluster, JobSet, and every other workload type nests the same information differently.
+The groups, roles, replica counts, GPU requests, and status conditions are all in there, but nested in fields that only LeaderWorkerSet-aware code knows how to find. RayCluster, JobSet, and every other workload type nests the same information differently.
 
-With the pre-built [PyTorchJob Karta definition](docs/samples/pytorch.yaml), any tool can resolve that object and its live pods into a uniform structural view:
+With the pre-built [LeaderWorkerSet Karta definition](docs/samples/lws.yaml), any tool can resolve that object and its live pods into a uniform structural view:
 
-![Workload tree derived from the PyTorchJob: demo (Running, 5 pods, 33 GPUs, gang scheduled) with a master component (1/1 ready, 1 GPU) and a workers component (4/4 ready, 8 GPUs per pod, 32 total), each resolved to its pods and nodes](docs/assets/pytorch-workload-tree.svg)
+![Workload tree derived from the LeaderWorkerSet: demo (Running, 4 pods, 32 GPUs, gang scheduled per group) with two groups, each 2/2 ready with a leader pod and a worker pod at 8 GPUs each, resolved to their nodes](docs/assets/lws-workload-tree.svg)
 
-Everything in this view comes from Karta path expressions: the master and worker components, their replica counts, the per-pod GPU counts, and the workload status mapped from PyTorchJob conditions to a common vocabulary. None of it is PyTorchJob-specific code. Point the same code at a RayCluster or a JobSet with their Karta definitions and the view keeps working. The same definition also carries gang-scheduling instructions, so a scheduler consuming Karta knows these five pods must be placed together.
+Everything in this view comes from Karta path expressions: the group, leader, and worker components, their replica counts, the per-pod GPU counts, and the workload status mapped from LeaderWorkerSet conditions to a common vocabulary. None of it is LeaderWorkerSet-specific code. Point the same code at a RayCluster or a JobSet with their Karta definitions and the view keeps working. The same definition also carries gang-scheduling instructions, so a scheduler consuming Karta knows each group's pods must be placed together.
 
 ## Quick Start
 
