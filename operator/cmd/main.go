@@ -16,6 +16,7 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -56,7 +57,11 @@ func trimCRDFields(i any) (any, error) {
 		}
 	}
 	return &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: crd.ObjectMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            crd.Name,
+			ResourceVersion: crd.ResourceVersion,
+			Generation:      crd.Generation,
+		},
 		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 			Group: crd.Spec.Group,
 			Names: apiextensionsv1.CustomResourceDefinitionNames{
