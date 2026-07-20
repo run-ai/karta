@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/yaml"
 
 	v1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/catalog/kartas"
@@ -178,6 +179,42 @@ func TestRoundTrip(t *testing.T) {
 			}
 			if string(got) != string(want) {
 				t.Errorf("generated YAML for %s differs from docs/catalog/%s.yaml; run `make generate-samples`", k.Name, slug)
+			}
+		})
+	}
+}
+
+// TestCatalogFilesUnmarshalAndValidate reads each committed docs/catalog file,
+// unmarshals it back into a Karta, and runs the shared validator. This guards the
+// on-disk YAML directly: it proves the generated files parse (including folded
+// multi-line expressions) and satisfy the same validation as the Go definitions.
+func TestCatalogFilesUnmarshalAndValidate(t *testing.T) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("cannot locate test file")
+	}
+	catalogDir := filepath.Join(filepath.Dir(thisFile), "..", "..", "docs", "catalog")
+
+	files, err := filepath.Glob(filepath.Join(catalogDir, "*.yaml"))
+	if err != nil {
+		t.Fatalf("glob catalog dir: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatal("no catalog files found")
+	}
+
+	for _, path := range files {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("read %s: %v", path, err)
+			}
+			var k v1alpha1.Karta
+			if err := yaml.Unmarshal(data, &k); err != nil {
+				t.Fatalf("unmarshal %s: %v", path, err)
+			}
+			if err := v1alpha1.NewKartaValidator(&k).Validate(); err != nil {
+				t.Errorf("validate %s: %v", path, err)
 			}
 		})
 	}
