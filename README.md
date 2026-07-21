@@ -48,7 +48,7 @@ In addition to the CRD, Karta provides a **Go package** that performs the core p
 
 ## From YAML to Workload Tree
 
-Here is a multi-node inference workload the way a user submits it - a LeaderWorkerSet serving two model replicas, each sharded across a leader and a worker node:
+Here is a distributed inference workload the way a user submits it - a LeaderWorkerSet serving two model replicas, each a group of one leader pod and one worker pod:
 
 ```yaml
 apiVersion: leaderworkerset.x-k8s.io/v1
@@ -83,7 +83,7 @@ With the pre-built [LeaderWorkerSet Karta definition](docs/samples/lws.yaml), an
 
 ![Workload tree derived from the LeaderWorkerSet: demo (Running, 4 pods, 32 GPUs, gang scheduled per group) with two groups, each 2/2 ready with a leader pod and a worker pod at 8 GPUs each, resolved to their nodes](docs/assets/lws-workload-tree.svg)
 
-Everything in this view comes from Karta path expressions: the group, leader, and worker components, their replica counts, the per-pod GPU counts, and the workload status mapped from LeaderWorkerSet conditions to a common vocabulary. None of it is LeaderWorkerSet-specific code. Point the same code at a RayCluster or a JobSet with their Karta definitions and the view keeps working. The same definition also carries gang-scheduling instructions: each group's pods form one gang. [KAI Scheduler](https://github.com/kai-scheduler/KAI-Scheduler) consumes these today through its Karta-based pod grouper to admit each gang all-or-nothing, and any scheduler with a gang primitive can translate them the same way.
+The structure in this view comes from Karta path expressions: the group, leader, and worker components, their replica counts, the per-pod GPU counts, and the workload status mapped from LeaderWorkerSet conditions to a common vocabulary. The gang semantics come from the same definition's gang-scheduling instructions, which declare each group's pods as one gang. None of it is LeaderWorkerSet-specific code. Point the same code at a RayCluster or a JobSet with their Karta definitions and the view keeps working. [KAI Scheduler](https://github.com/kai-scheduler/KAI-Scheduler) consumes the gang instructions today through its Karta-based pod grouper to admit each gang all-or-nothing, and any scheduler with a gang primitive can translate them the same way.
 
 ## Quick Start
 
