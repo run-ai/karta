@@ -17,7 +17,7 @@ import (
 
 // outputDir is the catalog directory relative to the repository root, which is
 // the working directory when run via `go run ./hack/gen-samples`.
-const outputDir = "docs/catalog"
+var outputDir = filepath.Join("docs", "catalog")
 
 func main() {
 	if err := run(); err != nil {

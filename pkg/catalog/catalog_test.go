@@ -65,19 +65,13 @@ func TestListDeterministic(t *testing.T) {
 		t.Fatalf("List length changed: %d vs %d", len(first), len(second))
 	}
 	for i := range first {
-		gi, err := key(first[i])
-		if err != nil {
-			t.Fatal(err)
-		}
-		gj, err := key(second[i])
-		if err != nil {
-			t.Fatal(err)
-		}
+		gi := RootKey(first[i])
+		gj := RootKey(second[i])
 		if gi != gj {
 			t.Fatalf("List order not stable at %d: %s vs %s", i, gi, gj)
 		}
 		if i > 0 {
-			prev, _ := key(first[i-1])
+			prev := RootKey(first[i-1])
 			if prev.String() > gi.String() {
 				t.Fatalf("List not sorted: %s before %s", prev, gi)
 			}
