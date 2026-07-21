@@ -9,7 +9,8 @@ package catalog
 
 import (
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -37,10 +38,9 @@ var definitions = []func() *v1alpha1.Karta{
 	kartas.Pod,
 }
 
-// Catalog is an immutable set of built-in Kartas.
+// Catalog is an immutable set of built-in Kartas indexed by their root component GVK.
 type Catalog struct {
 	byGVK map[schema.GroupVersionKind]*v1alpha1.Karta
-	all   []*v1alpha1.Karta // sorted by GVK string for deterministic List
 }
 
 // New builds the catalog from the definitions list. It panics in case of catalog violation.
@@ -53,7 +53,6 @@ func New() *Catalog {
 func newCatalog(defs []func() *v1alpha1.Karta) *Catalog {
 	c := &Catalog{
 		byGVK: make(map[schema.GroupVersionKind]*v1alpha1.Karta, len(defs)),
-		all:   make([]*v1alpha1.Karta, 0, len(defs)),
 	}
 	for _, def := range defs {
 		karta := def()
@@ -67,11 +66,7 @@ func newCatalog(defs []func() *v1alpha1.Karta) *Catalog {
 			panic(fmt.Sprintf("catalog: duplicate GVK %s defined by %q and %q", gvk, existing.Name, karta.Name))
 		}
 		c.byGVK[gvk] = karta
-		c.all = append(c.all, karta)
 	}
-	sort.Slice(c.all, func(i, j int) bool {
-		return RootKey(c.all[i]).String() < RootKey(c.all[j]).String()
-	})
 	return c
 }
 
@@ -98,9 +93,12 @@ func (c *Catalog) Get(gvk schema.GroupVersionKind) (*v1alpha1.Karta, error) {
 // callers may mutate the slice or the Kartas without affecting the immutable
 // catalog.
 func (c *Catalog) List() []*v1alpha1.Karta {
-	out := make([]*v1alpha1.Karta, len(c.all))
-	for i, k := range c.all {
-		out[i] = k.DeepCopy()
+	keys := slices.SortedFunc(maps.Keys(c.byGVK), func(a, b schema.GroupVersionKind) int {
+		return strings.Compare(a.String(), b.String())
+	})
+	out := make([]*v1alpha1.Karta, 0, len(keys))
+	for _, gvk := range keys {
+		out = append(out, c.byGVK[gvk].DeepCopy())
 	}
 	return out
 }

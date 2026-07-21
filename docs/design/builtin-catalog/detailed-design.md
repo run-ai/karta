@@ -106,7 +106,6 @@ import (
 // It is built once from the Go definitions and never mutated, so it needs no locking.
 type Catalog struct {
     byGVK map[schema.GroupVersionKind]*v1alpha1.Karta
-    all   []*v1alpha1.Karta // sorted by GVK string for deterministic List
 }
 
 var ErrNotFound = fmt.Errorf("builtin: no Karta registered for GVK")
@@ -125,11 +124,11 @@ var definitions = []func() *v1alpha1.Karta{
 // definitions is a compile-time constant, any such panic surfaces immediately in tests.
 func New() *Catalog { /* call each def, key by root GVK, detect duplicates, sort */ }
 
-// key derives the workload identity from the root component's kind.
-func key(k *v1alpha1.Karta) (schema.GroupVersionKind, error) { /* require root Kind with version and kind (group may be empty) */ }
+// RootKey derives the workload identity from the root component's kind.
+func RootKey(k *v1alpha1.Karta) schema.GroupVersionKind { /* convert root Kind (group may be empty) */ }
 
 func (c *Catalog) Get(gvk schema.GroupVersionKind) (*v1alpha1.Karta, error) { /* lookup, ErrNotFound */ }
-func (c *Catalog) List() []*v1alpha1.Karta { /* return copy of c.all */ }
+func (c *Catalog) List() []*v1alpha1.Karta { /* sort byGVK keys, return deep copies */ }
 
 // defaultCatalog is the package-global instance callers use directly.
 var defaultCatalog = New()
@@ -142,7 +141,7 @@ Design notes:
 
 - The key type is the standard `schema.GroupVersionKind`, not the local
   `v1alpha1.GroupVersionKind`. Callers already have `unstructured.GroupVersionKind()`, so
-  cluster-first fallback composes cleanly. `key()` converts the local root `Kind` to the
+  cluster-first fallback composes cleanly. `RootKey()` converts the local root `Kind` to the
   schema type internally.
 - `Get` and `List` return deep copies of the stored definitions, so a caller cannot mutate
   the immutable package-global catalog and affect later resolutions. The `Karta` type already
@@ -175,8 +174,8 @@ propagate. The slug:
 slug = strings.ReplaceAll(group, ".", "-") + "-" + strings.ToLower(kind) + "-" + version
 ```
 
-Output is deterministic: `List()` is sorted, and `sigs.k8s.io/yaml` marshals through JSON
-with stable key order from struct field order. Each file gets the SPDX and copyright YAML
+Output is deterministic: `List()` sorts the `byGVK` keys on each call, and
+`sigs.k8s.io/yaml` marshals through JSON with stable key order from struct field order. Each file gets the SPDX and copyright YAML
 header comment prepended.
 
 ### 3. Make and CI wiring
