@@ -9,6 +9,7 @@ For a complete list of third-party software licenses, please see the
 THIRD_PARTY_LICENSES file.
 
 Third-party Dependencies:
+- github.com/google/go-cmp (BSD-3-Clause)
 - github.com/itchyny/gojq (MIT)
 - github.com/onsi/ginkgo/v2 (MIT)
 - github.com/onsi/gomega (MIT)
@@ -22,7 +23,6 @@ Third-party Dependencies:
 - github.com/fxamacker/cbor/v2 (MIT)
 - github.com/go-logr/logr (Apache-2.0)
 - github.com/go-task/slim-sprig/v3 (MIT)
-- github.com/google/go-cmp (BSD-3-Clause)
 - github.com/google/pprof (Apache-2.0)
 - github.com/itchyny/timefmt-go (MIT)
 - github.com/json-iterator/go (MIT)

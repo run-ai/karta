@@ -1,0 +1,12 @@
+flow: initializing
+kartaFile: docs/catalog/core-pod-v1.yaml
+kartaName: core-pod-v1
+observedStates:
+- Initializing
+operator: pod
+schemaVersion: 4
+snapshots:
+- dir: 00-Initializing
+  state: Initializing
+version: v1.34.0
+want: Initializing

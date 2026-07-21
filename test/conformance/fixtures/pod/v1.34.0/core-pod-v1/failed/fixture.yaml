@@ -1,0 +1,26 @@
+flow: failed
+kartaFile: docs/catalog/core-pod-v1.yaml
+kartaName: core-pod-v1
+observedStates:
+- Initializing
+- Running
+- Failed
+operator: pod
+schemaVersion: 4
+snapshots:
+- dir: 00-Initializing
+  state: Initializing
+- dir: 01-Initializing
+  state: Initializing
+- dir: 02-Initializing
+  state: Initializing
+- dir: 03-Initializing
+  state: Initializing
+- dir: 04-Running
+  state: Running
+- dir: 05-Running
+  state: Running
+- dir: 06-Failed
+  state: Failed
+version: v1.34.0
+want: Failed
