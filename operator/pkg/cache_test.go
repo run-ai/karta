@@ -107,7 +107,7 @@ var _ = Describe("TrimCRDFields", func() {
 			crd := obj.(*apiextensionsv1.CustomResourceDefinition)
 			return []string{schema.GroupKind{Group: crd.Spec.Group, Kind: crd.Spec.Names.Kind}.String()}
 		}
-		Expect(indexFunc(trimmed)).To(ConsistOf("test.io/Foo"))
+		Expect(indexFunc(trimmed)).To(ConsistOf("Foo.test.io"))
 	})
 
 	It("satisfies crdServesVersion for served versions", func() {
