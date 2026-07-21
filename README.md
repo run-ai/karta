@@ -209,7 +209,9 @@ See [ADOPTERS.md](ADOPTERS.md) for the full list of adopters. If you use Karta, 
 
 ## Community
 
-Have a question, an idea, or want to show what you built with Karta? Join the conversation in [GitHub Discussions](https://github.com/run-ai/karta/discussions). For bugs and feature requests, [open an issue](https://github.com/run-ai/karta/issues).
+Have a question, an idea, or want to show what you built with Karta? Join the conversation in [GitHub Discussions](https://github.com/run-ai/karta/discussions). For bugs and feature requests, [open an issue](https://github.com/run-ai/karta/issues). Discussions and issues are the channels maintainers monitor; expect an initial response within 5 business days, usually sooner.
+
+New to the project? Introduce yourself in Discussions - what you are building and which workload types you care about. Good entry points are issues labeled [good first issue](https://github.com/run-ai/karta/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) and [help wanted](https://github.com/run-ai/karta/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22), and [CONTRIBUTING.md](CONTRIBUTING.md) covers the development workflow end to end.
 
 ## Status
 
