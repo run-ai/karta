@@ -40,6 +40,23 @@ always installed. A subset auto-includes dependencies: kserve pulls in knative,
 dynamo pulls in grove. Pair this with the Ginkgo `-run` filter below to exercise
 just the matching cases.
 
+### Run only the cases for the operators you installed
+
+Each case carries a Ginkgo label equal to its `hack/e2e` operator key (plus
+`builtin` for the built-in kinds), so `E2E_LABELS` runs only the matching cases -
+the same vocabulary as `WORKLOADS`:
+
+```sh
+make e2e-up  WORKLOADS="nim"    # bring up only the nim operator
+make test-e2e E2E_LABELS="nim"  # run only the NIMService case (others are skipped)
+```
+
+Cases whose operator you did not install are simply not selected, so they never hit
+the 1-minute "CRD does not exist" reconcile failure. Label set-expressions compose
+(`E2E_LABELS="kuberay || nim"`, `E2E_LABELS="!builtin"`, `E2E_LABELS="builtin"` for
+all built-in kinds on any base cluster), and `E2E_LABELS` intersects (AND) with the
+`E2E_FOCUS` name regex.
+
 ### Parallel / isolated clusters
 
 Set `CLUSTER_NAME` to bring up more than one cluster at a time, for example two
@@ -72,31 +89,88 @@ either run CPU-only or use a fictive image (see NIMService below).
 
 ## How a case is tested
 
-Each case is one entry in `cases_test.go` plus a workload fixture under
-`testdata/`. Every case is real operator-driven: the upstream operator is
+Each case is one entry in a `cases_<type>_test.go` file plus its workload
+manifests under `testdata/<type>/<flow>.yaml`, one file per flow (for example
+`testdata/pod/happy.yaml`, `testdata/pod/failed.yaml`). Every case is real
+operator-driven: the upstream operator is
 installed and drives a real workload to a stable state; the test waits for that
 state, then runs Karta against the live object. There is no status injection.
 
 Assertions only ever target stable states (never a transient mid-state the
 operator can pass through), which is what keeps the suite non-flaky.
 
-## Coverage (13 sample types)
+A case can drive its workload through more than one flow: the happy path, a
+failure, a suspend, a degraded state. Flows are declared as `flows` in
+`cases_test.go`, each with its own workload manifest, the ordered states it passes
+through, and the terminal `ResourceStatus` Karta should report.
+
+## Conformance fixtures (record and replay)
+
+`make record-e2e` runs the suite in recording mode. For each flow it watches the
+workload and captures every DISTINCT settled CR it passes through: the sanitized CR plus
+what the Karta library reads from it, written under
+`test/conformance/fixtures/<operator>/<version>/<karta>/<flow>/NN-<State>/`. Snapshots are
+deduplicated by sanitized content, so pure resourceVersion churn is dropped but any real
+status change is its own snapshot - even when it classifies to the same state as its
+neighbour, so a single `Running` window that the workload evolves through is several
+`NN-Running` snapshots. The state (the `NN-<State>` label) is judged from the workload's
+own fields, never from Karta, so the recorded expected output is never compared against
+itself.
+
+Recording every distinct CR - not one per declared state - is what makes the offline
+test a real regression guard. If the workload sits in `Running` across several CRs that
+today all read `Running`, a later library change that would read one of those middle CRs
+as `Degraded` only shows up if that middle CR was recorded. Collapsing to one snapshot
+per state would hide it. The cost is that a re-record is not byte-for-byte reproducible
+(which intermediate CRs a watch delivers is timing dependent); a fixture set is a frozen
+regression baseline, re-recorded when the operator version bumps, not on every run.
+
+A flow reaches `Initializing` by holding the workload not-ready long enough to observe:
+an init container keeps a Pod (and an operator's `Created` condition) pending; a
+readiness probe keeps a Job pod active but `ready==0`, which Karta maps to `initializing`
+before `running`.
+
+the `test/conformance` package replays those fixtures through the library with no cluster
+and no operators. `go test ./test/conformance -run TestGolden` loads every
+recorded CR - each intermediate, not just the terminal - runs Karta against it, and
+asserts the reading still matches. This is the fast offline guard that a library change
+has not silently altered how any real, recorded state is read.
+
+Golden also checks the transition sequence, not just each state in isolation: the
+snapshot directories are `NN-<State>` in order, collapsing them reproduces the
+fixture's `observedStates`, and the terminal snapshot reads as the flow's declared
+`want`. The recorder additionally asserts, at record time, that the observed states
+are a monotonic subsequence of the flow's declared order (a fast workload may skip a
+settled intermediate, but it never regresses or ends on the wrong state).
+
+## Coverage (17 sample types)
 
 | Sample | Mode | Karta maps to |
 |---|---|---|
 | LeaderWorkerSet | real operator | Running |
-| JobSet | real operator | Completed |
-| RayCluster | real operator | Running |
-| PyTorchJob | real operator | Running |
-| MPIJob | real operator | Completed |
-| NIMService | real operator (fictive CPU image) | Running |
+| JobSet | real operator | Initializing, Running, Completed, Failed, Suspended |
+| RayCluster | real operator | Running, Suspended |
+| PyTorchJob | real operator | Initializing, Running, Completed, Failed, Suspended |
+| MPIJob | real operator | Initializing, Running, Completed, Failed, Suspended |
+| NIMService | real operator (fictive CPU image) | Initializing, Running |
 | KnativeService | real operator (Knative Serving + Kourier) | Running |
-| KServe InferenceService | real operator (Serverless, sklearn CPU model) | Running |
+| KServe InferenceService | real operator (Serverless, sklearn CPU model) | Running, Failed |
 | Milvus | real operator (standalone) | Running |
-| RayJob | real operator (KubeRay) | Completed |
-| Grove PodCliqueSet | real operator (Grove + kai-scheduler) | Running |
-| DynamoGraphDeployment | real operator (mocker backend, CPU) | Running |
-| BatchJob | built-in | Completed |
+| RayJob | real operator (KubeRay) | Running, Completed, Failed, Suspended |
+| Grove PodCliqueSet | real operator (Grove + kai-scheduler) | Initializing, Running |
+| DynamoGraphDeployment | real operator (mocker backend, CPU) | Initializing, Running |
+| Pod | built-in | Initializing, Running, Completed, Failed |
+| BatchJob | built-in | Initializing, Running, Completed, Failed, Degraded, Suspended |
+| Deployment | built-in | Running, Failed |
+| StatefulSet | built-in | Running, Degraded |
+| CronJob | built-in | Initializing, Running, Suspended |
+
+Most cases carry more than one flow, so a single kind exercises several
+`ResourceStatus` values (a Job initializes, runs, then completes, fails, degrades, or is
+suspended). Across all cases the suite records six of them: Running, Completed, Failed,
+Degraded, Suspended, and Initializing. Several flows record the full
+`Initializing -> Running -> <terminal>` progression rather than jumping to the terminal.
+Suspending and Resuming are not covered because no bundled sample maps them.
 
 ## What `make e2e-up` installs
 
@@ -167,6 +241,9 @@ dummy `hf-token-secret` satisfies the worker; the mocker downloads nothing.
 Install side (the operator folder under `hack/e2e/operators/<name>/`, its version
 pin in `global.env`, and the make target) is documented in `hack/e2e/README.md`.
 
-Test side: add a `testdata/<name>-workload.yaml` fixture
-and a `workloadCases` entry in `cases_test.go` (the sample path, the target
-state predicate, the expected `ResourceStatus`, and optional `extracts`).
+Test side: add a `cases_<type>_test.go` file (or extend an existing one) that
+appends a `workloadCase` to `workloadCases`, plus a `testdata/<type>/<flow>.yaml`
+manifest per flow. For a single happy path set `workloadFile`, `ready`,
+and `want`; for several flows (failure, suspend, degraded) set `flows`, each with
+its own workload manifest, ordered state predicates, and expected `ResourceStatus`.
+Run `make record-e2e` once to write the conformance fixtures for the new flows.

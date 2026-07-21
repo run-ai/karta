@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# A built-in apps/v1 StatefulSet with one long-running pod. No operator is needed
+# (kube-controller-manager runs it). The Karta library reads it as Running once
+# readyReplicas equals spec.replicas. serviceName is required by the API; the
+# headless Service need not exist for the pod to run.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: karta-e2e-sts
+  namespace: default
+spec:
+  serviceName: karta-e2e-sts
+  replicas: 1
+  selector:
+    matchLabels: {app: karta-e2e-sts}
+  template:
+    metadata:
+      labels: {app: karta-e2e-sts}
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.36
+          command: ["sh", "-c", "sleep infinity"]
+          resources:
+            requests: {cpu: 50m, memory: 32Mi}

@@ -145,6 +145,13 @@ endif
 # suite); override for a quick subset, e.g. E2E_TIMEOUT=20m.
 E2E_TIMEOUT ?= 30m
 
+# Run a subset by operator via Ginkgo labels (each case is labelled with its
+# hack/e2e operator key, plus "builtin" for built-in kinds). Same vocabulary as
+# WORKLOADS, so a cluster brought up with WORKLOADS="nim" runs with E2E_LABELS="nim".
+# Set-expressions compose, e.g. E2E_LABELS="kuberay || nim", E2E_LABELS="!builtin".
+# Composes (AND) with E2E_FOCUS (a name regex).
+E2E_LABELS ?=
+
 # Pick which operators to install:
 #   make e2e-up                          # everything
 #   make e2e-up WORKLOADS="jobset lws"   # a subset - one provision, deps resolved once
@@ -157,8 +164,12 @@ e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)
 	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/down.sh
 
 .PHONY: test-e2e
-test-e2e: ## Run the e2e suite (run e2e-up first; CLUSTER_NAME to match; E2E_FOCUS="JobSet|LWS" to run a subset)
-	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) ./... $(if $(E2E_FOCUS),-args -ginkgo.focus="$(E2E_FOCUS)")
+test-e2e: ## Run the e2e suite (run e2e-up first; CLUSTER_NAME to match; E2E_FOCUS="JobSet|LWS" or E2E_LABELS="nim" to run a subset)
+	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) ./... $(if $(E2E_FOCUS)$(E2E_LABELS),-args $(if $(E2E_FOCUS),-ginkgo.focus="$(E2E_FOCUS)") $(if $(E2E_LABELS),-ginkgo.label-filter="$(E2E_LABELS)"))
+
+.PHONY: record-e2e
+record-e2e: ## Record conformance fixtures from the live suite (needs a cluster; writes conformance/)
+	KARTA_RECORD=1 $(MAKE) test-e2e E2E_FOCUS="$(E2E_FOCUS)" E2E_LABELS="$(E2E_LABELS)"
 
 # The e2e shell scripts to shellcheck: the provisioner, teardown, the shared
 # helpers, and every per-operator install.sh/verify.sh.

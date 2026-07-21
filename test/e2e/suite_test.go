@@ -17,6 +17,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/dynamic"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -26,6 +27,9 @@ import (
 var (
 	ctx       = context.Background()
 	k8sClient client.Client
+	// dynClient watches workload CRs by GVR while recording (make record-e2e); the
+	// typed client above cannot watch arbitrary unstructured resources.
+	dynClient dynamic.Interface
 )
 
 // TestE2E is the Go test entry point; it hands control to Ginkgo, which runs the
@@ -43,5 +47,8 @@ var _ = BeforeSuite(func() {
 	cfg := ctrl.GetConfigOrDie() // current kube context, provisioned by hack/e2e/up.sh
 	var err error
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
+	Expect(err).NotTo(HaveOccurred())
+
+	dynClient, err = dynamic.NewForConfig(cfg)
 	Expect(err).NotTo(HaveOccurred())
 })

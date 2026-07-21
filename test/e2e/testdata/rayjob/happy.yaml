@@ -17,7 +17,7 @@ metadata:
   name: karta-e2e-rayjob
   namespace: default
 spec:
-  entrypoint: 'python -c "print(''karta e2e ok'')"'
+  entrypoint: 'python -c "import time; time.sleep(15); print(''ok'')"'
   shutdownAfterJobFinishes: false
   backoffLimit: 12
   rayClusterSpec:

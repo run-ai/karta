@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# An MPIJob whose Launcher runs `sleep 300` so it stays Running (the happy flow runs
+# `true` and completes). The Karta library reads the Running condition as Running.
+apiVersion: kubeflow.org/v2beta1
+kind: MPIJob
+metadata:
+  name: karta-e2e-mpi-running
+  namespace: default
+spec:
+  slotsPerWorker: 1
+  runPolicy:
+    cleanPodPolicy: None
+  mpiReplicaSpecs:
+    Launcher:
+      replicas: 1
+      template:
+        spec:
+          containers:
+            - name: mpi-launcher
+              image: busybox:1.36
+              command: ["sh", "-c", "sleep 300"]
+              resources:
+                requests: {cpu: 50m, memory: 64Mi}
+    Worker:
+      replicas: 1
+      template:
+        spec:
+          containers:
+            - name: mpi-worker
+              image: busybox:1.36
+              command: ["sleep", "infinity"]
+              resources:
+                requests: {cpu: 50m, memory: 64Mi}

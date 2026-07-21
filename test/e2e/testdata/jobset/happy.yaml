@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
-# A minimal JobSet whose single Job runs `true` and completes immediately, so
-# the JobSet reaches a stable Completed condition on a CPU-only kind cluster.
+# A minimal JobSet whose single Job runs then exits 0. The readiness probe holds the
+# pod not-ready for its initialDelay, so the JobSet reports a replicatedJob active=1
+# ready=0 (Initializing) before active=1 ready=1 (Running), then the command exits 0
+# (Completed) on a CPU-only kind cluster.
 apiVersion: jobset.x-k8s.io/v1alpha2
 kind: JobSet
 metadata:
@@ -23,6 +25,11 @@ spec:
               containers:
                 - name: worker
                   image: busybox:1.36
-                  command: ["true"]
+                  command: ["sh", "-c", "sleep 20"]
+                  readinessProbe:
+                    exec:
+                      command: ["true"]
+                    initialDelaySeconds: 6
+                    periodSeconds: 2
                   resources:
                     requests: {cpu: 50m, memory: 32Mi}

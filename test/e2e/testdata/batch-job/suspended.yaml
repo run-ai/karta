@@ -1,17 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
-# A built-in batch/v1 Job that runs `true` and completes immediately. No operator
-# is needed (kube-controller-manager runs it). The Karta operator reports
-# CRDExists=False for built-in kinds; the library still maps and extracts.
+# A batch/v1 Job created suspended (spec.suspend=true): no pods are started and the
+# Job controller sets condition Suspended=True. The Karta library reads it as
+# Suspended. A distinct name keeps it from colliding with the other Job flows.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: karta-e2e-job
+  name: karta-e2e-job-suspended
   namespace: default
 spec:
-  parallelism: 1
-  completions: 1
+  suspend: true
   backoffLimit: 0
   template:
     spec:

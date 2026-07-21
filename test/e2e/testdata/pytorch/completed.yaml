@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# A PyTorchJob whose containers run `sleep 8` and exit 0, so it is briefly Running
+# then Succeeded. The Karta library reads Succeeded as Completed. The container must
+# be named "pytorch". A distinct name avoids colliding with the other PyTorch flows.
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: karta-e2e-pytorch-completed
+  namespace: default
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: Never
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              image: busybox:1.36
+              command: ["sh", "-c", "sleep 8"]
+              resources:
+                requests: {cpu: 50m, memory: 64Mi}
+    Worker:
+      replicas: 1
+      restartPolicy: Never
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              image: busybox:1.36
+              command: ["sh", "-c", "sleep 8"]
+              resources:
+                requests: {cpu: 50m, memory: 64Mi}

@@ -177,6 +177,9 @@ run_operator() {
   # Ungrouped, so the outcome is visible without expanding the group above.
   echo "==> ${name}: ready (install ${idur}s, smoke ${smoke})"
   summary "| :white_check_mark: | ${name} | ${ver} | ${idur}s | ${smoke} |"
+  # Record what actually installed, so the recorder (make record-e2e) keys each
+  # fixture on the real version rather than trusting an env pin.
+  printf '%s=%s\n' "${name}" "${ver}" >> "${OPERATORS_DIR}/.installed-versions"
 }
 
 main() {
@@ -226,6 +229,7 @@ main() {
   fi
 
   require_tools
+  : > "${OPERATORS_DIR}/.installed-versions" # reset; run_operator appends each installed version
   group "build image + kind cluster"; setup_cluster; endgroup
   group "cert-manager ${CERT_MANAGER_VERSION}"; install_cert_manager; endgroup
   group "fake-gpu-operator ${FAKE_GPU_VERSION}"; install_fake_gpu; endgroup

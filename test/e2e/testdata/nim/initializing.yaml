@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# A NIMService whose image tag does not exist, so the Deployment never becomes
+# available and the k8s-nim-operator holds status.state=NotReady. The Karta library
+# reads NotReady as Initializing. (A stable state=Failed is not reachable with the
+# fictive CPU image on kind - the operator keeps recoverable errors at NotReady.)
+apiVersion: apps.nvidia.com/v1alpha1
+kind: NIMService
+metadata:
+  name: karta-e2e-nim-initializing
+  namespace: default
+spec:
+  image: {repository: nim-cpu, tag: does-not-exist-xyz, pullPolicy: IfNotPresent}
+  authSecret: ngc-secret
+  storage: {pvc: {create: true, size: 1Gi, volumeAccessMode: ReadWriteOnce}}
+  replicas: 1
+  expose: {service: {type: ClusterIP, port: 8000}}
