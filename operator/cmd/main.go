@@ -16,10 +16,8 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	toolscache "k8s.io/client-go/tools/cache"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,38 +39,6 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-// trimCRDFields trims each CRD down to only the fields the reconciler
-// reads, so that unrelated fields are never retained in the cache.
-func trimCRDFields(i any) (any, error) {
-	crd, ok := i.(*apiextensionsv1.CustomResourceDefinition)
-	if !ok {
-		return i, nil
-	}
-	versions := make([]apiextensionsv1.CustomResourceDefinitionVersion, len(crd.Spec.Versions))
-	for j, v := range crd.Spec.Versions {
-		versions[j] = apiextensionsv1.CustomResourceDefinitionVersion{
-			Name:   v.Name,
-			Served: v.Served,
-		}
-	}
-	return &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            crd.Name,
-			ResourceVersion: crd.ResourceVersion,
-			Generation:      crd.Generation,
-		},
-		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
-			Group: crd.Spec.Group,
-			Names: apiextensionsv1.CustomResourceDefinitionNames{
-				Kind: crd.Spec.Names.Kind,
-			},
-			Versions: versions,
-		},
-	}, nil
-}
-
-var _ toolscache.TransformFunc = trimCRDFields // compile-time signature check
 
 func run() error {
 	var (
@@ -115,7 +81,7 @@ func run() error {
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
 				&apiextensionsv1.CustomResourceDefinition{}: {
-					Transform: trimCRDFields,
+					Transform: pkg.TrimCRDFields,
 				},
 			},
 		},
