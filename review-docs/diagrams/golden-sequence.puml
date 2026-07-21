@@ -1,0 +1,52 @@
+' SPDX-License-Identifier: Apache-2.0
+' Copyright (c) 2026 NVIDIA Corporation
+@startuml
+!theme plain
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam RoundCorner 8
+skinparam ParticipantPadding 22
+skinparam BoxPadding 14
+skinparam sequence {
+  ArrowColor #555555
+  ArrowFontName SansSerif
+  ArrowFontSize 11
+  LifeLineBorderColor #BDC3C7
+  LifeLineBackgroundColor #ECF0F1
+  ParticipantBorderColor transparent
+  ParticipantBackgroundColor #34495E
+  ParticipantFontName SansSerif
+  ParticipantFontSize 12
+  ParticipantFontColor white
+  BoxBorderColor transparent
+  BoxFontColor #95A5A6
+}
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor #FBC02D
+  FontName SansSerif
+  FontSize 10
+  FontColor #424242
+}
+title replay - what runs on every PR (go test ./test/conformance)
+
+participant "TestGolden\ngolden_test.go" as G
+database "fixtures/" as Disk
+participant "Karta lib\n(Replay)" as Karta
+participant "go-cmp" as Cmp
+
+G -> Disk : walk every fixture.yaml, Load()
+loop each recorded snapshot (each NN-<State>)
+  Disk -> G : cr.yaml (sanitized CR)\n+ expected.yaml (reading at record time)
+  G -> Karta : Replay(definition, cr)  with TODAY's library
+  Karta --> G : reading NOW
+  G -> Cmp : Diff(expected, reading-now)
+  alt readings match
+    Cmp --> G : "" (pass)
+  else a reading changed
+    Cmp --> G : diff -> FAIL\n(operator/flow/state named)
+  end
+end
+note over G #C8E6C9 : also: schema-version guard,\nNN-<State> dir order,\nterminal snapshot reads as want
+G -> G : no cluster, no operators, ~1s
+@enduml

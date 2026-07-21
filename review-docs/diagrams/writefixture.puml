@@ -1,0 +1,47 @@
+' SPDX-License-Identifier: Apache-2.0
+' Copyright (c) 2026 NVIDIA Corporation
+@startuml
+!theme plain
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam RoundCorner 8
+skinparam ParticipantPadding 22
+skinparam BoxPadding 14
+skinparam sequence {
+  ArrowColor #555555
+  ArrowFontName SansSerif
+  ArrowFontSize 11
+  LifeLineBorderColor #BDC3C7
+  LifeLineBackgroundColor #ECF0F1
+  ParticipantBorderColor transparent
+  ParticipantBackgroundColor #34495E
+  ParticipantFontName SansSerif
+  ParticipantFontSize 12
+  ParticipantFontColor white
+  BoxBorderColor transparent
+  BoxFontColor #95A5A6
+}
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor #FBC02D
+  FontName SansSerif
+  FontSize 10
+  FontColor #424242
+}
+title writeFixture - one snapshot, and the proof that sanitize is safe
+
+participant "writeFixture\nrecorder_test.go" as WF
+participant "Sanitize\n(denylist)" as San
+participant "Karta lib\n(Replay)" as Karta
+database "fixtures/" as Disk
+
+WF -> San : sanitized = Sanitize(copy of raw CR)
+San --> WF : volatile fields stripped
+WF -> Karta : Replay(RAW cr)
+Karta --> WF : readingRaw
+WF -> Karta : Replay(SANITIZED cr)
+Karta --> WF : readingSanitized
+note over WF #C8E6C9 : assert readingRaw == readingSanitized\nstripping a field never changed the reading;\nif it did, recording FAILS and nothing is written
+WF -> Disk : NN-<State>/cr.yaml        (the sanitized CR)
+WF -> Disk : NN-<State>/expected.yaml  (Karta's reading)
+@enduml

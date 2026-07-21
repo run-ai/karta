@@ -1,0 +1,46 @@
+' SPDX-License-Identifier: Apache-2.0
+' Copyright (c) 2026 NVIDIA Corporation
+@startuml
+!theme plain
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam RoundCorner 8
+skinparam ArrowColor #555555
+skinparam ArrowFontName SansSerif
+skinparam ArrowFontSize 10
+skinparam activity {
+  BackgroundColor #34495E
+  BorderColor transparent
+  FontColor white
+  FontName SansSerif
+  FontSize 11
+  DiamondBackgroundColor #ECF0F1
+  DiamondBorderColor #BDC3C7
+  DiamondFontColor #424242
+  StartColor #2E7D32
+  EndColor #B71C1C
+}
+title observeTransitions - each watch event through the gates
+
+start
+repeat :receive a watch event (a CR);
+  :state = classify(CR)
+  (the LAST declared predicate that matches,
+  read from the CR's own fields - never Karta);
+  if (statusSettled(CR)  and  state != "" ?) then (yes)
+    if (sanitizedKey(CR) already seen?) then (no - new content)
+      #C8E6C9:capture snapshot (state, CR)
+      append to recording;
+    else (yes - pure churn)
+      :drop (resourceVersion/timestamp noise);
+    endif
+    if (state has an action, not yet fired?) then (yes)
+      :fire it once  (e.g. unsuspend a suspended workload);
+    endif
+  else (no)
+    :skip  (mid-reconcile, or matches no declared state);
+  endif
+repeat while (state == terminal?) is (no) not (yes)
+#B71C1C:return the recording;
+stop
+@enduml

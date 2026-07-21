@@ -1,0 +1,71 @@
+' SPDX-License-Identifier: Apache-2.0
+' Copyright (c) 2026 NVIDIA Corporation
+@startuml
+!theme plain
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam RoundCorner 8
+skinparam ParticipantPadding 22
+skinparam BoxPadding 14
+skinparam sequence {
+  ArrowColor #555555
+  ArrowFontName SansSerif
+  ArrowFontSize 11
+  LifeLineBorderColor #BDC3C7
+  LifeLineBackgroundColor #ECF0F1
+  ParticipantBorderColor transparent
+  ParticipantBackgroundColor #34495E
+  ParticipantFontName SansSerif
+  ParticipantFontSize 12
+  ParticipantFontColor white
+  BoxBorderColor transparent
+  BoxFontColor #95A5A6
+}
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor #FBC02D
+  FontName SansSerif
+  FontSize 10
+  FontColor #424242
+}
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #34495E
+  BorderColor transparent
+  FontColor white
+  FontName SansSerif
+}
+skinparam package {
+  BorderColor #BDC3C7
+  FontColor #7F8C8D
+}
+title the seam - one read path, two callers
+
+package "docs/samples" {
+  [Karta definitions\n*.yaml] as Defs
+}
+package "pkg  (the Karta library)" {
+  [ComponentFactory\nGetStatus / GetExtractedInstances] as Lib
+}
+package "test/conformance  (main module)" {
+  [replay.go  Replay()] as Replay
+  [sanitize.go] as San
+  [fixture.go  Load/Write] as Fix
+  database "fixtures/**" as Data
+  [golden_test.go\nintermediate_test.go] as Golden
+}
+package "test/e2e  (separate module)" {
+  [recorder_test.go\nobserveTransitions/writeFixture] as Rec
+  [runner_test.go + predicates_test.go] as Run
+  [cases_*_test.go + testdata/] as Cases
+}
+
+Rec -down-> Replay : record: expected = Replay(raw)
+Rec -down-> San : sanitize each CR
+Rec ..> Data : writes  (make record-e2e)
+Golden -left-> Replay : replay: reading = Replay(cr)
+Golden ..> Data : reads  (go test, every PR)
+Replay -up-> Lib : runs the real library
+Replay ..> Defs : uses the definition
+Run -up-> Cases
+@enduml

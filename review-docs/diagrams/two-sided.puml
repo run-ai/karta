@@ -1,0 +1,49 @@
+' SPDX-License-Identifier: Apache-2.0
+' Copyright (c) 2026 NVIDIA Corporation
+@startuml
+!theme plain
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam RoundCorner 8
+skinparam ParticipantPadding 22
+skinparam BoxPadding 14
+skinparam sequence {
+  ArrowColor #555555
+  ArrowFontName SansSerif
+  ArrowFontSize 11
+  LifeLineBorderColor #BDC3C7
+  LifeLineBackgroundColor #ECF0F1
+  ParticipantBorderColor transparent
+  ParticipantBackgroundColor #34495E
+  ParticipantFontName SansSerif
+  ParticipantFontSize 12
+  ParticipantFontColor white
+  BoxBorderColor transparent
+  BoxFontColor #95A5A6
+}
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor #FBC02D
+  FontName SansSerif
+  FontSize 10
+  FontColor #424242
+}
+title the two sides - record writes the baseline, replay guards it
+
+participant "operator\n(real, on kind)" as Op
+participant "recorder\ntest/e2e" as Rec
+database "fixtures/\n(cr.yaml + expected.yaml)" as Disk
+participant "golden test\ntest/conformance" as Gold
+participant "Karta lib" as Karta
+
+== record (slow, needs a cluster: make record-e2e) ==
+Op -> Rec : drives a real workload\nthrough its states
+Rec -> Karta : Replay(each distinct CR)
+Karta --> Rec : reading (expected)
+Rec -> Disk : save CR + reading, per state
+== replay (fast, offline: go test, every PR) ==
+Disk -> Gold : load each saved CR
+Gold -> Karta : Replay(CR) with TODAY's library
+Karta --> Gold : reading now
+Gold -> Gold : diff reading-now vs saved expected\n-> fail if the library changed a reading
+@enduml

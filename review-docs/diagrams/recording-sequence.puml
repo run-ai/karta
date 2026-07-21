@@ -1,0 +1,59 @@
+' SPDX-License-Identifier: Apache-2.0
+' Copyright (c) 2026 NVIDIA Corporation
+@startuml
+!theme plain
+skinparam backgroundColor white
+skinparam shadowing true
+skinparam RoundCorner 8
+skinparam ParticipantPadding 22
+skinparam BoxPadding 14
+skinparam sequence {
+  ArrowColor #555555
+  ArrowFontName SansSerif
+  ArrowFontSize 11
+  LifeLineBorderColor #BDC3C7
+  LifeLineBackgroundColor #ECF0F1
+  ParticipantBorderColor transparent
+  ParticipantBackgroundColor #34495E
+  ParticipantFontName SansSerif
+  ParticipantFontSize 12
+  ParticipantFontColor white
+  BoxBorderColor transparent
+  BoxFontColor #95A5A6
+}
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor #FBC02D
+  FontName SansSerif
+  FontSize 10
+  FontColor #424242
+}
+title recording one flow, end to end
+
+box "test/e2e" #F0F4FF
+participant "It (driver)\nrunner_test.go" as Driver
+participant "observeTransitions\nrecorder_test.go" as Rec
+end box
+participant "API server" as API
+participant "operator" as Op
+participant "Karta lib" as Karta
+database "fixtures/" as Disk
+
+Driver -> API : create Karta def + workload CR
+API -> Op : (operator reconciles)
+Driver -> Rec : observeTransitions(watch from creation RV)
+activate Rec
+loop each watch event (a CR)
+  Op -> API : drive state: Pending -> Running -> Degraded
+  API -> Rec : the CR at this state
+  Rec -> Rec : classify() from the CR's OWN\nfields, never from Karta
+  Rec -> Rec : capture if settled, state != "",\nand sanitized content is NEW
+end
+Rec --> Driver : recording (ordered snapshots), on terminal
+deactivate Rec
+Driver -> Driver : assertObservedOrder()
+Driver -> Karta : run on the final live object
+Karta --> Driver : MatchedStatuses
+note over Driver #FFE0B2 : LIVE GATE - must contain the flow's want,\nelse fail HERE; writeFixture never runs
+Driver -> Disk : writeFixture(): per snapshot\ncr.yaml + expected.yaml
+@enduml
