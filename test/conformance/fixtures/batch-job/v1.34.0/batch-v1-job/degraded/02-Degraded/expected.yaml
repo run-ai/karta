@@ -1,0 +1,10 @@
+components:
+  job:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 2
+matchedStatuses:
+- Running
+- Degraded

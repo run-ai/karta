@@ -1,0 +1,10 @@
+components:
+  pod:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+matchedStatuses:
+- Failed
+phase: Failed

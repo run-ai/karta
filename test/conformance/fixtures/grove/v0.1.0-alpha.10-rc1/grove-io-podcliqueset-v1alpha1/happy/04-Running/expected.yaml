@@ -1,0 +1,12 @@
+components:
+  clique:
+    instances:
+    - worker
+    scale:
+      worker:
+        replicas: 2
+  podcliqueset:
+    instances:
+    - ""
+matchedStatuses:
+- Running

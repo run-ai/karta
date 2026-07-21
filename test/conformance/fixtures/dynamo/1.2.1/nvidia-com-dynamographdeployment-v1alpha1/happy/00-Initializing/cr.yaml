@@ -1,0 +1,53 @@
+apiVersion: nvidia.com/v1alpha1
+kind: DynamoGraphDeployment
+metadata:
+  annotations:
+    nvidia.com/current-worker-hash: a7fcd167
+    nvidia.com/current-worker-hash-v2: 739b1932
+    nvidia.com/dynamo-operator-origin-version: 1.2.1
+  finalizers:
+  - nvidia.com/finalizer
+  name: karta-e2e-dynamo
+  namespace: default
+spec:
+  services:
+    Frontend:
+      componentType: frontend
+      extraPodSpec:
+        mainContainer:
+          image: nvcr.io/nvidia/ai-dynamo/dynamo-planner:1.2.1
+          imagePullPolicy: IfNotPresent
+          name: ""
+          resources: {}
+      replicas: 1
+    decode:
+      componentType: worker
+      envFromSecret: hf-token-secret
+      extraPodSpec:
+        mainContainer:
+          args:
+          - --model-path
+          - nvidia/Llama-3.1-8B-Instruct-FP8
+          - --model-name
+          - nvidia/Llama-3.1-8B-Instruct-FP8
+          - --speedup-ratio
+          - "1.0"
+          - --planner-profile-data
+          - /workspace/components/src/dynamo/planner/tests/data/profiling_results/H200_TP1P_TP1D
+          command:
+          - python3
+          - -m
+          - dynamo.mocker
+          image: nvcr.io/nvidia/ai-dynamo/dynamo-planner:1.2.1
+          imagePullPolicy: IfNotPresent
+          name: ""
+          resources: {}
+          workingDir: /workspace
+      replicas: 1
+      subComponentType: decode
+status:
+  conditions:
+  - reason: some_resources_are_not_ready
+    status: "False"
+    type: Ready
+  state: pending

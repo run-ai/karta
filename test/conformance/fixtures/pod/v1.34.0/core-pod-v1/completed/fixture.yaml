@@ -1,0 +1,27 @@
+flow: completed
+kartaFile: docs/samples/pod.yaml
+kartaName: core-pod-v1
+kartaSha256: f817c8470fb28a0b80d8f0ccc32596b098b1c05dffbe6dda3cdbaebf59938976
+observedStates:
+- Initializing
+- Running
+- Completed
+operator: pod
+schemaVersion: 3
+snapshots:
+- dir: 00-Initializing
+  state: Initializing
+- dir: 01-Initializing
+  state: Initializing
+- dir: 02-Initializing
+  state: Initializing
+- dir: 03-Initializing
+  state: Initializing
+- dir: 04-Running
+  state: Running
+- dir: 05-Running
+  state: Running
+- dir: 06-Completed
+  state: Completed
+version: v1.34.0
+want: Completed

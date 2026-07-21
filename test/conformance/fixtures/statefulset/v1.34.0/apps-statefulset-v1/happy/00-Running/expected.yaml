@@ -1,0 +1,9 @@
+components:
+  statefulset:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+matchedStatuses:
+- Running

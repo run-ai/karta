@@ -1,0 +1,21 @@
+components:
+  head:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+  raycluster:
+    instances:
+    - ""
+  worker:
+    instances:
+    - small
+    scale:
+      small:
+        maxReplicas: 1
+        minReplicas: 0
+        replicas: 0
+matchedStatuses:
+- Suspended
+phase: ""

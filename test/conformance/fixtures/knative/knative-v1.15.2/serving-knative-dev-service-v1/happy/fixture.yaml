@@ -1,0 +1,13 @@
+flow: happy
+kartaFile: docs/samples/knative-serving.yaml
+kartaName: serving-knative-dev-service-v1
+kartaSha256: 85b785697e105f377602922d7743410d910b158064dd1faf7eead6a275fc8439
+observedStates:
+- Running
+operator: knative
+schemaVersion: 3
+snapshots:
+- dir: 00-Running
+  state: Running
+version: knative-v1.15.2
+want: Running

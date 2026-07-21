@@ -1,0 +1,13 @@
+flow: suspended
+kartaFile: docs/samples/raycluster.yaml
+kartaName: ray-io-raycluster-v1
+kartaSha256: df39ec35c48270f8e2e4cf819b11930d3aba104b7a63f914e15eee1645a8f052
+observedStates:
+- Suspended
+operator: kuberay
+schemaVersion: 3
+snapshots:
+- dir: 00-Suspended
+  state: Suspended
+version: 1.6.2
+want: Suspended

@@ -1,0 +1,13 @@
+flow: suspended
+kartaFile: docs/samples/cronjob.yaml
+kartaName: batch-cronjob-v1
+kartaSha256: c0533e4178a1cf9b39f67f0c1613b803f2a573609bfc05398c2450e3220766ec
+observedStates:
+- Suspended
+operator: cronjob
+schemaVersion: 3
+snapshots:
+- dir: 00-Suspended
+  state: Suspended
+version: v1.34.0
+want: Suspended

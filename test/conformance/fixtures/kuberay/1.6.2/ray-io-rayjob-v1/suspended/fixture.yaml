@@ -1,0 +1,13 @@
+flow: suspended
+kartaFile: docs/samples/rayjob.yaml
+kartaName: ray-io-rayjob-v1
+kartaSha256: 7bea1d533d0802366349dbea5d4013e7da564c122467ab99ae6b04e14b273406
+observedStates:
+- Suspended
+operator: kuberay
+schemaVersion: 3
+snapshots:
+- dir: 00-Suspended
+  state: Suspended
+version: 1.6.2
+want: Suspended

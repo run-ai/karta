@@ -1,0 +1,18 @@
+components:
+  launcher:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+  mpijob:
+    instances:
+    - ""
+  worker:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+matchedStatuses:
+- Initializing

@@ -1,0 +1,19 @@
+components:
+  head:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+  rayjob:
+    instances:
+    - ""
+  worker:
+    instances:
+    - small
+    scale:
+      small:
+        replicas: 0
+matchedStatuses:
+- Completed
+phase: SUCCEEDED

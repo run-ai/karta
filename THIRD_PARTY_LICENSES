@@ -6,6 +6,11 @@ For complete license texts, please refer to the source repositories or the LICEN
 
 ## Dependencies
 
+### github.com/google/go-cmp
+- Name: github.com/google/go-cmp
+- Version: v0.7.0
+- License: BSD-3-Clause
+
 ### github.com/itchyny/gojq
 - Name: github.com/itchyny/gojq
 - Version: v0.12.19
@@ -70,11 +75,6 @@ For complete license texts, please refer to the source repositories or the LICEN
 - Name: github.com/go-task/slim-sprig/v3
 - Version: v3.0.0
 - License: MIT
-
-### github.com/google/go-cmp
-- Name: github.com/google/go-cmp
-- Version: v0.7.0
-- License: BSD-3-Clause
 
 ### github.com/google/pprof
 - Name: github.com/google/pprof

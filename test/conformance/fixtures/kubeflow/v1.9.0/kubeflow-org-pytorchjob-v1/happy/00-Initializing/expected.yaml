@@ -1,0 +1,18 @@
+components:
+  master:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+  pytorchjob:
+    instances:
+    - ""
+  worker:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+matchedStatuses:
+- Initializing

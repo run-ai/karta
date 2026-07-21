@@ -1,0 +1,26 @@
+flow: happy
+kartaFile: docs/samples/dynamo.yaml
+kartaName: nvidia-com-dynamographdeployment-v1alpha1
+kartaSha256: 8688d0afd777c1917e147fef482e1ee64ffa128447a7cdd855e690665247a7bf
+observedStates:
+- Initializing
+- Running
+operator: dynamo
+schemaVersion: 3
+snapshots:
+- dir: 00-Initializing
+  state: Initializing
+- dir: 01-Initializing
+  state: Initializing
+- dir: 02-Initializing
+  state: Initializing
+- dir: 03-Initializing
+  state: Initializing
+- dir: 04-Initializing
+  state: Initializing
+- dir: 05-Initializing
+  state: Initializing
+- dir: 06-Running
+  state: Running
+version: 1.2.1
+want: Running

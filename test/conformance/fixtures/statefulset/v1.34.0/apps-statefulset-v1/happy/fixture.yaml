@@ -1,0 +1,13 @@
+flow: happy
+kartaFile: docs/samples/statefulset.yaml
+kartaName: apps-statefulset-v1
+kartaSha256: 162bb3d3624b63b3b19fc13081b19061472828c4802f40075d82f6ac6cee17e2
+observedStates:
+- Running
+operator: statefulset
+schemaVersion: 3
+snapshots:
+- dir: 00-Running
+  state: Running
+version: v1.34.0
+want: Running

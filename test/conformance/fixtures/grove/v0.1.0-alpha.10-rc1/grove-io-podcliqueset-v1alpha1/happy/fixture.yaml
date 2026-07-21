@@ -1,0 +1,22 @@
+flow: happy
+kartaFile: docs/samples/grove-podcliqueset.yaml
+kartaName: grove-io-podcliqueset-v1alpha1
+kartaSha256: dc80a2b3152140d0a273cd2e5f225c671032ab9b9690ef4fc3db1b1a168289fb
+observedStates:
+- Initializing
+- Running
+operator: grove
+schemaVersion: 3
+snapshots:
+- dir: 00-Initializing
+  state: Initializing
+- dir: 01-Initializing
+  state: Initializing
+- dir: 02-Initializing
+  state: Initializing
+- dir: 03-Initializing
+  state: Initializing
+- dir: 04-Running
+  state: Running
+version: v0.1.0-alpha.10-rc1
+want: Running

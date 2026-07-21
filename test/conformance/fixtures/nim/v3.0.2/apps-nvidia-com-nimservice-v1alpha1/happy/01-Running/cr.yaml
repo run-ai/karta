@@ -1,0 +1,51 @@
+apiVersion: apps.nvidia.com/v1alpha1
+kind: NIMService
+metadata:
+  finalizers:
+  - finalizer.nimservice.apps.nvidia.com
+  name: karta-e2e-nim
+  namespace: default
+spec:
+  authSecret: ngc-secret
+  env:
+  - name: NIM_REQUEST_LATENCY
+    value: "2"
+  expose:
+    ingress:
+      spec: {}
+    service:
+      port: 8000
+      type: ClusterIP
+  image:
+    pullPolicy: IfNotPresent
+    repository: nim-cpu
+    tag: e2e
+  inferencePlatform: standalone
+  livenessProbe: {}
+  metrics:
+    serviceMonitor: {}
+  readinessProbe: {}
+  replicas: 1
+  scale:
+    hpa:
+      maxReplicas: 0
+      minReplicas: 1
+  startupProbe: {}
+  storage:
+    nimCache: {}
+    pvc:
+      create: true
+      size: 1Gi
+      volumeAccessMode: ReadWriteOnce
+status:
+  conditions:
+  - reason: Ready
+    status: "True"
+    type: Ready
+  - reason: Ready
+    status: "False"
+    type: Failed
+  model:
+    externalEndpoint: ""
+    name: meta/llama-3.2-1b-instruct
+  state: Ready

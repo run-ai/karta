@@ -1,0 +1,97 @@
+components:
+  cdc:
+    instances:
+    - ""
+    scale:
+      "": {}
+  datacoord:
+    instances:
+    - ""
+    scale:
+      "": {}
+  datanode:
+    instances:
+    - ""
+    scale:
+      "": {}
+  etcd:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+  indexcoord:
+    instances:
+    - ""
+    scale:
+      "": {}
+  indexnode:
+    instances:
+    - ""
+    scale:
+      "": {}
+  milvus:
+    instances:
+    - ""
+  minio:
+    instances:
+    - ""
+  mixcoord:
+    instances:
+    - ""
+    scale:
+      "": {}
+  proxy:
+    instances:
+    - ""
+    scale:
+      "": {}
+  pulsar-bookkeeper:
+    instances:
+    - ""
+    scale:
+      "": {}
+  pulsar-broker:
+    instances:
+    - ""
+    scale:
+      "": {}
+  pulsar-proxy:
+    instances:
+    - ""
+    scale:
+      "": {}
+  pulsar-zookeeper:
+    instances:
+    - ""
+    scale:
+      "": {}
+  querycoord:
+    instances:
+    - ""
+    scale:
+      "": {}
+  querynode:
+    instances:
+    - ""
+    scale:
+      "": {}
+  rootcoord:
+    instances:
+    - ""
+    scale:
+      "": {}
+  standalone:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+  streamingnode:
+    instances:
+    - ""
+    scale:
+      "": {}
+matchedStatuses:
+- Running
+phase: Healthy

@@ -1,0 +1,13 @@
+flow: failed
+kartaFile: docs/samples/deployment.yaml
+kartaName: apps-deployment-v1
+kartaSha256: b61f030f4a794278197b6c7374733545f1a79c440200d25276a90c6cf9180e8a
+observedStates:
+- Failed
+operator: deployment
+schemaVersion: 3
+snapshots:
+- dir: 00-Failed
+  state: Failed
+version: v1.34.0
+want: Failed

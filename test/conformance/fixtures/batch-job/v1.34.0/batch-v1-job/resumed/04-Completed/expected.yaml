@@ -1,0 +1,9 @@
+components:
+  job:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+matchedStatuses:
+- Completed

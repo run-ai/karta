@@ -1,0 +1,13 @@
+flow: initializing
+kartaFile: docs/samples/nimservice.yaml
+kartaName: apps-nvidia-com-nimservice-v1alpha1
+kartaSha256: a9276a6db8f0c4941a1abe514a17ae9eb54ab15a4a92e97154bcaeeb3740599a
+observedStates:
+- Initializing
+operator: nim
+schemaVersion: 3
+snapshots:
+- dir: 00-Initializing
+  state: Initializing
+version: v3.0.2
+want: Initializing

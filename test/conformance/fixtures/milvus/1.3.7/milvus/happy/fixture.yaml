@@ -1,0 +1,12 @@
+flow: happy
+kartaFile: docs/samples/milvus.yaml
+kartaName: milvus
+kartaSha256: ab7d7c229d4ba59161ee1c4d9a9585bfa04be3dc7ce73b46570439066e37f0e7
+observedStates:
+- Running
+operator: milvus
+schemaVersion: 3
+snapshots:
+- dir: 00-Running
+  state: Running
+version: 1.3.7

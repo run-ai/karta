@@ -1,0 +1,12 @@
+components:
+  deployment:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+  replicaset:
+    instances:
+    - ""
+matchedStatuses:
+- Running

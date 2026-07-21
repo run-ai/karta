@@ -1,0 +1,19 @@
+flow: happy
+kartaFile: docs/samples/mpijob.yaml
+kartaName: kubeflow-org-mpijob-v2beta1
+kartaSha256: b81f27a7480b36f6af9169e17fda74529c75096d8fd2d2b431bfed6892648254
+observedStates:
+- Initializing
+- Running
+- Completed
+operator: kubeflow
+schemaVersion: 3
+snapshots:
+- dir: 00-Initializing
+  state: Initializing
+- dir: 01-Running
+  state: Running
+- dir: 02-Completed
+  state: Completed
+version: v1.9.0
+want: Completed

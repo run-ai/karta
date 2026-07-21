@@ -1,0 +1,13 @@
+flow: running
+kartaFile: docs/samples/mpijob.yaml
+kartaName: kubeflow-org-mpijob-v2beta1
+kartaSha256: b81f27a7480b36f6af9169e17fda74529c75096d8fd2d2b431bfed6892648254
+observedStates:
+- Running
+operator: kubeflow
+schemaVersion: 3
+snapshots:
+- dir: 00-Running
+  state: Running
+version: v1.9.0
+want: Running

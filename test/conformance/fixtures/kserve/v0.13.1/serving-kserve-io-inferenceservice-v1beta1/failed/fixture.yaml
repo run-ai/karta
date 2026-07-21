@@ -1,0 +1,13 @@
+flow: failed
+kartaFile: docs/samples/kserve.yaml
+kartaName: serving-kserve-io-inferenceservice-v1beta1
+kartaSha256: e0785b54b8784804a253020fb0650f07215be16d536a81d0e9f199a1af13a032
+observedStates:
+- Failed
+operator: kserve
+schemaVersion: 3
+snapshots:
+- dir: 00-Failed
+  state: Failed
+version: v0.13.1
+want: Failed

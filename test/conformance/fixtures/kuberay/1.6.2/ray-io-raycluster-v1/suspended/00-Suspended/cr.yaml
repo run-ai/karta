@@ -1,0 +1,37 @@
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: karta-e2e-ray-suspended
+  namespace: default
+spec:
+  headGroupSpec:
+    rayStartParams: {}
+    template:
+      spec:
+        containers:
+        - image: ray-e2e:local
+          imagePullPolicy: IfNotPresent
+          name: ray-head
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+  rayVersion: 2.40.0
+  suspend: true
+  workerGroupSpecs:
+  - groupName: small
+    maxReplicas: 1
+    minReplicas: 0
+    numOfHosts: 1
+    rayStartParams: {}
+    replicas: 0
+    template:
+      spec:
+        containers:
+        - image: ray-e2e:local
+          imagePullPolicy: IfNotPresent
+          name: ray-worker
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi

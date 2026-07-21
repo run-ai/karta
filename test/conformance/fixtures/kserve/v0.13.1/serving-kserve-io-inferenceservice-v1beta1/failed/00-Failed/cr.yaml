@@ -1,0 +1,51 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  finalizers:
+  - inferenceservice.finalizers
+  name: karta-e2e-kserve-failed
+  namespace: default
+spec:
+  predictor:
+    containers:
+    - image: karta-e2e-no-such-registry.invalid/nope:latest
+      name: kserve-container
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+status:
+  components:
+    predictor:
+      latestCreatedRevision: karta-e2e-kserve-failed-predictor-00001
+  conditions:
+  - reason: PredictorConfigurationReady not ready
+    severity: Info
+    status: "False"
+    type: LatestDeploymentReady
+  - reason: RevisionFailed
+    severity: Info
+    status: "False"
+    type: PredictorConfigurationReady
+  - reason: RevisionMissing
+    status: "False"
+    type: PredictorReady
+  - reason: RevisionMissing
+    severity: Info
+    status: "False"
+    type: PredictorRouteReady
+  - reason: RevisionMissing
+    status: "False"
+    type: Ready
+  - reason: PredictorRouteReady not ready
+    severity: Info
+    status: "False"
+    type: RoutesReady
+  modelStatus:
+    states:
+      activeModelState: ""
+      targetModelState: Pending
+    transitionStatus: InProgress

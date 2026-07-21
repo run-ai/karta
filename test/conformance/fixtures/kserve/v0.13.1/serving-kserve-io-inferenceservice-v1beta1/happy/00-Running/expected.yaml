@@ -1,0 +1,16 @@
+components:
+  inferenceservice:
+    instances:
+    - ""
+  predictor:
+    instances:
+    - ""
+    scale:
+      "": {}
+  transformer:
+    instances:
+    - ""
+    scale:
+      "": {}
+matchedStatuses:
+- Running

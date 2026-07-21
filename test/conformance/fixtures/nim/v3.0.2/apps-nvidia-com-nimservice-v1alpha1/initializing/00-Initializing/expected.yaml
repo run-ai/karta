@@ -1,0 +1,10 @@
+components:
+  nimservice:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+matchedStatuses:
+- Initializing
+phase: NotReady

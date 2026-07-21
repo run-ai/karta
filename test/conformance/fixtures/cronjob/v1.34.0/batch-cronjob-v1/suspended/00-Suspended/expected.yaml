@@ -1,0 +1,12 @@
+components:
+  cronjob:
+    instances:
+    - ""
+    scale:
+      "":
+        replicas: 1
+  job:
+    instances:
+    - ""
+matchedStatuses:
+- Suspended

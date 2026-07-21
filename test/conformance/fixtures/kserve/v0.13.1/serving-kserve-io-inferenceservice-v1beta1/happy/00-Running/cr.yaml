@@ -1,0 +1,58 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  finalizers:
+  - inferenceservice.finalizers
+  name: karta-e2e-kserve
+  namespace: default
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: sklearn
+      name: ""
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+      storageUri: gs://kfserving-examples/models/sklearn/1.0/model
+status:
+  address:
+    url: http://karta-e2e-kserve-predictor.default.svc.cluster.local
+  components:
+    predictor:
+      address:
+        url: http://karta-e2e-kserve-predictor.default.svc.cluster.local
+      latestCreatedRevision: karta-e2e-kserve-predictor-00001
+      latestReadyRevision: karta-e2e-kserve-predictor-00001
+      latestRolledoutRevision: karta-e2e-kserve-predictor-00001
+      traffic:
+      - latestRevision: true
+        percent: 100
+        revisionName: karta-e2e-kserve-predictor-00001
+      url: http://karta-e2e-kserve-predictor.default.127.0.0.1.sslip.io
+  conditions:
+  - status: "True"
+    type: IngressReady
+  - severity: Info
+    status: "True"
+    type: LatestDeploymentReady
+  - severity: Info
+    status: "True"
+    type: PredictorConfigurationReady
+  - status: "True"
+    type: PredictorReady
+  - severity: Info
+    status: "True"
+    type: PredictorRouteReady
+  - status: "True"
+    type: Ready
+  - severity: Info
+    status: "True"
+    type: RoutesReady
+  modelStatus:
+    states:
+      activeModelState: ""
+      targetModelState: Pending
+    transitionStatus: InProgress
+  url: http://karta-e2e-kserve-predictor.default.127.0.0.1.sslip.io

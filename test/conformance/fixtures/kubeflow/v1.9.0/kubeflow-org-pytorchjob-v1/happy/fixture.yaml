@@ -1,0 +1,16 @@
+flow: happy
+kartaFile: docs/samples/pytorch.yaml
+kartaName: kubeflow-org-pytorchjob-v1
+kartaSha256: 53d1c7710d9adb8c2e01077e82f8ac0fa4a424448644a991e9b4c8bb477c675c
+observedStates:
+- Initializing
+- Running
+operator: kubeflow
+schemaVersion: 3
+snapshots:
+- dir: 00-Initializing
+  state: Initializing
+- dir: 01-Running
+  state: Running
+version: v1.9.0
+want: Running

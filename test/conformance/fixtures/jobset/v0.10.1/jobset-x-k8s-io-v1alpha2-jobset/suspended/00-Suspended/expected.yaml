@@ -1,0 +1,12 @@
+components:
+  jobset:
+    instances:
+    - ""
+  replicatedjob:
+    instances:
+    - workers
+    scale:
+      workers:
+        replicas: 1
+matchedStatuses:
+- Suspended

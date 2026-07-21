@@ -1,0 +1,13 @@
+flow: happy
+kartaFile: docs/samples/lws.yaml
+kartaName: leaderworkerset-x-k8s-io-leaderworkerset-v1
+kartaSha256: 306ecd300495eca3fa349acd445fa9204807f3680584df0c4cc7f0f23c6575c4
+observedStates:
+- Running
+operator: lws
+schemaVersion: 3
+snapshots:
+- dir: 00-Running
+  state: Running
+version: v0.7.0
+want: Running

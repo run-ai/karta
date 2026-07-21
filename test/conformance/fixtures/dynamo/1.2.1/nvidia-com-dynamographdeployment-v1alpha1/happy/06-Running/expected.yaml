@@ -1,0 +1,16 @@
+components:
+  dynamographdeployment:
+    instances:
+    - ""
+  service:
+    instances:
+    - Frontend
+    - decode
+    scale:
+      Frontend:
+        replicas: 1
+      decode:
+        replicas: 1
+matchedStatuses:
+- Running
+phase: successful

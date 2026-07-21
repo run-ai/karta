@@ -1,0 +1,13 @@
+flow: suspended
+kartaFile: docs/samples/batch-job.yaml
+kartaName: batch-v1-job
+kartaSha256: 480c0a243307da50d35be691005817e72edf8ce33c54ac911058f42bc21c41c0
+observedStates:
+- Suspended
+operator: batch-job
+schemaVersion: 3
+snapshots:
+- dir: 00-Suspended
+  state: Suspended
+version: v1.34.0
+want: Suspended

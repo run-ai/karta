@@ -1,0 +1,13 @@
+flow: running
+kartaFile: docs/samples/jobset.yaml
+kartaName: jobset-x-k8s-io-v1alpha2-jobset
+kartaSha256: 1d2143ba02be6b6e2f623b9a02e3d354c2ce5874df831e4e8c4e1f5d945af6e9
+observedStates:
+- Running
+operator: jobset
+schemaVersion: 3
+snapshots:
+- dir: 00-Running
+  state: Running
+version: v0.10.1
+want: Running

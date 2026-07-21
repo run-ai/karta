@@ -1,0 +1,16 @@
+flow: failed
+kartaFile: docs/samples/pytorch.yaml
+kartaName: kubeflow-org-pytorchjob-v1
+kartaSha256: 53d1c7710d9adb8c2e01077e82f8ac0fa4a424448644a991e9b4c8bb477c675c
+observedStates:
+- Running
+- Failed
+operator: kubeflow
+schemaVersion: 3
+snapshots:
+- dir: 00-Running
+  state: Running
+- dir: 01-Failed
+  state: Failed
+version: v1.9.0
+want: Failed

@@ -1,0 +1,12 @@
+components:
+  knativeservice:
+    instances:
+    - ""
+  revision:
+    instances:
+    - ""
+    scale:
+      "":
+        minReplicas: 1
+matchedStatuses:
+- Running
