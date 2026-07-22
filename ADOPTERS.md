@@ -11,4 +11,5 @@ To add your project or organization, open a pull request that adds a row to the 
 
 | Adopter | Type | How Karta is used |
 |---------|------|-------------------|
+| [Elotl Nova](https://www.elotl.co) | Commercial multi-cluster Kubernetes scheduler | Uses Karta to parse resource requirements of custom resource workloads (RayCluster, PyTorchJob, and others) for multi-cluster scheduling. Documented in [Nova supported API resources](https://docs.elotl.co/nova/Appendix/api-resources/#custom-resource-objects) (Nova v1.5). |
 | [KAI Scheduler](https://github.com/kai-scheduler/KAI-Scheduler) | Open-source Kubernetes GPU scheduler | Pod-grouper fallback plugin: gang scheduling for any workload type through Karta workload descriptions. Native plugins take precedence; Karta is the generic fallback. Merged 2026-07-13 in [KAI PR #1877](https://github.com/kai-scheduler/KAI-Scheduler/pull/1877). |
