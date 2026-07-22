@@ -59,9 +59,14 @@ vet-go:
 lint: fmt-go vet-go lint-go 
 .PHONY: lint
 
+.PHONY: generate-samples
+generate-samples: ## Regenerate docs/catalog/ from pkg/catalog
+	go run ./hack/gen-samples
+
 .PHONY: validate
-validate: generate manifests generate-mocks generate-licenses
-	@git diff --exit-code 
+validate: generate manifests generate-mocks generate-licenses generate-samples
+	@test -z "$$(git status --porcelain)" || { git status --porcelain; \
+		echo "generated files are stale or untracked; run the generators and commit"; exit 1; }
 
 .PHONY: install-crd
 install-crd: manifests ## Install CRDs into the cluster
