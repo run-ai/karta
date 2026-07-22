@@ -31,9 +31,6 @@ var ErrNotFound = errors.New("catalog: no Karta registered for GVK")
 var ErrInvalidGVK = errors.New("catalog: root component GVK incomplete")
 
 // definitions is the single wiring point for the catalog supported workloads.
-// Adding a workload means adding its file under kartas/ plus one entry here. The
-// completeness test asserts this list matches the set of constructors defined in
-// the kartas package, so a forgotten entry fails CI.
 var definitions = []func() *v1alpha1.Karta{
 	kartas.BatchJob,
 	kartas.CronJob,
