@@ -67,7 +67,7 @@ func newCatalog(defs []func() *v1alpha1.Karta) (*Catalog, error) {
 		root := karta.Spec.StructureDefinition.RootComponent
 		// Group may be empty (core workloads such as Pod), but Version and Kind are required.
 		if root.Kind == nil || root.Kind.Version == "" || root.Kind.Kind == "" {
-			return nil, fmt.Errorf("Karta %q: %w", karta.Name, ErrInvalidGVK)
+			return nil, fmt.Errorf("%w: Karta %q", ErrInvalidGVK, karta.Name)
 		}
 		gvk := RootKey(karta)
 		if existing, ok := c.byGVK[gvk]; ok {
@@ -126,7 +126,7 @@ func List() []*v1alpha1.Karta { return defaultCatalog.List() }
 func Slug(k *v1alpha1.Karta) (string, error) {
 	gvk := RootKey(k)
 	if gvk.Version == "" || gvk.Kind == "" {
-		return "", fmt.Errorf("Karta %q: %w", k.Name, ErrInvalidGVK)
+		return "", fmt.Errorf("%w: Karta %q", ErrInvalidGVK, k.Name)
 	}
 	group := gvk.Group
 	if group == "" {
