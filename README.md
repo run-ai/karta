@@ -46,6 +46,45 @@ In addition to the CRD, Karta provides a **Go package** that performs the core p
 └────────────┴────────────┴────────────┴───────────┘
 ```
 
+## From YAML to Workload Tree
+
+Here is a distributed inference workload the way a user submits it - a LeaderWorkerSet serving two model replicas, each a group of one leader pod and one worker pod:
+
+```yaml
+apiVersion: leaderworkerset.x-k8s.io/v1
+kind: LeaderWorkerSet
+metadata:
+  name: demo
+spec:
+  replicas: 2        # two groups, one per model replica
+  leaderWorkerTemplate:
+    size: 2          # pods per group: 1 leader + 1 worker
+    leaderTemplate:
+      spec:
+        containers:
+        - name: inference-leader
+          image: ghcr.io/example/inference:latest
+          resources:
+            limits:
+              nvidia.com/gpu: 8
+    workerTemplate:
+      spec:
+        containers:
+        - name: inference-worker
+          image: ghcr.io/example/inference:latest
+          resources:
+            limits:
+              nvidia.com/gpu: 8
+```
+
+The groups, roles, replica counts, GPU requests, and status conditions are all in there, but nested in fields that only LeaderWorkerSet-aware code knows how to find. RayCluster, JobSet, and every other workload type nests the same information differently.
+
+With the pre-built [LeaderWorkerSet Karta definition](docs/samples/lws.yaml), any tool can resolve that object and its live pods into a uniform structural view:
+
+![Workload tree derived from the LeaderWorkerSet: demo (Running, 4 pods, 32 GPUs, gang scheduled per group) with two groups, each 2/2 ready with a leader pod and a worker pod at 8 GPUs each, resolved to their nodes](docs/assets/lws-workload-tree.svg)
+
+The structure in this view comes from Karta path expressions: the group, leader, and worker components, their replica counts, the per-pod GPU counts, and the workload status mapped from LeaderWorkerSet conditions to a common vocabulary. The gang semantics come from the same definition's gang-scheduling instructions, which declare each group's pods as one gang. None of it is LeaderWorkerSet-specific code. Point the same code at a RayCluster or a JobSet with their Karta definitions and the view keeps working. [KAI Scheduler](https://github.com/kai-scheduler/KAI-Scheduler) consumes the gang instructions today through its Karta-based pod grouper to admit each gang all-or-nothing, and any scheduler with a gang primitive can translate them the same way.
+
 ## Quick Start
 
 ### Install the CRD
