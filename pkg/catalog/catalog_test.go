@@ -109,21 +109,18 @@ func TestListReturnsDeepCopies(t *testing.T) {
 	}
 }
 
-// TestNewPanicsOnDuplicateGVK asserts two definitions with the same root GVK
-// fail loudly at construction.
-func TestNewPanicsOnDuplicateGVK(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Fatal("expected panic on duplicate GVK")
-		}
-	}()
-	newCatalog([]func() *v1alpha1.Karta{kartas.BatchJob, kartas.BatchJob})
+// TestNewCatalogDuplicateGVK asserts two definitions with the same root GVK
+// fail construction.
+func TestNewCatalogDuplicateGVK(t *testing.T) {
+	if _, err := newCatalog([]func() *v1alpha1.Karta{kartas.BatchJob, kartas.BatchJob}); err == nil {
+		t.Fatal("expected error on duplicate GVK")
+	}
 }
 
-// TestNewPanicsOnIncompleteGVK asserts a definition whose root GVK is missing a
-// version or kind fails loudly at construction rather than being indexed under a
-// partial GVK. An empty group stays valid (core workloads such as Pod).
-func TestNewPanicsOnIncompleteGVK(t *testing.T) {
+// TestNewCatalogIncompleteGVK asserts a definition whose root GVK is missing a
+// version or kind fails construction rather than being indexed under a partial
+// GVK. An empty group stays valid (core workloads such as Pod).
+func TestNewCatalogIncompleteGVK(t *testing.T) {
 	withKind := func(gvk *v1alpha1.GroupVersionKind) func() *v1alpha1.Karta {
 		return func() *v1alpha1.Karta {
 			return &v1alpha1.Karta{Spec: v1alpha1.KartaSpec{StructureDefinition: v1alpha1.StructureDefinition{
@@ -137,12 +134,9 @@ func TestNewPanicsOnIncompleteGVK(t *testing.T) {
 	}
 	for name, gvk := range cases {
 		t.Run(name, func(t *testing.T) {
-			defer func() {
-				if recover() == nil {
-					t.Fatal("expected panic on incomplete root GVK")
-				}
-			}()
-			newCatalog([]func() *v1alpha1.Karta{withKind(gvk)})
+			if _, err := newCatalog([]func() *v1alpha1.Karta{withKind(gvk)}); !errors.Is(err, ErrInvalidGVK) {
+				t.Fatalf("error = %v, want ErrInvalidGVK", err)
+			}
 		})
 	}
 }

@@ -8,6 +8,7 @@
 package catalog
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -24,7 +25,10 @@ import (
 const yamlHeader = "# SPDX-License-Identifier: Apache-2.0\n# Copyright (c) 2026 NVIDIA Corporation\n"
 
 // ErrNotFound is returned by Get when no built-in Karta is registered for a GVK.
-var ErrNotFound = fmt.Errorf("catalog: no Karta registered for GVK")
+var ErrNotFound = errors.New("catalog: no Karta registered for GVK")
+
+// ErrInvalidGVK wraps failures to derive a root-component GVK from a Karta.
+var ErrInvalidGVK = errors.New("catalog: root component GVK incomplete")
 
 // definitions is the single wiring point for the catalog supported workloads.
 // Adding a workload means adding its file under kartas/ plus one entry here. The
@@ -43,14 +47,21 @@ type Catalog struct {
 	byGVK map[schema.GroupVersionKind]*v1alpha1.Karta
 }
 
-// New builds the catalog from the definitions list. It panics in case of catalog violation.
+// New builds the catalog from the definitions list. It panics in case of catalog
+// violation, which can only happen at package init since definitions is fixed at
+// compile time.
 func New() *Catalog {
-	return newCatalog(definitions)
+	c, err := newCatalog(definitions)
+	if err != nil {
+		panic(fmt.Sprintf("catalog: %v", err))
+	}
+	return c
 }
 
-// newCatalog builds a catalog from an explicit definitions list. It exists so
-// tests can exercise the duplicate-GVK panic without mutating the package list.
-func newCatalog(defs []func() *v1alpha1.Karta) *Catalog {
+// newCatalog builds a catalog from an explicit definitions list. It reports a
+// violation as an error so tests can assert on it without recover; New turns that
+// error into the package's single panic.
+func newCatalog(defs []func() *v1alpha1.Karta) (*Catalog, error) {
 	c := &Catalog{
 		byGVK: make(map[schema.GroupVersionKind]*v1alpha1.Karta, len(defs)),
 	}
@@ -59,15 +70,15 @@ func newCatalog(defs []func() *v1alpha1.Karta) *Catalog {
 		root := karta.Spec.StructureDefinition.RootComponent
 		// Group may be empty (core workloads such as Pod), but Version and Kind are required.
 		if root.Kind == nil || root.Kind.Version == "" || root.Kind.Kind == "" {
-			panic(fmt.Sprintf("catalog: root component GVK incomplete for Karta %q", karta.Name))
+			return nil, fmt.Errorf("Karta %q: %w", karta.Name, ErrInvalidGVK)
 		}
 		gvk := RootKey(karta)
 		if existing, ok := c.byGVK[gvk]; ok {
-			panic(fmt.Sprintf("catalog: duplicate GVK %s defined by %q and %q", gvk, existing.Name, karta.Name))
+			return nil, fmt.Errorf("duplicate GVK %s defined by %q and %q", gvk, existing.Name, karta.Name)
 		}
 		c.byGVK[gvk] = karta
 	}
-	return c
+	return c, nil
 }
 
 // RootKey returns the workload GVK of a Karta's root component.
@@ -118,7 +129,7 @@ func List() []*v1alpha1.Karta { return defaultCatalog.List() }
 func Slug(k *v1alpha1.Karta) (string, error) {
 	gvk := RootKey(k)
 	if gvk.Version == "" || gvk.Kind == "" {
-		return "", fmt.Errorf("root component GVK incomplete for Karta %q", k.Name)
+		return "", fmt.Errorf("Karta %q: %w", k.Name, ErrInvalidGVK)
 	}
 	group := gvk.Group
 	if group == "" {
