@@ -208,13 +208,16 @@ Karta supports any workload type. The following are pre-built and tested Karta d
 | PyTorchJob | Kubeflow |
 | RayCluster | Ray |
 | RayJob | Ray |
+| RayService | Ray |
 | InferenceService | KServe |
 | Knative Service | Knative |
 | MPIJob | Kubeflow |
 | NIM Service | NVIDIA |
+| NIM Cache | NVIDIA |
 | LeaderWorkerSet | Kubernetes |
 | Milvus | Milvus |
 | DynamoGraphDeployment | NVIDIA Dynamo |
+| PodCliqueSet | Grove |
 
 See [`docs/samples/`](docs/samples/) for the full Karta definitions.
 
