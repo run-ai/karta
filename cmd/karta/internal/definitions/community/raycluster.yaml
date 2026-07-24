@@ -10,6 +10,13 @@ spec:
         group: ray.io
         version: v1
         kind: RayCluster
+      suspendDefinition:
+        suspendActions:
+          - path: .spec.suspend
+            value: "true"
+        resumeActions:
+          - path: .spec.suspend
+            value: "false"
       statusDefinition:
         phaseDefinition:
           path: .status.state
@@ -18,6 +25,10 @@ spec:
           - byPhase: ready
           failed:
           - byPhase: failed
+          suspended:
+          - byExpression:
+              expression: .spec.suspend == true and (.status.state == "suspended" or (.status.state | not))
+              expectedResult: "true"
     childComponents:
       - name: head
         kind:

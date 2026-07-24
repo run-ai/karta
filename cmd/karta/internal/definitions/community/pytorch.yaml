@@ -10,13 +10,12 @@ spec:
         group: kubeflow.org
         version: v1
         kind: PyTorchJob
-      # suspendDefinition sets spec.suspend to pause/resume the job natively.
       suspendDefinition:
         suspendActions:
-          - path: .spec.suspend
+          - path: .spec.runPolicy.suspend
             value: "true"
         resumeActions:
-          - path: .spec.suspend
+          - path: .spec.runPolicy.suspend
             value: "false"
       statusDefinition:
         conditionsDefinition:
@@ -44,10 +43,6 @@ spec:
           suspended:
           - byConditions:
               - type: Suspended
-                status: "True"
-          suspending:
-          - byConditions:
-              - type: Suspending
                 status: "True"
     childComponents:
       - name: master

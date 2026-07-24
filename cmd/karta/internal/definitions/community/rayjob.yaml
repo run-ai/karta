@@ -10,6 +10,13 @@ spec:
         group: ray.io
         version: v1
         kind: RayJob
+      suspendDefinition:
+        suspendActions:
+          - path: .spec.suspend
+            value: "true"
+        resumeActions:
+          - path: .spec.suspend
+            value: "false"
       statusDefinition:
         phaseDefinition:
           path: .status.jobStatus
@@ -28,6 +35,10 @@ spec:
           - byPhase: SUCCEEDED
           failed:
           - byPhase: FAILED
+          suspended:
+          - byExpression:
+              expression: .status.jobDeploymentStatus == "Suspended"
+              expectedResult: "true"
     childComponents:
       - name: head
         kind:
@@ -53,7 +64,7 @@ spec:
           podTemplateSpecPath: .spec.rayClusterSpec.workerGroupSpecs[].template
         scaleDefinition:
           replicasPath: .spec.rayClusterSpec.workerGroupSpecs[].replicas // 1
-        instanceIdPath: .spec.workerGroupSpecs[].groupName
+        instanceIdPath: .spec.rayClusterSpec.workerGroupSpecs[].groupName
         podSelector:
           componentTypeSelector:
             keyPath: .metadata.labels["ray.io/node-type"]

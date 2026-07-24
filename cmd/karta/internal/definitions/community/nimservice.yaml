@@ -31,13 +31,12 @@ spec:
         statusMappings:
           initializing:
           - byPhase: NotReady
+          - byPhase: Pending
           running:
           - byPhase: Ready
           failed:
           - byPhase: Failed
-  # Optimization instructions using new structure
   optimizationInstructions:
-    # Gang scheduling for inference pipeline coordination (preferred for serving)
     gangScheduling:
       podGroups:
       - name: service
