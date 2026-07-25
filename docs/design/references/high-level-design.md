@@ -47,7 +47,7 @@ We want to enrich a Karta definition by letting it draw on other cluster resourc
 ## Concept
 A reference is a definition's way of reaching another resource in the cluster. A reference lets it name another resource - or a set of them - and use that resource's values too.
 
-Concretely, a reference is a named pointer to another cluster resource, or set of resources, that Karta exposes to a definition's JQ expressions as the variable `$<Name>`. In this proposal, a Karta definition declares its references at the structure level. Each reference could be resolved against the workload object itself (the root custom resource the definition describes, for example the `TrainJob`) - the expressions that pick the name, namespace, and labels run with that object as their input - and then fetched once from the cluster. Its value can then be used anywhere in the Karta definition - in the JQ expressions of any component. To the author it is just another input: where `.spec...` reads the workload object, `$trainingRuntime.spec...` reads a referenced one.
+Concretely, a reference is a named pointer to another cluster resource, or set of resources, that Karta exposes to a definition's JQ expressions as the variable `$<Name>`. In this proposal, a Karta definition declares its references at the structure level. Each reference could be resolved against the workload object itself (the root custom resource the definition describes, for example the `TrainJob`) - the expressions that pick the name and labels run with that object as their input - and then fetched once from the cluster. Its value can then be used anywhere in the Karta definition - in the JQ expressions of any component. To the author it is just another input: where `.spec...` reads the workload object, `$trainingRuntime.spec...` reads a referenced one.
 
 Karta stays declarative: it still fetches nothing itself. Resolving references is the consumer's job, and it adds one more input - the fetched values - to what the consumer passes when it evaluates a Karta definition.
 
@@ -62,7 +62,9 @@ Naming the two cases after what they return - one object versus many - keeps the
 ## API
 References are declared on the structure definition, as a list, alongside the root component, child components, and additional child kinds. Each entry names the variable, the GVK to fetch, and one of `lookup` or `list`. The list is keyed by the unique `name`.
 
-A `lookup` names the single object to fetch: its `nameExpression` is a JQ expression against the root object that resolves the resource's name, and the consumer `Get`s that object (in the namespace from `namespaceExpression`, or the workload's own namespace).
+A `lookup` names the single object to fetch: its `nameExpression` is a JQ expression against the root object that resolves the resource's name, and the consumer `Get`s that object.
+
+There is no namespace field, deliberately. A namespaced reference always resolves in the workload's own namespace; a cluster-scoped GVK (such as `ClusterTrainingRuntime`) has none. A definition can never reach into another namespace, which keeps references inside the workload's isolation boundary by construction.
 
 A `list` selects its set with a structured selector in the shape of a Kubernetes `LabelSelector` (`matchLabels` plus `matchExpressions`), so it converts directly into a real selector for the `List` call. The one addition over a plain Kubernetes selector is that a value can be sourced from the root object (using JQ) rather than being a constant: most values are literals, but the workload's own name (for "pods of this workload") only exists at runtime. A value is therefore either a literal or a JQ expression evaluated against the root.
 
@@ -83,11 +85,6 @@ type StructureDefinition struct {
 type ResourceReference struct {
     Name string           // variable name exposed to JQ as $<Name>
     GVK  GroupVersionKind // group/version/kind of the referenced resource(s)
-
-    // NamespaceExpression is a JQ expression against the root object resolving the
-    // namespace to fetch from. If empty, a namespaced GVK defaults to the root
-    // object's namespace.
-    NamespaceExpression *string
 
     Lookup *LookupReference
     List   *ListReference
@@ -139,10 +136,9 @@ spec:
         lookup:
           nameExpression: .spec.runtimeRef.name
 
-      # set of objects: $pods
+      # set of objects: $pods (listed in the workload's namespace)
       - name: pods
         gvk: { group: "", version: v1, kind: Pod }
-        namespaceExpression: .metadata.namespace
         list:
           matchLabels:
             training.kubeflow.org/job-name: { expression: .metadata.name }  # value from the root
@@ -262,3 +258,5 @@ A few points are worth calling out because they change the contract or carry rea
 - A label value resolves to exactly one scalar. There is no fan-out from one expression into a variable-length set of values; authors enumerate the values they want. Sourcing a whole value set from the root (for example, every replica type a workload declares) is intentionally out of scope for the first version and can be added later without breaking the API.
   
 - The reference uses `gvk` for its group/version/kind, while the existing `ComponentDefinition` names the same type `kind`. This inconsistency is deliberate for now - `kind.kind` reads poorly and `gvk` is accurate - but it should be resolved before the API stabilizes, either by renaming the existing field or accepting the divergence.
+
+- Merging a referenced base with the workload's overrides has no vocabulary yet. The Kubeflow case is the sharpest instance: the effective container env is the runtime's env merged with `.spec.trainer.env` by `name`, and no path expression can express that read, let alone write through it. This is a general Karta gap, not a references one - the read path and the write path need to be separated - and is tracked in #183.
