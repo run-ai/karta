@@ -205,13 +205,13 @@ factory := resource.NewComponentFactoryFromObject(karta, workload, resource.With
 
 If a definition declares a reference that is not provided to the factory, evaluating an expression that reads `$<Name>` errors instead of silently resolving to null.
 ### Integration options
-Three shapes are possible for the Go-level integration, from most convenient to most control. They stack rather than compete: option 1 is sugar over options 2 and 3, and all can be offered together.
-### Option 1: a reader in a new constructor
+Three shapes are possible for the Go-level integration, from most convenient to most control. They stack rather than compete: option 1 builds on option 2's reader and option 3's binding, and all can be offered together.
+### Option 1: a Kubernetes reader as a factory option
 ```go
-factory, err := references.NewComponentFactory(ctx, reader, karta, workload)
+factory := resource.NewComponentFactoryFromObject(karta, workload, resource.WithReferenceReader(reader))
 ```
 
-A convenience constructor in `pkg/references` resolves and binds in one call. The expected path for a controller that already holds a client. Backward compatible because it is purely additive: the existing `resource.NewComponentFactoryFromObject` is untouched, and placing the new constructor in `pkg/references` keeps `pkg/resource` free of any client dependency.
+The existing constructor gains an option carrying a reader - a Kubernetes client reader, or any implementation of option 2's interface - so the opt-in is explicit in the option name and there is no second constructor. Backward compatible because the option is purely additive.
 ### Option 2: a Karta-owned reader interface
 ```go
 type ResourceReader interface {
@@ -229,14 +229,15 @@ type ListQuery struct {
 }
 ```
 
-The reader everywhere - in `Resolve` and in option 1's constructor - is this minimal `ResourceReader`, not controller-runtime's `client.Reader`: two methods, plain arguments, a sentinel not-found error. Cluster consumers bridge with one call, non-cluster consumers implement the two methods directly:
+The reader everywhere - in `Resolve` and in option 1's factory option - is this minimal `ResourceReader`, not controller-runtime's `client.Reader`: two methods, plain arguments, a sentinel not-found error. Cluster consumers bridge with one call, non-cluster consumers implement the two methods directly:
 
 ```go
 // controller with a cluster: adapt the client it already holds
-factory, err := references.NewComponentFactory(ctx, references.FromClient(mgr.GetAPIReader()), karta, workload)
+reader := references.FromClient(mgr.GetAPIReader())
+factory := resource.NewComponentFactoryFromObject(karta, workload, resource.WithReferenceReader(reader))
 
 // no cluster: any implementation of the two methods
-factory, err := references.NewComponentFactory(ctx, myStore, karta, workload)
+factory := resource.NewComponentFactoryFromObject(karta, workload, resource.WithReferenceReader(myStore))
 ```
 
 Benefits: a consumer without a cluster implements two straightforward methods over its own store (an in-memory reader is a map and a label match), and the controller-runtime client dependency is confined to the `FromClient` adapter.
@@ -248,6 +249,19 @@ factory := resource.NewComponentFactoryFromObject(karta, workload, resource.With
 The consumer skips resolution entirely, builds the `ResolvedReferences` map from wherever its data lives - its own client, caching, batching, or no Kubernetes at all - and passes it to the existing factory constructor. Backward compatible because the option is variadic: existing call sites compile unchanged. Karta only sees the finished values.
 
 Anything built on top of the factory inherits references for free. The planned `WorkloadTree` builder, for example, should accept a constructed factory rather than building its own - the `$<Name>` variables are already bound, so tree extraction over referenced values just works and the tree stays reference-agnostic.
+## Hardening
+References make a definition ask the consumer to fetch cluster resources with the consumer's permissions. A malicious or careless definition could point at data it should not surface.
+
+The design already bounds this structurally: the API has no namespace field, so a definition cannot name another namespace - the resolver always resolves namespaced references in the workload's namespace.
+
+Further options, composable rather than exclusive:
+
+- **Namespace-scoped reader.** The reader handed to the factory can itself be pinned to the workload's namespace - a small wrapper over any reader that rejects every other namespace - so even a resolver bug cannot cross the boundary. The client behind the reader adds a second bound: give it RBAC covering only the kinds definitions legitimately need, and a reference to anything else fails at the API server.
+  
+- **References as consumer opt-in (or opt-out).** A consumer that passes no reader and no values behaves exactly as today. Resolution is lazy: the first accessor call that needs a reference resolves all of them with that call's context and memoizes the result, so a definition without references never touches the reader, resolution failures surface on first use rather than at construction, and the first extraction call performs cluster reads. A definition that declares references when nothing was provided fails on that first use with `ErrReferencesNotSupported`, not with a cryptic expression error - a consumer that has not implemented resolution rejects such definitions loudly. Opt-in (off unless wired) or opt-out (wired by default, disabled explicitly) is the consumer's choice; the library default is opt-in.
+  
+- **Validator opt-in (or opt-out).** `NewKartaValidator` grows an option: without it, a definition that declares references fails validation with a sentinel error (`ErrReferencesNotSupported`). Deny-by-default costs nothing today - no existing definition declares references - and gives two gates for free: a consumer enables it only once it supports resolution, and a cluster operator who leaves it off in the admission webhook makes reference-carrying definitions unstorable cluster-wide. The option can later carry constraints (which GVKs a definition may reference); the opt-out variant is the alternative if the feature should spread with no ceremony.
+  
 ## Caveats
 A few points are worth calling out because they change the contract or carry real cost.
 
@@ -258,5 +272,5 @@ A few points are worth calling out because they change the contract or carry rea
 - A label value resolves to exactly one scalar. There is no fan-out from one expression into a variable-length set of values; authors enumerate the values they want. Sourcing a whole value set from the root (for example, every replica type a workload declares) is intentionally out of scope for the first version and can be added later without breaking the API.
   
 - The reference uses `gvk` for its group/version/kind, while the existing `ComponentDefinition` names the same type `kind`. This inconsistency is deliberate for now - `kind.kind` reads poorly and `gvk` is accurate - but it should be resolved before the API stabilizes, either by renaming the existing field or accepting the divergence.
-
+  
 - Merging a referenced base with the workload's overrides has no vocabulary yet. The Kubeflow case is the sharpest instance: the effective container env is the runtime's env merged with `.spec.trainer.env` by `name`, and no path expression can express that read, let alone write through it. This is a general Karta gap, not a references one - the read path and the write path need to be separated - and is tracked in #183.
