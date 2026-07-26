@@ -1,0 +1,46 @@
+components:
+  head:
+    instances:
+      "":
+        podTemplateSpec:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              name: ray-head
+              readinessProbe:
+                failureThreshold: 90
+                initialDelaySeconds: 15
+                periodSeconds: 5
+                tcpSocket:
+                  port: 8265
+              resources:
+                limits:
+                  cpu: "2"
+                  memory: 3Gi
+                requests:
+                  cpu: 500m
+                  memory: 2Gi
+        scale:
+          replicas: 1
+  rayjob:
+    instances:
+      "": {}
+  worker:
+    instances:
+      small:
+        podTemplateSpec:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              name: ray-worker
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
+        scale:
+          replicas: 0
+matchedStatuses:
+- Completed
+phase: SUCCEEDED

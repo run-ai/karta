@@ -1,0 +1,12 @@
+flow: running
+kartaFile: docs/samples/milvus.yaml
+kartaName: milvus
+observedStates:
+- Running
+operator: milvus
+schemaVersion: 4
+snapshots:
+- dir: 00-Running
+  state: Running
+version: 1.3.7
+want: Running

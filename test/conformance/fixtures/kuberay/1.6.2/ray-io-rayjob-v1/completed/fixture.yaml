@@ -1,0 +1,12 @@
+flow: completed
+kartaFile: docs/samples/rayjob.yaml
+kartaName: ray-io-rayjob-v1
+observedStates:
+- Completed
+operator: kuberay
+schemaVersion: 4
+snapshots:
+- dir: 00-Completed
+  state: Completed
+version: 1.6.2
+want: Completed

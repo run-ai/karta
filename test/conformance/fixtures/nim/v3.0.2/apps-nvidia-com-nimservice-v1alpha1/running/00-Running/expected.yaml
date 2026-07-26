@@ -1,0 +1,16 @@
+components:
+  nimservice:
+    instances:
+      "":
+        scale:
+          replicas: 1
+conditions:
+- reason: Ready
+  status: "True"
+  type: Ready
+- reason: Ready
+  status: "False"
+  type: Failed
+matchedStatuses:
+- Running
+phase: Ready

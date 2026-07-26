@@ -1,0 +1,78 @@
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: karta-e2e-ray
+  namespace: default
+spec:
+  headGroupSpec:
+    rayStartParams: {}
+    template:
+      spec:
+        containers:
+        - image: ray-e2e:local
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            tcpSocket:
+              port: 6379
+          name: ray-head
+          readinessProbe:
+            failureThreshold: 30
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            tcpSocket:
+              port: 6379
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: 250m
+              memory: 1Gi
+  rayVersion: 2.40.0
+  workerGroupSpecs:
+  - groupName: small
+    maxReplicas: 1
+    minReplicas: 0
+    numOfHosts: 1
+    rayStartParams: {}
+    replicas: 0
+    template:
+      spec:
+        containers:
+        - image: ray-e2e:local
+          imagePullPolicy: IfNotPresent
+          name: ray-worker
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+status:
+  conditions:
+  - reason: HeadPodRunningAndReady
+    status: "True"
+    type: HeadPodReady
+  - reason: AllPodRunningAndReadyFirstTime
+    status: "True"
+    type: RayClusterProvisioned
+  - reason: RayClusterSuspended
+    status: "False"
+    type: RayClusterSuspended
+  - reason: RayClusterSuspending
+    status: "False"
+    type: RayClusterSuspending
+  desiredCPU: 250m
+  desiredGPU: "0"
+  desiredMemory: 1Gi
+  desiredTPU: "0"
+  endpoints:
+    client: "10001"
+    dashboard: "8265"
+    gcs-server: "6379"
+    metrics: "8080"
+    serve: "8000"
+  head: {}
+  maxWorkerReplicas: 1
+  state: ready

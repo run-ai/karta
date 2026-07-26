@@ -1,0 +1,12 @@
+flow: running
+kartaFile: docs/samples/dynamo.yaml
+kartaName: nvidia-com-dynamographdeployment-v1alpha1
+observedStates:
+- Running
+operator: dynamo
+schemaVersion: 4
+snapshots:
+- dir: 00-Running
+  state: Running
+version: 1.2.1
+want: Running

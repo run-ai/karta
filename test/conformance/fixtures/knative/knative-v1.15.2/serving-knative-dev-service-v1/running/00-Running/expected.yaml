@@ -1,0 +1,38 @@
+components:
+  knativeservice:
+    instances:
+      "": {}
+  revision:
+    instances:
+      "":
+        podTemplateSpec:
+          spec:
+            containers:
+            - env:
+              - name: TARGET
+                value: karta-e2e
+              image: ghcr.io/knative/helloworld-go:latest
+              name: user-container
+              ports:
+              - containerPort: 8080
+                protocol: TCP
+              readinessProbe:
+                successThreshold: 1
+                tcpSocket:
+                  port: 0
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+            enableServiceLinks: false
+        scale:
+          minReplicas: 1
+conditions:
+- status: "True"
+  type: ConfigurationsReady
+- status: "True"
+  type: Ready
+- status: "True"
+  type: RoutesReady
+matchedStatuses:
+- Running

@@ -1,0 +1,52 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    serving.knative.dev/creator: kubernetes-admin
+    serving.knative.dev/lastModifier: kubernetes-admin
+  name: karta-e2e-knative
+  namespace: default
+spec:
+  template:
+    metadata: {}
+    spec:
+      containerConcurrency: 0
+      containers:
+      - env:
+        - name: TARGET
+          value: karta-e2e
+        image: ghcr.io/knative/helloworld-go:latest
+        name: user-container
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          successThreshold: 1
+          tcpSocket:
+            port: 0
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+      enableServiceLinks: false
+      timeoutSeconds: 300
+  traffic:
+  - latestRevision: true
+    percent: 100
+status:
+  address:
+    url: http://karta-e2e-knative.default.svc.cluster.local
+  conditions:
+  - status: "True"
+    type: ConfigurationsReady
+  - status: "True"
+    type: Ready
+  - status: "True"
+    type: RoutesReady
+  latestCreatedRevisionName: karta-e2e-knative-00001
+  latestReadyRevisionName: karta-e2e-knative-00001
+  traffic:
+  - latestRevision: true
+    percent: 100
+    revisionName: karta-e2e-knative-00001
+  url: http://karta-e2e-knative.default.127.0.0.1.sslip.io

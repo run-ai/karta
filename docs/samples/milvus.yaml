@@ -18,6 +18,8 @@ spec:
           path: .status.conditions
           typeFieldName: type
           statusFieldName: status
+          messageFieldName: message
+          reasonFieldName: reason
         statusMappings:
           running:
           - byPhase: "Healthy"

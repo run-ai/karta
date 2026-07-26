@@ -1,0 +1,52 @@
+components:
+  group:
+    instances:
+      "":
+        scale:
+          replicas: 2
+  leader:
+    instances:
+      "":
+        podTemplateSpec:
+          spec:
+            containers:
+            - command:
+              - sleep
+              - infinity
+              image: busybox:1.36
+              name: leader
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 32Mi
+        scale:
+          replicas: 1
+  leaderworkerset:
+    instances:
+      "": {}
+  worker:
+    instances:
+      "":
+        podTemplateSpec:
+          spec:
+            containers:
+            - command:
+              - sleep
+              - infinity
+              image: busybox:1.36
+              name: worker
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 32Mi
+        scale:
+          replicas: 1
+conditions:
+- reason: GroupsProgressing
+  status: "False"
+  type: Progressing
+- reason: AllGroupsReady
+  status: "True"
+  type: Available
+matchedStatuses:
+- Running

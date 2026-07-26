@@ -1,0 +1,12 @@
+flow: running
+kartaFile: docs/samples/lws.yaml
+kartaName: leaderworkerset-x-k8s-io-leaderworkerset-v1
+observedStates:
+- Running
+operator: lws
+schemaVersion: 4
+snapshots:
+- dir: 00-Running
+  state: Running
+version: v0.7.0
+want: Running

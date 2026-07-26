@@ -1,0 +1,12 @@
+flow: completed
+kartaFile: docs/samples/mpijob.yaml
+kartaName: kubeflow-org-mpijob-v2beta1
+observedStates:
+- Completed
+operator: kubeflow
+schemaVersion: 4
+snapshots:
+- dir: 00-Completed
+  state: Completed
+version: v1.9.0
+want: Completed

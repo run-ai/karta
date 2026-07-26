@@ -1,0 +1,34 @@
+components:
+  inferenceservice:
+    instances:
+      "": {}
+  predictor:
+    instances:
+      "":
+        fragmentedPodSpec:
+          container:
+            name: ""
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+  transformer:
+    instances:
+      "": {}
+conditions:
+- status: "True"
+  type: IngressReady
+- status: "True"
+  type: LatestDeploymentReady
+- status: "True"
+  type: PredictorConfigurationReady
+- status: "True"
+  type: PredictorReady
+- status: "True"
+  type: PredictorRouteReady
+- status: "True"
+  type: Ready
+- status: "True"
+  type: RoutesReady
+matchedStatuses:
+- Running

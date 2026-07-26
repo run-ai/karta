@@ -23,6 +23,7 @@ spec:
           typeFieldName: type
           statusFieldName: status
           messageFieldName: message
+          reasonFieldName: reason
         statusMappings:
           initializing:
           - byConditions:

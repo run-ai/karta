@@ -1,0 +1,12 @@
+flow: running
+kartaFile: docs/samples/raycluster.yaml
+kartaName: ray-io-raycluster-v1
+observedStates:
+- Running
+operator: kuberay
+schemaVersion: 4
+snapshots:
+- dir: 00-Running
+  state: Running
+version: 1.6.2
+want: Running

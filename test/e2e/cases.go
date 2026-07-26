@@ -18,7 +18,20 @@ const (
 // allCases is every workload case the suite runs: online to record, offline to replay. Add a case
 // here after defining it in cases_<type>.go.
 var allCases = []workloadCase{
+	// built-in kinds (no operator install)
 	podCase,
 	batchJobCase,
+	// operator-driven
 	jobsetCase,
+	lwsCase,
+	rayClusterCase,
+	rayJobCase,
+	pytorchCase,
+	mpijobCase,
+	knativeCase,
+	kserveCase,
+	milvusCase,
+	groveCase,
+	dynamoCase,
+	nimCase,
 }
