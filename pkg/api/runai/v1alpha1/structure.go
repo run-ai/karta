@@ -306,12 +306,12 @@ type ConditionsDefinition struct {
 	// MessageFieldName is the field name for the condition text message
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=message
-	MessageFieldName *string `json:"messageFieldName"`
+	MessageFieldName *string `json:"messageFieldName,omitempty"`
 
 	// ReasonFieldName is the field name for the condition reason
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=reason
-	ReasonFieldName *string `json:"reasonFieldName"`
+	ReasonFieldName *string `json:"reasonFieldName,omitempty"`
 }
 
 // StatusMappings define how to map extracted status information to ResourceStatus values.
