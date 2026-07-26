@@ -146,9 +146,19 @@ func Slug(k *v1alpha1.Karta) (string, error) {
 	return strings.ReplaceAll(group, ".", "-") + "-" + strings.ToLower(gvk.Kind) + "-" + gvk.Version, nil
 }
 
-// MarshalYAML renders a Karta into YAML with required header.
+// MarshalYAML renders a Karta into YAML with required header. The catalog files
+// are pure definitions, so the empty generated status field is dropped.
 func MarshalYAML(k *v1alpha1.Karta) ([]byte, error) {
 	body, err := yaml.Marshal(k)
+	if err != nil {
+		return nil, fmt.Errorf("marshal Karta %q: %w", k.Name, err)
+	}
+	var doc map[string]any
+	if err := yaml.Unmarshal(body, &doc); err != nil {
+		return nil, fmt.Errorf("unmarshal Karta %q: %w", k.Name, err)
+	}
+	delete(doc, "status")
+	body, err = yaml.Marshal(doc)
 	if err != nil {
 		return nil, fmt.Errorf("marshal Karta %q: %w", k.Name, err)
 	}

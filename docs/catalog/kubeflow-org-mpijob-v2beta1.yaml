@@ -87,4 +87,3 @@ spec:
         suspendActions:
         - path: .spec.runPolicy.suspend
           value: "true"
-status: {}

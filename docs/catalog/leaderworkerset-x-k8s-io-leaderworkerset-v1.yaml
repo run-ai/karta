@@ -91,4 +91,3 @@ spec:
               expectedResult: "true"
               expression: (.status.replicas // 0) > 0 and .status.readyReplicas ==
                 .status.replicas and .status.updatedReplicas == .status.replicas
-status: {}

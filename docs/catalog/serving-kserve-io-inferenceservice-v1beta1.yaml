@@ -87,4 +87,3 @@ spec:
               type: RoutesReady
             - status: "True"
               type: LatestDeploymentReady
-status: {}

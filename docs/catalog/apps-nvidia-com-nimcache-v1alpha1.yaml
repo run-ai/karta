@@ -45,4 +45,3 @@ spec:
               type: NIM_CACHE_JOB_CREATED
           running:
           - byPhase: InProgress
-status: {}

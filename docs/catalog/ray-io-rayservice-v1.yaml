@@ -86,4 +86,3 @@ spec:
           - byConditions:
             - status: "True"
               type: Ready
-status: {}
