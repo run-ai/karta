@@ -8,6 +8,12 @@ var mpijobCase = workloadCase{
 	operator:  "kubeflow",
 	kartaFile: "../../docs/samples/mpijob.yaml",
 	kartaName: "kubeflow-org-mpijob-v2beta1",
-	states:    []namedState{{completed, condTrue("Succeeded")}},
-	flows:     []flow{{name: "completed", workloadFile: "testdata/mpijob/completed.yaml", journey: steps(completed)}},
+	states: []namedState{
+		{completed, condTrue("Succeeded")},
+		{failed, condTrue("Failed")},
+	},
+	flows: []flow{
+		{name: "completed", workloadFile: "testdata/mpijob/completed.yaml", journey: steps(completed)},
+		{name: "failed", workloadFile: "testdata/mpijob/failed.yaml", journey: steps(failed)},
+	},
 }

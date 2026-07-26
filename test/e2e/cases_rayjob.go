@@ -10,7 +10,13 @@ var rayJobCase = workloadCase{
 	operator:  "kuberay",
 	kartaFile: "../../docs/samples/rayjob.yaml",
 	kartaName: "ray-io-rayjob-v1",
-	states:    []namedState{{completed, phaseEq("SUCCEEDED", "status", "jobStatus")}},
-	flows:     []flow{{name: "completed", workloadFile: "testdata/rayjob/completed.yaml", journey: steps(completed)}},
-	timeout:   6 * time.Minute,
+	states: []namedState{
+		{completed, phaseEq("SUCCEEDED", "status", "jobStatus")},
+		{failed, phaseEq("FAILED", "status", "jobStatus")},
+	},
+	flows: []flow{
+		{name: "completed", workloadFile: "testdata/rayjob/completed.yaml", journey: steps(completed)},
+		{name: "failed", workloadFile: "testdata/rayjob/failed.yaml", journey: steps(failed)},
+	},
+	timeout: 6 * time.Minute,
 }

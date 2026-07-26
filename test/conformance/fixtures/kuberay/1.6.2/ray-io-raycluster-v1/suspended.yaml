@@ -1,0 +1,170 @@
+flow: suspended
+kartaFile: docs/samples/raycluster.yaml
+kartaName: ray-io-raycluster-v1
+operator: kuberay
+schemaVersion: 6
+steps:
+- cr:
+    apiVersion: ray.io/v1
+    kind: RayCluster
+    metadata:
+      creationTimestamp: "2026-07-26T16:39:38Z"
+      generation: 1
+      managedFields:
+      - apiVersion: ray.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:headGroupSpec:
+              .: {}
+              f:rayStartParams: {}
+              f:template:
+                .: {}
+                f:spec:
+                  .: {}
+                  f:containers:
+                    .: {}
+                    k:{"name":"ray-head"}:
+                      .: {}
+                      f:image: {}
+                      f:imagePullPolicy: {}
+                      f:livenessProbe:
+                        .: {}
+                        f:failureThreshold: {}
+                        f:initialDelaySeconds: {}
+                        f:periodSeconds: {}
+                        f:tcpSocket:
+                          .: {}
+                          f:port: {}
+                      f:name: {}
+                      f:readinessProbe:
+                        .: {}
+                        f:failureThreshold: {}
+                        f:initialDelaySeconds: {}
+                        f:periodSeconds: {}
+                        f:tcpSocket:
+                          .: {}
+                          f:port: {}
+                      f:resources:
+                        .: {}
+                        f:limits:
+                          .: {}
+                          f:cpu: {}
+                          f:memory: {}
+                        f:requests:
+                          .: {}
+                          f:cpu: {}
+                          f:memory: {}
+            f:rayVersion: {}
+            f:suspend: {}
+            f:workerGroupSpecs: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T16:39:38Z"
+      name: karta-e2e-ray-suspended
+      namespace: default
+      resourceVersion: "2878074"
+      uid: 2b06ffaa-caf4-4082-b147-afb0935ff7d2
+    spec:
+      headGroupSpec:
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              livenessProbe:
+                failureThreshold: 30
+                initialDelaySeconds: 30
+                periodSeconds: 10
+                tcpSocket:
+                  port: 6379
+              name: ray-head
+              readinessProbe:
+                failureThreshold: 30
+                initialDelaySeconds: 10
+                periodSeconds: 5
+                tcpSocket:
+                  port: 6379
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 2Gi
+                requests:
+                  cpu: 250m
+                  memory: 1Gi
+      rayVersion: 2.40.0
+      suspend: true
+      workerGroupSpecs:
+      - groupName: small
+        maxReplicas: 1
+        minReplicas: 0
+        numOfHosts: 1
+        rayStartParams: {}
+        replicas: 0
+        template:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              name: ray-worker
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
+  expected:
+    components:
+      head:
+        instances:
+          "":
+            podTemplateSpec:
+              spec:
+                containers:
+                - image: ray-e2e:local
+                  imagePullPolicy: IfNotPresent
+                  livenessProbe:
+                    failureThreshold: 30
+                    initialDelaySeconds: 30
+                    periodSeconds: 10
+                    tcpSocket:
+                      port: 6379
+                  name: ray-head
+                  readinessProbe:
+                    failureThreshold: 30
+                    initialDelaySeconds: 10
+                    periodSeconds: 5
+                    tcpSocket:
+                      port: 6379
+                  resources:
+                    limits:
+                      cpu: "1"
+                      memory: 2Gi
+                    requests:
+                      cpu: 250m
+                      memory: 1Gi
+            scale:
+              replicas: 1
+      worker:
+        instances:
+          small:
+            podTemplateSpec:
+              spec:
+                containers:
+                - image: ray-e2e:local
+                  imagePullPolicy: IfNotPresent
+                  name: ray-worker
+                  resources:
+                    requests:
+                      cpu: 250m
+                      memory: 512Mi
+            scale:
+              maxReplicas: 1
+              minReplicas: 0
+              replicas: 0
+    matchedStatuses:
+    - Suspended
+    phase: ""
+  state: Suspended
+version: 1.6.2
+want: Suspended
