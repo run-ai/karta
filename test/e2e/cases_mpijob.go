@@ -11,9 +11,11 @@ var mpijobCase = workloadCase{
 	states: []namedState{
 		{completed, condTrue("Succeeded")},
 		{failed, condTrue("Failed")},
+		{suspended, condTrue("Suspended")},
 	},
 	flows: []flow{
 		{name: "completed", workloadFile: "testdata/mpijob/completed.yaml", journey: steps(completed)},
 		{name: "failed", workloadFile: "testdata/mpijob/failed.yaml", journey: steps(failed)},
+		{name: "suspended", workloadFile: "testdata/mpijob/suspended.yaml", journey: steps(suspended)},
 	},
 }

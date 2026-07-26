@@ -1,0 +1,229 @@
+flow: suspended
+kartaFile: docs/samples/mpijob.yaml
+kartaName: kubeflow-org-mpijob-v2beta1
+operator: kubeflow
+schemaVersion: 6
+steps:
+- cr:
+    apiVersion: kubeflow.org/v2beta1
+    kind: MPIJob
+    metadata:
+      creationTimestamp: "2026-07-26T18:12:29Z"
+      generation: 1
+      managedFields:
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:launcherCreationPolicy: {}
+            f:mpiImplementation: {}
+            f:mpiReplicaSpecs:
+              .: {}
+              f:Launcher:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-launcher"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+              f:Worker:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-worker"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+            f:runLauncherAsWorker: {}
+            f:runPolicy:
+              .: {}
+              f:cleanPodPolicy: {}
+              f:suspend: {}
+            f:slotsPerWorker: {}
+            f:sshAuthMountPath: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T18:12:29Z"
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions:
+              .: {}
+              k:{"type":"Created"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Running"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Suspended"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:replicaStatuses:
+              .: {}
+              f:Launcher: {}
+              f:Worker: {}
+        manager: mpi-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-26T18:12:29Z"
+      name: karta-e2e-mpi-suspended
+      namespace: default
+      resourceVersion: "2921557"
+      uid: 79318a8b-a62d-48ba-a67b-3a925af4b092
+    spec:
+      launcherCreationPolicy: AtStartup
+      mpiImplementation: OpenMPI
+      mpiReplicaSpecs:
+        Launcher:
+          replicas: 1
+          template:
+            spec:
+              containers:
+              - command:
+                - "true"
+                image: busybox:1.36
+                name: mpi-launcher
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 64Mi
+        Worker:
+          replicas: 1
+          template:
+            spec:
+              containers:
+              - command:
+                - sleep
+                - infinity
+                image: busybox:1.36
+                name: mpi-worker
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 64Mi
+      runLauncherAsWorker: false
+      runPolicy:
+        cleanPodPolicy: None
+        suspend: true
+      slotsPerWorker: 1
+      sshAuthMountPath: /root/.ssh
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-26T18:12:29Z"
+        lastUpdateTime: "2026-07-26T18:12:29Z"
+        message: MPIJob default/karta-e2e-mpi-suspended is created.
+        reason: MPIJobCreated
+        status: "True"
+        type: Created
+      - lastTransitionTime: "2026-07-26T18:12:29Z"
+        lastUpdateTime: "2026-07-26T18:12:29Z"
+        message: MPIJob suspended
+        reason: MPIJobSuspended
+        status: "True"
+        type: Suspended
+      - lastTransitionTime: "2026-07-26T18:12:29Z"
+        lastUpdateTime: "2026-07-26T18:12:29Z"
+        message: MPIJob default/karta-e2e-mpi-suspended is suspended.
+        reason: MPIJobSuspended
+        status: "False"
+        type: Running
+      replicaStatuses:
+        Launcher: {}
+        Worker: {}
+  expected:
+    components:
+      launcher:
+        instances:
+          "":
+            podTemplateSpec:
+              spec:
+                containers:
+                - command:
+                  - "true"
+                  image: busybox:1.36
+                  name: mpi-launcher
+                  resources:
+                    requests:
+                      cpu: 50m
+                      memory: 64Mi
+            scale:
+              replicas: 1
+      worker:
+        instances:
+          "":
+            podTemplateSpec:
+              spec:
+                containers:
+                - command:
+                  - sleep
+                  - infinity
+                  image: busybox:1.36
+                  name: mpi-worker
+                  resources:
+                    requests:
+                      cpu: 50m
+                      memory: 64Mi
+            scale:
+              replicas: 1
+    conditions:
+    - message: MPIJob default/karta-e2e-mpi-suspended is created.
+      reason: MPIJobCreated
+      status: "True"
+      type: Created
+    - message: MPIJob suspended
+      reason: MPIJobSuspended
+      status: "True"
+      type: Suspended
+    - message: MPIJob default/karta-e2e-mpi-suspended is suspended.
+      reason: MPIJobSuspended
+      status: "False"
+      type: Running
+    matchedStatuses:
+    - Suspended
+    - Initializing
+  state: Suspended
+version: v1.9.0
+want: Suspended

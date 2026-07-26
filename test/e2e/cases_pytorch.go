@@ -14,11 +14,13 @@ var pytorchCase = workloadCase{
 		{running, condTrue("Running")},
 		{completed, condTrue("Succeeded")},
 		{failed, condTrue("Failed")},
+		{suspended, condTrue("Suspended")},
 	},
 	flows: []flow{
 		{name: "running", workloadFile: "testdata/pytorch/running.yaml", journey: steps(running)},
 		{name: "completed", workloadFile: "testdata/pytorch/completed.yaml", journey: steps(running, completed)},
 		{name: "failed", workloadFile: "testdata/pytorch/failed.yaml", journey: steps(running, failed)},
+		{name: "suspended", workloadFile: "testdata/pytorch/suspended.yaml", journey: steps(suspended)},
 	},
 	timeout: 4 * time.Minute,
 }
