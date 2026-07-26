@@ -1,0 +1,176 @@
+flow: failed
+kartaFile: docs/samples/kserve.yaml
+kartaName: serving-kserve-io-inferenceservice-v1beta1
+operator: kserve
+schemaVersion: 6
+steps:
+- cr:
+    apiVersion: serving.kserve.io/v1beta1
+    kind: InferenceService
+    metadata:
+      creationTimestamp: "2026-07-26T20:35:23Z"
+      finalizers:
+      - inferenceservice.finalizers
+      generation: 1
+      managedFields:
+      - apiVersion: serving.kserve.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:predictor:
+              .: {}
+              f:containers: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T20:35:23Z"
+      - apiVersion: serving.kserve.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"inferenceservice.finalizers": {}
+        manager: manager
+        operation: Update
+        time: "2026-07-26T20:35:23Z"
+      - apiVersion: serving.kserve.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:components:
+              .: {}
+              f:predictor:
+                .: {}
+                f:latestCreatedRevision: {}
+            f:conditions: {}
+            f:modelStatus:
+              .: {}
+              f:states:
+                .: {}
+                f:activeModelState: {}
+                f:targetModelState: {}
+              f:transitionStatus: {}
+            f:observedGeneration: {}
+        manager: manager
+        operation: Update
+        subresource: status
+        time: "2026-07-26T20:35:23Z"
+      name: karta-e2e-kserve-failed
+      namespace: default
+      resourceVersion: "2987022"
+      uid: 53aa64cb-fa68-4cf5-b8b5-b2a8605bd058
+    spec:
+      predictor:
+        containers:
+        - image: karta-e2e-no-such-registry.invalid/nope:latest
+          name: kserve-container
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+    status:
+      components:
+        predictor:
+          latestCreatedRevision: karta-e2e-kserve-failed-predictor-00001
+      conditions:
+      - lastTransitionTime: "2026-07-26T20:35:23Z"
+        reason: PredictorConfigurationReady not ready
+        severity: Info
+        status: "False"
+        type: LatestDeploymentReady
+      - lastTransitionTime: "2026-07-26T20:35:23Z"
+        message: 'Revision "karta-e2e-kserve-failed-predictor-00001" failed with message:
+          Unable to fetch image "karta-e2e-no-such-registry.invalid/nope:latest":
+          failed to resolve image to digest: Get "https://karta-e2e-no-such-registry.invalid/v2/":
+          dial tcp: lookup karta-e2e-no-such-registry.invalid on 10.96.0.10:53: no
+          such host.'
+        reason: RevisionFailed
+        severity: Info
+        status: "False"
+        type: PredictorConfigurationReady
+      - lastTransitionTime: "2026-07-26T20:35:23Z"
+        message: Configuration "karta-e2e-kserve-failed-predictor" does not have any
+          ready Revision.
+        reason: RevisionMissing
+        status: "False"
+        type: PredictorReady
+      - lastTransitionTime: "2026-07-26T20:35:23Z"
+        message: Configuration "karta-e2e-kserve-failed-predictor" does not have any
+          ready Revision.
+        reason: RevisionMissing
+        severity: Info
+        status: "False"
+        type: PredictorRouteReady
+      - lastTransitionTime: "2026-07-26T20:35:23Z"
+        message: Configuration "karta-e2e-kserve-failed-predictor" does not have any
+          ready Revision.
+        reason: RevisionMissing
+        status: "False"
+        type: Ready
+      - lastTransitionTime: "2026-07-26T20:35:23Z"
+        reason: PredictorRouteReady not ready
+        severity: Info
+        status: "False"
+        type: RoutesReady
+      modelStatus:
+        states:
+          activeModelState: ""
+          targetModelState: Pending
+        transitionStatus: InProgress
+      observedGeneration: 1
+  expected:
+    components:
+      predictor:
+        instances:
+          "":
+            fragmentedPodSpec:
+              containers:
+              - image: karta-e2e-no-such-registry.invalid/nope:latest
+                name: kserve-container
+                resources:
+                  limits:
+                    cpu: "1"
+                    memory: 2Gi
+                  requests:
+                    cpu: 100m
+                    memory: 128Mi
+    conditions:
+    - reason: PredictorConfigurationReady not ready
+      status: "False"
+      type: LatestDeploymentReady
+    - message: 'Revision "karta-e2e-kserve-failed-predictor-00001" failed with message:
+        Unable to fetch image "karta-e2e-no-such-registry.invalid/nope:latest": failed
+        to resolve image to digest: Get "https://karta-e2e-no-such-registry.invalid/v2/":
+        dial tcp: lookup karta-e2e-no-such-registry.invalid on 10.96.0.10:53: no such
+        host.'
+      reason: RevisionFailed
+      status: "False"
+      type: PredictorConfigurationReady
+    - message: Configuration "karta-e2e-kserve-failed-predictor" does not have any
+        ready Revision.
+      reason: RevisionMissing
+      status: "False"
+      type: PredictorReady
+    - message: Configuration "karta-e2e-kserve-failed-predictor" does not have any
+        ready Revision.
+      reason: RevisionMissing
+      status: "False"
+      type: PredictorRouteReady
+    - message: Configuration "karta-e2e-kserve-failed-predictor" does not have any
+        ready Revision.
+      reason: RevisionMissing
+      status: "False"
+      type: Ready
+    - reason: PredictorRouteReady not ready
+      status: "False"
+      type: RoutesReady
+    matchedStatuses:
+    - Failed
+  state: Failed
+version: v0.13.1
+want: Failed

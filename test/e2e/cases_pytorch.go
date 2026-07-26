@@ -21,6 +21,10 @@ var pytorchCase = workloadCase{
 		{name: "completed", workloadFile: "testdata/pytorch/completed.yaml", journey: steps(running, completed)},
 		{name: "failed", workloadFile: "testdata/pytorch/failed.yaml", journey: steps(running, failed)},
 		{name: "suspended", workloadFile: "testdata/pytorch/suspended.yaml", journey: steps(suspended)},
+		{name: "resumed", workloadFile: "testdata/pytorch/resumed.yaml", journey: []step{
+			{state: suspended, action: unsuspendRunPolicy},
+			{state: running},
+		}},
 	},
 	timeout: 4 * time.Minute,
 }

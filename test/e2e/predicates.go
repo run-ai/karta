@@ -10,6 +10,19 @@ import (
 // Shared state predicates: each reads a workload's own fields to recognise one stable
 // state. The pod case uses phaseEq; the rest serve the per-operator cases in follow-up PRs.
 
+// allOf matches when every check matches, for a state a definition reads from more than one
+// condition (a Deployment is initializing while Progressing is True and Available is False).
+func allOf(checks ...stateCheck) stateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		for _, c := range checks {
+			if !c(u) {
+				return false
+			}
+		}
+		return len(checks) > 0
+	}
+}
+
 func condTrue(condType string) stateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		conds, _, _ := unstructured.NestedSlice(u.Object, "status", "conditions")

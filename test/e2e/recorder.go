@@ -363,6 +363,16 @@ func unsuspend(ctx context.Context, obj *unstructured.Unstructured) error {
 	return k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, []byte(`{"spec":{"suspend":false}}`)))
 }
 
+// unsuspendRunPolicy clears spec.runPolicy.suspend so a suspended Kubeflow job (PyTorchJob, MPIJob)
+// resumes. Kubeflow puts the suspend flag under runPolicy, unlike the top-level spec.suspend that
+// unsuspend patches for batch-job, jobset, and raycluster.
+func unsuspendRunPolicy(ctx context.Context, obj *unstructured.Unstructured) error {
+	target := emptyLike(obj)
+	target.SetName(obj.GetName())
+	target.SetNamespace(obj.GetNamespace())
+	return k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, []byte(`{"spec":{"runPolicy":{"suspend":false}}}`)))
+}
+
 // scaleReplicas patches spec.replicas, the merge-patch analog of kubectl scale, to drive a scale up
 // or down on any workload with a scalar spec.replicas. A merge patch, not a read-modify-write Update,
 // so it does not race the controller on the resourceVersion.

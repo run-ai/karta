@@ -15,6 +15,7 @@ var deploymentCase = workloadCase{
 	kartaFile: "../../docs/catalog/apps-deployment-v1.yaml",
 	kartaName: "apps-deployment-v1",
 	states: []namedState{
+		{initializing, allOf(condTrue("Progressing"), condFalse("Available"))},
 		{running, fullyAvailable()},
 		{failed, condFalse("Progressing")},
 	},
@@ -24,9 +25,11 @@ var deploymentCase = workloadCase{
 			{state: running, settle: replicasReady(3), action: scaleReplicas(1)},
 			{state: running, settle: replicasReady(1)},
 		}},
+		// Bad image, no progress deadline: Progressing stays True with Available False, read as Initializing.
+		{name: "initializing", workloadFile: "testdata/deployment/initializing.yaml", journey: steps(initializing)},
 		// Pinned to a nonexistent node with a 10s progress deadline: the controller sets
-		// Progressing=False/ProgressDeadlineExceeded, read as Failed.
-		{name: "failed", workloadFile: "testdata/deployment/failed.yaml", journey: steps(failed)},
+		// Progressing=False/ProgressDeadlineExceeded, read as Failed. It passes through Initializing first.
+		{name: "failed", workloadFile: "testdata/deployment/failed.yaml", journey: steps(initializing, failed)},
 	},
 	timeout: 3 * time.Minute,
 }
