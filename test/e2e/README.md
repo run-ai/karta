@@ -42,6 +42,14 @@ make e2e-up   WORKLOADS="nim"   # only the NIM operator
 make test-e2e WORKLOADS="nim"   # only the NIMService case
 ```
 
+While adding or fixing one case, `FLOW="<name>"` narrows a record to a single flow, so you
+re-record just what changed instead of the whole operator:
+
+```sh
+make record-e2e WORKLOADS="kuberay" FLOW="suspended"  # just the RayCluster suspended flow
+make record-e2e WORKLOADS="kubeflow" FLOW="failed"    # every failed flow under the kubeflow label
+```
+
 Operator versions are pinned in `hack/e2e/global.env`, each overridable from the
 environment. To check Karta against a different version, edit the file or set the
 variable for the run:
