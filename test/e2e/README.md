@@ -8,17 +8,17 @@ suite is how we guarantee those definitions stay correct: it brings up real
 operators, runs real workloads, and checks Karta reads each one the way the
 catalog says it should.
 
-## Online, offline, regolden
+## Online and offline
 
-- Online, `make test-e2e`: against a live cluster, drive each workload and check Karta reads it the
-  way the catalog says. `make record-e2e` does the same and freezes what it saw as fixtures.
-- Offline, `go test ./test/conformance`: replay those fixtures through the current Karta with no
-  cluster, so a change that misreads any recorded workload fails fast, for every operator and
-  version captured. This is how a new Karta cannot quietly break the catalog.
-- regolden, `go run ./hack/regolden`: when you intentionally change what Karta reads (say you refine
-  the jobset `running` mapping), offline goes red on purpose. regolden re-reads the frozen CRs and
-  rewrites the expected reading for every fixture at once, all jobset versions and flows, no cluster.
-  It rewrites only what Karta says, never the recorded CRs or their `NN-<State>` labels.
+- Online, `make record-e2e`: against a live cluster, drive each workload through its states (firing
+  actions like resume where the operator will not), and record what it saw - the first CR, then a
+  merge-patch per state change, plus the state each reaches - as `recording.yaml`. `make test-e2e`
+  runs the same checks live and writes nothing.
+- Offline, `go test ./test/conformance`: with no cluster, rebuild each CR from the first-CR + patches
+  and run it through the current Karta, checking it reads the recorded state at every step and that
+  the sequence is a legal transition ending at `want`. A change that misreads any recorded workload
+  fails fast, for every operator and version captured. There is no sanitize denylist - the checks are
+  on states, so per-run volatile fields never matter.
 
 ## Run
 
@@ -90,15 +90,15 @@ commit the fixtures. `want` is the last step's state.
 
 ## How it works
 
-- Recorder: watches the workload from creation and keeps every distinct CR it
-  settles in, not one per state, so the offline replay also catches a misread of
-  a middle CR. Identical back-to-back CRs are dropped as churn.
-- Sanitize: strips fields Karta never reads (`resourceVersion`, timestamps,
-  `nodeName`, ...) before a CR is frozen, so re-recording is byte-stable and a
-  diff means a real change.
-- Actions: a step's action fires once when its state is reached, in journey order,
-  to drive a transition the operator will not make itself (e.g. clear `spec.suspend`
-  to resume). Put actions on states the operator holds at, like Suspended.
+- Recorder: watches the workload from creation, classifies each settled CR from its own fields, and
+  keeps one CR per state change (a return to an earlier state is kept, so a backwards jump is caught).
+  Deduping on the state needs no denylist to tell a real change from resourceVersion churn.
+- Recording: the first kept CR is stored in full; every later state is a merge-patch (RFC 7386) from
+  the CR before it, tagged with the state it reaches and the action fired there. Replay applies the
+  patches to rebuild each CR. No sanitize - the offline checks read states, not raw bytes.
+- Actions: a step's action fires once when its state is reached, in journey order, to drive a
+  transition the operator will not make itself (e.g. clear `spec.suspend` to resume). Put actions on
+  states the operator holds at, like Suspended.
 
 ## Prerequisites
 
@@ -106,10 +106,17 @@ docker, kind, kubectl, helm, Go. No GPU.
 
 ## Coverage
 
-| Sample | Karta maps to |
+| Workload type | Operator |
 |---|---|
-| Pod (built-in) | Initializing, Running, Completed, Failed |
-| BatchJob (built-in) | Initializing, Running, Completed, Failed, Suspended |
-| JobSet | Initializing, Running, Completed, Failed, Suspended |
-
-More types land as this infrastructure grows.
+| Pod, BatchJob | built-in |
+| JobSet | jobset |
+| RayCluster, RayJob | kuberay |
+| PyTorchJob | kubeflow |
+| MPIJob | mpi-operator |
+| LeaderWorkerSet | lws |
+| KnativeService | knative |
+| KServe InferenceService | kserve |
+| Milvus | milvus |
+| Grove PodCliqueSet | grove |
+| DynamoGraphDeployment | dynamo |
+| NIMService | nim |

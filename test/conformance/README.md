@@ -3,32 +3,30 @@
 
 # Karta conformance
 
-The offline replay engine (package `conformance`) and the fixtures it replays
-(`fixtures/`). The live recorder that writes those fixtures lives in `test/e2e`.
+The offline transition test (package `conformance`) and the recordings it replays
+(`fixtures/`). The live recorder that writes those recordings lives in `test/e2e`.
 
-Each fixture is a recorded reading of a real workload, one tree per operator, version,
-definition, and flow:
+Each recording is one flow of a real workload, one file per operator, version, definition,
+and flow:
 
 ```text
 fixtures/<operator>/<version>/<definition>/<flow>/
-  fixture.yaml              # index: schema version, observed states, snapshots
-  NN-<State>/
-    cr.yaml                # the sanitized workload CR at this state
-    expected.yaml          # what Karta read from it, scrubbed
+  recording.yaml
 ```
 
-`NN-<State>` is one settled CR the workload passed through, in order (a state it holds
-across several CRs becomes several snapshots, so golden checks each, not just the last).
-The state is judged from the workload's own fields, not from Karta. `expected.yaml` is the
-full reading - status, phase, conditions, and the whole per-instance extraction - with
-per-run volatile fields (uids, timestamps, the node a pod landed on) stripped, so any
-change to how Karta reads a field surfaces in the diff.
+`recording.yaml` holds the flow's metadata (`kartaFile`, `want`) and an ordered list of steps,
+one per state the workload passed through. Step 0 carries the first CR in full; every later step
+carries a merge-patch (RFC 7386) from the CR before it, tagged with the state it reaches (judged
+from the workload's own fields, not from Karta) and any action fired there. There is no sanitize:
+`TestTransitions` rebuilds each CR by applying the patches, runs it through Karta, and checks Karta
+reads the recorded state at every step and that the sequence is a legal path ending at `want`.
+Because the checks are on states, per-run volatile fields (uids, timestamps, the node a pod landed
+on) ride along in the CR and never change the result.
 
-## Working with fixtures
+## Working with recordings
 
-- Verify (every PR, no cluster): `go test ./test/conformance -run TestGolden`
-- Refresh offline after changing what `Replay` extracts: `go run ./hack/regolden`
+- Verify (every PR, no cluster): `go test ./test/conformance -run TestTransitions`
 - Re-record from live workloads: `make record-e2e` (needs a cluster; see `test/e2e`)
 
-Do not hand-edit fixtures. The set of fixtures is Karta's tested matrix - which workload
-types it reads correctly, at which versions, through which states.
+Do not hand-edit recordings. The set of recordings is Karta's tested matrix - which workload types
+it reads correctly, at which versions, through which states.

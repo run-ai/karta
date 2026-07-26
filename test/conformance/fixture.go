@@ -1,142 +1,154 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Package conformance is the shared seam between the live e2e recorder (test/e2e)
-// and the offline golden replay (golden_test.go). Both call Replay so the way a
-// recorded workload is read can never drift between the two, and both use the same
-// on-disk schema under test/conformance/fixtures/<operator>/<version>/<kartaName>/<flow>/.
+// Package conformance is the shared seam between the live e2e recorder (test/e2e) and the offline
+// transition test. A recording is one flow of one operator: the workload's first CR in full, then a
+// merge-patch per state change, each tagged with the state it reaches. Both sides read a CR through
+// the same Read helper, so what Karta reads can never drift between record and replay. Recordings
+// live under test/conformance/fixtures/<operator>/<version>/<kartaName>/<flow>/recording.yaml.
 package conformance
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
 	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// SchemaVersion is bumped when the on-disk fixture format changes incompatibly.
-// v4: expected.yaml carries the full extracted instances and status, stripped, rather
-// than a hand-picked projection.
-const SchemaVersion = 4
+// SchemaVersion is bumped when the on-disk format changes incompatibly.
+// v5: a recording is first-CR + per-state merge-patch + the state each CR reaches, replacing the
+// sanitized full CR per snapshot. There is no sanitize; the test asserts states, not raw bytes.
+const SchemaVersion = 5
 
-const (
-	fixtureFile  = "fixture.yaml"
-	crFile       = "cr.yaml"
-	expectedFile = "expected.yaml"
-)
+const recordingFile = "recording.yaml"
 
-// ComponentReading is everything Karta extracts for one component: each instance id
-// mapped to its full extraction (pod template, scale, metadata), volatile fields removed.
-type ComponentReading struct {
-	Instances map[string]interface{} `json:"instances,omitempty"`
+// Recording is one flow: metadata plus an ordered list of steps, one per state the workload passed
+// through. Step 0 carries the full first CR; every later step carries a merge-patch from the CR
+// before it. The set of recordings under test/conformance/fixtures/ is the tested operator matrix.
+type Recording struct {
+	SchemaVersion int                     `json:"schemaVersion"`
+	Operator      string                  `json:"operator"`
+	Version       string                  `json:"version"`
+	KartaName     string                  `json:"kartaName"`
+	Flow          string                  `json:"flow"`
+	Want          v1alpha1.ResourceStatus `json:"want,omitempty"`
+	KartaFile     string                  `json:"kartaFile"` // repo-relative path to the Karta definition
+	Steps         []Step                  `json:"steps"`
 }
 
-// Expected is what Karta reads for one CR snapshot: matched statuses, phase, conditions,
-// and the full per-component extraction, all with volatile fields stripped.
-type Expected struct {
-	// MatchedStatuses has no omitempty on purpose: it is the primary thing the golden
-	// guards, so every snapshot shows the matched set even when it is empty.
-	MatchedStatuses []v1alpha1.ResourceStatus   `json:"matchedStatuses"`
-	Phase           *string                     `json:"phase,omitempty"`
-	Conditions      []interface{}               `json:"conditions,omitempty"`
-	Components      map[string]ComponentReading `json:"components,omitempty"`
+// Step is one observed state. State is judged from the workload's own fields, never from Karta. The
+// first step carries CR (the full object); every later step carries Patch (an RFC 7386 merge-patch
+// from the previous CR). Action names the mutation fired when this state was reached, if any.
+type Step struct {
+	State  string                 `json:"state"`
+	Action string                 `json:"action,omitempty"`
+	CR     map[string]interface{} `json:"cr,omitempty"`
+	Patch  map[string]interface{} `json:"patch,omitempty"`
 }
 
-// Snapshot indexes one recorded state. Its data lives in its own directory Dir,
-// which holds cr.yaml (the sanitized CR) and expected.yaml (Karta's reading), so a
-// reviewer reads the input and the output side by side per state.
-type Snapshot struct {
-	State string `json:"state"`
-	Dir   string `json:"dir"`
+// States is the ordered list of states the recording passed through.
+func (r Recording) States() []string {
+	out := make([]string, len(r.Steps))
+	for i, s := range r.Steps {
+		out[i] = s.State
+	}
+	return out
 }
 
-// SnapshotData is the on-disk content of one snapshot directory.
-type SnapshotData struct {
-	CR       *unstructured.Unstructured
-	Expected Expected
+// CRs reconstructs the full CR at each step by applying the merge-patches in order onto the first CR.
+func (r Recording) CRs() ([]*unstructured.Unstructured, error) {
+	if len(r.Steps) == 0 {
+		return nil, nil
+	}
+	if r.Steps[0].CR == nil {
+		return nil, fmt.Errorf("recording %s/%s: first step has no cr", r.Operator, r.Flow)
+	}
+	cur := runtime.DeepCopyJSON(r.Steps[0].CR)
+	out := []*unstructured.Unstructured{{Object: runtime.DeepCopyJSON(cur)}}
+	for i, s := range r.Steps[1:] {
+		if s.Patch == nil {
+			return nil, fmt.Errorf("recording %s/%s: step %d has no patch", r.Operator, r.Flow, i+1)
+		}
+		applyMergePatch(cur, s.Patch)
+		out = append(out, &unstructured.Unstructured{Object: runtime.DeepCopyJSON(cur)})
+	}
+	return out, nil
 }
 
-// Fixture indexes one flow of one operator/version/kartaName. A flow is a way the
-// workload was driven (for example happy or failed). The set of Fixtures present
-// under test/conformance/fixtures/ is the tested operator matrix for a Karta release.
-type Fixture struct {
-	SchemaVersion  int                     `json:"schemaVersion"`
-	Operator       string                  `json:"operator"`
-	Version        string                  `json:"version"`
-	KartaName      string                  `json:"kartaName"`
-	Flow           string                  `json:"flow"`
-	Want           v1alpha1.ResourceStatus `json:"want,omitempty"` // the flow's terminal ResourceStatus
-	KartaFile      string                  `json:"kartaFile"`      // repo-relative path to the Karta definition
-	ObservedStates []string                `json:"observedStates"`
-	Snapshots      []Snapshot              `json:"snapshots"`
-}
-
-// SnapshotDir is the deterministic directory name for the idx-th observed state,
-// relative to the flow directory (for example "00-Running").
-func SnapshotDir(idx int, state string) string {
-	return fmt.Sprintf("%02d-%s", idx, state)
-}
-
-// Write persists the flow's fixture index plus one directory per snapshot holding
-// cr.yaml and expected.yaml. sigs.k8s.io/yaml marshals through JSON with sorted
-// keys, so re-recording an unchanged workload yields a byte-identical tree. data is
-// keyed by Snapshot.Dir.
-func Write(root string, f Fixture, data map[string]SnapshotData) error {
-	// Clear any snapshot dirs from a previous record first, so a flow that now yields
-	// fewer or differently-named snapshots leaves no stale orphan dirs behind.
+// WriteRecording persists a recording as a single recording.yaml under root, replacing any prior one.
+func WriteRecording(root string, r Recording) error {
 	if err := os.RemoveAll(root); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		return err
 	}
-	if err := writeYAML(filepath.Join(root, fixtureFile), f); err != nil {
-		return err
-	}
-	for _, s := range f.Snapshots {
-		d, ok := data[s.Dir]
-		if !ok || d.CR == nil {
-			return fmt.Errorf("no snapshot data for %s", s.Dir)
-		}
-		dir := filepath.Join(root, s.Dir)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return err
-		}
-		if err := writeYAML(filepath.Join(dir, crFile), d.CR.Object); err != nil {
-			return err
-		}
-		if err := writeYAML(filepath.Join(dir, expectedFile), d.Expected); err != nil {
-			return err
-		}
-	}
-	return nil
+	return writeYAML(filepath.Join(root, recordingFile), r)
 }
 
-// Load reads a flow fixture at root: the index plus each snapshot's cr.yaml and
-// expected.yaml, keyed by Snapshot.Dir.
-func Load(root string) (Fixture, map[string]SnapshotData, error) {
-	var f Fixture
-	if err := readYAML(filepath.Join(root, fixtureFile), &f); err != nil {
-		return f, nil, err
-	}
-	data := make(map[string]SnapshotData, len(f.Snapshots))
-	for _, s := range f.Snapshots {
-		dir := filepath.Join(root, s.Dir)
-		cr := map[string]interface{}{}
-		if err := readYAML(filepath.Join(dir, crFile), &cr); err != nil {
-			return f, nil, err
+// LoadRecording reads the recording.yaml under root.
+func LoadRecording(root string) (Recording, error) {
+	var r Recording
+	err := readYAML(filepath.Join(root, recordingFile), &r)
+	return r, err
+}
+
+// MergePatch computes the RFC 7386 merge-patch that turns prev into cur: keys only in prev are
+// nulled, keys added or changed are set, nested objects recurse, and arrays or scalars that differ
+// are replaced whole.
+func MergePatch(prev, cur map[string]interface{}) map[string]interface{} {
+	patch := map[string]interface{}{}
+	for k := range prev {
+		if _, ok := cur[k]; !ok {
+			patch[k] = nil
 		}
-		var exp Expected
-		if err := readYAML(filepath.Join(dir, expectedFile), &exp); err != nil {
-			return f, nil, err
-		}
-		data[s.Dir] = SnapshotData{CR: &unstructured.Unstructured{Object: cr}, Expected: exp}
 	}
-	return f, data, nil
+	for k, cv := range cur {
+		pv, existed := prev[k]
+		if !existed {
+			patch[k] = cv
+			continue
+		}
+		cm, cIsMap := cv.(map[string]interface{})
+		pm, pIsMap := pv.(map[string]interface{})
+		if cIsMap && pIsMap {
+			if sub := MergePatch(pm, cm); len(sub) > 0 {
+				patch[k] = sub
+			}
+			continue
+		}
+		if !reflect.DeepEqual(pv, cv) {
+			patch[k] = cv
+		}
+	}
+	return patch
+}
+
+// applyMergePatch applies an RFC 7386 merge-patch onto target in place.
+func applyMergePatch(target, patch map[string]interface{}) {
+	for k, pv := range patch {
+		if pv == nil {
+			delete(target, k)
+			continue
+		}
+		pm, pIsMap := pv.(map[string]interface{})
+		if !pIsMap {
+			target[k] = pv
+			continue
+		}
+		tm, tIsMap := target[k].(map[string]interface{})
+		if !tIsMap {
+			tm = map[string]interface{}{}
+		}
+		applyMergePatch(tm, pm)
+		target[k] = tm
+	}
 }
 
 func writeYAML(path string, v interface{}) error {

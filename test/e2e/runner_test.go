@@ -114,7 +114,7 @@ func (tc workloadCase) run() {
 
 				if recordEnabled() {
 					By("recording the conformance fixture")
-					writeFixture(tc, fl, karta, rec)
+					writeFixture(tc, fl, rec)
 				}
 			})
 		}

@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -118,26 +120,31 @@ func observeTransitions(tc workloadCase, fl flow, obj *unstructured.Unstructured
 	}
 }
 
-// recording is one watched run: the snapshots worth freezing and the order the states happened
-// in. A snapshot is dropped only when identical to the PREVIOUS kept one (pure churn); a genuine
-// return to an earlier state (A -> B -> A) is kept, so the order check can catch a backwards jump.
+// recording is one watched run: the CRs worth freezing and the order the states happened in. A CR
+// is kept only when its classified state differs from the previous kept one, so the recording holds
+// one CR per state change. A genuine return to an earlier state (A -> B -> A) is kept, so the order
+// check can catch a backwards jump. Deduping on the state (read from the workload's own fields)
+// needs no sanitize to tell a real change from resourceVersion churn.
 type recording struct {
 	order     []kartav1alpha1.ResourceStatus
 	snapshots []capture
-	lastKey   string
+	lastState kartav1alpha1.ResourceStatus
+	started   bool
 }
 
 type capture struct {
 	state kartav1alpha1.ResourceStatus
-	raw   *unstructured.Unstructured // raw, not sanitized: the sanitize proof needs the original
+	raw   *unstructured.Unstructured // the full CR, stored as-is; the recording is not sanitized
 }
 
 func (r *recording) keep(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) {
-	if key := sanitizedKey(u); key != r.lastKey {
-		r.lastKey = key
-		r.snapshots = append(r.snapshots, capture{state: state, raw: u.DeepCopy()})
-		r.order = append(r.order, state)
+	if r.started && state == r.lastState {
+		return
 	}
+	r.started = true
+	r.lastState = state
+	r.snapshots = append(r.snapshots, capture{state: state, raw: u.DeepCopy()})
+	r.order = append(r.order, state)
 }
 
 // classify returns the furthest-along state the workload matches, judged from its own fields.
@@ -168,18 +175,6 @@ func statusSettled(u *unstructured.Unstructured) bool {
 		return true
 	}
 	return obs >= gen
-}
-
-// sanitizedKey is a workload's sanitized content as a stable string, so keep can tell a real
-// state change from pure resourceVersion churn.
-func sanitizedKey(u *unstructured.Unstructured) string {
-	c := u.DeepCopy()
-	conformance.Sanitize(c)
-	b, err := json.Marshal(c.Object) // Go sorts map keys, so this is deterministic
-	if err != nil {
-		return u.GetResourceVersion()
-	}
-	return string(b)
 }
 
 func assertObservedOrder(fl flow, order []kartav1alpha1.ResourceStatus) {
@@ -227,52 +222,57 @@ func observedOrderErr(fl flow, order []kartav1alpha1.ResourceStatus) error {
 // did, not just the terminal, so an intermediate mapping bug fails live.
 func assertKartaTransitions(karta *kartav1alpha1.Karta, rec *recording) {
 	for _, snap := range rec.snapshots {
-		reading, err := conformance.Replay(karta, snap.raw)
-		Expect(err).NotTo(HaveOccurred(), "replay state %q", snap.state)
-		Expect(reading.MatchedStatuses).To(ContainElement(snap.state),
-			"Karta should read %q here but matched %v", snap.state, reading.MatchedStatuses)
+		matched, err := conformance.Read(karta, snap.raw)
+		Expect(err).NotTo(HaveOccurred(), "read state %q", snap.state)
+		Expect(matched).To(ContainElement(snap.state),
+			"Karta should read %q here but matched %v", snap.state, matched)
 	}
 }
 
-// writeFixture replays each snapshot through Karta and writes the fixture under
-// test/conformance/fixtures/. It runs only after the live assertions passed.
-func writeFixture(tc workloadCase, fl flow, karta *kartav1alpha1.Karta, rec *recording) {
+// writeFixture builds a Recording from the run and writes it under test/conformance/fixtures/. It
+// runs only after the live assertions passed. Step 0 keeps the full first CR; every later step is a
+// merge-patch from the previous CR plus the state it reaches. No sanitize.
+func writeFixture(tc workloadCase, fl flow, rec *recording) {
 	version := operatorVersion(tc.operator)
-	observed := slices.Compact(slices.Clone(rec.order))
-	obs := make([]string, len(observed))
-	for i, s := range observed {
-		obs[i] = string(s)
+	rc := conformance.Recording{
+		SchemaVersion: conformance.SchemaVersion,
+		Operator:      tc.operator,
+		Version:       version,
+		KartaName:     tc.kartaName,
+		Flow:          fl.name,
+		Want:          fl.want(),
+		KartaFile:     strings.TrimPrefix(tc.kartaFile, "../../"),
 	}
-
-	fixture := conformance.Fixture{
-		SchemaVersion:  conformance.SchemaVersion,
-		Operator:       tc.operator,
-		Version:        version,
-		KartaName:      tc.kartaName,
-		Flow:           fl.name,
-		Want:           fl.want(),
-		KartaFile:      strings.TrimPrefix(tc.kartaFile, "../../"),
-		ObservedStates: obs,
-	}
-	data := map[string]conformance.SnapshotData{}
+	var prev map[string]interface{}
 	for i, snap := range rec.snapshots {
-		sanitized := snap.raw.DeepCopy()
-		conformance.Sanitize(sanitized)
-
-		rawReading, err := conformance.Replay(karta, snap.raw)
-		Expect(err).NotTo(HaveOccurred())
-		reading, err := conformance.Replay(karta, sanitized)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(reading).To(Equal(rawReading), "sanitising snapshot %d changed what Karta reads", i)
-
-		dir := conformance.SnapshotDir(i, string(snap.state))
-		fixture.Snapshots = append(fixture.Snapshots, conformance.Snapshot{State: string(snap.state), Dir: dir})
-		data[dir] = conformance.SnapshotData{CR: sanitized, Expected: reading}
+		cur := snap.raw.Object
+		st := conformance.Step{State: string(snap.state), Action: actionName(fl, snap.state)}
+		if i == 0 {
+			st.CR = cur
+		} else {
+			st.Patch = conformance.MergePatch(prev, cur)
+		}
+		rc.Steps = append(rc.Steps, st)
+		prev = cur
 	}
 
 	root := filepath.Join("..", "conformance", "fixtures", tc.operator, version, tc.kartaName, fl.name)
-	Expect(conformance.Write(root, fixture, data)).To(Succeed())
-	GinkgoWriter.Printf("recorded %s/%s/%s/%s (%d snapshots %v)\n", tc.operator, version, tc.kartaName, fl.name, len(rec.snapshots), observed)
+	Expect(conformance.WriteRecording(root, rc)).To(Succeed())
+	GinkgoWriter.Printf("recorded %s/%s/%s/%s (%d steps %v)\n", tc.operator, version, tc.kartaName, fl.name, len(rc.Steps), rec.order)
+}
+
+// actionName is the name of the action fired when a state is reached, for recording provenance.
+func actionName(fl flow, state kartav1alpha1.ResourceStatus) string {
+	for _, st := range fl.journey {
+		if st.state == state && st.action != nil {
+			full := runtime.FuncForPC(reflect.ValueOf(st.action).Pointer()).Name()
+			if i := strings.LastIndexByte(full, '.'); i >= 0 {
+				return full[i+1:]
+			}
+			return full
+		}
+	}
+	return ""
 }
 
 // operatorVersion is the version hack/e2e/up.sh installed for op, or "unknown".

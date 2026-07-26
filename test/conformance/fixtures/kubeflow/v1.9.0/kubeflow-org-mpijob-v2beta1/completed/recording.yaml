@@ -1,0 +1,186 @@
+flow: completed
+kartaFile: docs/samples/mpijob.yaml
+kartaName: kubeflow-org-mpijob-v2beta1
+operator: kubeflow
+schemaVersion: 5
+steps:
+- cr:
+    apiVersion: kubeflow.org/v2beta1
+    kind: MPIJob
+    metadata:
+      creationTimestamp: "2026-07-26T14:28:42Z"
+      generation: 1
+      managedFields:
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:launcherCreationPolicy: {}
+            f:mpiImplementation: {}
+            f:mpiReplicaSpecs:
+              .: {}
+              f:Launcher:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-launcher"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+              f:Worker:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-worker"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+            f:runLauncherAsWorker: {}
+            f:runPolicy:
+              .: {}
+              f:cleanPodPolicy: {}
+              f:suspend: {}
+            f:slotsPerWorker: {}
+            f:sshAuthMountPath: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T14:28:42Z"
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:completionTime: {}
+            f:conditions:
+              .: {}
+              k:{"type":"Created"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Running"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Succeeded"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:replicaStatuses:
+              .: {}
+              f:Launcher:
+                .: {}
+                f:succeeded: {}
+              f:Worker: {}
+            f:startTime: {}
+        manager: mpi-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-26T14:28:46Z"
+      name: karta-e2e-mpi
+      namespace: default
+      resourceVersion: "2815079"
+      uid: 0e5e8f02-89b8-477a-bd14-5bdecaf35499
+    spec:
+      launcherCreationPolicy: AtStartup
+      mpiImplementation: OpenMPI
+      mpiReplicaSpecs:
+        Launcher:
+          replicas: 1
+          template:
+            spec:
+              containers:
+              - command:
+                - "true"
+                image: busybox:1.36
+                name: mpi-launcher
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 64Mi
+        Worker:
+          replicas: 1
+          template:
+            spec:
+              containers:
+              - command:
+                - sleep
+                - infinity
+                image: busybox:1.36
+                name: mpi-worker
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 64Mi
+      runLauncherAsWorker: false
+      runPolicy:
+        cleanPodPolicy: None
+        suspend: false
+      slotsPerWorker: 1
+      sshAuthMountPath: /root/.ssh
+    status:
+      completionTime: "2026-07-26T14:28:46Z"
+      conditions:
+      - lastTransitionTime: "2026-07-26T14:28:42Z"
+        lastUpdateTime: "2026-07-26T14:28:42Z"
+        message: MPIJob default/karta-e2e-mpi is created.
+        reason: MPIJobCreated
+        status: "True"
+        type: Created
+      - lastTransitionTime: "2026-07-26T14:28:46Z"
+        lastUpdateTime: "2026-07-26T14:28:46Z"
+        message: MPIJob default/karta-e2e-mpi successfully completed.
+        reason: MPIJobSucceeded
+        status: "True"
+        type: Succeeded
+      - lastTransitionTime: "2026-07-26T14:28:46Z"
+        lastUpdateTime: "2026-07-26T14:28:46Z"
+        message: MPIJob default/karta-e2e-mpi is finished but Running condition was
+          never set.
+        reason: MPIJobRunning
+        status: "False"
+        type: Running
+      replicaStatuses:
+        Launcher:
+          succeeded: 1
+        Worker: {}
+      startTime: "2026-07-26T14:28:42Z"
+  state: Completed
+version: v1.9.0
+want: Completed
