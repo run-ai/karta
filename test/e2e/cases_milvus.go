@@ -10,7 +10,13 @@ var milvusCase = workloadCase{
 	operator:  "milvus",
 	kartaFile: "../../docs/samples/milvus.yaml",
 	kartaName: "milvus",
-	states:    []namedState{{running, condTrue("MilvusReady")}},
-	flows:     []flow{{name: "running", workloadFile: "testdata/milvus/running.yaml", journey: steps(running)}},
-	timeout:   8 * time.Minute,
+	states: []namedState{
+		{initializing, phaseEq("Pending", "status", "status")},
+		{running, condTrue("MilvusReady")},
+	},
+	flows: []flow{
+		{name: "running", workloadFile: "testdata/milvus/running.yaml", journey: steps(initializing, running)},
+		{name: "initializing", workloadFile: "testdata/milvus/initializing.yaml", journey: steps(initializing)},
+	},
+	timeout: 8 * time.Minute,
 }
