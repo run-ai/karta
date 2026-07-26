@@ -58,7 +58,6 @@ spec:
         conditionsDefinition:
           messageFieldName: message
           path: .status.conditions
-          reasonFieldName: null
           statusFieldName: status
           typeFieldName: type
         statusMappings:
