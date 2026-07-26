@@ -189,7 +189,7 @@ adding one never touches the Go code. To also manage, say, JobSet:
    ```
 2. Apply its Karta definition:
    ```bash
-   kubectl apply -f docs/samples/jobset.yaml
+   kubectl apply -f docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml
    ```
 3. Add the GVK to the flag in `manifests/01-deployment.yaml` (format
    `group/version/kind`, core group empty):

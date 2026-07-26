@@ -48,4 +48,3 @@ spec:
             - reason: NewReplicaSetAvailable
               status: "True"
               type: Progressing
-status: {}

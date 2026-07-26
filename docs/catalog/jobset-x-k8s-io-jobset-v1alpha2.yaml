@@ -3,27 +3,38 @@
 apiVersion: run.ai/v1alpha1
 kind: Karta
 metadata:
-  name: batch-job-v1
+  name: jobset-x-k8s-io-jobset-v1alpha2
 spec:
   optimizationInstructions:
     gangScheduling:
       podGroups:
       - members:
-        - componentName: job
+        - componentName: replicatedjob
           groupByKeyPaths:
-          - .metadata.labels["batch.kubernetes.io/job-name"]
+          - .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]
         name: job
   structureDefinition:
-    rootComponent:
+    childComponents:
+    - instanceIdPath: .spec.replicatedJobs[].name
       kind:
         group: batch
         kind: Job
         version: v1
-      name: job
+      name: replicatedjob
+      ownerRef: jobset
+      podSelector:
+        componentInstanceSelector:
+          idPath: .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]
       scaleDefinition:
-        replicasPath: .spec.parallelism // 1
+        replicasPath: .spec.replicatedJobs[] | .replicas * .template.spec.parallelism
       specDefinition:
-        podTemplateSpecPath: .spec.template
+        podTemplateSpecPath: .spec.replicatedJobs[].template.spec.template
+    rootComponent:
+      kind:
+        group: jobset.x-k8s.io
+        kind: JobSet
+        version: v1alpha2
+      name: jobset
       statusDefinition:
         conditionsDefinition:
           messageFieldName: message
@@ -35,12 +46,7 @@ spec:
           completed:
           - byConditions:
             - status: "True"
-              type: Complete
-          degraded:
-          - byExpression:
-              expectedResult: "true"
-              expression: .spec.parallelism > 1 and (.status.ready // 0) < .spec.parallelism
-                and ((.status.succeeded // 0) > 0 or (.status.failed // 0) > 0)
+              type: Completed
           failed:
           - byConditions:
             - status: "True"
@@ -48,11 +54,13 @@ spec:
           initializing:
           - byExpression:
               expectedResult: "true"
-              expression: (.status.active // 0) > 0 and (.status.ready // 0) == 0
+              expression: (.status.replicatedJobsStatus // []) | any(.active > 0 and
+                (.ready // 0) == 0) and all(.failed == 0)
           running:
           - byExpression:
               expectedResult: "true"
-              expression: (.status.active // 0) > 0 and (.status.ready // 0) > 0
+              expression: (.status.replicatedJobsStatus // []) | any(.ready > 0 and
+                .active > 0) and all(.failed == 0)
           suspended:
           - byConditions:
             - status: "True"

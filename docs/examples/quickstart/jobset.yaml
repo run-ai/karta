@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
-# The Karta definition for this CRD lives in docs/samples/jobset.yaml.
+# The Karta definition for this CRD lives in docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml.
 apiVersion: jobset.x-k8s.io/v1alpha2
 kind: JobSet
 metadata:
