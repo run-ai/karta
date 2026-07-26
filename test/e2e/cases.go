@@ -23,6 +23,7 @@ var allCases = []workloadCase{
 	podCase,
 	batchJobCase,
 	deploymentCase,
+	statefulSetCase,
 	// operator-driven
 	jobsetCase,
 	lwsCase,
