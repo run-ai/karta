@@ -8,11 +8,17 @@ suite is how we guarantee those definitions stay correct: it brings up real
 operators, runs real workloads, and checks Karta reads each one the way the
 catalog says it should.
 
-The suite also records what it saw, and that is the point. The offline test in
-`test/conformance` replays every recorded workload through the current Karta with
-no cluster, so a change that would misread one is caught for every operator and
-version we captured. That is how a new Karta cannot quietly break the catalog on
-today's operators or the versions before them.
+## Online, offline, regolden
+
+- Online, `make test-e2e`: against a live cluster, drive each workload and check Karta reads it the
+  way the catalog says. `make record-e2e` does the same and freezes what it saw as fixtures.
+- Offline, `go test ./test/conformance`: replay those fixtures through the current Karta with no
+  cluster, so a change that misreads any recorded workload fails fast, for every operator and
+  version captured. This is how a new Karta cannot quietly break the catalog.
+- regolden, `go run ./hack/regolden`: when you intentionally change what Karta reads (say you refine
+  the jobset `running` mapping), offline goes red on purpose. regolden re-reads the frozen CRs and
+  rewrites the expected reading for every fixture at once, all jobset versions and flows, no cluster.
+  It rewrites only what Karta says, never the recorded CRs or their `NN-<State>` labels.
 
 ## Run
 
@@ -103,5 +109,7 @@ docker, kind, kubectl, helm, Go. No GPU.
 | Sample | Karta maps to |
 |---|---|
 | Pod (built-in) | Initializing, Running, Completed, Failed |
+| BatchJob (built-in) | Initializing, Running, Completed, Failed, Suspended |
+| JobSet | Initializing, Running, Completed, Failed, Suspended |
 
-More catalog types land in follow-up PRs on this infrastructure.
+More types land as this infrastructure grows.

@@ -3,15 +3,6 @@
 
 package e2e
 
-import kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
-
-const (
-	initializing = kartav1alpha1.InitializingStatus
-	running      = kartav1alpha1.RunningStatus
-	completed    = kartav1alpha1.CompletedStatus
-	failed       = kartav1alpha1.FailedStatus
-)
-
 var podCase = workloadCase{
 	name:      "Pod (built-in)",
 	operator:  "pod",
@@ -30,5 +21,3 @@ var podCase = workloadCase{
 		{name: "initializing", workloadFile: "testdata/pod/initializing.yaml", journey: steps(initializing)},
 	},
 }
-
-var allCases = []workloadCase{podCase}

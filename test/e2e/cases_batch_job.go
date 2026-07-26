@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
+package e2e
+
+var batchJobCase = workloadCase{
+	name:      "BatchJob (built-in)",
+	operator:  "batch-job",
+	kartaFile: "../../docs/catalog/batch-job-v1.yaml",
+	kartaName: "batch-job-v1",
+	// States least to most advanced. Initializing and Running read the Job's active/ready counts;
+	// Completed, Failed and Suspended read conditions. Suspended is first so a lingering Suspended
+	// condition never masks real progress after a resume.
+	states: []namedState{
+		{suspended, condTrue("Suspended")},
+		{initializing, intAtLeast(1, "status", "active")},
+		{running, intAtLeast(1, "status", "ready")},
+		{completed, condTrue("Complete")},
+		{failed, condTrue("Failed")},
+	},
+	flows: []flow{
+		{name: "running", workloadFile: "testdata/batch-job/running.yaml", journey: steps(initializing, running)},
+		// completed and resumed set mayGoBackwards: a Job reports active-not-ready for a tick as its
+		// pod terminates, which reads as Initializing again after Running, so the observed order is
+		// not strictly forward. The check then only requires each observed state is in the journey
+		// and the terminal is last.
+		{name: "completed", workloadFile: "testdata/batch-job/completed.yaml", mayGoBackwards: true, journey: steps(initializing, running, completed)},
+		{name: "failed", workloadFile: "testdata/batch-job/failed.yaml", journey: steps(initializing, failed)},
+		// Created already suspended, then resumed: the operator holds at Suspended until the action
+		// clears spec.suspend, then a pod runs to completion.
+		{name: "resumed", workloadFile: "testdata/batch-job/resumed.yaml", mayGoBackwards: true, journey: []step{
+			{state: suspended, action: unsuspend},
+			{state: initializing},
+			{state: running},
+			{state: completed},
+		}},
+	},
+}

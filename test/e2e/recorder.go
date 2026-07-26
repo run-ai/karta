@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
@@ -288,16 +289,14 @@ func operatorVersion(op string) string {
 	return "unknown"
 }
 
-// unsuspend clears spec.suspend so a suspended workload resumes.
+// unsuspend clears spec.suspend so a suspended workload resumes. A merge patch, not a
+// read-modify-write Update, so it does not race the controller reconciling a just-created
+// workload, which would make an Update conflict on the resourceVersion.
 func unsuspend(ctx context.Context, obj *unstructured.Unstructured) error {
-	live := emptyLike(obj)
-	if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), live); err != nil {
-		return err
-	}
-	if err := unstructured.SetNestedField(live.Object, false, "spec", "suspend"); err != nil {
-		return err
-	}
-	return k8sClient.Update(ctx, live)
+	target := emptyLike(obj)
+	target.SetName(obj.GetName())
+	target.SetNamespace(obj.GetNamespace())
+	return k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, []byte(`{"spec":{"suspend":false}}`)))
 }
 
 // dumpStatus renders a CR's status for a timeout failure message.

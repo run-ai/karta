@@ -1,0 +1,21 @@
+flow: completed
+kartaFile: docs/samples/jobset.yaml
+kartaName: jobset-x-k8s-io-v1alpha2-jobset
+observedStates:
+- Initializing
+- Running
+- Initializing
+- Completed
+operator: jobset
+schemaVersion: 4
+snapshots:
+- dir: 00-Initializing
+  state: Initializing
+- dir: 01-Running
+  state: Running
+- dir: 02-Initializing
+  state: Initializing
+- dir: 03-Completed
+  state: Completed
+version: v0.10.1
+want: Completed
