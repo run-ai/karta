@@ -41,4 +41,3 @@ spec:
                 // 0) and (.status.readyReplicas // 0) == (.spec.replicas // 1) and
                 (.status.updatedReplicas // 0) == (.spec.replicas // 1) and (.status.currentRevision
                 == .status.updateRevision)
-status: {}

@@ -72,4 +72,3 @@ spec:
         suspendActions:
         - path: .spec.suspend
           value: "true"
-status: {}
