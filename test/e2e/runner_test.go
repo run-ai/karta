@@ -66,7 +66,7 @@ func (tc workloadCase) run() {
 
 		for _, fl := range tc.flows {
 			fl := fl
-			It(fmt.Sprintf("%s flow: Karta reads the live workload as %s", fl.name, fl.want()), func() {
+			It(fmt.Sprintf("%s flow reaches %s", fl.name, fl.want()), func() {
 				timeout := tc.timeout
 				if timeout == 0 {
 					timeout = 3 * time.Minute

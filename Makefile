@@ -160,6 +160,14 @@ empty :=
 space := $(empty) $(empty)
 E2E_LABELS ?= $(subst $(space), || ,$(strip $(filter-out all,$(WORKLOADS))))
 
+# FLOW="failed" narrows a run or a record to one flow by name: it focuses the spec titled
+# "<FLOW> flow ..." (see test/e2e/runner_test.go). Compose with WORKLOADS to target a single
+# operator's single flow - the fast loop while adding cases, e.g.:
+#   make record-e2e WORKLOADS="kuberay" FLOW="scaled"
+ifneq ($(strip $(FLOW)),)
+E2E_FOCUS := $(strip $(FLOW)) flow
+endif
+
 # Pick which operators to install:
 #   make e2e-up                          # everything
 #   make e2e-up WORKLOADS="jobset lws"   # a subset - one provision, deps resolved once
@@ -176,7 +184,7 @@ test-e2e: ## Run the e2e suite (run e2e-up first; WORKLOADS="nim" runs a subset 
 	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) ./... $(if $(E2E_FOCUS)$(E2E_LABELS),-args $(if $(E2E_FOCUS),-ginkgo.focus="$(E2E_FOCUS)") $(if $(E2E_LABELS),-ginkgo.label-filter="$(E2E_LABELS)"))
 
 .PHONY: record-e2e
-record-e2e: ## Record conformance fixtures from the live suite (needs a cluster; writes conformance/)
+record-e2e: ## Record conformance fixtures (needs a cluster; WORKLOADS="kuberay" one operator, FLOW="scaled" one flow)
 	KARTA_RECORD=1 $(MAKE) test-e2e E2E_FOCUS="$(E2E_FOCUS)" E2E_LABELS="$(E2E_LABELS)"
 
 .PHONY: regolden

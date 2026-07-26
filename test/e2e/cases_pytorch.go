@@ -10,7 +10,15 @@ var pytorchCase = workloadCase{
 	operator:  "kubeflow",
 	kartaFile: "../../docs/samples/pytorch.yaml",
 	kartaName: "kubeflow-org-pytorchjob-v1",
-	states:    []namedState{{running, condTrue("Running")}},
-	flows:     []flow{{name: "running", workloadFile: "testdata/pytorch/running.yaml", journey: steps(running)}},
-	timeout:   4 * time.Minute,
+	states: []namedState{
+		{running, condTrue("Running")},
+		{completed, condTrue("Succeeded")},
+		{failed, condTrue("Failed")},
+	},
+	flows: []flow{
+		{name: "running", workloadFile: "testdata/pytorch/running.yaml", journey: steps(running)},
+		{name: "completed", workloadFile: "testdata/pytorch/completed.yaml", journey: steps(running, completed)},
+		{name: "failed", workloadFile: "testdata/pytorch/failed.yaml", journey: steps(running, failed)},
+	},
+	timeout: 4 * time.Minute,
 }

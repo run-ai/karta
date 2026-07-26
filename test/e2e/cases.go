@@ -13,6 +13,7 @@ const (
 	completed    = kartav1alpha1.CompletedStatus
 	failed       = kartav1alpha1.FailedStatus
 	suspended    = kartav1alpha1.SuspendedStatus
+	degraded     = kartav1alpha1.DegradedStatus
 )
 
 // allCases is every workload case the suite runs: online to record, offline to replay. Add a case
