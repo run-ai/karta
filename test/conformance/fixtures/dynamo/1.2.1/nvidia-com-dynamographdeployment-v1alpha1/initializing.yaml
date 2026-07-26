@@ -1,0 +1,171 @@
+flow: initializing
+kartaFile: docs/samples/dynamo.yaml
+kartaName: nvidia-com-dynamographdeployment-v1alpha1
+operator: dynamo
+schemaVersion: 6
+steps:
+- cr:
+    apiVersion: nvidia.com/v1alpha1
+    kind: DynamoGraphDeployment
+    metadata:
+      annotations:
+        nvidia.com/current-worker-hash: 43fa66e8
+        nvidia.com/current-worker-hash-v2: 377ebf7c
+        nvidia.com/dynamo-operator-origin-version: 1.2.1
+      creationTimestamp: "2026-07-26T16:48:06Z"
+      finalizers:
+      - nvidia.com/finalizer
+      generation: 1
+      managedFields:
+      - apiVersion: nvidia.com/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:services:
+              .: {}
+              f:Frontend:
+                .: {}
+                f:componentType: {}
+                f:extraPodSpec:
+                  .: {}
+                  f:mainContainer:
+                    .: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                f:replicas: {}
+              f:decode:
+                .: {}
+                f:componentType: {}
+                f:envFromSecret: {}
+                f:extraPodSpec:
+                  .: {}
+                  f:mainContainer:
+                    .: {}
+                    f:args: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:workingDir: {}
+                f:replicas: {}
+                f:subComponentType: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T16:48:06Z"
+      - apiVersion: nvidia.com/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:annotations:
+              f:nvidia.com/current-worker-hash: {}
+              f:nvidia.com/current-worker-hash-v2: {}
+            f:finalizers:
+              .: {}
+              v:"nvidia.com/finalizer": {}
+        manager: manager
+        operation: Update
+        time: "2026-07-26T16:48:06Z"
+      - apiVersion: nvidia.com/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:conditions:
+              .: {}
+              k:{"type":"Ready"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:observedGeneration: {}
+            f:state: {}
+        manager: manager
+        operation: Update
+        subresource: status
+        time: "2026-07-26T16:48:06Z"
+      name: karta-e2e-dynamo-initializing
+      namespace: default
+      resourceVersion: "2882283"
+      uid: cf1a1e55-7bbb-421b-b6b3-81aa74f10e49
+    spec:
+      services:
+        Frontend:
+          componentType: frontend
+          extraPodSpec:
+            mainContainer:
+              image: busybox:99.99.99
+              imagePullPolicy: IfNotPresent
+              name: ""
+              resources: {}
+          replicas: 1
+        decode:
+          componentType: worker
+          envFromSecret: hf-token-secret
+          extraPodSpec:
+            mainContainer:
+              args:
+              - --model-path
+              - nvidia/Llama-3.1-8B-Instruct-FP8
+              - --model-name
+              - nvidia/Llama-3.1-8B-Instruct-FP8
+              command:
+              - python3
+              - -m
+              - dynamo.mocker
+              image: busybox:99.99.99
+              imagePullPolicy: IfNotPresent
+              name: ""
+              resources: {}
+              workingDir: /workspace
+          replicas: 1
+          subComponentType: decode
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-26T16:48:06Z"
+        message: 'Resources not ready: karta-e2e-dynamo-initializing-decode-43fa66e8:
+          Component deployment not ready - Available condition not true; karta-e2e-dynamo-initializing-frontend:
+          Component deployment not ready - Available condition not true'
+        reason: some_resources_are_not_ready
+        status: "False"
+        type: Ready
+      observedGeneration: 1
+      state: pending
+  expected:
+    components:
+      service:
+        instances:
+          Frontend:
+            fragmentedPodSpec:
+              container:
+                image: busybox:99.99.99
+                imagePullPolicy: IfNotPresent
+                name: ""
+              image: busybox:99.99.99
+            scale:
+              replicas: 1
+          decode:
+            fragmentedPodSpec:
+              container:
+                args:
+                - --model-path
+                - nvidia/Llama-3.1-8B-Instruct-FP8
+                - --model-name
+                - nvidia/Llama-3.1-8B-Instruct-FP8
+                command:
+                - python3
+                - -m
+                - dynamo.mocker
+                image: busybox:99.99.99
+                imagePullPolicy: IfNotPresent
+                name: ""
+                workingDir: /workspace
+              image: busybox:99.99.99
+            scale:
+              replicas: 1
+    matchedStatuses:
+    - Initializing
+    phase: pending
+  state: Initializing
+version: 1.2.1
+want: Initializing

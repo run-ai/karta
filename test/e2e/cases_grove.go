@@ -10,7 +10,13 @@ var groveCase = workloadCase{
 	operator:  "grove",
 	kartaFile: "../../docs/samples/grove-podcliqueset.yaml",
 	kartaName: "grove-io-podcliqueset-v1alpha1",
-	states:    []namedState{{running, intAtLeast(1, "status", "availableReplicas")}},
-	flows:     []flow{{name: "running", workloadFile: "testdata/grove/running.yaml", journey: steps(running)}},
-	timeout:   4 * time.Minute,
+	states: []namedState{
+		{initializing, intBelow(1, "status", "availableReplicas")},
+		{running, intAtLeast(1, "status", "availableReplicas")},
+	},
+	flows: []flow{
+		{name: "running", workloadFile: "testdata/grove/running.yaml", journey: steps(initializing, running)},
+		{name: "initializing", workloadFile: "testdata/grove/initializing.yaml", journey: steps(initializing)},
+	},
+	timeout: 4 * time.Minute,
 }

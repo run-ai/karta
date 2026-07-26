@@ -1,0 +1,132 @@
+flow: initializing
+kartaFile: docs/samples/grove-podcliqueset.yaml
+kartaName: grove-io-podcliqueset-v1alpha1
+operator: grove
+schemaVersion: 6
+steps:
+- cr:
+    apiVersion: grove.io/v1alpha1
+    kind: PodCliqueSet
+    metadata:
+      creationTimestamp: "2026-07-26T16:43:57Z"
+      finalizers:
+      - grove.io/podcliqueset.grove.io
+      generation: 1
+      managedFields:
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:replicas: {}
+            f:template:
+              .: {}
+              f:cliqueStartupType: {}
+              f:cliques:
+                .: {}
+                k:{"name":"worker"}:
+                  .: {}
+                  f:name: {}
+                  f:spec:
+                    .: {}
+                    f:podSpec:
+                      .: {}
+                      f:containers:
+                        .: {}
+                        k:{"name":"worker"}:
+                          .: {}
+                          f:command: {}
+                          f:image: {}
+                          f:name: {}
+                          f:resources:
+                            .: {}
+                            f:requests:
+                              .: {}
+                              f:cpu: {}
+                              f:memory: {}
+                    f:replicas: {}
+                    f:roleName: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T16:43:57Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"grove.io/podcliqueset.grove.io": {}
+        manager: grove-operator
+        operation: Update
+        time: "2026-07-26T16:43:57Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:availableReplicas: {}
+            f:currentGenerationHash: {}
+            f:updatedReplicas: {}
+        manager: grove-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-26T16:43:57Z"
+      name: karta-e2e-grove-initializing
+      namespace: default
+      resourceVersion: "2880129"
+      uid: 546dbcdd-6ef1-4634-9d5d-b05cabddf04a
+    spec:
+      replicas: 1
+      template:
+        cliqueStartupType: CliqueStartupTypeAnyOrder
+        cliques:
+        - name: worker
+          spec:
+            minAvailable: 2
+            podSpec:
+              containers:
+              - command:
+                - /bin/sh
+                - -c
+                - echo karta-e2e-grove && sleep infinity
+                image: busybox:99.99.99
+                name: worker
+                resources:
+                  requests:
+                    cpu: 20m
+                    memory: 32Mi
+              restartPolicy: Always
+              terminationGracePeriodSeconds: 30
+            replicas: 2
+            roleName: worker
+        headlessServiceConfig:
+          publishNotReadyAddresses: true
+        terminationDelay: 4h0m0s
+    status:
+      availableReplicas: 0
+      currentGenerationHash: 764cc6885bfd777bbc6
+      updatedReplicas: 0
+  expected:
+    components:
+      clique:
+        instances:
+          worker:
+            fragmentedPodSpec:
+              containers:
+              - command:
+                - /bin/sh
+                - -c
+                - echo karta-e2e-grove && sleep infinity
+                image: busybox:99.99.99
+                name: worker
+                resources:
+                  requests:
+                    cpu: 20m
+                    memory: 32Mi
+            scale:
+              replicas: 2
+    matchedStatuses:
+    - Initializing
+  state: Initializing
+version: v0.1.0-alpha.10-rc1
+want: Initializing

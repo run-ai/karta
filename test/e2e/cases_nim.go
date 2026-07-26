@@ -10,7 +10,13 @@ var nimCase = workloadCase{
 	operator:  "nim",
 	kartaFile: "../../docs/samples/nimservice.yaml",
 	kartaName: "apps-nvidia-com-nimservice-v1alpha1",
-	states:    []namedState{{running, phaseEq("Ready", "status", "state")}},
-	flows:     []flow{{name: "running", workloadFile: "testdata/nim/running.yaml", journey: steps(running)}},
-	timeout:   5 * time.Minute,
+	states: []namedState{
+		{initializing, phaseAny([]string{"NotReady", "Pending"}, "status", "state")},
+		{running, phaseEq("Ready", "status", "state")},
+	},
+	flows: []flow{
+		{name: "running", workloadFile: "testdata/nim/running.yaml", journey: steps(initializing, running)},
+		{name: "initializing", workloadFile: "testdata/nim/initializing.yaml", journey: steps(initializing)},
+	},
+	timeout: 5 * time.Minute,
 }

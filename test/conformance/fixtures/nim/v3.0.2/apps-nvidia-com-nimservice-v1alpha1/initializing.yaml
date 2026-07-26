@@ -1,0 +1,154 @@
+flow: initializing
+kartaFile: docs/samples/nimservice.yaml
+kartaName: apps-nvidia-com-nimservice-v1alpha1
+operator: nim
+schemaVersion: 6
+steps:
+- cr:
+    apiVersion: apps.nvidia.com/v1alpha1
+    kind: NIMService
+    metadata:
+      creationTimestamp: "2026-07-26T16:48:06Z"
+      finalizers:
+      - finalizer.nimservice.apps.nvidia.com
+      generation: 2
+      managedFields:
+      - apiVersion: apps.nvidia.com/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:authSecret: {}
+            f:env: {}
+            f:expose:
+              .: {}
+              f:service:
+                .: {}
+                f:port: {}
+                f:type: {}
+            f:image:
+              .: {}
+              f:pullPolicy: {}
+              f:repository: {}
+              f:tag: {}
+            f:inferencePlatform: {}
+            f:replicas: {}
+            f:storage:
+              .: {}
+              f:pvc:
+                .: {}
+                f:create: {}
+                f:size: {}
+                f:volumeAccessMode: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T16:48:06Z"
+      - apiVersion: apps.nvidia.com/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"finalizer.nimservice.apps.nvidia.com": {}
+          f:spec:
+            f:expose:
+              f:ingress:
+                .: {}
+                f:spec: {}
+            f:livenessProbe: {}
+            f:metrics:
+              .: {}
+              f:serviceMonitor: {}
+            f:readinessProbe: {}
+            f:scale:
+              .: {}
+              f:hpa:
+                .: {}
+                f:maxReplicas: {}
+                f:minReplicas: {}
+            f:startupProbe: {}
+            f:storage:
+              f:nimCache: {}
+        manager: manager
+        operation: Update
+        time: "2026-07-26T16:48:06Z"
+      - apiVersion: apps.nvidia.com/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions: {}
+            f:state: {}
+        manager: manager
+        operation: Update
+        subresource: status
+        time: "2026-07-26T16:48:06Z"
+      name: karta-e2e-nim-initializing
+      namespace: default
+      resourceVersion: "2882314"
+      uid: 18a95a2f-1bd0-4f5a-a688-dda548ec1251
+    spec:
+      authSecret: ngc-secret
+      env:
+      - name: NIM_REQUEST_LATENCY
+        value: "2"
+      expose:
+        ingress:
+          spec: {}
+        service:
+          port: 8000
+          type: ClusterIP
+      image:
+        pullPolicy: IfNotPresent
+        repository: nonexistent-nim
+        tag: bad
+      inferencePlatform: standalone
+      livenessProbe: {}
+      metrics:
+        serviceMonitor: {}
+      readinessProbe: {}
+      replicas: 1
+      scale:
+        hpa:
+          maxReplicas: 0
+          minReplicas: 1
+      startupProbe: {}
+      storage:
+        nimCache: {}
+        pvc:
+          create: true
+          size: 1Gi
+          volumeAccessMode: ReadWriteOnce
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-26T16:48:06Z"
+        message: ""
+        reason: NotReady
+        status: "False"
+        type: Ready
+      - lastTransitionTime: "2026-07-26T16:48:06Z"
+        message: ""
+        reason: Ready
+        status: "False"
+        type: Failed
+      state: NotReady
+  expected:
+    components:
+      nimservice:
+        instances:
+          "":
+            scale:
+              replicas: 1
+    conditions:
+    - reason: NotReady
+      status: "False"
+      type: Ready
+    - reason: Ready
+      status: "False"
+      type: Failed
+    matchedStatuses:
+    - Initializing
+    phase: NotReady
+  state: Initializing
+version: v3.0.2
+want: Initializing

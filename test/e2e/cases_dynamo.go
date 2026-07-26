@@ -10,7 +10,13 @@ var dynamoCase = workloadCase{
 	operator:  "dynamo",
 	kartaFile: "../../docs/samples/dynamo.yaml",
 	kartaName: "nvidia-com-dynamographdeployment-v1alpha1",
-	states:    []namedState{{running, phaseEq("successful", "status", "state")}},
-	flows:     []flow{{name: "running", workloadFile: "testdata/dynamo/running.yaml", journey: steps(running)}},
-	timeout:   5 * time.Minute,
+	states: []namedState{
+		{initializing, phaseAny([]string{"initializing", "pending"}, "status", "state")},
+		{running, phaseEq("successful", "status", "state")},
+	},
+	flows: []flow{
+		{name: "running", workloadFile: "testdata/dynamo/running.yaml", journey: steps(initializing, running)},
+		{name: "initializing", workloadFile: "testdata/dynamo/initializing.yaml", journey: steps(initializing)},
+	},
+	timeout: 5 * time.Minute,
 }
