@@ -34,5 +34,6 @@ var jobsetCase = workloadCase{
 			{state: running},
 			{state: completed},
 		}},
+		{name: "suspended", workloadFile: "testdata/jobset/suspended.yaml", journey: steps(suspended)},
 	},
 }

@@ -17,6 +17,7 @@ var batchJobCase = workloadCase{
 		{running, intAtLeast(1, "status", "ready")},
 		{completed, condTrue("Complete")},
 		{failed, condTrue("Failed")},
+		{degraded, jobDegraded()},
 	},
 	flows: []flow{
 		{name: "running", workloadFile: "testdata/batch-job/running.yaml", journey: steps(initializing, running)},
@@ -34,5 +35,9 @@ var batchJobCase = workloadCase{
 			{state: running},
 			{state: completed},
 		}},
+		// Indexed Job: index 0 runs to completion while index 1 sleeps, so one pod succeeded and one
+		// stays ready - a settled partial read as Degraded.
+		{name: "degraded", workloadFile: "testdata/batch-job/degraded.yaml", mayGoBackwards: true, journey: steps(initializing, running, degraded)},
+		{name: "suspended", workloadFile: "testdata/batch-job/suspended.yaml", journey: steps(suspended)},
 	},
 }

@@ -1,0 +1,158 @@
+flow: suspended
+kartaFile: docs/catalog/batch-job-v1.yaml
+kartaName: batch-job-v1
+operator: batch-job
+schemaVersion: 6
+steps:
+- cr:
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      creationTimestamp: "2026-07-26T20:30:18Z"
+      generation: 1
+      labels:
+        batch.kubernetes.io/controller-uid: 772604aa-4cf0-406b-b460-61451e655aaa
+        batch.kubernetes.io/job-name: karta-e2e-job-suspended
+        controller-uid: 772604aa-4cf0-406b-b460-61451e655aaa
+        job-name: karta-e2e-job-suspended
+      managedFields:
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:backoffLimit: {}
+            f:completionMode: {}
+            f:completions: {}
+            f:manualSelector: {}
+            f:parallelism: {}
+            f:podReplacementPolicy: {}
+            f:suspend: {}
+            f:template:
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T20:30:18Z"
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:conditions: {}
+            f:ready: {}
+            f:terminating: {}
+            f:uncountedTerminatedPods: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-26T20:30:18Z"
+      name: karta-e2e-job-suspended
+      namespace: default
+      resourceVersion: "2984522"
+      uid: 772604aa-4cf0-406b-b460-61451e655aaa
+    spec:
+      backoffLimit: 0
+      completionMode: NonIndexed
+      completions: 1
+      manualSelector: false
+      parallelism: 1
+      podReplacementPolicy: TerminatingOrFailed
+      selector:
+        matchLabels:
+          batch.kubernetes.io/controller-uid: 772604aa-4cf0-406b-b460-61451e655aaa
+      suspend: true
+      template:
+        metadata:
+          labels:
+            batch.kubernetes.io/controller-uid: 772604aa-4cf0-406b-b460-61451e655aaa
+            batch.kubernetes.io/job-name: karta-e2e-job-suspended
+            controller-uid: 772604aa-4cf0-406b-b460-61451e655aaa
+            job-name: karta-e2e-job-suspended
+        spec:
+          containers:
+          - command:
+            - "true"
+            image: busybox:1.36
+            imagePullPolicy: IfNotPresent
+            name: worker
+            resources:
+              requests:
+                cpu: 50m
+                memory: 32Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+    status:
+      conditions:
+      - lastProbeTime: "2026-07-26T20:30:18Z"
+        lastTransitionTime: "2026-07-26T20:30:18Z"
+        message: Job suspended
+        reason: JobSuspended
+        status: "True"
+        type: Suspended
+      ready: 0
+      terminating: 0
+      uncountedTerminatedPods: {}
+  expected:
+    components:
+      job:
+        instances:
+          "":
+            podTemplateSpec:
+              metadata:
+                labels:
+                  batch.kubernetes.io/controller-uid: 772604aa-4cf0-406b-b460-61451e655aaa
+                  batch.kubernetes.io/job-name: karta-e2e-job-suspended
+                  controller-uid: 772604aa-4cf0-406b-b460-61451e655aaa
+                  job-name: karta-e2e-job-suspended
+              spec:
+                containers:
+                - command:
+                  - "true"
+                  image: busybox:1.36
+                  imagePullPolicy: IfNotPresent
+                  name: worker
+                  resources:
+                    requests:
+                      cpu: 50m
+                      memory: 32Mi
+                  terminationMessagePath: /dev/termination-log
+                  terminationMessagePolicy: File
+                dnsPolicy: ClusterFirst
+                restartPolicy: Never
+                schedulerName: default-scheduler
+                terminationGracePeriodSeconds: 30
+            scale:
+              replicas: 1
+    conditions:
+    - message: Job suspended
+      reason: JobSuspended
+      status: "True"
+      type: Suspended
+    matchedStatuses:
+    - Suspended
+  state: Suspended
+version: v1.34.0
+want: Suspended

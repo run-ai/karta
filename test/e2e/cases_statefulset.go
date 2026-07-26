@@ -14,13 +14,19 @@ var statefulSetCase = workloadCase{
 	operator:  "statefulset",
 	kartaFile: "../../docs/catalog/apps-statefulset-v1.yaml",
 	kartaName: "apps-statefulset-v1",
-	states:    []namedState{{running, fullyAvailable()}},
+	states: []namedState{
+		{running, fullyAvailable()},
+		{degraded, replicasDegraded()},
+	},
 	flows: []flow{
 		{name: "scaled", workloadFile: "testdata/statefulset/running.yaml", journey: []step{
 			{state: running, settle: replicasReady(1), action: scaleReplicas(3)},
 			{state: running, settle: replicasReady(3), action: scaleReplicas(1)},
 			{state: running, settle: replicasReady(1)},
 		}},
+		// 3 replicas + hostname antiAffinity on 2 nodes: one stays pending, so readyReplicas settles
+		// below replicas with updatedReplicas == replicas, read as Degraded.
+		{name: "degraded", workloadFile: "testdata/statefulset/degraded.yaml", journey: steps(degraded)},
 	},
 	timeout: 3 * time.Minute,
 }
