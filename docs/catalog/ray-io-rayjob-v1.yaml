@@ -46,6 +46,8 @@ spec:
           keyPath: .metadata.labels["ray.io/node-type"]
           value: worker
       scaleDefinition:
+        maxReplicasPath: .spec.rayClusterSpec.workerGroupSpecs[].maxReplicas
+        minReplicasPath: .spec.rayClusterSpec.workerGroupSpecs[].minReplicas
         replicasPath: .spec.rayClusterSpec.workerGroupSpecs[].replicas // 1
       specDefinition:
         podTemplateSpecPath: .spec.rayClusterSpec.workerGroupSpecs[].template

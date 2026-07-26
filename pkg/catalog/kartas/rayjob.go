@@ -73,7 +73,9 @@ func Rayjob() *v1alpha1.Karta {
 							PodTemplateSpecPath: ptr.To(".spec.rayClusterSpec.workerGroupSpecs[].template"),
 						},
 						ScaleDefinition: &v1alpha1.ScaleDefinition{
-							ReplicasPath: ptr.To(".spec.rayClusterSpec.workerGroupSpecs[].replicas // 1"),
+							ReplicasPath:    ptr.To(".spec.rayClusterSpec.workerGroupSpecs[].replicas // 1"),
+							MinReplicasPath: ptr.To(".spec.rayClusterSpec.workerGroupSpecs[].minReplicas"),
+							MaxReplicasPath: ptr.To(".spec.rayClusterSpec.workerGroupSpecs[].maxReplicas"),
 						},
 						InstanceIdPath: ptr.To(".spec.rayClusterSpec.workerGroupSpecs[].groupName"),
 						PodSelector: &v1alpha1.PodSelector{
