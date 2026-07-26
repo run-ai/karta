@@ -12,6 +12,5 @@ var rayJobCase = workloadCase{
 	kartaName: "ray-io-rayjob-v1",
 	states:    []namedState{{completed, phaseEq("SUCCEEDED", "status", "jobStatus")}},
 	flows:     []flow{{name: "completed", workloadFile: "testdata/rayjob/completed.yaml", journey: steps(completed)}},
-	extracts:  []extractCheck{{component: "head"}},
 	timeout:   6 * time.Minute,
 }

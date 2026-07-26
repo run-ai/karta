@@ -10,5 +10,4 @@ var mpijobCase = workloadCase{
 	kartaName: "kubeflow-org-mpijob-v2beta1",
 	states:    []namedState{{completed, condTrue("Succeeded")}},
 	flows:     []flow{{name: "completed", workloadFile: "testdata/mpijob/completed.yaml", journey: steps(completed)}},
-	extracts:  []extractCheck{{component: "launcher"}, {component: "worker"}},
 }

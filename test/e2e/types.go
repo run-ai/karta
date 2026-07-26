@@ -32,11 +32,6 @@ type step struct {
 	action stateAction
 }
 
-type extractCheck struct {
-	component string
-	keys      []string
-}
-
 // flow drives a workload along an ordered journey of states. mayGoBackwards waives the
 // strict-order check for an operator whose observed order Karta cannot make reliable.
 type flow struct {
@@ -55,7 +50,6 @@ type workloadCase struct {
 	kartaName string
 	states    []namedState // state registry, ordered least to most advanced
 	flows     []flow
-	extracts  []extractCheck
 	timeout   time.Duration
 }
 

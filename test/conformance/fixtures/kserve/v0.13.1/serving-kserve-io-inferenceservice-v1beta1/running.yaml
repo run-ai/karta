@@ -1,0 +1,176 @@
+flow: running
+kartaFile: docs/samples/kserve.yaml
+kartaName: serving-kserve-io-inferenceservice-v1beta1
+operator: kserve
+schemaVersion: 6
+steps:
+- cr:
+    apiVersion: serving.kserve.io/v1beta1
+    kind: InferenceService
+    metadata:
+      creationTimestamp: "2026-07-26T15:52:14Z"
+      finalizers:
+      - inferenceservice.finalizers
+      generation: 1
+      managedFields:
+      - apiVersion: serving.kserve.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:predictor:
+              .: {}
+              f:model:
+                .: {}
+                f:modelFormat:
+                  .: {}
+                  f:name: {}
+                f:resources:
+                  .: {}
+                  f:requests:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+                f:storageUri: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T15:52:14Z"
+      - apiVersion: serving.kserve.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"inferenceservice.finalizers": {}
+        manager: manager
+        operation: Update
+        time: "2026-07-26T15:52:14Z"
+      - apiVersion: serving.kserve.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:address:
+              .: {}
+              f:url: {}
+            f:components:
+              .: {}
+              f:predictor:
+                .: {}
+                f:address:
+                  .: {}
+                  f:url: {}
+                f:latestCreatedRevision: {}
+                f:latestReadyRevision: {}
+                f:latestRolledoutRevision: {}
+                f:traffic: {}
+                f:url: {}
+            f:conditions: {}
+            f:modelStatus:
+              .: {}
+              f:states:
+                .: {}
+                f:activeModelState: {}
+                f:targetModelState: {}
+              f:transitionStatus: {}
+            f:observedGeneration: {}
+            f:url: {}
+        manager: manager
+        operation: Update
+        subresource: status
+        time: "2026-07-26T15:52:36Z"
+      name: karta-e2e-kserve
+      namespace: default
+      resourceVersion: "2855317"
+      uid: 673666de-7c47-4140-a4c5-17712654d8e1
+    spec:
+      predictor:
+        model:
+          modelFormat:
+            name: sklearn
+          name: ""
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          storageUri: gs://kfserving-examples/models/sklearn/1.0/model
+    status:
+      address:
+        url: http://karta-e2e-kserve-predictor.default.svc.cluster.local
+      components:
+        predictor:
+          address:
+            url: http://karta-e2e-kserve-predictor.default.svc.cluster.local
+          latestCreatedRevision: karta-e2e-kserve-predictor-00001
+          latestReadyRevision: karta-e2e-kserve-predictor-00001
+          latestRolledoutRevision: karta-e2e-kserve-predictor-00001
+          traffic:
+          - latestRevision: true
+            percent: 100
+            revisionName: karta-e2e-kserve-predictor-00001
+          url: http://karta-e2e-kserve-predictor.default.127.0.0.1.sslip.io
+      conditions:
+      - lastTransitionTime: "2026-07-26T15:52:36Z"
+        status: "True"
+        type: IngressReady
+      - lastTransitionTime: "2026-07-26T15:52:36Z"
+        severity: Info
+        status: "True"
+        type: LatestDeploymentReady
+      - lastTransitionTime: "2026-07-26T15:52:36Z"
+        severity: Info
+        status: "True"
+        type: PredictorConfigurationReady
+      - lastTransitionTime: "2026-07-26T15:52:36Z"
+        status: "True"
+        type: PredictorReady
+      - lastTransitionTime: "2026-07-26T15:52:36Z"
+        severity: Info
+        status: "True"
+        type: PredictorRouteReady
+      - lastTransitionTime: "2026-07-26T15:52:36Z"
+        status: "True"
+        type: Ready
+      - lastTransitionTime: "2026-07-26T15:52:36Z"
+        severity: Info
+        status: "True"
+        type: RoutesReady
+      modelStatus:
+        states:
+          activeModelState: ""
+          targetModelState: Pending
+        transitionStatus: InProgress
+      observedGeneration: 1
+      url: http://karta-e2e-kserve-predictor.default.127.0.0.1.sslip.io
+  expected:
+    components:
+      predictor:
+        instances:
+          "":
+            fragmentedPodSpec:
+              container:
+                name: ""
+                resources:
+                  requests:
+                    cpu: 100m
+                    memory: 256Mi
+    conditions:
+    - status: "True"
+      type: IngressReady
+    - status: "True"
+      type: LatestDeploymentReady
+    - status: "True"
+      type: PredictorConfigurationReady
+    - status: "True"
+      type: PredictorReady
+    - status: "True"
+      type: PredictorRouteReady
+    - status: "True"
+      type: Ready
+    - status: "True"
+      type: RoutesReady
+    matchedStatuses:
+    - Running
+  state: Running
+version: v0.13.1
+want: Running

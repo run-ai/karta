@@ -12,6 +12,5 @@ var kserveCase = workloadCase{
 	kartaName: "serving-kserve-io-inferenceservice-v1beta1",
 	states:    []namedState{{running, condTrue("Ready")}},
 	flows:     []flow{{name: "running", workloadFile: "testdata/kserve/running.yaml", journey: steps(running)}},
-	extracts:  []extractCheck{{component: "predictor"}},
 	timeout:   6 * time.Minute,
 }

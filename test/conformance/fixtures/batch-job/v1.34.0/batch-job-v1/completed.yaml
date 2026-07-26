@@ -1,0 +1,414 @@
+flow: completed
+kartaFile: docs/catalog/batch-job-v1.yaml
+kartaName: batch-job-v1
+operator: batch-job
+schemaVersion: 6
+steps:
+- cr:
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      creationTimestamp: "2026-07-26T15:47:13Z"
+      generation: 1
+      labels:
+        batch.kubernetes.io/controller-uid: 9069b719-b2e8-49f1-bb3e-9a71e740171c
+        batch.kubernetes.io/job-name: karta-e2e-job-completed
+        controller-uid: 9069b719-b2e8-49f1-bb3e-9a71e740171c
+        job-name: karta-e2e-job-completed
+      managedFields:
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:backoffLimit: {}
+            f:completionMode: {}
+            f:completions: {}
+            f:manualSelector: {}
+            f:parallelism: {}
+            f:podReplacementPolicy: {}
+            f:suspend: {}
+            f:template:
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:exec:
+                        .: {}
+                        f:command: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T15:47:13Z"
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:active: {}
+            f:ready: {}
+            f:startTime: {}
+            f:terminating: {}
+            f:uncountedTerminatedPods: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-26T15:47:13Z"
+      name: karta-e2e-job-completed
+      namespace: default
+      resourceVersion: "2852115"
+      uid: 9069b719-b2e8-49f1-bb3e-9a71e740171c
+    spec:
+      backoffLimit: 0
+      completionMode: NonIndexed
+      completions: 1
+      manualSelector: false
+      parallelism: 1
+      podReplacementPolicy: TerminatingOrFailed
+      selector:
+        matchLabels:
+          batch.kubernetes.io/controller-uid: 9069b719-b2e8-49f1-bb3e-9a71e740171c
+      suspend: false
+      template:
+        metadata:
+          labels:
+            batch.kubernetes.io/controller-uid: 9069b719-b2e8-49f1-bb3e-9a71e740171c
+            batch.kubernetes.io/job-name: karta-e2e-job-completed
+            controller-uid: 9069b719-b2e8-49f1-bb3e-9a71e740171c
+            job-name: karta-e2e-job-completed
+        spec:
+          containers:
+          - command:
+            - sh
+            - -c
+            - sleep 20
+            image: busybox:1.36
+            imagePullPolicy: IfNotPresent
+            name: worker
+            readinessProbe:
+              exec:
+                command:
+                - "true"
+              failureThreshold: 3
+              initialDelaySeconds: 6
+              periodSeconds: 2
+              successThreshold: 1
+              timeoutSeconds: 1
+            resources:
+              requests:
+                cpu: 50m
+                memory: 32Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+    status:
+      active: 1
+      ready: 0
+      startTime: "2026-07-26T15:47:13Z"
+      terminating: 0
+      uncountedTerminatedPods: {}
+  expected:
+    components:
+      job:
+        instances:
+          "":
+            podTemplateSpec:
+              metadata:
+                labels:
+                  batch.kubernetes.io/controller-uid: 9069b719-b2e8-49f1-bb3e-9a71e740171c
+                  batch.kubernetes.io/job-name: karta-e2e-job-completed
+                  controller-uid: 9069b719-b2e8-49f1-bb3e-9a71e740171c
+                  job-name: karta-e2e-job-completed
+              spec:
+                containers:
+                - command:
+                  - sh
+                  - -c
+                  - sleep 20
+                  image: busybox:1.36
+                  imagePullPolicy: IfNotPresent
+                  name: worker
+                  readinessProbe:
+                    exec:
+                      command:
+                      - "true"
+                    failureThreshold: 3
+                    initialDelaySeconds: 6
+                    periodSeconds: 2
+                    successThreshold: 1
+                    timeoutSeconds: 1
+                  resources:
+                    requests:
+                      cpu: 50m
+                      memory: 32Mi
+                  terminationMessagePath: /dev/termination-log
+                  terminationMessagePolicy: File
+                dnsPolicy: ClusterFirst
+                restartPolicy: Never
+                schedulerName: default-scheduler
+                terminationGracePeriodSeconds: 30
+            scale:
+              replicas: 1
+    matchedStatuses:
+    - Initializing
+  state: Initializing
+- expectedPatch:
+    matchedStatuses:
+    - Running
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:backoffLimit: {}
+            f:completionMode: {}
+            f:completions: {}
+            f:manualSelector: {}
+            f:parallelism: {}
+            f:podReplacementPolicy: {}
+            f:suspend: {}
+            f:template:
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:exec:
+                        .: {}
+                        f:command: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T15:47:13Z"
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:active: {}
+            f:ready: {}
+            f:startTime: {}
+            f:terminating: {}
+            f:uncountedTerminatedPods: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-26T15:47:20Z"
+      resourceVersion: "2852164"
+    status:
+      ready: 1
+  state: Running
+- expectedPatch:
+    matchedStatuses:
+    - Initializing
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:backoffLimit: {}
+            f:completionMode: {}
+            f:completions: {}
+            f:manualSelector: {}
+            f:parallelism: {}
+            f:podReplacementPolicy: {}
+            f:suspend: {}
+            f:template:
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:exec:
+                        .: {}
+                        f:command: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T15:47:13Z"
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:active: {}
+            f:ready: {}
+            f:startTime: {}
+            f:terminating: {}
+            f:uncountedTerminatedPods: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-26T15:47:35Z"
+      resourceVersion: "2852295"
+    status:
+      ready: 0
+  state: Initializing
+- expectedPatch:
+    conditions:
+    - message: Reached expected number of succeeded pods
+      reason: CompletionsReached
+      status: "True"
+      type: SuccessCriteriaMet
+    - message: Reached expected number of succeeded pods
+      reason: CompletionsReached
+      status: "True"
+      type: Complete
+    matchedStatuses:
+    - Completed
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:backoffLimit: {}
+            f:completionMode: {}
+            f:completions: {}
+            f:manualSelector: {}
+            f:parallelism: {}
+            f:podReplacementPolicy: {}
+            f:suspend: {}
+            f:template:
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:exec:
+                        .: {}
+                        f:command: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T15:47:13Z"
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:completionTime: {}
+            f:conditions: {}
+            f:ready: {}
+            f:startTime: {}
+            f:succeeded: {}
+            f:terminating: {}
+            f:uncountedTerminatedPods: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-26T15:47:36Z"
+      resourceVersion: "2852299"
+    status:
+      active: null
+      completionTime: "2026-07-26T15:47:36Z"
+      conditions:
+      - lastProbeTime: "2026-07-26T15:47:36Z"
+        lastTransitionTime: "2026-07-26T15:47:36Z"
+        message: Reached expected number of succeeded pods
+        reason: CompletionsReached
+        status: "True"
+        type: SuccessCriteriaMet
+      - lastProbeTime: "2026-07-26T15:47:36Z"
+        lastTransitionTime: "2026-07-26T15:47:36Z"
+        message: Reached expected number of succeeded pods
+        reason: CompletionsReached
+        status: "True"
+        type: Complete
+      succeeded: 1
+  state: Completed
+version: v1.34.0
+want: Completed

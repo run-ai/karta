@@ -4,6 +4,7 @@
 package conformance
 
 import (
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -53,25 +54,26 @@ func TestMergePatchRoundTrip(t *testing.T) {
 	}
 }
 
-// TestRecordingReconstructsAndRoundTrips checks that CRs() rebuilds each snapshot by applying the
-// patches in order, and that WriteRecording/LoadRecording round-trips.
+// TestRecordingReconstructsAndRoundTrips checks that CRs() and Readings() rebuild each step by
+// applying the patches in order, and that WriteRecording/LoadRecording round-trips one <flow>.yaml.
 func TestRecordingReconstructsAndRoundTrips(t *testing.T) {
-	first := map[string]interface{}{
-		"kind":     "Job",
-		"metadata": map[string]interface{}{"name": "j"},
-		"status":   map[string]interface{}{"active": float64(1)},
-	}
 	rec := Recording{
 		SchemaVersion: SchemaVersion,
 		Operator:      "batch-job",
 		KartaName:     "batch-job-v1",
 		Flow:          "completed",
-		Want:          v1alpha1.CompletedStatus,
+		Want:          string(v1alpha1.CompletedStatus),
 		Steps: []Step{
-			{State: "Initializing", CR: first},
-			{State: "Completed", Patch: map[string]interface{}{
-				"status": map[string]interface{}{"active": float64(0), "succeeded": float64(1)},
-			}},
+			{
+				State:    "Initializing",
+				CR:       map[string]interface{}{"kind": "Job", "metadata": map[string]interface{}{"name": "j"}, "status": map[string]interface{}{"active": float64(1)}},
+				Expected: map[string]interface{}{"matchedStatuses": []interface{}{"Initializing"}},
+			},
+			{
+				State:         "Completed",
+				Patch:         map[string]interface{}{"status": map[string]interface{}{"active": float64(0), "succeeded": float64(1)}},
+				ExpectedPatch: map[string]interface{}{"matchedStatuses": []interface{}{"Completed"}},
+			},
 		},
 	}
 
@@ -92,15 +94,29 @@ func TestRecordingReconstructsAndRoundTrips(t *testing.T) {
 		t.Errorf("cr[1] status.active = %v, want 0", v)
 	}
 
-	dir := t.TempDir()
-	if err := WriteRecording(dir, rec); err != nil {
-		t.Fatal(err)
-	}
-	got, err := LoadRecording(dir)
+	readings, err := rec.Readings()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Operator != "batch-job" || got.Flow != "completed" || got.Want != v1alpha1.CompletedStatus || len(got.Steps) != 2 {
+	if len(readings) != 2 {
+		t.Fatalf("want 2 reconstructed readings, got %d", len(readings))
+	}
+	if got := matchedStatuses(readings[0]); !reflect.DeepEqual(got, []string{"Initializing"}) {
+		t.Errorf("reading[0] matchedStatuses = %v, want [Initializing]", got)
+	}
+	if got := matchedStatuses(readings[1]); !reflect.DeepEqual(got, []string{"Completed"}) {
+		t.Errorf("reading[1] matchedStatuses = %v, want [Completed]", got)
+	}
+
+	path := filepath.Join(t.TempDir(), "op", "v1", "batch-job-v1", "completed.yaml")
+	if err := WriteRecording(path, rec); err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadRecording(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Operator != "batch-job" || got.Flow != "completed" || got.Want != string(v1alpha1.CompletedStatus) || len(got.Steps) != 2 {
 		t.Fatalf("recording round-trip mismatch: %+v", got)
 	}
 	if !reflect.DeepEqual(got.States(), []string{"Initializing", "Completed"}) {
@@ -108,15 +124,20 @@ func TestRecordingReconstructsAndRoundTrips(t *testing.T) {
 	}
 }
 
-// TestReadRunsKarta checks the shared Read helper drives the Karta library on a CR without error.
-func TestReadRunsKarta(t *testing.T) {
+// TestReadingRunsKarta checks the shared Reading helper drives the Karta library on a CR and returns
+// a reading without error.
+func TestReadingRunsKarta(t *testing.T) {
 	karta := types.PyFlowKarta()
 	obj := types.NewPyFlowObject()
 	m, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Read(karta, &unstructured.Unstructured{Object: m}); err != nil {
-		t.Fatalf("read: %v", err)
+	reading, err := Reading(karta, &unstructured.Unstructured{Object: m})
+	if err != nil {
+		t.Fatalf("reading: %v", err)
+	}
+	if reading == nil {
+		t.Fatal("reading is nil")
 	}
 }

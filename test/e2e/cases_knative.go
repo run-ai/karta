@@ -12,6 +12,5 @@ var knativeCase = workloadCase{
 	kartaName: "serving-knative-dev-service-v1",
 	states:    []namedState{{running, condTrue("Ready")}},
 	flows:     []flow{{name: "running", workloadFile: "testdata/knative/running.yaml", journey: steps(running)}},
-	extracts:  []extractCheck{{component: "revision"}},
 	timeout:   5 * time.Minute,
 }

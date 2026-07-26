@@ -10,5 +10,4 @@ var lwsCase = workloadCase{
 	kartaName: "leaderworkerset-x-k8s-io-leaderworkerset-v1",
 	states:    []namedState{{running, condTrue("Available")}},
 	flows:     []flow{{name: "running", workloadFile: "testdata/lws/running.yaml", journey: steps(running)}},
-	extracts:  []extractCheck{{component: "leader"}, {component: "worker"}},
 }

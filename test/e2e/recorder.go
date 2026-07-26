@@ -218,21 +218,12 @@ func observedOrderErr(fl flow, order []kartav1alpha1.ResourceStatus) error {
 	return nil
 }
 
-// assertKartaTransitions checks Karta reads each recorded state the way the workload's own fields
-// did, not just the terminal, so an intermediate mapping bug fails live.
-func assertKartaTransitions(karta *kartav1alpha1.Karta, rec *recording) {
-	for _, snap := range rec.snapshots {
-		matched, err := conformance.Read(karta, snap.raw)
-		Expect(err).NotTo(HaveOccurred(), "read state %q", snap.state)
-		Expect(matched).To(ContainElement(snap.state),
-			"Karta should read %q here but matched %v", snap.state, matched)
-	}
-}
-
-// writeFixture builds a Recording from the run and writes it under test/conformance/fixtures/. It
-// runs only after the live assertions passed. Step 0 keeps the full first CR; every later step is a
-// merge-patch from the previous CR plus the state it reaches. No sanitize.
-func writeFixture(tc workloadCase, fl flow, rec *recording) {
+// writeFixture builds a Recording from the run and writes it as one <flow>.yaml under
+// test/conformance/fixtures/. For each observed state it stores the workload's own-fields state, the
+// CR, and what Karta read of it; the CR and the reading are both a full value on the first step and a
+// merge-patch from the previous step on every later step, so the file holds only what changed. No
+// sanitize - the offline golden rebuilds the exact CR, so Karta reads the exact same bytes back.
+func writeFixture(tc workloadCase, fl flow, rec *recording, karta *kartav1alpha1.Karta) {
 	version := operatorVersion(tc.operator)
 	rc := conformance.Recording{
 		SchemaVersion: conformance.SchemaVersion,
@@ -240,25 +231,29 @@ func writeFixture(tc workloadCase, fl flow, rec *recording) {
 		Version:       version,
 		KartaName:     tc.kartaName,
 		Flow:          fl.name,
-		Want:          fl.want(),
+		Want:          string(fl.want()),
 		KartaFile:     strings.TrimPrefix(tc.kartaFile, "../../"),
 	}
-	var prev map[string]interface{}
+	var prevCR, prevExp map[string]interface{}
 	for i, snap := range rec.snapshots {
 		cur := snap.raw.Object
+		exp, err := conformance.Reading(karta, snap.raw)
+		Expect(err).NotTo(HaveOccurred(), "read Karta at state %q", snap.state)
 		st := conformance.Step{State: string(snap.state), Action: actionName(fl, snap.state)}
 		if i == 0 {
 			st.CR = cur
+			st.Expected = exp
 		} else {
-			st.Patch = conformance.MergePatch(prev, cur)
+			st.Patch = conformance.MergePatch(prevCR, cur)
+			st.ExpectedPatch = conformance.MergePatch(prevExp, exp)
 		}
 		rc.Steps = append(rc.Steps, st)
-		prev = cur
+		prevCR, prevExp = cur, exp
 	}
 
-	root := filepath.Join("..", "conformance", "fixtures", tc.operator, version, tc.kartaName, fl.name)
-	Expect(conformance.WriteRecording(root, rc)).To(Succeed())
-	GinkgoWriter.Printf("recorded %s/%s/%s/%s (%d steps %v)\n", tc.operator, version, tc.kartaName, fl.name, len(rc.Steps), rec.order)
+	path := conformance.RecordingPath(filepath.Join("..", "conformance", "fixtures"), rc)
+	Expect(conformance.WriteRecording(path, rc)).To(Succeed())
+	GinkgoWriter.Printf("recorded %s/%s/%s/%s.yaml (%d steps %v)\n", tc.operator, version, tc.kartaName, fl.name, len(rc.Steps), rec.order)
 }
 
 // actionName is the name of the action fired when a state is reached, for recording provenance.

@@ -5,20 +5,24 @@
 
 Karta reads any workload from a catalog of definitions (`docs/catalog`). This
 suite is how we guarantee those definitions stay correct: it brings up real
-operators, runs real workloads, and checks Karta reads each one the way the
-catalog says it should.
+operators, runs real workloads, and records what they do. Karta itself is checked
+offline, against those recordings, by `go test ./test/conformance` (see
+`test/conformance`) - never in the live run, so the recorder can never validate
+Karta by asking Karta.
 
 ## Online and offline
 
 - Online, `make record-e2e`: against a live cluster, drive each workload through its states (firing
-  actions like resume where the operator will not), and record what it saw - the first CR, then a
-  merge-patch per state change, plus the state each reaches - as `recording.yaml`. `make test-e2e`
-  runs the same checks live and writes nothing.
-- Offline, `go test ./test/conformance`: with no cluster, rebuild each CR from the first-CR + patches
-  and run it through the current Karta, checking it reads the recorded state at every step and that
-  the sequence is a legal transition ending at `want`. A change that misreads any recorded workload
-  fails fast, for every operator and version captured. There is no sanitize denylist - the checks are
-  on states, so per-run volatile fields never matter.
+  actions like resume where the operator will not), and record what it saw - for each state, the CR
+  (first CR, then a merge-patch per change), the state judged from the workload's own fields, and what
+  Karta read of it (also a first value plus patches) - as one `<flow>.yaml`. `make test-e2e` drives the
+  same workloads and checks the order, but does not check Karta and writes nothing.
+- Offline, `go test ./test/conformance`: with no cluster, rebuild each CR and reading, run the CR
+  through the current Karta, and check it matches the recorded state at every step, that its reading
+  matches, and that the sequence is a legal transition ending at `want`. This is the only place Karta
+  is checked. A change that misreads any recorded workload fails fast, for every operator and version
+  captured. There is no sanitize denylist - the golden rebuilds the exact CR, so Karta reads the same
+  bytes back and per-run volatile fields never change the result.
 
 ## Run
 
@@ -56,10 +60,13 @@ For each case, in order:
    condition, a replica count), never from Karta. Asking Karta when to check
    Karta would just let it agree with itself.
 4. Check the workload moved through its states in the declared order.
-5. Run Karta on each of those states and check it reads the same one, not only
-   the last, then read the final object and check the components extract.
+5. Record each state's CR and what Karta read of it. Karta is not checked here:
+   whether it reads each state correctly, and extracts the same components, is
+   asserted offline against the recording by `go test ./test/conformance`. The
+   live run stays a pure recorder.
 
-Only stable states are checked, never a transient one, so a run does not flake.
+Only stable states are recorded, never a transient one, so the offline golden does
+not flake.
 
 ## Add a case or a flow
 
@@ -94,8 +101,11 @@ commit the fixtures. `want` is the last step's state.
   keeps one CR per state change (a return to an earlier state is kept, so a backwards jump is caught).
   Deduping on the state needs no denylist to tell a real change from resourceVersion churn.
 - Recording: the first kept CR is stored in full; every later state is a merge-patch (RFC 7386) from
-  the CR before it, tagged with the state it reaches and the action fired there. Replay applies the
-  patches to rebuild each CR. No sanitize - the offline checks read states, not raw bytes.
+  the CR before it, tagged with the state it reaches and the action fired there. What Karta read of each
+  CR is stored the same way (first reading + patches) as `expected`. The offline golden applies the
+  patches to rebuild each CR and reading, re-runs Karta, and diffs. No sanitize - the golden rebuilds
+  the exact CR, so the reading is stable without a denylist. Refresh the reading after an intended
+  library change with `make regolden` (offline, no cluster).
 - Actions: a step's action fires once when its state is reached, in journey order, to drive a
   transition the operator will not make itself (e.g. clear `spec.suspend` to resume). Put actions on
   states the operator holds at, like Suspended.

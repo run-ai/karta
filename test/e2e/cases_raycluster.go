@@ -12,6 +12,5 @@ var rayClusterCase = workloadCase{
 	kartaName: "ray-io-raycluster-v1",
 	states:    []namedState{{running, phaseEq("ready", "status", "state")}},
 	flows:     []flow{{name: "running", workloadFile: "testdata/raycluster/running.yaml", journey: steps(running)}},
-	extracts:  []extractCheck{{component: "head"}, {component: "worker", keys: []string{"small"}}},
 	timeout:   8 * time.Minute,
 }

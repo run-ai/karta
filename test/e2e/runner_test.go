@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
-	"github.com/run-ai/karta/pkg/resource"
 )
 
 // builtinOperators are the workloadCase operator keys whose kinds are built into
@@ -85,36 +84,12 @@ func (tc workloadCase) run() {
 				rec := observeTransitions(tc, fl, obj, timeout)
 				assertObservedOrder(fl, rec.order)
 
-				By("checking Karta reads each of those states, not just the last")
-				assertKartaTransitions(karta, rec)
-
-				By("reading the live workload through the Karta library")
-				live := emptyLike(obj)
-				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), live)).To(Succeed())
-				factory := resource.NewComponentFactoryFromObject(karta, live)
-				root, err := factory.GetRootComponent()
-				Expect(err).NotTo(HaveOccurred())
-				status, err := root.GetStatus(ctx)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(status.MatchedStatuses).To(ContainElement(fl.want()))
-
-				for _, ec := range tc.extracts {
-					comp, err := factory.GetComponent(ec.component)
-					Expect(err).NotTo(HaveOccurred(), ec.component)
-					inst, err := comp.GetExtractedInstances(ctx)
-					Expect(err).NotTo(HaveOccurred(), ec.component)
-					if len(ec.keys) == 0 {
-						Expect(inst).NotTo(BeEmpty(), ec.component)
-						continue
-					}
-					for _, k := range ec.keys {
-						Expect(inst).To(HaveKey(k), ec.component)
-					}
-				}
-
+				// Karta is not checked here. The e2e run drives the workload and records only what its
+				// own fields did; whether Karta reads each recorded state correctly, and extracts the
+				// same components, is asserted offline against the fixture (go test ./test/conformance).
 				if recordEnabled() {
 					By("recording the conformance fixture")
-					writeFixture(tc, fl, rec)
+					writeFixture(tc, fl, rec, karta)
 				}
 			})
 		}

@@ -2,10 +2,12 @@
 // Copyright (c) 2026 NVIDIA Corporation
 
 // Package conformance is the shared seam between the live e2e recorder (test/e2e) and the offline
-// transition test. A recording is one flow of one operator: the workload's first CR in full, then a
-// merge-patch per state change, each tagged with the state it reaches. Both sides read a CR through
-// the same Read helper, so what Karta reads can never drift between record and replay. Recordings
-// live under test/conformance/fixtures/<operator>/<version>/<kartaName>/<flow>/recording.yaml.
+// golden test. A recording is one flow of one operator: for each state the workload passed through
+// it stores the workload's own-fields state, the CR, and what Karta read - the CR and the reading
+// both as a first value plus a merge-patch per state change, so the file holds only what changed.
+// The recorder writes recordings; the offline test rebuilds each CR, re-reads it through the current
+// Karta, and diffs against the stored reading. Recordings live under
+// test/conformance/fixtures/<operator>/<version>/<kartaName>/<flow>.yaml.
 package conformance
 
 import (
@@ -17,42 +19,39 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
-
-	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
 // SchemaVersion is bumped when the on-disk format changes incompatibly.
-// v5: a recording is first-CR + per-state merge-patch + the state each CR reaches, replacing the
-// sanitized full CR per snapshot. There is no sanitize; the test asserts states, not raw bytes.
-const SchemaVersion = 5
-
-const recordingFile = "recording.yaml"
+// v6: one <flow>.yaml per flow; each step carries the own-fields state, the CR (first + merge-patch),
+// and Karta's reading (first + merge-patch). No sanitize.
+const SchemaVersion = 6
 
 // Recording is one flow: metadata plus an ordered list of steps, one per state the workload passed
-// through. Step 0 carries the full first CR; every later step carries a merge-patch from the CR
-// before it. The set of recordings under test/conformance/fixtures/ is the tested operator matrix.
+// through. The set of recordings under test/conformance/fixtures/ is the tested operator matrix.
 type Recording struct {
-	SchemaVersion int                     `json:"schemaVersion"`
-	Operator      string                  `json:"operator"`
-	Version       string                  `json:"version"`
-	KartaName     string                  `json:"kartaName"`
-	Flow          string                  `json:"flow"`
-	Want          v1alpha1.ResourceStatus `json:"want,omitempty"`
-	KartaFile     string                  `json:"kartaFile"` // repo-relative path to the Karta definition
-	Steps         []Step                  `json:"steps"`
+	SchemaVersion int    `json:"schemaVersion"`
+	Operator      string `json:"operator"`
+	Version       string `json:"version"`
+	KartaName     string `json:"kartaName"`
+	Flow          string `json:"flow"`
+	Want          string `json:"want,omitempty"`
+	KartaFile     string `json:"kartaFile"` // repo-relative path to the Karta definition
+	Steps         []Step `json:"steps"`
 }
 
-// Step is one observed state. State is judged from the workload's own fields, never from Karta. The
-// first step carries CR (the full object); every later step carries Patch (an RFC 7386 merge-patch
-// from the previous CR). Action names the mutation fired when this state was reached, if any.
+// Step is one observed state. State is the workload's own-fields state (never from Karta). CR and
+// Expected are the full values on the first step; Patch and ExpectedPatch are RFC 7386 merge-patches
+// from the previous step on every later step. Action names the mutation fired at this state, if any.
 type Step struct {
-	State  string                 `json:"state"`
-	Action string                 `json:"action,omitempty"`
-	CR     map[string]interface{} `json:"cr,omitempty"`
-	Patch  map[string]interface{} `json:"patch,omitempty"`
+	State         string                 `json:"state"`
+	Action        string                 `json:"action,omitempty"`
+	CR            map[string]interface{} `json:"cr,omitempty"`
+	Patch         map[string]interface{} `json:"patch,omitempty"`
+	Expected      map[string]interface{} `json:"expected,omitempty"`
+	ExpectedPatch map[string]interface{} `json:"expectedPatch,omitempty"`
 }
 
-// States is the ordered list of states the recording passed through.
+// States is the ordered list of own-fields states the recording passed through.
 func (r Recording) States() []string {
 	out := make([]string, len(r.Steps))
 	for i, s := range r.Steps {
@@ -61,41 +60,64 @@ func (r Recording) States() []string {
 	return out
 }
 
-// CRs reconstructs the full CR at each step by applying the merge-patches in order onto the first CR.
+// CRs reconstructs the full CR at each step by applying the CR merge-patches in order.
 func (r Recording) CRs() ([]*unstructured.Unstructured, error) {
-	if len(r.Steps) == 0 {
-		return nil, nil
+	series, err := reconstruct(r, func(s Step) (map[string]interface{}, map[string]interface{}) { return s.CR, s.Patch })
+	if err != nil {
+		return nil, err
 	}
-	if r.Steps[0].CR == nil {
-		return nil, fmt.Errorf("recording %s/%s: first step has no cr", r.Operator, r.Flow)
-	}
-	cur := runtime.DeepCopyJSON(r.Steps[0].CR)
-	out := []*unstructured.Unstructured{{Object: runtime.DeepCopyJSON(cur)}}
-	for i, s := range r.Steps[1:] {
-		if s.Patch == nil {
-			return nil, fmt.Errorf("recording %s/%s: step %d has no patch", r.Operator, r.Flow, i+1)
-		}
-		applyMergePatch(cur, s.Patch)
-		out = append(out, &unstructured.Unstructured{Object: runtime.DeepCopyJSON(cur)})
+	out := make([]*unstructured.Unstructured, len(series))
+	for i, m := range series {
+		out[i] = &unstructured.Unstructured{Object: m}
 	}
 	return out, nil
 }
 
-// WriteRecording persists a recording as a single recording.yaml under root, replacing any prior one.
-func WriteRecording(root string, r Recording) error {
-	if err := os.RemoveAll(root); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		return err
-	}
-	return writeYAML(filepath.Join(root, recordingFile), r)
+// Readings reconstructs Karta's stored reading at each step by applying the reading merge-patches.
+func (r Recording) Readings() ([]map[string]interface{}, error) {
+	return reconstruct(r, func(s Step) (map[string]interface{}, map[string]interface{}) { return s.Expected, s.ExpectedPatch })
 }
 
-// LoadRecording reads the recording.yaml under root.
-func LoadRecording(root string) (Recording, error) {
+// reconstruct walks the steps applying pick(step)'s first value (step 0) then merge-patch (later
+// steps), returning the full value at each step.
+func reconstruct(r Recording, pick func(Step) (first, patch map[string]interface{})) ([]map[string]interface{}, error) {
+	if len(r.Steps) == 0 {
+		return nil, nil
+	}
+	first, _ := pick(r.Steps[0])
+	if first == nil {
+		return nil, fmt.Errorf("recording %s/%s: first step missing its full value", r.Operator, r.Flow)
+	}
+	cur := runtime.DeepCopyJSON(first)
+	out := []map[string]interface{}{runtime.DeepCopyJSON(cur)}
+	for _, s := range r.Steps[1:] {
+		_, patch := pick(s)
+		if patch == nil {
+			patch = map[string]interface{}{}
+		}
+		applyMergePatch(cur, patch)
+		out = append(out, runtime.DeepCopyJSON(cur))
+	}
+	return out, nil
+}
+
+// RecordingPath is the on-disk path of a flow's recording, relative to fixturesRoot.
+func RecordingPath(fixturesRoot string, r Recording) string {
+	return filepath.Join(fixturesRoot, r.Operator, r.Version, r.KartaName, r.Flow+".yaml")
+}
+
+// WriteRecording writes a recording to a single <flow>.yaml file, creating parent dirs.
+func WriteRecording(path string, r Recording) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return writeYAML(path, r)
+}
+
+// LoadRecording reads a <flow>.yaml recording.
+func LoadRecording(path string) (Recording, error) {
 	var r Recording
-	err := readYAML(filepath.Join(root, recordingFile), &r)
+	err := readYAML(path, &r)
 	return r, err
 }
 
