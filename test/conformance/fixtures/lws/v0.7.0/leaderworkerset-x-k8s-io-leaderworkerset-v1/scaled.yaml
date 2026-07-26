@@ -1,0 +1,376 @@
+flow: scaled
+kartaFile: docs/samples/lws.yaml
+kartaName: leaderworkerset-x-k8s-io-leaderworkerset-v1
+operator: lws
+schemaVersion: 6
+steps:
+- action: func42
+  cr:
+    apiVersion: leaderworkerset.x-k8s.io/v1
+    kind: LeaderWorkerSet
+    metadata:
+      creationTimestamp: "2026-07-26T18:08:23Z"
+      generation: 1
+      managedFields:
+      - apiVersion: leaderworkerset.x-k8s.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:leaderWorkerTemplate:
+              .: {}
+              f:leaderTemplate:
+                .: {}
+                f:spec:
+                  .: {}
+                  f:containers:
+                    .: {}
+                    k:{"name":"leader"}:
+                      .: {}
+                      f:command: {}
+                      f:image: {}
+                      f:name: {}
+                      f:resources:
+                        .: {}
+                        f:requests:
+                          .: {}
+                          f:cpu: {}
+                          f:memory: {}
+              f:restartPolicy: {}
+              f:size: {}
+              f:workerTemplate:
+                .: {}
+                f:spec:
+                  .: {}
+                  f:containers:
+                    .: {}
+                    k:{"name":"worker"}:
+                      .: {}
+                      f:command: {}
+                      f:image: {}
+                      f:name: {}
+                      f:resources:
+                        .: {}
+                        f:requests:
+                          .: {}
+                          f:cpu: {}
+                          f:memory: {}
+            f:replicas: {}
+            f:startupPolicy: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T18:08:23Z"
+      - apiVersion: leaderworkerset.x-k8s.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions: {}
+            f:hpaPodSelector: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updatedReplicas: {}
+        manager: lws
+        operation: Update
+        subresource: status
+        time: "2026-07-26T18:08:24Z"
+      name: karta-e2e-lws-scaled
+      namespace: default
+      resourceVersion: "2919403"
+      uid: abd24883-8e61-4e7e-921d-a09ce0a6ada5
+    spec:
+      leaderWorkerTemplate:
+        leaderTemplate:
+          metadata: {}
+          spec:
+            containers:
+            - command:
+              - sleep
+              - infinity
+              image: busybox:1.36
+              name: leader
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 32Mi
+        restartPolicy: RecreateGroupOnPodRestart
+        size: 2
+        workerTemplate:
+          metadata: {}
+          spec:
+            containers:
+            - command:
+              - sleep
+              - infinity
+              image: busybox:1.36
+              name: worker
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 32Mi
+      networkConfig:
+        subdomainPolicy: Shared
+      replicas: 1
+      rolloutStrategy:
+        rollingUpdateConfiguration:
+          maxSurge: 0
+          maxUnavailable: 1
+          partition: 0
+        type: RollingUpdate
+      startupPolicy: LeaderCreated
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-26T18:08:23Z"
+        message: Replicas are progressing
+        reason: GroupsProgressing
+        status: "False"
+        type: Progressing
+      - lastTransitionTime: "2026-07-26T18:08:24Z"
+        message: All replicas are ready
+        reason: AllGroupsReady
+        status: "True"
+        type: Available
+      hpaPodSelector: leaderworkerset.sigs.k8s.io/name=karta-e2e-lws-scaled,leaderworkerset.sigs.k8s.io/worker-index=0
+      readyReplicas: 1
+      replicas: 1
+      updatedReplicas: 1
+  expected:
+    components:
+      group:
+        instances:
+          "":
+            scale:
+              replicas: 2
+      leader:
+        instances:
+          "":
+            podTemplateSpec:
+              spec:
+                containers:
+                - command:
+                  - sleep
+                  - infinity
+                  image: busybox:1.36
+                  name: leader
+                  resources:
+                    requests:
+                      cpu: 50m
+                      memory: 32Mi
+            scale:
+              replicas: 1
+      worker:
+        instances:
+          "":
+            podTemplateSpec:
+              spec:
+                containers:
+                - command:
+                  - sleep
+                  - infinity
+                  image: busybox:1.36
+                  name: worker
+                  resources:
+                    requests:
+                      cpu: 50m
+                      memory: 32Mi
+            scale:
+              replicas: 1
+    conditions:
+    - message: Replicas are progressing
+      reason: GroupsProgressing
+      status: "False"
+      type: Progressing
+    - message: All replicas are ready
+      reason: AllGroupsReady
+      status: "True"
+      type: Available
+    matchedStatuses:
+    - Running
+  state: Running
+- action: func42
+  expectedPatch:
+    components:
+      leader:
+        instances:
+          "":
+            scale:
+              replicas: 2
+      worker:
+        instances:
+          "":
+            scale:
+              replicas: 2
+  patch:
+    metadata:
+      generation: 2
+      managedFields:
+      - apiVersion: leaderworkerset.x-k8s.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:leaderWorkerTemplate:
+              .: {}
+              f:leaderTemplate:
+                .: {}
+                f:spec:
+                  .: {}
+                  f:containers:
+                    .: {}
+                    k:{"name":"leader"}:
+                      .: {}
+                      f:command: {}
+                      f:image: {}
+                      f:name: {}
+                      f:resources:
+                        .: {}
+                        f:requests:
+                          .: {}
+                          f:cpu: {}
+                          f:memory: {}
+              f:restartPolicy: {}
+              f:size: {}
+              f:workerTemplate:
+                .: {}
+                f:spec:
+                  .: {}
+                  f:containers:
+                    .: {}
+                    k:{"name":"worker"}:
+                      .: {}
+                      f:command: {}
+                      f:image: {}
+                      f:name: {}
+                      f:resources:
+                        .: {}
+                        f:requests:
+                          .: {}
+                          f:cpu: {}
+                          f:memory: {}
+            f:replicas: {}
+            f:startupPolicy: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T18:08:24Z"
+      - apiVersion: leaderworkerset.x-k8s.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions: {}
+            f:hpaPodSelector: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updatedReplicas: {}
+        manager: lws
+        operation: Update
+        subresource: status
+        time: "2026-07-26T18:08:25Z"
+      resourceVersion: "2919442"
+    spec:
+      replicas: 2
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-26T18:08:24Z"
+        message: Replicas are progressing
+        reason: GroupsProgressing
+        status: "False"
+        type: Progressing
+      - lastTransitionTime: "2026-07-26T18:08:25Z"
+        message: All replicas are ready
+        reason: AllGroupsReady
+        status: "True"
+        type: Available
+      readyReplicas: 2
+      replicas: 2
+      updatedReplicas: 2
+  state: Running
+- action: func42
+  expectedPatch:
+    components:
+      leader:
+        instances:
+          "":
+            scale:
+              replicas: 1
+      worker:
+        instances:
+          "":
+            scale:
+              replicas: 1
+  patch:
+    metadata:
+      generation: 3
+      managedFields:
+      - apiVersion: leaderworkerset.x-k8s.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:leaderWorkerTemplate:
+              .: {}
+              f:leaderTemplate:
+                .: {}
+                f:spec:
+                  .: {}
+                  f:containers:
+                    .: {}
+                    k:{"name":"leader"}:
+                      .: {}
+                      f:command: {}
+                      f:image: {}
+                      f:name: {}
+                      f:resources:
+                        .: {}
+                        f:requests:
+                          .: {}
+                          f:cpu: {}
+                          f:memory: {}
+              f:restartPolicy: {}
+              f:size: {}
+              f:workerTemplate:
+                .: {}
+                f:spec:
+                  .: {}
+                  f:containers:
+                    .: {}
+                    k:{"name":"worker"}:
+                      .: {}
+                      f:command: {}
+                      f:image: {}
+                      f:name: {}
+                      f:resources:
+                        .: {}
+                        f:requests:
+                          .: {}
+                          f:cpu: {}
+                          f:memory: {}
+            f:replicas: {}
+            f:startupPolicy: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-26T18:08:25Z"
+      - apiVersion: leaderworkerset.x-k8s.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions: {}
+            f:hpaPodSelector: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updatedReplicas: {}
+        manager: lws
+        operation: Update
+        subresource: status
+        time: "2026-07-26T18:08:57Z"
+      resourceVersion: "2919715"
+    spec:
+      replicas: 1
+    status:
+      readyReplicas: 1
+      replicas: 1
+      updatedReplicas: 1
+  state: Running
+version: v0.7.0
+want: Running
