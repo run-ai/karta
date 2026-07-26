@@ -39,5 +39,12 @@ var batchJobCase = workloadCase{
 		// stays ready - a settled partial read as Degraded.
 		{name: "degraded", workloadFile: "testdata/batch-job/degraded.yaml", mayGoBackwards: true, journey: steps(initializing, running, degraded)},
 		{name: "suspended", workloadFile: "testdata/batch-job/suspended.yaml", journey: steps(suspended)},
+		// Parallelism scale: sleeping pods, no completions, so it stays Running while spec.parallelism
+		// drives status.ready 1 -> 3 -> 1.
+		{name: "scaled", workloadFile: "testdata/batch-job/scaled.yaml", journey: []step{
+			{state: running, settle: intEq(1, "status", "ready"), action: scaleParallelism(3)},
+			{state: running, settle: intEq(3, "status", "ready"), action: scaleParallelism(1)},
+			{state: running, settle: intEq(1, "status", "ready")},
+		}},
 	},
 }

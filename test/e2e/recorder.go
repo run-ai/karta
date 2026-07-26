@@ -363,6 +363,18 @@ func unsuspend(ctx context.Context, obj *unstructured.Unstructured) error {
 	return k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, []byte(`{"spec":{"suspend":false}}`)))
 }
 
+// scaleParallelism patches spec.parallelism, the Job analog of scaleReplicas, to drive a batch Job's
+// pod count up or down. A merge patch, so it does not race the controller on the resourceVersion.
+func scaleParallelism(n int) stateAction {
+	return func(ctx context.Context, obj *unstructured.Unstructured) error {
+		target := emptyLike(obj)
+		target.SetName(obj.GetName())
+		target.SetNamespace(obj.GetNamespace())
+		patch := []byte(fmt.Sprintf(`{"spec":{"parallelism":%d}}`, n))
+		return k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, patch))
+	}
+}
+
 // unsuspendRunPolicy clears spec.runPolicy.suspend so a suspended Kubeflow job (PyTorchJob, MPIJob)
 // resumes. Kubeflow puts the suspend flag under runPolicy, unlike the top-level spec.suspend that
 // unsuspend patches for batch-job, jobset, and raycluster.
