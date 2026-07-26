@@ -17,6 +17,10 @@ var rayClusterCase = workloadCase{
 	flows: []flow{
 		{name: "running", workloadFile: "testdata/raycluster/running.yaml", journey: steps(running)},
 		{name: "suspended", workloadFile: "testdata/raycluster/suspended.yaml", journey: steps(suspended)},
+		{name: "resumed", workloadFile: "testdata/raycluster/resumed.yaml", journey: []step{
+			{state: suspended, action: unsuspend},
+			{state: running},
+		}},
 	},
 	timeout: 8 * time.Minute,
 }
