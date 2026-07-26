@@ -76,6 +76,16 @@ func replicasReady(n int64) stateCheck {
 	}
 }
 
+// intEq matches when the integer field at the given path is present and exactly n. It gates a scale
+// flow's step for a workload whose readiness count is a single field (a Grove PodCliqueSet reports
+// status.availableReplicas), where replicasReady's replicas+readyReplicas pair does not apply.
+func intEq(n int64, path ...string) stateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		got, found, err := unstructured.NestedInt64(u.Object, path...)
+		return err == nil && found && got == n
+	}
+}
+
 // fullyAvailable matches a replicated workload with every replica ready (replicas > 0 and
 // readyReplicas == replicas), at any count. It is the running state for a Deployment or StatefulSet:
 // the rollout is complete, which is when Karta reads it as Running. During a scale it goes false
