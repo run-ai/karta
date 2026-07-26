@@ -24,6 +24,7 @@ var allCases = []workloadCase{
 	batchJobCase,
 	deploymentCase,
 	statefulSetCase,
+	cronjobCase,
 	// operator-driven
 	jobsetCase,
 	lwsCase,
