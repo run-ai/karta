@@ -27,9 +27,14 @@ type namedState struct {
 }
 
 // step is one stop on a journey: a state to reach and an optional action fired when it does.
+// settle is an optional extra gate on the workload's own fields: the step is only reached once
+// classify returns state AND settle holds. It lets a journey list the same state twice and capture
+// each - a scale flow is Running(1 replica) -> Running(3) -> Running(1), one step per replica count,
+// distinguished by settle even though Karta reads Running throughout.
 type step struct {
 	state  kartav1alpha1.ResourceStatus
 	action stateAction
+	settle stateCheck
 }
 
 // flow drives a workload along an ordered journey of states. mayGoBackwards waives the

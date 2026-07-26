@@ -22,6 +22,7 @@ var allCases = []workloadCase{
 	// built-in kinds (no operator install)
 	podCase,
 	batchJobCase,
+	deploymentCase,
 	// operator-driven
 	jobsetCase,
 	lwsCase,

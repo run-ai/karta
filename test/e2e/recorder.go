@@ -74,6 +74,15 @@ func observeTransitions(tc workloadCase, fl flow, obj *unstructured.Unstructured
 	defer watcher.Stop()
 
 	rec := &recording{}
+
+	// A journey that gates any step on the workload's own fields (a scale flow, where the state stays
+	// Running while the replica count changes) is driven strictly by position: one CR captured per
+	// step, so a repeated state is recorded each time. The default path below dedups on the state.
+	if journeyGated(fl.journey) {
+		observeGated(ctx, tc, fl, obj, watcher, timeout, rec)
+		return rec
+	}
+
 	var pending []step // journey steps with an action, fired head-first in order
 	for _, st := range fl.journey {
 		if st.action != nil {
@@ -120,6 +129,60 @@ func observeTransitions(tc workloadCase, fl flow, obj *unstructured.Unstructured
 	}
 }
 
+// observeGated drives a gated journey strictly by position: it walks the steps in order, and a step
+// is reached only when classify returns its state and its settle gate holds. Each reached step's CR
+// is captured (even when the state repeats) and its action fires to drive toward the next step. This
+// is the scale path - the workload stays Running while spec.replicas and the ready count change, and
+// settle (replicasReady) picks out the CR settled at each count.
+func observeGated(ctx context.Context, tc workloadCase, fl flow, obj *unstructured.Unstructured, watcher watch.Interface, timeout time.Duration, rec *recording) {
+	pos := 0
+	var lastSeen *unstructured.Unstructured
+	deadline := time.After(timeout)
+	for {
+		select {
+		case <-deadline:
+			st := fl.journey[pos]
+			Fail(fmt.Sprintf("workload %s flow %q stuck at step %d (want %q + settle); recorded %v\nlast-seen status:\n%s",
+				tc.name, fl.name, pos, st.state, rec.order, dumpStatus(lastSeen)))
+		case event, open := <-watcher.ResultChan():
+			if !open {
+				Fail("watch closed before the journey finished")
+			}
+			u, ok := event.Object.(*unstructured.Unstructured)
+			if !ok {
+				continue
+			}
+			lastSeen = u
+			state := classify(u, tc.states)
+			if !statusSettled(u) || state == "" {
+				continue
+			}
+			st := fl.journey[pos]
+			if state != st.state || (st.settle != nil && !st.settle(u)) {
+				continue
+			}
+			rec.keepForced(u, state)
+			if st.action != nil {
+				Expect(st.action(ctx, obj)).NotTo(HaveOccurred(), "action at step %d state %q", pos, state)
+			}
+			pos++
+			if pos == len(fl.journey) {
+				return
+			}
+		}
+	}
+}
+
+// journeyGated reports whether any step carries a settle gate, so the flow needs the position path.
+func journeyGated(journey []step) bool {
+	for _, st := range journey {
+		if st.settle != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // recording is one watched run: the CRs worth freezing and the order the states happened in. A CR
 // is kept only when its classified state differs from the previous kept one, so the recording holds
 // one CR per state change. A genuine return to an earlier state (A -> B -> A) is kept, so the order
@@ -141,6 +204,12 @@ func (r *recording) keep(u *unstructured.Unstructured, state kartav1alpha1.Resou
 	if r.started && state == r.lastState {
 		return
 	}
+	r.keepForced(u, state)
+}
+
+// keepForced captures a CR at the given state without the state-change dedup, so a gated journey can
+// record the same state more than once (a scale flow's Running before and after the scale).
+func (r *recording) keepForced(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) {
 	r.started = true
 	r.lastState = state
 	r.snapshots = append(r.snapshots, capture{state: state, raw: u.DeepCopy()})
@@ -292,6 +361,19 @@ func unsuspend(ctx context.Context, obj *unstructured.Unstructured) error {
 	target.SetName(obj.GetName())
 	target.SetNamespace(obj.GetNamespace())
 	return k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, []byte(`{"spec":{"suspend":false}}`)))
+}
+
+// scaleReplicas patches spec.replicas, the merge-patch analog of kubectl scale, to drive a scale up
+// or down on any workload with a scalar spec.replicas. A merge patch, not a read-modify-write Update,
+// so it does not race the controller on the resourceVersion.
+func scaleReplicas(n int) stateAction {
+	return func(ctx context.Context, obj *unstructured.Unstructured) error {
+		target := emptyLike(obj)
+		target.SetName(obj.GetName())
+		target.SetNamespace(obj.GetNamespace())
+		patch := []byte(fmt.Sprintf(`{"spec":{"replicas":%d}}`, n))
+		return k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, patch))
+	}
 }
 
 // dumpStatus renders a CR's status for a timeout failure message.

@@ -65,6 +65,29 @@ func intAtLeast(min int64, path ...string) stateCheck {
 	}
 }
 
+// replicasReady matches a workload settled at exactly n replicas: status.replicas and
+// status.readyReplicas both equal n. It gates a scale flow's step so each replica count is captured
+// only once the controller has finished scaling to it, not mid-rollout.
+func replicasReady(n int64) stateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		replicas, ok, _ := unstructured.NestedInt64(u.Object, "status", "replicas")
+		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
+		return ok && replicas == n && ready == n
+	}
+}
+
+// fullyAvailable matches a replicated workload with every replica ready (replicas > 0 and
+// readyReplicas == replicas), at any count. It is the running state for a Deployment or StatefulSet:
+// the rollout is complete, which is when Karta reads it as Running. During a scale it goes false
+// mid-rollout, so a scale flow only classifies Running at the settled counts.
+func fullyAvailable() stateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		replicas, ok, _ := unstructured.NestedInt64(u.Object, "status", "replicas")
+		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
+		return ok && replicas > 0 && ready == replicas
+	}
+}
+
 // replicasDegraded matches a replicated workload that has settled degraded: the
 // controller has created every replica (updatedReplicas == replicas) but some are
 // not ready (0 < readyReplicas < replicas). Requiring updatedReplicas == replicas
