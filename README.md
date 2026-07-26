@@ -121,9 +121,9 @@ spec:
           statusFieldName: status
         statusMappings:
           running:
-          - byConditions:
-            - type: StartupPolicyCompleted
-              status: "True"
+          - byExpression:
+              expression: "(.status.replicatedJobsStatus // []) | any(.ready > 0 and .active > 0) and all(.failed == 0)"
+              expectedResult: "true"
           completed:
           - byConditions:
             - type: Completed
@@ -143,7 +143,7 @@ spec:
       specDefinition:
         podTemplateSpecPath: .spec.replicatedJobs[].template.spec.template
       scaleDefinition:
-        replicasPath: .spec.replicatedJobs[].replicas
+        replicasPath: .spec.replicatedJobs[] | .replicas * .template.spec.parallelism
       instanceIdPath: .spec.replicatedJobs[].name  # Instances: "master", "worker"
 ```
 
@@ -208,13 +208,16 @@ Karta supports any workload type. The following are pre-built and tested Karta d
 | PyTorchJob | Kubeflow |
 | RayCluster | Ray |
 | RayJob | Ray |
+| RayService | Ray |
 | InferenceService | KServe |
 | Knative Service | Knative |
 | MPIJob | Kubeflow |
 | NIM Service | NVIDIA |
+| NIM Cache | NVIDIA |
 | LeaderWorkerSet | Kubernetes |
 | Milvus | Milvus |
 | DynamoGraphDeployment | NVIDIA Dynamo |
+| PodCliqueSet | Grove |
 
 See [`docs/samples/`](docs/samples/) for the full Karta definitions.
 
