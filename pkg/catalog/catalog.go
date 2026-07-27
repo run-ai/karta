@@ -164,14 +164,7 @@ func MarshalYAML(k *v1alpha1.Karta) ([]byte, error) {
 	}
 	clearStyle(&node)
 	// KartaStatus is a value field, so json always emits an empty "status": {}.
-	// The catalog files are pure definitions, so drop it from the root mapping.
-	root := node.Content[0]
-	for i := 0; i+1 < len(root.Content); i += 2 {
-		if root.Content[i].Value == "status" {
-			root.Content = append(root.Content[:i], root.Content[i+2:]...)
-			break
-		}
-	}
+	dropMapKey(node.Content[0], "status")
 	var buf bytes.Buffer
 	buf.WriteString(yamlHeader)
 	enc := yamlv3.NewEncoder(&buf)
@@ -183,6 +176,16 @@ func MarshalYAML(k *v1alpha1.Karta) ([]byte, error) {
 		return nil, fmt.Errorf("encode Karta %q: %w", k.Name, err)
 	}
 	return buf.Bytes(), nil
+}
+
+// dropMapKey removes key and its value from a mapping node.
+func dropMapKey(mapping *yamlv3.Node, key string) {
+	for i := 0; i+1 < len(mapping.Content); i += 2 {
+		if mapping.Content[i].Value == key {
+			mapping.Content = append(mapping.Content[:i], mapping.Content[i+2:]...)
+			return
+		}
+	}
 }
 
 // clearStyle strips per-node style recursively so JSON flow syntax ({...}, "...")
