@@ -27,6 +27,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/test/conformance"
@@ -39,10 +40,25 @@ var (
 	dynClient dynamic.Interface
 )
 
-// observeTransitions watches one workload from creation and records every distinct settled CR
-// it moves through, firing each journey action once when its state is reached, until the
-// terminal state is reached with all actions fired (or the timeout).
-func observeTransitions(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, timeout time.Duration) *recording {
+// observeTransitions watches one workload from creation and records every distinct CR it moves through
+// until the flow finishes (or the timeout). An ordinary flow uses driveByState; a scale flow, whose
+// state stays Running while the replica count changes, uses driveByPosition.
+func observeTransitions(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, timeout time.Duration) *recording {
+	watcher := watchWorkload(obj)
+	defer watcher.Stop()
+
+	rec := &recording{}
+	if journeyGated(fl.Journey) {
+		driveByPosition(tc, fl, obj, karta, watcher, timeout, rec)
+	} else {
+		driveByState(tc, fl, obj, karta, watcher, timeout, rec)
+	}
+	return rec
+}
+
+// watchWorkload watches the single workload object from its creation resourceVersion, so no transition
+// between Create and the watch connecting is missed (the apiserver replays events newer than that RV).
+func watchWorkload(obj *unstructured.Unstructured) watch.Interface {
 	gvk := obj.GroupVersionKind()
 	mapping, err := k8sClient.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
 	Expect(err).NotTo(HaveOccurred(), "rest mapping for %s", gvk)
@@ -52,9 +68,8 @@ func observeTransitions(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.
 		namespace = "default"
 	}
 
-	// Watch from the workload's creation resourceVersion so no early state is missed.
 	initialRV := obj.GetResourceVersion()
-	if initialRV == "" {
+	if initialRV == "" { // Create was a no-op (object already existed); fetch a current RV to start from
 		seed := cases.EmptyLike(obj)
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed)).To(Succeed())
 		initialRV = seed.GetResourceVersion()
@@ -67,42 +82,66 @@ func observeTransitions(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.
 		},
 	})
 	Expect(err).NotTo(HaveOccurred())
-	defer watcher.Stop()
+	return watcher
+}
 
-	rec := &recording{}
-
-	// A journey that gates any step on the workload's own fields (a scale flow, where the state stays
-	// Running while the replica count changes) is driven strictly by position: one CR captured per
-	// step, so a repeated state is recorded each time. The default path below dedups on the state.
-	if journeyGated(fl.Journey) {
-		observeGated(ctx, tc, fl, obj, watcher, timeout, rec)
-		return rec
-	}
-
-	var pending []cases.Step // journey steps with an action, fired head-first in order
-	for _, st := range fl.Journey {
-		if st.Action != nil {
-			pending = append(pending, st)
-		}
-	}
+// driveByState follows the states as they appear, firing each journey action when its state is reached,
+// until the workload is at the terminal state with every action fired.
+func driveByState(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, watcher watch.Interface, timeout time.Duration, rec *recording) {
+	pending := actionSteps(fl.Journey)
 	done := func(state kartav1alpha1.ResourceStatus) bool { return state == fl.Want() && len(pending) == 0 }
-	var lastSeen *unstructured.Unstructured
 
-	// A workload terminal at creation never fires a watch event; take the create response.
-	if statusSettled(obj) && done(cases.Classify(obj, tc.States)) {
-		rec.keep(obj, fl.Want())
-		return rec
+	// A workload already at its terminal state when Create returns never fires a watch event (the watch
+	// replays only newer resourceVersions), so take that first snapshot from the create response.
+	if state := cases.Classify(obj, tc.States); statusSettled(obj) && done(state) {
+		rec.keep(obj, state)
+		return
 	}
 
+	recordUntil(tc, fl, karta, watcher, timeout, rec, func(_ *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool {
+		if len(pending) > 0 && state == pending[0].State {
+			Expect(pending[0].Action(ctx, obj)).NotTo(HaveOccurred(), "action at state %q", state)
+			pending = pending[1:]
+		}
+		return done(state)
+	})
+}
+
+// driveByPosition walks a gated journey step by step: a step is reached only when its state matches and
+// its settle gate holds. The scale path - the gate (a replica count), not the state, is what advances.
+func driveByPosition(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, watcher watch.Interface, timeout time.Duration, rec *recording) {
+	pos := 0
+	recordUntil(tc, fl, karta, watcher, timeout, rec, func(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool {
+		step := fl.Journey[pos]
+		if state != step.State || (step.Settle != nil && !step.Settle(u)) {
+			return false
+		}
+		if step.Action != nil {
+			Expect(step.Action(ctx, obj)).NotTo(HaveOccurred(), "action at step %d state %q", pos, state)
+		}
+		pos++
+		return pos == len(fl.Journey)
+	})
+}
+
+// advanceFunc handles one settled event: it fires any action due now and returns whether the flow has
+// finished. u is the observed CR (for settle gates); actions patch the workload the closure captured.
+type advanceFunc func(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool
+
+// recordUntil is the shared watch loop: it keeps every distinct CR (even mid-reconcile) and, once the
+// status has settled, calls advance to drive the journey. Recording is unconditional; advancing waits
+// for settle. It returns when advance reports done, and fails on the deadline.
+func recordUntil(tc cases.WorkloadCase, fl cases.Flow, karta *kartav1alpha1.Karta, watcher watch.Interface, timeout time.Duration, rec *recording, advance advanceFunc) {
 	deadline := time.After(timeout)
+	var lastSeen *unstructured.Unstructured
 	for {
 		select {
 		case <-deadline:
-			Fail(fmt.Sprintf("workload %s flow %q did not finish within %s; observed %v, want %q, unfired %v\nlast-seen status:\n%s",
-				tc.Name, fl.Name, timeout, rec.order, fl.Want(), stepStates(pending), dumpStatus(lastSeen)))
+			Fail(fmt.Sprintf("workload %s flow %q did not reach %q within %s; recorded %v\nlast-seen status:\n%s",
+				tc.Name, fl.Name, fl.Want(), timeout, rec.order, dumpStatus(lastSeen)))
 		case event, open := <-watcher.ResultChan():
 			if !open {
-				Fail("watch closed before terminal state")
+				Fail("watch closed before the flow finished")
 			}
 			u, ok := event.Object.(*unstructured.Unstructured)
 			if !ok {
@@ -110,66 +149,40 @@ func observeTransitions(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.
 			}
 			lastSeen = u
 			state := cases.Classify(u, tc.States)
-			if !statusSettled(u) || state == "" {
-				continue // mid-reconcile or unrecognised: nothing to replay against
+			if state == "" {
+				// No predicate matched. If Karta still reads a real state, the registry is missing a
+				// predicate - fail with the CR, else that reading goes unvalidated. If Karta reads nothing
+				// either (Undefined), the CR is outside the definition; nothing to record.
+				if ks := kartaState(karta, u); statusSettled(u) && ks != "" {
+					Fail(fmt.Sprintf("%s flow %q: Karta reads %q here but no predicate in the registry "+
+						"declares it - add one, or the mapping over-reads. full CR:\n%s", tc.Name, fl.Name, ks, dumpCR(u)))
+				}
+				continue
 			}
 			rec.keep(u, state)
-			if len(pending) > 0 && state == pending[0].State {
-				Expect(pending[0].Action(ctx, obj)).NotTo(HaveOccurred(), "action at state %q", state)
-				pending = pending[1:]
+			if !statusSettled(u) {
+				continue // do not advance a phase on a half-written status
 			}
-			if done(state) {
-				return rec
-			}
-		}
-	}
-}
-
-// observeGated drives a gated journey strictly by position: it walks the steps in order, and a step
-// is reached only when Classify returns its state and its settle gate holds. Each reached step's CR
-// is captured (even when the state repeats) and its action fires to drive toward the next step. This
-// is the scale path - the workload stays Running while spec.replicas and the ready count change, and
-// settle (ReplicasReady) picks out the CR settled at each count.
-func observeGated(ctx context.Context, tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, watcher watch.Interface, timeout time.Duration, rec *recording) {
-	pos := 0
-	var lastSeen *unstructured.Unstructured
-	deadline := time.After(timeout)
-	for {
-		select {
-		case <-deadline:
-			st := fl.Journey[pos]
-			Fail(fmt.Sprintf("workload %s flow %q stuck at step %d (want %q + settle); recorded %v\nlast-seen status:\n%s",
-				tc.Name, fl.Name, pos, st.State, rec.order, dumpStatus(lastSeen)))
-		case event, open := <-watcher.ResultChan():
-			if !open {
-				Fail("watch closed before the journey finished")
-			}
-			u, ok := event.Object.(*unstructured.Unstructured)
-			if !ok {
-				continue
-			}
-			lastSeen = u
-			state := cases.Classify(u, tc.States)
-			if !statusSettled(u) || state == "" {
-				continue
-			}
-			st := fl.Journey[pos]
-			if state != st.State || (st.Settle != nil && !st.Settle(u)) {
-				continue
-			}
-			rec.keepForced(u, state)
-			if st.Action != nil {
-				Expect(st.Action(ctx, obj)).NotTo(HaveOccurred(), "action at step %d state %q", pos, state)
-			}
-			pos++
-			if pos == len(fl.Journey) {
+			if advance(u, state) {
 				return
 			}
 		}
 	}
 }
 
-// journeyGated reports whether any step carries a settle gate, so the flow needs the position path.
+// actionSteps returns the journey steps that carry an action, in order; driveByState fires them
+// head-first as their state appears.
+func actionSteps(journey []cases.Step) []cases.Step {
+	var out []cases.Step
+	for _, st := range journey {
+		if st.Action != nil {
+			out = append(out, st)
+		}
+	}
+	return out
+}
+
+// journeyGated reports whether any step carries a settle gate, so the flow needs driveByPosition.
 func journeyGated(journey []cases.Step) bool {
 	for _, st := range journey {
 		if st.Settle != nil {
@@ -179,45 +192,42 @@ func journeyGated(journey []cases.Step) bool {
 	return false
 }
 
-// recording is one watched run: the CRs worth freezing and the order the states happened in. A CR
-// is kept only when its classified state differs from the previous kept one, so the recording holds
-// one CR per state change. A genuine return to an earlier state (A -> B -> A) is kept, so the order
-// check can catch a backwards jump. Deduping on the state (read from the workload's own fields)
-// needs no sanitize to tell a real change from resourceVersion churn.
+// recording is one watched run: every distinct CR the workload moved through and the order of states.
+// keep dedups on the CR bytes, so an intermediate CR at the same state (a scale step) is captured too.
 type recording struct {
-	order     []kartav1alpha1.ResourceStatus
+	order     []kartav1alpha1.ResourceStatus // the state of each snapshot, flat for the order check
 	snapshots []capture
-	lastState kartav1alpha1.ResourceStatus
-	started   bool
+	lastRaw   *unstructured.Unstructured
 }
 
 type capture struct {
 	state kartav1alpha1.ResourceStatus
-	raw   *unstructured.Unstructured // the full CR, stored as-is; the recording is not sanitized
+	raw   *unstructured.Unstructured
 }
 
+// keep records the CR when it differs (by sameCR) from the last one kept, storing its classified state
+// alongside for the golden's anchor and the order check.
 func (r *recording) keep(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) {
-	if r.started && state == r.lastState {
+	if r.lastRaw != nil && sameCR(r.lastRaw, u) {
 		return
 	}
-	r.keepForced(u, state)
-}
-
-// keepForced captures a CR at the given state without the state-change dedup, so a gated journey can
-// record the same state more than once (a scale flow's Running before and after the scale).
-func (r *recording) keepForced(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) {
-	r.started = true
-	r.lastState = state
-	r.snapshots = append(r.snapshots, capture{state: state, raw: u.DeepCopy()})
+	raw := u.DeepCopy()
+	r.lastRaw = raw
+	r.snapshots = append(r.snapshots, capture{state: state, raw: raw})
 	r.order = append(r.order, state)
 }
 
-func stepStates(sts []cases.Step) []kartav1alpha1.ResourceStatus {
-	out := make([]kartav1alpha1.ResourceStatus, len(sts))
-	for i, st := range sts {
-		out[i] = st.State
-	}
-	return out
+// sameCR reports whether two CRs are equal ignoring resourceVersion and managedFields, which the
+// apiserver bumps on every event with no workload change. Every other field counts.
+func sameCR(a, b *unstructured.Unstructured) bool {
+	return reflect.DeepEqual(significantCR(a), significantCR(b))
+}
+
+func significantCR(u *unstructured.Unstructured) map[string]any {
+	c := u.DeepCopy().Object
+	unstructured.RemoveNestedField(c, "metadata", "resourceVersion")
+	unstructured.RemoveNestedField(c, "metadata", "managedFields")
+	return c
 }
 
 // statusSettled reports whether the controller has caught up (observedGeneration >= generation);
@@ -235,41 +245,48 @@ func assertObservedOrder(fl cases.Flow, order []kartav1alpha1.ResourceStatus) {
 	Expect(observedOrderErr(fl, order)).To(Succeed())
 }
 
-// observedOrderErr checks the observed states are an in-order subsequence of the journey, ending on
-// the terminal. A fast workload may skip a declared step (subsequence, not equality), but a state out
-// of order or not declared at all is a regression. A workload that genuinely revisits a state - a Job
-// or JobSet reads active-not-ready again as its pod terminates, so Running dips back to Initializing -
-// declares that revisit as its own step in the journey, so the dip is stated, never waived.
+// stepStates is the journey's declared states, in order.
+func stepStates(steps []cases.Step) []kartav1alpha1.ResourceStatus {
+	out := make([]kartav1alpha1.ResourceStatus, len(steps))
+	for i, st := range steps {
+		out[i] = st.State
+	}
+	return out
+}
+
+// observedOrderErr checks the observed states are an in-order subsequence of the journey, ending on the
+// terminal. A skipped step is fine; an out-of-order or undeclared state is a regression. A genuine
+// revisit (a Job dips Running -> Initializing as its pod terminates) is declared as its own step.
 func observedOrderErr(fl cases.Flow, order []kartav1alpha1.ResourceStatus) error {
-	seq := slices.Compact(slices.Clone(order))
-	if len(seq) == 0 {
+	observed := slices.Compact(slices.Clone(order)) // collapse consecutive repeats
+	if len(observed) == 0 {
 		return fmt.Errorf("no states observed")
 	}
 	declared := stepStates(fl.Journey)
-	j := 0
-	for _, s := range seq {
-		for j < len(declared) && declared[j] != s {
-			j++
+
+	// Walk declared forward, matching each observed state to the next declared one (subsequence check).
+	di := 0
+	for _, state := range observed {
+		for di < len(declared) && declared[di] != state {
+			di++
 		}
-		if j == len(declared) {
-			if slices.Contains(declared, s) {
-				return fmt.Errorf("state %q observed out of journey %v", s, declared)
+		if di == len(declared) {
+			if slices.Contains(declared, state) {
+				return fmt.Errorf("state %q observed out of journey %v", state, declared)
 			}
-			return fmt.Errorf("observed undeclared state %q; journey is %v", s, declared)
+			return fmt.Errorf("observed undeclared state %q; journey is %v", state, declared)
 		}
-		j++
+		di++
 	}
-	if last := seq[len(seq)-1]; last != fl.Want() {
+	if last := observed[len(observed)-1]; last != fl.Want() {
 		return fmt.Errorf("terminal must be %q, observed %q", fl.Want(), last)
 	}
 	return nil
 }
 
-// writeFixture builds a Recording from the run and writes it as one <flow>.yaml under
-// test/conformance/fixtures/. For each observed state it stores the workload's own-fields state, the
-// CR, and what Karta read of it; the CR and the reading are both a full value on the first step and a
-// merge-patch from the previous step on every later step, so the file holds only what changed. No
-// sanitize - the offline golden rebuilds the exact CR, so Karta reads the exact same bytes back.
+// writeFixture writes the run as one <flow>.yaml under test/conformance/fixtures/. Each step holds the
+// own-fields state, the CR, and what Karta read of it - full on the first step, a merge-patch from the
+// previous step after, so the file holds only what changed.
 func writeFixture(tc cases.WorkloadCase, fl cases.Flow, rec *recording, karta *kartav1alpha1.Karta) {
 	version := operatorVersion(tc.Operator)
 	rc := conformance.Recording{
@@ -281,7 +298,7 @@ func writeFixture(tc cases.WorkloadCase, fl cases.Flow, rec *recording, karta *k
 		Want:          string(fl.Want()),
 		KartaFile:     strings.TrimPrefix(tc.KartaFile, "../../"),
 	}
-	var prevCR, prevExp map[string]interface{}
+	var prevCR, prevExp map[string]any
 	for i, snap := range rec.snapshots {
 		cur := snap.raw.Object
 		exp, err := conformance.Reading(karta, snap.raw)
@@ -329,6 +346,33 @@ func operatorVersion(op string) string {
 		}
 	}
 	return "unknown"
+}
+
+// kartaState returns the real state Karta reads for this CR, or "" if Karta matches nothing. Karta's
+// Undefined sentinel counts as no match, the same "" our predicates return on those CRs.
+func kartaState(karta *kartav1alpha1.Karta, u *unstructured.Unstructured) string {
+	reading, err := conformance.Reading(karta, u)
+	if err != nil {
+		return ""
+	}
+	matched, _ := reading["matchedStatuses"].([]interface{})
+	for _, s := range matched {
+		if str, ok := s.(string); ok && str != string(kartav1alpha1.UndefinedStatus) {
+			return str
+		}
+	}
+	return ""
+}
+
+// dumpCR renders the whole CR (minus managedFields) for an undeclared-state failure message.
+func dumpCR(u *unstructured.Unstructured) string {
+	c := u.DeepCopy()
+	unstructured.RemoveNestedField(c.Object, "metadata", "managedFields")
+	b, err := yaml.Marshal(c.Object)
+	if err != nil {
+		return fmt.Sprintf("(cr marshal error: %v)", err)
+	}
+	return string(b)
 }
 
 // dumpStatus renders a CR's status for a timeout failure message.

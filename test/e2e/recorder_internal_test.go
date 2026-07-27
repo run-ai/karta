@@ -28,9 +28,9 @@ func TestRecorderCatchesBackwardsJump(t *testing.T) {
 	completed := kartav1alpha1.CompletedStatus
 
 	states := []cases.NamedState{
-		{Name: initializing, Ready: cases.JobsetInitializing()},
-		{Name: running, Ready: cases.JobsetRunning()},
-		{Name: completed, Ready: cases.CondTrue("Completed")},
+		{Name: initializing, Match: cases.JobsetInitializing()},
+		{Name: running, Match: cases.JobsetRunning()},
+		{Name: completed, Match: cases.CondTrue("Completed")},
 	}
 	initCR := func() *unstructured.Unstructured {
 		return obj(map[string]any{"replicatedJobsStatus": []any{map[string]any{"active": int64(1), "ready": int64(0)}}})

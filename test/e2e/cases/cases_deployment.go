@@ -16,7 +16,7 @@ var deploymentCase = WorkloadCase{
 	KartaName: "apps-deployment-v1",
 	States: []NamedState{
 		{initializing, AllOf(CondTrue("Progressing"), CondFalse("Available"))},
-		{running, FullyAvailable()},
+		{running, CondReason("Progressing", "NewReplicaSetAvailable")},
 		{failed, CondFalse("Progressing")},
 	},
 	Flows: []Flow{

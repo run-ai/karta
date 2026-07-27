@@ -24,7 +24,7 @@ type StateAction func(ctx context.Context, obj *unstructured.Unstructured) error
 
 type NamedState struct {
 	Name  kartav1alpha1.ResourceStatus
-	Ready StateCheck
+	Match StateCheck
 }
 
 // Step is one stop on a journey: a state to reach and an optional action fired when it does.
@@ -89,7 +89,7 @@ func (tc WorkloadCase) Validate() error {
 func Classify(u *unstructured.Unstructured, states []NamedState) kartav1alpha1.ResourceStatus {
 	var name kartav1alpha1.ResourceStatus
 	for _, s := range states {
-		if s.Ready(u) {
+		if s.Match(u) {
 			name = s.Name
 		}
 	}

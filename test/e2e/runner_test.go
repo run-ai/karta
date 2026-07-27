@@ -80,10 +80,16 @@ func run(tc cases.WorkloadCase) {
 				DeferCleanup(func() { _ = k8sClient.Delete(ctx, obj) })
 
 				// The order check runs in both modes, so a bad progression fails a plain
-				// make test-e2e too, not only a record run.
+				// make test-e2e too, not only a record run. A gated (scale) flow is order-checked
+				// by its position walk instead (driveByPosition only advances through the declared
+				// steps in order, gate by gate): its dense recording legitimately includes transient
+				// dips - a scaling workload is briefly not fully ready - which the subsequence check
+				// would wrongly reject.
 				By("watching it move through its states, in the declared order")
-				rec := observeTransitions(tc, fl, obj, timeout)
-				assertObservedOrder(fl, rec.order)
+				rec := observeTransitions(tc, fl, obj, karta, timeout)
+				if !journeyGated(fl.Journey) {
+					assertObservedOrder(fl, rec.order)
+				}
 
 				// Karta is not checked here. The e2e run drives the workload and records only what its
 				// own fields did; whether Karta reads each recorded state correctly, and extracts the

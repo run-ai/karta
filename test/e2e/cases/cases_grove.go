@@ -11,8 +11,8 @@ var groveCase = WorkloadCase{
 	KartaFile: "../../docs/samples/grove-podcliqueset.yaml",
 	KartaName: "grove-io-podcliqueset-v1alpha1",
 	States: []NamedState{
-		{initializing, IntBelow(1, "status", "availableReplicas")},
-		{running, IntAtLeast(1, "status", "availableReplicas")},
+		{initializing, ReplicasComingUp()},
+		{running, AllReplicasAvailable()},
 	},
 	Flows: []Flow{
 		{Name: "running", WorkloadFile: "testdata/grove/running.yaml", Journey: Steps(initializing, running)},

@@ -99,40 +99,91 @@ func IntEq(n int64, path ...string) StateCheck {
 	}
 }
 
-// FullyAvailable matches a replicated workload with every replica ready (replicas > 0 and
-// readyReplicas == replicas), at any count. It is the running state for a Deployment or StatefulSet:
-// the rollout is complete, which is when Karta reads it as Running. During a scale it goes false
-// mid-rollout, so a scale flow only classifies Running at the settled counts.
+// FullyAvailable matches when every desired replica is created and ready (readyReplicas == updatedReplicas
+// == spec.replicas), Karta's Running for a StatefulSet. It compares to spec.replicas, not the lagging
+// status.replicas, so a gradually-scaled StatefulSet never reads Running mid-ramp.
 func FullyAvailable() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
-		replicas, ok, _ := unstructured.NestedInt64(u.Object, "status", "replicas")
+		desired, ok, _ := unstructured.NestedInt64(u.Object, "spec", "replicas")
+		if !ok {
+			desired = 1 // Karta defaults `.spec.replicas // 1`
+		}
 		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
-		return ok && replicas > 0 && ready == replicas
+		updated, _, _ := unstructured.NestedInt64(u.Object, "status", "updatedReplicas")
+		return desired > 0 && ready == desired && updated == desired
 	}
 }
 
-// ReplicasDegraded matches a replicated workload that has settled degraded: the
-// controller has created every replica (updatedReplicas == replicas) but some are
-// not ready (0 < readyReplicas < replicas). Requiring updatedReplicas == replicas
-// excludes the transient mid-rollout where a StatefulSet has only brought up its
-// first ordinals, so the assertion never races the workload into a false Degraded.
+// ReplicasDegraded matches a settled-degraded workload: every desired replica created (updatedReplicas ==
+// spec.replicas) but some not ready (0 < readyReplicas < spec.replicas). Compares to spec.replicas.
 func ReplicasDegraded() StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		desired, ok, _ := unstructured.NestedInt64(u.Object, "spec", "replicas")
+		if !ok {
+			desired = 1
+		}
+		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
+		updated, _, _ := unstructured.NestedInt64(u.Object, "status", "updatedReplicas")
+		return desired > 0 && updated == desired && ready > 0 && ready < desired
+	}
+}
+
+// ReplicasInitializing matches a StatefulSet still coming up: spec.replicas > 0 and either nothing ready
+// (readyReplicas == 0) or not all created (updatedReplicas != spec.replicas). Mirrors Karta's initializing.
+func ReplicasInitializing() StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		desired, ok, _ := unstructured.NestedInt64(u.Object, "spec", "replicas")
+		if !ok {
+			desired = 1
+		}
+		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
+		updated, _, _ := unstructured.NestedInt64(u.Object, "status", "updatedReplicas")
+		return desired > 0 && (ready == 0 || updated != desired)
+	}
+}
+
+// ReplicasSettled matches when every current replica is ready and updated (readyReplicas == updatedReplicas
+// == status.replicas), Karta's Running for a LeaderWorkerSet, which compares to status.replicas not spec.
+func ReplicasSettled() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		replicas, ok, _ := unstructured.NestedInt64(u.Object, "status", "replicas")
 		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
 		updated, _, _ := unstructured.NestedInt64(u.Object, "status", "updatedReplicas")
-		return ok && replicas > 0 && updated == replicas && ready > 0 && ready < replicas
+		return ok && replicas > 0 && ready == replicas && updated == replicas
 	}
 }
 
-// IntBelow matches when an integer field at the given path is present and < max. It
-// is the counterpart of IntAtLeast for an initializing state (a Grove PodCliqueSet has
-// availableReplicas present and below spec.replicas while its clique pods start). The
-// field must be present, so the empty pre-reconcile status is not mistaken for it.
-func IntBelow(max int64, path ...string) StateCheck {
+// CondReason matches when the condition of the given type is True with the given reason. A Deployment is
+// Running only when Progressing is True with reason NewReplicaSetAvailable, so status alone is not enough.
+func CondReason(condType, reason string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
-		got, found, err := unstructured.NestedInt64(u.Object, path...)
-		return err == nil && found && got < max
+		conds, _, _ := unstructured.NestedSlice(u.Object, "status", "conditions")
+		for _, c := range conds {
+			if m, ok := c.(map[string]any); ok && m["type"] == condType && m["status"] == "True" && m["reason"] == reason {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+// AllReplicasAvailable matches when every desired replica is available (status.availableReplicas >=
+// spec.replicas), Karta's Running for a Grove PodCliqueSet. Includes the vacuous spec.replicas == 0 case.
+func AllReplicasAvailable() StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		desired, _, _ := unstructured.NestedInt64(u.Object, "spec", "replicas")
+		avail, _, _ := unstructured.NestedInt64(u.Object, "status", "availableReplicas")
+		return avail >= desired
+	}
+}
+
+// ReplicasComingUp is the initializing counterpart of AllReplicasAvailable: spec.replicas > 0 and not
+// every desired replica is available yet (status.availableReplicas < spec.replicas).
+func ReplicasComingUp() StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		desired, _, _ := unstructured.NestedInt64(u.Object, "spec", "replicas")
+		avail, _, _ := unstructured.NestedInt64(u.Object, "status", "availableReplicas")
+		return desired > 0 && avail < desired
 	}
 }
 
@@ -158,9 +209,10 @@ func Absent(path ...string) StateCheck {
 // reference. Karta reads a fired, enabled CronJob as Running.
 func CronjobFired() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
+		// Karta reads a CronJob as running once it has fired and is not suspended, whether or not a Job
+		// is currently active - so match on lastScheduleTime alone (suspended wins via the registry).
 		_, scheduled, _ := unstructured.NestedFieldNoCopy(u.Object, "status", "lastScheduleTime")
-		active, _, _ := unstructured.NestedSlice(u.Object, "status", "active")
-		return scheduled && len(active) == 0
+		return scheduled
 	}
 }
 

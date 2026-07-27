@@ -15,6 +15,7 @@ var statefulSetCase = WorkloadCase{
 	KartaFile: "../../docs/catalog/apps-statefulset-v1.yaml",
 	KartaName: "apps-statefulset-v1",
 	States: []NamedState{
+		{initializing, ReplicasInitializing()},
 		{running, FullyAvailable()},
 		{degraded, ReplicasDegraded()},
 	},
@@ -26,7 +27,7 @@ var statefulSetCase = WorkloadCase{
 		}},
 		// 3 replicas + hostname antiAffinity on 2 nodes: one stays pending, so readyReplicas settles
 		// below replicas with updatedReplicas == replicas, read as Degraded.
-		{Name: "degraded", WorkloadFile: "testdata/statefulset/degraded.yaml", Journey: Steps(degraded)},
+		{Name: "degraded", WorkloadFile: "testdata/statefulset/degraded.yaml", Journey: Steps(initializing, degraded)},
 	},
 	Timeout: 3 * time.Minute,
 }
