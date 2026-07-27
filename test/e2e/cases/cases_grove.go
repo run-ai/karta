@@ -18,8 +18,11 @@ var groveCase = WorkloadCase{
 		{Name: "running", WorkloadFile: "testdata/grove/running.yaml", Journey: Steps(initializing, running)},
 		{Name: "initializing", WorkloadFile: "testdata/grove/initializing.yaml", Journey: Steps(initializing)},
 		{Name: "scaled", WorkloadFile: "testdata/grove/scaled.yaml", Journey: []Step{
+			{State: initializing, Optional: true},
 			{State: running, Settle: IntEq(1, "status", "availableReplicas"), Action: ScaleReplicas(2)},
+			{State: initializing, Optional: true},
 			{State: running, Settle: IntEq(2, "status", "availableReplicas"), Action: ScaleReplicas(1)},
+			{State: initializing, Optional: true},
 			{State: running, Settle: IntEq(1, "status", "availableReplicas")},
 		}},
 	},

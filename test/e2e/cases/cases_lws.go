@@ -18,8 +18,11 @@ var lwsCase = WorkloadCase{
 	Flows: []Flow{
 		{Name: "running", WorkloadFile: "testdata/lws/running.yaml", Journey: Steps(initializing, running)},
 		{Name: "scaled", WorkloadFile: "testdata/lws/scaled.yaml", Journey: []Step{
+			{State: initializing, Optional: true},
 			{State: running, Settle: ReplicasReady(1), Action: ScaleReplicas(2)},
+			{State: initializing, Optional: true},
 			{State: running, Settle: ReplicasReady(2), Action: ScaleReplicas(1)},
+			{State: initializing, Optional: true},
 			{State: running, Settle: ReplicasReady(1)},
 		}},
 	},

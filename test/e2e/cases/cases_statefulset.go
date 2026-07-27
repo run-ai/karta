@@ -20,9 +20,15 @@ var statefulSetCase = WorkloadCase{
 		{degraded, ReplicasDegraded()},
 	},
 	Flows: []Flow{
+		// Marker steps (no gate/action) declare the transient dips a StatefulSet takes while scaling, so
+		// the order check runs on scale flows too; driveByPosition skips them and stops only at the gates.
 		{Name: "scaled", WorkloadFile: "testdata/statefulset/running.yaml", Journey: []Step{
+			{State: initializing, Optional: true},
 			{State: running, Settle: ReplicasReady(1), Action: ScaleReplicas(3)},
+			{State: initializing, Optional: true},
+			{State: degraded, Optional: true},
 			{State: running, Settle: ReplicasReady(3), Action: ScaleReplicas(1)},
+			{State: initializing, Optional: true},
 			{State: running, Settle: ReplicasReady(1)},
 		}},
 		// 3 replicas + hostname antiAffinity on 2 nodes: one stays pending, so readyReplicas settles

@@ -36,6 +36,9 @@ type Step struct {
 	State  kartav1alpha1.ResourceStatus
 	Action StateAction
 	Settle StateCheck
+	// Optional marks a transient step the workload may or may not be caught in - a scale dip. The order
+	// check tolerates it being absent, and driveByPosition does not stop at it (it is not a drive stop).
+	Optional bool
 }
 
 // Flow drives a workload along an ordered journey of states. The observed states must be an in-order

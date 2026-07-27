@@ -21,6 +21,7 @@ var deploymentCase = WorkloadCase{
 	},
 	Flows: []Flow{
 		{Name: "scaled", WorkloadFile: "testdata/deployment/running.yaml", Journey: []Step{
+			{State: initializing, Optional: true}, // startup, before the first Running (Deployment stays Running while scaling)
 			{State: running, Settle: ReplicasReady(1), Action: ScaleReplicas(3)},
 			{State: running, Settle: ReplicasReady(3), Action: ScaleReplicas(1)},
 			{State: running, Settle: ReplicasReady(1)},

@@ -56,8 +56,6 @@ func observeTransitions(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.
 	return rec
 }
 
-// watchWorkload watches the single workload object from its creation resourceVersion, so no transition
-// between Create and the watch connecting is missed (the apiserver replays events newer than that RV).
 func watchWorkload(obj *unstructured.Unstructured) watch.Interface {
 	gvk := obj.GroupVersionKind()
 	mapping, err := k8sClient.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
@@ -112,6 +110,14 @@ func driveByState(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstru
 func driveByPosition(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, watcher watch.Interface, timeout time.Duration, rec *recording) {
 	pos := 0
 	recordUntil(tc, fl, karta, watcher, timeout, rec, func(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool {
+		// An Optional step is a transient scale dip declared for the order check only, not a drive stop -
+		// skip past it. driveByPosition waits only at the real steps.
+		for pos < len(fl.Journey) && fl.Journey[pos].Optional {
+			pos++
+		}
+		if pos == len(fl.Journey) {
+			return true
+		}
 		step := fl.Journey[pos]
 		if state != step.State || (step.Settle != nil && !step.Settle(u)) {
 			return false

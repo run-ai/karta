@@ -43,6 +43,7 @@ var batchJobCase = WorkloadCase{
 		// Parallelism scale: sleeping pods, no completions, so it stays Running while spec.parallelism
 		// drives status.ready 1 -> 3 -> 1.
 		{Name: "scaled", WorkloadFile: "testdata/batch-job/scaled.yaml", Journey: []Step{
+			{State: initializing, Optional: true}, // startup, before the first pod is ready
 			{State: running, Settle: IntEq(1, "status", "ready"), Action: ScaleParallelism(3)},
 			{State: running, Settle: IntEq(3, "status", "ready"), Action: ScaleParallelism(1)},
 			{State: running, Settle: IntEq(1, "status", "ready")},
