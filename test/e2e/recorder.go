@@ -250,36 +250,29 @@ func assertObservedOrder(fl flow, order []kartav1alpha1.ResourceStatus) {
 	Expect(observedOrderErr(fl, order)).To(Succeed())
 }
 
-// observedOrderErr checks the observed states are an in-order subsequence of the journey, ending
-// on the terminal. A fast workload may skip a step (subsequence, not equality), but a backwards
-// jump or undeclared state is a regression. mayGoBackwards drops the ordering and only requires
-// every observed state is in the journey.
+// observedOrderErr checks the observed states are an in-order subsequence of the journey, ending on
+// the terminal. A fast workload may skip a declared step (subsequence, not equality), but a state out
+// of order or not declared at all is a regression. A workload that genuinely revisits a state - a Job
+// or JobSet reads active-not-ready again as its pod terminates, so Running dips back to Initializing -
+// declares that revisit as its own step in the journey, so the dip is stated, never waived.
 func observedOrderErr(fl flow, order []kartav1alpha1.ResourceStatus) error {
 	seq := slices.Compact(slices.Clone(order))
 	if len(seq) == 0 {
 		return fmt.Errorf("no states observed")
 	}
 	declared := stepStates(fl.journey)
-	if fl.mayGoBackwards {
-		for _, s := range seq {
-			if !slices.Contains(declared, s) {
-				return fmt.Errorf("observed undeclared state %q", s)
-			}
-		}
-	} else {
-		j := 0
-		for _, s := range seq {
-			for j < len(declared) && declared[j] != s {
-				j++
-			}
-			if j == len(declared) {
-				if slices.Contains(declared, s) {
-					return fmt.Errorf("state %q observed out of journey %v", s, declared)
-				}
-				return fmt.Errorf("observed undeclared state %q; journey is %v", s, declared)
-			}
+	j := 0
+	for _, s := range seq {
+		for j < len(declared) && declared[j] != s {
 			j++
 		}
+		if j == len(declared) {
+			if slices.Contains(declared, s) {
+				return fmt.Errorf("state %q observed out of journey %v", s, declared)
+			}
+			return fmt.Errorf("observed undeclared state %q; journey is %v", s, declared)
+		}
+		j++
 	}
 	if last := seq[len(seq)-1]; last != fl.want() {
 		return fmt.Errorf("terminal must be %q, observed %q", fl.want(), last)

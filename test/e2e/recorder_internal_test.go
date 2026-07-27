@@ -20,7 +20,7 @@ func obj(status map[string]any) *unstructured.Unstructured {
 
 // TestRecorderCatchesBackwardsJump reproduces the JobSet bug: Running returns to a byte-identical
 // Initializing before Completed. Consecutive dedup keeps the return, and the strict order check
-// flags it unless the journey declares the dip (or the flow sets mayGoBackwards).
+// flags it unless the journey declares the dip explicitly.
 func TestRecorderCatchesBackwardsJump(t *testing.T) {
 	states := []namedState{
 		{initializing, jobsetInitializing()},
@@ -49,8 +49,8 @@ func TestRecorderCatchesBackwardsJump(t *testing.T) {
 	if observedOrderErr(flow{journey: steps(initializing, running, completed)}, rec.order) == nil {
 		t.Error("strict journey should reject the undeclared Running -> Initializing dip")
 	}
-	if err := observedOrderErr(flow{journey: steps(initializing, running, completed), mayGoBackwards: true}, rec.order); err != nil {
-		t.Errorf("mayGoBackwards should accept the dip, got %v", err)
+	if err := observedOrderErr(flow{journey: steps(initializing, running, initializing, completed)}, rec.order); err != nil {
+		t.Errorf("declaring the Initializing revisit should accept the dip, got %v", err)
 	}
 }
 
@@ -84,7 +84,6 @@ func TestObservedOrder(t *testing.T) {
 		{"backwards not declared", flow{journey: steps(initializing, running, completed)}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, false},
 		{"backwards declared", flow{journey: steps(initializing, running, initializing, completed)}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, true},
 		{"wrong terminal", flow{journey: steps(initializing, running, completed)}, []kartav1alpha1.ResourceStatus{initializing, running}, false},
-		{"mayGoBackwards", flow{journey: steps(initializing, running, completed), mayGoBackwards: true}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, true},
 	}
 	for _, c := range cases {
 		err := observedOrderErr(c.fl, c.observed)

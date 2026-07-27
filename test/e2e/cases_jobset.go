@@ -20,18 +20,19 @@ var jobsetCase = workloadCase{
 	},
 	flows: []flow{
 		{name: "running", workloadFile: "testdata/jobset/running.yaml", journey: steps(initializing, running)},
-		// completed and resumed set mayGoBackwards: a JobSet reports a replicatedJob active-not-ready
-		// for a tick as its pod terminates, which reads as Initializing again after Running, so the
-		// observed order is not strictly forward. The check then only requires each observed state is
-		// in the journey and the terminal is last.
-		{name: "completed", workloadFile: "testdata/jobset/completed.yaml", mayGoBackwards: true, journey: steps(initializing, running, completed)},
+		// completed and resumed declare Initializing twice: a JobSet reports a replicatedJob
+		// active-not-ready for a tick as its pod terminates, so Running dips back to Initializing
+		// before the terminal. Declaring the revisit keeps the order check strict rather than waiving it.
+		{name: "completed", workloadFile: "testdata/jobset/completed.yaml", journey: steps(initializing, running, initializing, completed)},
 		{name: "failed", workloadFile: "testdata/jobset/failed.yaml", journey: steps(initializing, failed)},
 		// Created already suspended, then resumed: the operator holds at Suspended until the action
-		// clears spec.suspend, then a replicated Job runs to completion.
-		{name: "resumed", workloadFile: "testdata/jobset/resumed.yaml", mayGoBackwards: true, journey: []step{
+		// clears spec.suspend, then a replicated Job runs to completion. Initializing is declared twice
+		// for the terminating-pod dip (see above).
+		{name: "resumed", workloadFile: "testdata/jobset/resumed.yaml", journey: []step{
 			{state: suspended, action: unsuspend},
 			{state: initializing},
 			{state: running},
+			{state: initializing},
 			{state: completed},
 		}},
 		{name: "suspended", workloadFile: "testdata/jobset/suspended.yaml", journey: steps(suspended)},

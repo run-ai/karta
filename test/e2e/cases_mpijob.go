@@ -16,10 +16,10 @@ var mpijobCase = workloadCase{
 	},
 	flows: []flow{
 		{name: "running", workloadFile: "testdata/mpijob/running.yaml", journey: steps(running)},
-		// completed/failed use instant launchers that may or may not blip Running; declare it and
-		// waive strict order so an observed Running before the terminal is tolerated.
-		{name: "completed", workloadFile: "testdata/mpijob/completed.yaml", mayGoBackwards: true, journey: steps(running, completed)},
-		{name: "failed", workloadFile: "testdata/mpijob/failed.yaml", mayGoBackwards: true, journey: steps(running, failed)},
+		// completed/failed use instant launchers that may skip Running; the subsequence check tolerates
+		// a skipped step, so declaring running then the terminal is enough (no backwards here).
+		{name: "completed", workloadFile: "testdata/mpijob/completed.yaml", journey: steps(running, completed)},
+		{name: "failed", workloadFile: "testdata/mpijob/failed.yaml", journey: steps(running, failed)},
 		{name: "suspended", workloadFile: "testdata/mpijob/suspended.yaml", journey: steps(suspended)},
 		{name: "resumed", workloadFile: "testdata/mpijob/resumed.yaml", journey: []step{
 			{state: suspended, action: unsuspendRunPolicy},

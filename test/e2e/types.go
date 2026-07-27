@@ -37,13 +37,12 @@ type step struct {
 	settle stateCheck
 }
 
-// flow drives a workload along an ordered journey of states. mayGoBackwards waives the
-// strict-order check for an operator whose observed order Karta cannot make reliable.
+// flow drives a workload along an ordered journey of states. The observed states must be an in-order
+// subsequence of the journey; a workload that revisits a state declares that revisit as its own step.
 type flow struct {
-	name           string
-	workloadFile   string
-	journey        []step
-	mayGoBackwards bool
+	name         string
+	workloadFile string
+	journey      []step
 }
 
 func (f flow) want() kartav1alpha1.ResourceStatus { return f.journey[len(f.journey)-1].state }
