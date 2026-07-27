@@ -1,5 +1,7 @@
-apiVersion: run.ai/v1alpha1
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
 kind: Karta
+apiVersion: run.ai/v1alpha1
 metadata:
   name: apps-nvidia-com-nimcache-v1alpha1
 spec:
@@ -10,11 +12,11 @@ spec:
         group: apps.nvidia.com
         version: v1alpha1
         kind: NIMCache
-      scaleDefinition:
-        replicasPath: "1"
       specDefinition:
         fragmentedPodSpecDefinition:
           resourcesPath: '{requests: .spec.resources}'
+      scaleDefinition:
+        replicasPath: "1"
       statusDefinition:
         phaseDefinition:
           path: .status.state
@@ -22,23 +24,24 @@ spec:
           path: .status.conditions
           typeFieldName: type
           statusFieldName: status
-          reasonFieldName: reason
           messageFieldName: message
+          reasonFieldName: reason
         statusMappings:
           initializing:
-          - byPhase: Pending
-          - byPhase: NotReady
-          - byPhase: PVC-Created
-          - byPhase: Started
-          - byConditions:
-              - type: NIM_CACHE_JOB_CREATED
-                status: "True"
+            - byPhase: Pending
+            - byPhase: NotReady
+            - byPhase: PVC-Created
+            - byPhase: Started
+            - byConditions:
+                - type: NIM_CACHE_JOB_CREATED
+                  status: "True"
           running:
-          - byPhase: InProgress
+            - byPhase: InProgress
           completed:
-          - byPhase: Ready
-            byConditions:
-              - type: NIM_CACHE_JOB_COMPLETED
-                status: "True"
+            - byPhase: Ready
+              byConditions:
+                - type: NIM_CACHE_JOB_COMPLETED
+                  status: "True"
           failed:
-          - byPhase: Failed
+            - byPhase: Failed
+  optimizationInstructions: {}

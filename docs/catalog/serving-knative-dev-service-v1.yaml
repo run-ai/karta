@@ -1,5 +1,7 @@
-apiVersion: run.ai/v1alpha1
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
 kind: Karta
+apiVersion: run.ai/v1alpha1
 metadata:
   name: serving-knative-dev-service-v1
 spec:
@@ -18,9 +20,9 @@ spec:
           messageFieldName: message
         statusMappings:
           running:
-          - byConditions:
-              - type: Ready
-                status: "True"
+            - byConditions:
+                - type: Ready
+                  status: "True"
     childComponents:
       - name: revision
         kind:

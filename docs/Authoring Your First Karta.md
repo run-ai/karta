@@ -221,7 +221,7 @@ live workloads through the same uniform API, with no per-CRD code.
 
 - Add child components for workloads that own other resources. Each child needs
   an `ownerRef`. See the multi-component samples such as
-  [`docs/samples/kserve.yaml`](./samples/kserve.yaml) and
+  [`docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml`](./catalog/serving-kserve-io-inferenceservice-v1beta1.yaml) and
   [`docs/catalog/kubeflow-org-pytorchjob-v1.yaml`](./catalog/kubeflow-org-pytorchjob-v1.yaml).
 - Handle workloads with repeated roles or instances (for example the replicated
   jobs of a JobSet) with `instanceIdPath` and a matching component instance

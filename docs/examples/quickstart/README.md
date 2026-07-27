@@ -131,7 +131,7 @@ Default expected output:
 | `jobset.yaml` | Sample `JobSet` workload (leader × 1, worker × 4) |
 | `lws.yaml` | Sample `LeaderWorkerSet` workload (2 groups × 4 pods) |
 | `docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml` | Karta definition for JobSet (loaded at runtime) |
-| `docs/samples/lws.yaml` | Karta definition for LeaderWorkerSet (loaded at runtime) |
+| `docs/catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml` | Karta definition for LeaderWorkerSet (loaded at runtime) |
 
 ## How Karta works
 
