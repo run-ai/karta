@@ -4,12 +4,12 @@ kartaName: jobset-x-k8s-io-v1alpha2-jobset
 operator: jobset
 schemaVersion: 6
 steps:
-- action: unsuspend
+- action: Unsuspend
   cr:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-07-26T15:51:49Z"
+      creationTimestamp: "2026-07-27T12:25:25Z"
       generation: 1
       managedFields:
       - apiVersion: jobset.x-k8s.io/v1alpha2
@@ -59,7 +59,7 @@ steps:
             f:suspend: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:51:49Z"
+        time: "2026-07-27T12:25:25Z"
       - apiVersion: jobset.x-k8s.io/v1alpha2
         fieldsType: FieldsV1
         fieldsV1:
@@ -88,11 +88,11 @@ steps:
         manager: jobset
         operation: Update
         subresource: status
-        time: "2026-07-26T15:51:49Z"
+        time: "2026-07-27T12:25:25Z"
       name: karta-e2e-jobset-resumed
       namespace: default
-      resourceVersion: "2854788"
-      uid: 59c467f1-aaaf-43b0-9425-2ad7b579bafe
+      resourceVersion: "3178275"
+      uid: 01eafb44-caeb-4b7e-9300-b53595a90e58
     spec:
       network:
         enableDNSHostnames: true
@@ -136,7 +136,7 @@ steps:
       suspend: true
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T15:51:49Z"
+      - lastTransitionTime: "2026-07-27T12:25:25Z"
         message: jobset is suspended
         reason: SuspendedJobs
         status: "True"
@@ -184,6 +184,27 @@ steps:
     matchedStatuses:
     - Suspended
   state: Suspended
+- action: Unsuspend
+  patch:
+    metadata:
+      resourceVersion: "3178278"
+    status:
+      replicatedJobsStatus:
+      - active: 0
+        failed: 0
+        name: workers
+        ready: 0
+        succeeded: 0
+        suspended: 1
+  state: Suspended
+- action: Unsuspend
+  patch:
+    metadata:
+      generation: 2
+      resourceVersion: "3178279"
+    spec:
+      suspend: false
+  state: Suspended
 - expectedPatch:
     conditions:
     - message: jobset is resumed
@@ -194,13 +215,10 @@ steps:
     - Initializing
   patch:
     metadata:
-      generation: 2
-      resourceVersion: "2854806"
-    spec:
-      suspend: false
+      resourceVersion: "3178290"
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T15:51:49Z"
+      - lastTransitionTime: "2026-07-27T12:25:25Z"
         message: jobset is resumed
         reason: ResumeJobs
         status: "False"
@@ -266,7 +284,7 @@ steps:
             f:suspend: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:51:49Z"
+        time: "2026-07-27T12:25:25Z"
       - apiVersion: jobset.x-k8s.io/v1alpha2
         fieldsType: FieldsV1
         fieldsV1:
@@ -295,8 +313,8 @@ steps:
         manager: jobset
         operation: Update
         subresource: status
-        time: "2026-07-26T15:51:56Z"
-      resourceVersion: "2854866"
+        time: "2026-07-27T12:25:32Z"
+      resourceVersion: "3178371"
     status:
       replicatedJobsStatus:
       - active: 1
@@ -359,7 +377,7 @@ steps:
             f:suspend: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:51:49Z"
+        time: "2026-07-27T12:25:25Z"
       - apiVersion: jobset.x-k8s.io/v1alpha2
         fieldsType: FieldsV1
         fieldsV1:
@@ -388,8 +406,8 @@ steps:
         manager: jobset
         operation: Update
         subresource: status
-        time: "2026-07-26T15:52:11Z"
-      resourceVersion: "2854986"
+        time: "2026-07-27T12:25:47Z"
+      resourceVersion: "3178476"
     status:
       replicatedJobsStatus:
       - active: 1
@@ -461,7 +479,7 @@ steps:
             f:suspend: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:51:49Z"
+        time: "2026-07-27T12:25:25Z"
       - apiVersion: jobset.x-k8s.io/v1alpha2
         fieldsType: FieldsV1
         fieldsV1:
@@ -498,16 +516,16 @@ steps:
         manager: jobset
         operation: Update
         subresource: status
-        time: "2026-07-26T15:52:12Z"
-      resourceVersion: "2854994"
+        time: "2026-07-27T12:25:48Z"
+      resourceVersion: "3178493"
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T15:51:49Z"
+      - lastTransitionTime: "2026-07-27T12:25:25Z"
         message: jobset is resumed
         reason: ResumeJobs
         status: "False"
         type: Suspended
-      - lastTransitionTime: "2026-07-26T15:52:12Z"
+      - lastTransitionTime: "2026-07-27T12:25:48Z"
         message: jobset completed successfully
         reason: AllJobsCompleted
         status: "True"

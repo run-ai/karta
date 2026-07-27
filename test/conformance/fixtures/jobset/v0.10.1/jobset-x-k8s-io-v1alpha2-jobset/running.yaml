@@ -8,7 +8,7 @@ steps:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-07-26T15:51:09Z"
+      creationTimestamp: "2026-07-27T12:24:46Z"
       generation: 1
       managedFields:
       - apiVersion: jobset.x-k8s.io/v1alpha2
@@ -57,7 +57,7 @@ steps:
                         f:restartPolicy: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:51:09Z"
+        time: "2026-07-27T12:24:46Z"
       - apiVersion: jobset.x-k8s.io/v1alpha2
         fieldsType: FieldsV1
         fieldsV1:
@@ -77,11 +77,11 @@ steps:
         manager: jobset
         operation: Update
         subresource: status
-        time: "2026-07-26T15:51:09Z"
+        time: "2026-07-27T12:24:46Z"
       name: karta-e2e-jobset-running
       namespace: default
-      resourceVersion: "2854362"
-      uid: 4650fc4b-5b1e-43f6-b55c-39bd612af42f
+      resourceVersion: "3177841"
+      uid: abf5655c-340c-44a7-95c1-039d965ea583
     spec:
       network:
         enableDNSHostnames: true
@@ -213,7 +213,7 @@ steps:
                         f:restartPolicy: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:51:09Z"
+        time: "2026-07-27T12:24:46Z"
       - apiVersion: jobset.x-k8s.io/v1alpha2
         fieldsType: FieldsV1
         fieldsV1:
@@ -233,8 +233,8 @@ steps:
         manager: jobset
         operation: Update
         subresource: status
-        time: "2026-07-26T15:51:18Z"
-      resourceVersion: "2854442"
+        time: "2026-07-27T12:24:54Z"
+      resourceVersion: "3177921"
     status:
       replicatedJobsStatus:
       - active: 1

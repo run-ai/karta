@@ -8,7 +8,7 @@ steps:
     apiVersion: apps/v1
     kind: StatefulSet
     metadata:
-      creationTimestamp: "2026-07-26T20:30:35Z"
+      creationTimestamp: "2026-07-27T12:34:18Z"
       generation: 1
       managedFields:
       - apiVersion: apps/v1
@@ -62,28 +62,23 @@ steps:
               f:type: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:30:35Z"
+        time: "2026-07-27T12:34:18Z"
       - apiVersion: apps/v1
         fieldsType: FieldsV1
         fieldsV1:
           f:status:
-            f:availableReplicas: {}
             f:collisionCount: {}
-            f:currentReplicas: {}
             f:currentRevision: {}
             f:observedGeneration: {}
-            f:readyReplicas: {}
-            f:replicas: {}
             f:updateRevision: {}
-            f:updatedReplicas: {}
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T20:30:36Z"
+        time: "2026-07-27T12:34:18Z"
       name: karta-e2e-sts-degraded
       namespace: default
-      resourceVersion: "2984699"
-      uid: da183efa-2a78-4f64-98fa-92197bdb6239
+      resourceVersion: "3184034"
+      uid: 49c37187-0b9e-4e9c-83a4-de9f7351e875
     spec:
       persistentVolumeClaimRetentionPolicy:
         whenDeleted: Retain
@@ -131,15 +126,12 @@ steps:
           partition: 0
         type: RollingUpdate
     status:
-      availableReplicas: 1
+      availableReplicas: 0
       collisionCount: 0
-      currentReplicas: 3
       currentRevision: karta-e2e-sts-degraded-5fb8d9544d
       observedGeneration: 1
-      readyReplicas: 1
-      replicas: 3
+      replicas: 0
       updateRevision: karta-e2e-sts-degraded-5fb8d9544d
-      updatedReplicas: 3
   expected:
     components:
       statefulset:
@@ -178,7 +170,163 @@ steps:
             scale:
               replicas: 3
     matchedStatuses:
+    - Initializing
+  state: Initializing
+- patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:persistentVolumeClaimRetentionPolicy:
+              .: {}
+              f:whenDeleted: {}
+              f:whenScaled: {}
+            f:podManagementPolicy: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:serviceName: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:affinity:
+                  .: {}
+                  f:podAntiAffinity:
+                    .: {}
+                    f:requiredDuringSchedulingIgnoredDuringExecution: {}
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+            f:updateStrategy:
+              f:rollingUpdate:
+                .: {}
+                f:partition: {}
+              f:type: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:34:18Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:collisionCount: {}
+            f:currentReplicas: {}
+            f:currentRevision: {}
+            f:observedGeneration: {}
+            f:replicas: {}
+            f:updateRevision: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:34:18Z"
+      resourceVersion: "3184036"
+    status:
+      currentReplicas: 3
+      replicas: 3
+      updatedReplicas: 3
+  state: Initializing
+- expectedPatch:
+    matchedStatuses:
     - Degraded
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:persistentVolumeClaimRetentionPolicy:
+              .: {}
+              f:whenDeleted: {}
+              f:whenScaled: {}
+            f:podManagementPolicy: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:serviceName: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:affinity:
+                  .: {}
+                  f:podAntiAffinity:
+                    .: {}
+                    f:requiredDuringSchedulingIgnoredDuringExecution: {}
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+            f:updateStrategy:
+              f:rollingUpdate:
+                .: {}
+                f:partition: {}
+              f:type: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:34:18Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:availableReplicas: {}
+            f:collisionCount: {}
+            f:currentReplicas: {}
+            f:currentRevision: {}
+            f:observedGeneration: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updateRevision: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:34:19Z"
+      resourceVersion: "3184060"
+    status:
+      availableReplicas: 1
+      readyReplicas: 1
   state: Degraded
 version: v1.34.0
 want: Degraded

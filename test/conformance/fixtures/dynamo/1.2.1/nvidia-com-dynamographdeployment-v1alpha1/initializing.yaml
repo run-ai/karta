@@ -12,7 +12,7 @@ steps:
         nvidia.com/current-worker-hash: 43fa66e8
         nvidia.com/current-worker-hash-v2: 377ebf7c
         nvidia.com/dynamo-operator-origin-version: 1.2.1
-      creationTimestamp: "2026-07-26T16:48:06Z"
+      creationTimestamp: "2026-07-27T12:24:37Z"
       finalizers:
       - nvidia.com/finalizer
       generation: 1
@@ -51,7 +51,7 @@ steps:
                 f:subComponentType: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T16:48:06Z"
+        time: "2026-07-27T12:24:37Z"
       - apiVersion: nvidia.com/v1beta1
         fieldsType: FieldsV1
         fieldsV1:
@@ -64,7 +64,7 @@ steps:
               v:"nvidia.com/finalizer": {}
         manager: manager
         operation: Update
-        time: "2026-07-26T16:48:06Z"
+        time: "2026-07-27T12:24:37Z"
       - apiVersion: nvidia.com/v1beta1
         fieldsType: FieldsV1
         fieldsV1:
@@ -83,11 +83,11 @@ steps:
         manager: manager
         operation: Update
         subresource: status
-        time: "2026-07-26T16:48:06Z"
+        time: "2026-07-27T12:24:38Z"
       name: karta-e2e-dynamo-initializing
       namespace: default
-      resourceVersion: "2882283"
-      uid: cf1a1e55-7bbb-421b-b6b3-81aa74f10e49
+      resourceVersion: "3177478"
+      uid: 88891fd9-c637-4f76-8611-e36ef87171d3
     spec:
       services:
         Frontend:
@@ -122,7 +122,7 @@ steps:
           subComponentType: decode
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T16:48:06Z"
+      - lastTransitionTime: "2026-07-27T12:24:38Z"
         message: 'Resources not ready: karta-e2e-dynamo-initializing-decode-43fa66e8:
           Component deployment not ready - Available condition not true; karta-e2e-dynamo-initializing-frontend:
           Component deployment not ready - Available condition not true'

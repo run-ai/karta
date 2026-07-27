@@ -8,7 +8,7 @@ steps:
     apiVersion: serving.kserve.io/v1beta1
     kind: InferenceService
     metadata:
-      creationTimestamp: "2026-07-26T15:52:14Z"
+      creationTimestamp: "2026-07-27T12:25:50Z"
       finalizers:
       - inferenceservice.finalizers
       generation: 1
@@ -34,7 +34,7 @@ steps:
                 f:storageUri: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:52:14Z"
+        time: "2026-07-27T12:25:50Z"
       - apiVersion: serving.kserve.io/v1beta1
         fieldsType: FieldsV1
         fieldsV1:
@@ -44,7 +44,7 @@ steps:
               v:"inferenceservice.finalizers": {}
         manager: manager
         operation: Update
-        time: "2026-07-26T15:52:14Z"
+        time: "2026-07-27T12:25:50Z"
       - apiVersion: serving.kserve.io/v1beta1
         fieldsType: FieldsV1
         fieldsV1:
@@ -78,11 +78,11 @@ steps:
         manager: manager
         operation: Update
         subresource: status
-        time: "2026-07-26T15:52:36Z"
+        time: "2026-07-27T12:26:12Z"
       name: karta-e2e-kserve
       namespace: default
-      resourceVersion: "2855317"
-      uid: 673666de-7c47-4140-a4c5-17712654d8e1
+      resourceVersion: "3178819"
+      uid: 94ce81f5-1cd6-4443-a73b-bd08fd14df68
     spec:
       predictor:
         model:
@@ -110,28 +110,28 @@ steps:
             revisionName: karta-e2e-kserve-predictor-00001
           url: http://karta-e2e-kserve-predictor.default.127.0.0.1.sslip.io
       conditions:
-      - lastTransitionTime: "2026-07-26T15:52:36Z"
+      - lastTransitionTime: "2026-07-27T12:26:12Z"
         status: "True"
         type: IngressReady
-      - lastTransitionTime: "2026-07-26T15:52:36Z"
+      - lastTransitionTime: "2026-07-27T12:26:12Z"
         severity: Info
         status: "True"
         type: LatestDeploymentReady
-      - lastTransitionTime: "2026-07-26T15:52:36Z"
+      - lastTransitionTime: "2026-07-27T12:26:12Z"
         severity: Info
         status: "True"
         type: PredictorConfigurationReady
-      - lastTransitionTime: "2026-07-26T15:52:36Z"
+      - lastTransitionTime: "2026-07-27T12:26:12Z"
         status: "True"
         type: PredictorReady
-      - lastTransitionTime: "2026-07-26T15:52:36Z"
+      - lastTransitionTime: "2026-07-27T12:26:12Z"
         severity: Info
         status: "True"
         type: PredictorRouteReady
-      - lastTransitionTime: "2026-07-26T15:52:36Z"
+      - lastTransitionTime: "2026-07-27T12:26:12Z"
         status: "True"
         type: Ready
-      - lastTransitionTime: "2026-07-26T15:52:36Z"
+      - lastTransitionTime: "2026-07-27T12:26:12Z"
         severity: Info
         status: "True"
         type: RoutesReady

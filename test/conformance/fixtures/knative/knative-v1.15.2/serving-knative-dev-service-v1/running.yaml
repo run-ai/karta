@@ -11,7 +11,7 @@ steps:
       annotations:
         serving.knative.dev/creator: kubernetes-admin
         serving.knative.dev/lastModifier: kubernetes-admin
-      creationTimestamp: "2026-07-26T15:52:38Z"
+      creationTimestamp: "2026-07-27T12:26:15Z"
       generation: 1
       managedFields:
       - apiVersion: serving.knative.dev/v1
@@ -26,7 +26,7 @@ steps:
                 f:containers: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:52:38Z"
+        time: "2026-07-27T12:26:15Z"
       - apiVersion: serving.knative.dev/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -44,11 +44,11 @@ steps:
         manager: controller
         operation: Update
         subresource: status
-        time: "2026-07-26T15:52:41Z"
+        time: "2026-07-27T12:26:17Z"
       name: karta-e2e-knative
       namespace: default
-      resourceVersion: "2855479"
-      uid: 458bc910-b517-4860-94c1-6559501fd5f8
+      resourceVersion: "3179018"
+      uid: 540358c9-4154-41ff-b12f-f67af16e7331
     spec:
       template:
         metadata:
@@ -81,13 +81,13 @@ steps:
       address:
         url: http://karta-e2e-knative.default.svc.cluster.local
       conditions:
-      - lastTransitionTime: "2026-07-26T15:52:41Z"
+      - lastTransitionTime: "2026-07-27T12:26:17Z"
         status: "True"
         type: ConfigurationsReady
-      - lastTransitionTime: "2026-07-26T15:52:41Z"
+      - lastTransitionTime: "2026-07-27T12:26:17Z"
         status: "True"
         type: Ready
-      - lastTransitionTime: "2026-07-26T15:52:41Z"
+      - lastTransitionTime: "2026-07-27T12:26:17Z"
         status: "True"
         type: RoutesReady
       latestCreatedRevisionName: karta-e2e-knative-00001

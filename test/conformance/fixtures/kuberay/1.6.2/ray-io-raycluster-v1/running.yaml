@@ -8,7 +8,7 @@ steps:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
-      creationTimestamp: "2026-07-26T15:55:10Z"
+      creationTimestamp: "2026-07-27T12:29:53Z"
       generation: 1
       managedFields:
       - apiVersion: ray.io/v1
@@ -60,7 +60,7 @@ steps:
             f:workerGroupSpecs: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:55:10Z"
+        time: "2026-07-27T12:29:53Z"
       - apiVersion: ray.io/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -123,11 +123,11 @@ steps:
         manager: kuberay-operator
         operation: Update
         subresource: status
-        time: "2026-07-26T15:55:22Z"
+        time: "2026-07-27T12:30:06Z"
       name: karta-e2e-ray
       namespace: default
-      resourceVersion: "2857241"
-      uid: 6ea79f6c-57a8-4f63-aa5d-7545d657bdfa
+      resourceVersion: "3181736"
+      uid: 57b9566f-2d2a-4cae-9de3-51cafd5f82c3
     spec:
       headGroupSpec:
         rayStartParams: {}
@@ -176,22 +176,22 @@ steps:
                   memory: 512Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T15:55:22Z"
+      - lastTransitionTime: "2026-07-27T12:30:06Z"
         message: ""
         reason: HeadPodRunningAndReady
         status: "True"
         type: HeadPodReady
-      - lastTransitionTime: "2026-07-26T15:55:22Z"
+      - lastTransitionTime: "2026-07-27T12:30:06Z"
         message: All Ray Pods are ready for the first time
         reason: AllPodRunningAndReadyFirstTime
         status: "True"
         type: RayClusterProvisioned
-      - lastTransitionTime: "2026-07-26T15:55:10Z"
+      - lastTransitionTime: "2026-07-27T12:29:53Z"
         message: ""
         reason: RayClusterSuspended
         status: "False"
         type: RayClusterSuspended
-      - lastTransitionTime: "2026-07-26T15:55:10Z"
+      - lastTransitionTime: "2026-07-27T12:29:53Z"
         message: ""
         reason: RayClusterSuspending
         status: "False"
@@ -207,16 +207,16 @@ steps:
         metrics: "8080"
         serve: "8000"
       head:
-        podIP: 10.244.1.149
-        podName: karta-e2e-ray-head-kl5dc
-        serviceIP: 10.244.1.149
+        podIP: 10.244.1.203
+        podName: karta-e2e-ray-head-vqn2v
+        serviceIP: 10.244.1.203
         serviceName: karta-e2e-ray-head-svc
-      lastUpdateTime: "2026-07-26T15:55:22Z"
+      lastUpdateTime: "2026-07-27T12:30:06Z"
       maxWorkerReplicas: 1
       observedGeneration: 1
       state: ready
       stateTransitionTimes:
-        ready: "2026-07-26T15:55:22Z"
+        ready: "2026-07-27T12:30:06Z"
   expected:
     components:
       head:

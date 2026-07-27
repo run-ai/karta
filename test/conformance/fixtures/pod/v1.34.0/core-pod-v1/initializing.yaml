@@ -8,7 +8,7 @@ steps:
     apiVersion: v1
     kind: Pod
     metadata:
-      creationTimestamp: "2026-07-26T15:49:01Z"
+      creationTimestamp: "2026-07-27T12:29:13Z"
       generation: 1
       managedFields:
       - apiVersion: v1
@@ -40,11 +40,11 @@ steps:
             f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:49:01Z"
+        time: "2026-07-27T12:29:13Z"
       name: karta-e2e-pod-initializing
       namespace: default
-      resourceVersion: "2853053"
-      uid: 4b89c940-224c-4da9-96ae-e5b19f91caa2
+      resourceVersion: "3181154"
+      uid: d93d6e01-567b-441b-a1f0-71524e9c5a53
     spec:
       automountServiceAccountToken: false
       containers:
@@ -92,18 +92,18 @@ steps:
           "":
             podTemplateSpec:
               metadata:
-                creationTimestamp: "2026-07-26T15:49:01Z"
+                creationTimestamp: "2026-07-27T12:29:13Z"
                 generation: 1
                 managedFields:
                 - apiVersion: v1
                   fieldsType: FieldsV1
                   manager: e2e.test
                   operation: Update
-                  time: "2026-07-26T15:49:01Z"
+                  time: "2026-07-27T12:29:13Z"
                 name: karta-e2e-pod-initializing
                 namespace: default
-                resourceVersion: "2853053"
-                uid: 4b89c940-224c-4da9-96ae-e5b19f91caa2
+                resourceVersion: "3181154"
+                uid: d93d6e01-567b-441b-a1f0-71524e9c5a53
               spec:
                 automountServiceAccountToken: false
                 containers:

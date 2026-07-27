@@ -11,7 +11,7 @@ steps:
       annotations:
         milvus.io/dependency-values-merged: "true"
         milvus.io/pod-service-label-added: "true"
-      creationTimestamp: "2026-07-26T16:51:46Z"
+      creationTimestamp: "2026-07-27T09:58:38Z"
       finalizers:
       - milvus.milvus.io/finalizer
       generation: 3
@@ -47,7 +47,7 @@ steps:
             f:mode: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T16:51:46Z"
+        time: "2026-07-27T09:58:38Z"
       - apiVersion: milvus.io/v1beta1
         fieldsType: FieldsV1
         fieldsV1:
@@ -115,7 +115,7 @@ steps:
             f:hookConfig: {}
         manager: manager
         operation: Update
-        time: "2026-07-26T16:51:46Z"
+        time: "2026-07-27T09:58:38Z"
       - apiVersion: milvus.io/v1beta1
         fieldsType: FieldsV1
         fieldsV1:
@@ -130,11 +130,11 @@ steps:
         manager: manager
         operation: Update
         subresource: status
-        time: "2026-07-26T16:51:46Z"
+        time: "2026-07-27T09:58:38Z"
       name: karta-e2e-milvus-initializing
       namespace: default
-      resourceVersion: "2884124"
-      uid: ac22e4a5-8cab-4830-97c6-6fe6395e6efe
+      resourceVersion: "3101839"
+      uid: fadb73e0-39f1-4183-8984-7cd58cdb5105
     spec:
       components:
         disableMetric: false

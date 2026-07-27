@@ -8,7 +8,7 @@ steps:
     apiVersion: batch/v1
     kind: CronJob
     metadata:
-      creationTimestamp: "2026-07-26T20:25:03Z"
+      creationTimestamp: "2026-07-27T12:24:00Z"
       generation: 1
       managedFields:
       - apiVersion: batch/v1
@@ -46,11 +46,11 @@ steps:
             f:suspend: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:25:03Z"
+        time: "2026-07-27T12:24:00Z"
       name: karta-e2e-cronjob-suspended
       namespace: default
-      resourceVersion: "2982072"
-      uid: 4148bbab-5538-4a3b-a550-af8409493d4b
+      resourceVersion: "3176836"
+      uid: ed11dd9d-0e4d-4ad3-9260-bbf388eb5801
     spec:
       concurrencyPolicy: Allow
       failedJobsHistoryLimit: 1

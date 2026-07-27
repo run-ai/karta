@@ -4,12 +4,11 @@ kartaName: grove-io-podcliqueset-v1alpha1
 operator: grove
 schemaVersion: 6
 steps:
-- action: func36
-  cr:
+- cr:
     apiVersion: grove.io/v1alpha1
     kind: PodCliqueSet
     metadata:
-      creationTimestamp: "2026-07-26T18:10:46Z"
+      creationTimestamp: "2026-07-27T12:24:41Z"
       finalizers:
       - grove.io/podcliqueset.grove.io
       generation: 1
@@ -49,7 +48,7 @@ steps:
                     f:roleName: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:10:46Z"
+        time: "2026-07-27T12:24:41Z"
       - apiVersion: grove.io/v1alpha1
         fieldsType: FieldsV1
         fieldsV1:
@@ -59,25 +58,11 @@ steps:
               v:"grove.io/podcliqueset.grove.io": {}
         manager: grove-operator
         operation: Update
-        time: "2026-07-26T18:10:46Z"
-      - apiVersion: grove.io/v1alpha1
-        fieldsType: FieldsV1
-        fieldsV1:
-          f:status:
-            .: {}
-            f:availableReplicas: {}
-            f:currentGenerationHash: {}
-            f:observedGeneration: {}
-            f:replicas: {}
-            f:updatedReplicas: {}
-        manager: grove-operator
-        operation: Update
-        subresource: status
-        time: "2026-07-26T18:10:48Z"
+        time: "2026-07-27T12:24:41Z"
       name: karta-e2e-grove-scaled
       namespace: default
-      resourceVersion: "2920658"
-      uid: ac92ce9e-face-41ef-bf91-ebe918d69562
+      resourceVersion: "3177630"
+      uid: c46d8510-e0b7-42c0-ba3e-806199fccb6c
     spec:
       replicas: 1
       template:
@@ -105,12 +90,6 @@ steps:
         headlessServiceConfig:
           publishNotReadyAddresses: true
         terminationDelay: 4h0m0s
-    status:
-      availableReplicas: 1
-      currentGenerationHash: fcd7c86f456f9f449b
-      observedGeneration: 1
-      replicas: 1
-      updatedReplicas: 1
   expected:
     components:
       clique:
@@ -131,30 +110,11 @@ steps:
             scale:
               replicas: 2
     matchedStatuses:
-    - Running
-  state: Running
-- action: func36
-  expectedPatch:
-    components:
-      clique:
-        instances:
-          worker:
-            scale:
-              replicas: 4
-  patch:
+    - Initializing
+  state: Initializing
+- patch:
     metadata:
-      generation: 2
       managedFields:
-      - apiVersion: grove.io/v1alpha1
-        fieldsType: FieldsV1
-        fieldsV1:
-          f:metadata:
-            f:finalizers:
-              .: {}
-              v:"grove.io/podcliqueset.grove.io": {}
-        manager: grove-operator
-        operation: Update
-        time: "2026-07-26T18:10:46Z"
       - apiVersion: grove.io/v1alpha1
         fieldsType: FieldsV1
         fieldsV1:
@@ -190,7 +150,289 @@ steps:
                     f:roleName: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:10:48Z"
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"grove.io/podcliqueset.grove.io": {}
+        manager: grove-operator
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:availableReplicas: {}
+            f:currentGenerationHash: {}
+            f:updatedReplicas: {}
+        manager: grove-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:24:41Z"
+      resourceVersion: "3177633"
+    status:
+      availableReplicas: 0
+      currentGenerationHash: fcd7c86f456f9f449b
+      updatedReplicas: 0
+  state: Initializing
+- patch:
+    metadata:
+      managedFields:
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:replicas: {}
+            f:template:
+              .: {}
+              f:cliqueStartupType: {}
+              f:cliques:
+                .: {}
+                k:{"name":"worker"}:
+                  .: {}
+                  f:name: {}
+                  f:spec:
+                    .: {}
+                    f:podSpec:
+                      .: {}
+                      f:containers:
+                        .: {}
+                        k:{"name":"worker"}:
+                          .: {}
+                          f:command: {}
+                          f:image: {}
+                          f:name: {}
+                          f:resources:
+                            .: {}
+                            f:requests:
+                              .: {}
+                              f:cpu: {}
+                              f:memory: {}
+                    f:replicas: {}
+                    f:roleName: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"grove.io/podcliqueset.grove.io": {}
+        manager: grove-operator
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:availableReplicas: {}
+            f:currentGenerationHash: {}
+            f:lastErrors: {}
+            f:updatedReplicas: {}
+        manager: grove-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:24:41Z"
+      resourceVersion: "3177642"
+    status:
+      lastErrors:
+      - code: ERR_SYNC_ROLEBINDING
+        description: 'failed to sync RoleBinding: [Operation: Sync, Code: ERR_SYNC_ROLEBINDING]
+          message: Error syncing RoleBinding: default/grove.io:pcs:karta-e2e-grove-scaled
+          for PodCliqueSet: default/karta-e2e-grove-scaled, cause: rolebindings.rbac.authorization.k8s.io
+          "grove.io:pcs:karta-e2e-grove-scaled" not found'
+        observedAt: "2026-07-27T12:24:41Z"
+  state: Initializing
+- patch:
+    metadata:
+      managedFields:
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:replicas: {}
+            f:template:
+              .: {}
+              f:cliqueStartupType: {}
+              f:cliques:
+                .: {}
+                k:{"name":"worker"}:
+                  .: {}
+                  f:name: {}
+                  f:spec:
+                    .: {}
+                    f:podSpec:
+                      .: {}
+                      f:containers:
+                        .: {}
+                        k:{"name":"worker"}:
+                          .: {}
+                          f:command: {}
+                          f:image: {}
+                          f:name: {}
+                          f:resources:
+                            .: {}
+                            f:requests:
+                              .: {}
+                              f:cpu: {}
+                              f:memory: {}
+                    f:replicas: {}
+                    f:roleName: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"grove.io/podcliqueset.grove.io": {}
+        manager: grove-operator
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:availableReplicas: {}
+            f:currentGenerationHash: {}
+            f:lastErrors: {}
+            f:replicas: {}
+            f:updatedReplicas: {}
+        manager: grove-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:24:41Z"
+      resourceVersion: "3177643"
+    status:
+      replicas: 1
+  state: Initializing
+- patch:
+    metadata:
+      managedFields:
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:replicas: {}
+            f:template:
+              .: {}
+              f:cliqueStartupType: {}
+              f:cliques:
+                .: {}
+                k:{"name":"worker"}:
+                  .: {}
+                  f:name: {}
+                  f:spec:
+                    .: {}
+                    f:podSpec:
+                      .: {}
+                      f:containers:
+                        .: {}
+                        k:{"name":"worker"}:
+                          .: {}
+                          f:command: {}
+                          f:image: {}
+                          f:name: {}
+                          f:resources:
+                            .: {}
+                            f:requests:
+                              .: {}
+                              f:cpu: {}
+                              f:memory: {}
+                    f:replicas: {}
+                    f:roleName: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"grove.io/podcliqueset.grove.io": {}
+        manager: grove-operator
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:availableReplicas: {}
+            f:currentGenerationHash: {}
+            f:replicas: {}
+            f:updatedReplicas: {}
+        manager: grove-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:24:41Z"
+      resourceVersion: "3177653"
+    status:
+      lastErrors: null
+  state: Initializing
+- patch:
+    metadata:
+      managedFields:
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:replicas: {}
+            f:template:
+              .: {}
+              f:cliqueStartupType: {}
+              f:cliques:
+                .: {}
+                k:{"name":"worker"}:
+                  .: {}
+                  f:name: {}
+                  f:spec:
+                    .: {}
+                    f:podSpec:
+                      .: {}
+                      f:containers:
+                        .: {}
+                        k:{"name":"worker"}:
+                          .: {}
+                          f:command: {}
+                          f:image: {}
+                          f:name: {}
+                          f:resources:
+                            .: {}
+                            f:requests:
+                              .: {}
+                              f:cpu: {}
+                              f:memory: {}
+                    f:replicas: {}
+                    f:roleName: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"grove.io/podcliqueset.grove.io": {}
+        manager: grove-operator
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
       - apiVersion: grove.io/v1alpha1
         fieldsType: FieldsV1
         fieldsV1:
@@ -204,17 +446,245 @@ steps:
         manager: grove-operator
         operation: Update
         subresource: status
-        time: "2026-07-26T18:10:49Z"
-      resourceVersion: "2920733"
+        time: "2026-07-27T12:24:42Z"
+      resourceVersion: "3177664"
+    status:
+      observedGeneration: 1
+  state: Initializing
+- action: func30
+  expectedPatch:
+    matchedStatuses:
+    - Running
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:replicas: {}
+            f:template:
+              .: {}
+              f:cliqueStartupType: {}
+              f:cliques:
+                .: {}
+                k:{"name":"worker"}:
+                  .: {}
+                  f:name: {}
+                  f:spec:
+                    .: {}
+                    f:podSpec:
+                      .: {}
+                      f:containers:
+                        .: {}
+                        k:{"name":"worker"}:
+                          .: {}
+                          f:command: {}
+                          f:image: {}
+                          f:name: {}
+                          f:resources:
+                            .: {}
+                            f:requests:
+                              .: {}
+                              f:cpu: {}
+                              f:memory: {}
+                    f:replicas: {}
+                    f:roleName: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"grove.io/podcliqueset.grove.io": {}
+        manager: grove-operator
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:availableReplicas: {}
+            f:currentGenerationHash: {}
+            f:observedGeneration: {}
+            f:replicas: {}
+            f:updatedReplicas: {}
+        manager: grove-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:24:43Z"
+      resourceVersion: "3177703"
+    status:
+      availableReplicas: 1
+      updatedReplicas: 1
+  state: Running
+- expectedPatch:
+    components:
+      clique:
+        instances:
+          worker:
+            scale:
+              replicas: 4
+    matchedStatuses:
+    - Initializing
+  patch:
+    metadata:
+      generation: 2
+      managedFields:
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"grove.io/podcliqueset.grove.io": {}
+        manager: grove-operator
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:replicas: {}
+            f:template:
+              .: {}
+              f:cliqueStartupType: {}
+              f:cliques:
+                .: {}
+                k:{"name":"worker"}:
+                  .: {}
+                  f:name: {}
+                  f:spec:
+                    .: {}
+                    f:podSpec:
+                      .: {}
+                      f:containers:
+                        .: {}
+                        k:{"name":"worker"}:
+                          .: {}
+                          f:command: {}
+                          f:image: {}
+                          f:name: {}
+                          f:resources:
+                            .: {}
+                            f:requests:
+                              .: {}
+                              f:cpu: {}
+                              f:memory: {}
+                    f:replicas: {}
+                    f:roleName: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:24:43Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:availableReplicas: {}
+            f:currentGenerationHash: {}
+            f:observedGeneration: {}
+            f:replicas: {}
+            f:updatedReplicas: {}
+        manager: grove-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:24:43Z"
+      resourceVersion: "3177704"
     spec:
       replicas: 2
+  state: Initializing
+- patch:
+    metadata:
+      resourceVersion: "3177721"
+    status:
+      replicas: 2
+  state: Initializing
+- patch:
+    metadata:
+      resourceVersion: "3177732"
+    status:
+      observedGeneration: 2
+  state: Initializing
+- action: func30
+  expectedPatch:
+    matchedStatuses:
+    - Running
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"grove.io/podcliqueset.grove.io": {}
+        manager: grove-operator
+        operation: Update
+        time: "2026-07-27T12:24:41Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:replicas: {}
+            f:template:
+              .: {}
+              f:cliqueStartupType: {}
+              f:cliques:
+                .: {}
+                k:{"name":"worker"}:
+                  .: {}
+                  f:name: {}
+                  f:spec:
+                    .: {}
+                    f:podSpec:
+                      .: {}
+                      f:containers:
+                        .: {}
+                        k:{"name":"worker"}:
+                          .: {}
+                          f:command: {}
+                          f:image: {}
+                          f:name: {}
+                          f:resources:
+                            .: {}
+                            f:requests:
+                              .: {}
+                              f:cpu: {}
+                              f:memory: {}
+                    f:replicas: {}
+                    f:roleName: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:24:43Z"
+      - apiVersion: grove.io/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:availableReplicas: {}
+            f:currentGenerationHash: {}
+            f:observedGeneration: {}
+            f:replicas: {}
+            f:updatedReplicas: {}
+        manager: grove-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:24:44Z"
+      resourceVersion: "3177778"
     status:
       availableReplicas: 2
-      observedGeneration: 2
-      replicas: 2
       updatedReplicas: 2
   state: Running
-- action: func36
+- action: func30
   expectedPatch:
     components:
       clique:
@@ -235,7 +705,7 @@ steps:
               v:"grove.io/podcliqueset.grove.io": {}
         manager: grove-operator
         operation: Update
-        time: "2026-07-26T18:10:46Z"
+        time: "2026-07-27T12:24:41Z"
       - apiVersion: grove.io/v1alpha1
         fieldsType: FieldsV1
         fieldsV1:
@@ -271,7 +741,7 @@ steps:
                     f:roleName: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:10:49Z"
+        time: "2026-07-27T12:24:44Z"
       - apiVersion: grove.io/v1alpha1
         fieldsType: FieldsV1
         fieldsV1:
@@ -285,13 +755,24 @@ steps:
         manager: grove-operator
         operation: Update
         subresource: status
-        time: "2026-07-26T18:10:49Z"
-      resourceVersion: "2920738"
+        time: "2026-07-27T12:24:44Z"
+      resourceVersion: "3177779"
     spec:
       replicas: 1
+  state: Running
+- action: func30
+  patch:
+    metadata:
+      resourceVersion: "3177782"
+    status:
+      observedGeneration: 3
+  state: Running
+- action: func30
+  patch:
+    metadata:
+      resourceVersion: "3177784"
     status:
       availableReplicas: 1
-      observedGeneration: 3
       replicas: 1
       updatedReplicas: 1
   state: Running

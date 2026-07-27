@@ -8,7 +8,7 @@ steps:
     apiVersion: serving.kserve.io/v1beta1
     kind: InferenceService
     metadata:
-      creationTimestamp: "2026-07-26T20:35:23Z"
+      creationTimestamp: "2026-07-27T12:26:12Z"
       finalizers:
       - inferenceservice.finalizers
       generation: 1
@@ -23,7 +23,7 @@ steps:
               f:containers: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:35:23Z"
+        time: "2026-07-27T12:26:12Z"
       - apiVersion: serving.kserve.io/v1beta1
         fieldsType: FieldsV1
         fieldsV1:
@@ -33,7 +33,7 @@ steps:
               v:"inferenceservice.finalizers": {}
         manager: manager
         operation: Update
-        time: "2026-07-26T20:35:23Z"
+        time: "2026-07-27T12:26:12Z"
       - apiVersion: serving.kserve.io/v1beta1
         fieldsType: FieldsV1
         fieldsV1:
@@ -56,11 +56,11 @@ steps:
         manager: manager
         operation: Update
         subresource: status
-        time: "2026-07-26T20:35:23Z"
+        time: "2026-07-27T12:26:13Z"
       name: karta-e2e-kserve-failed
       namespace: default
-      resourceVersion: "2987022"
-      uid: 53aa64cb-fa68-4cf5-b8b5-b2a8605bd058
+      resourceVersion: "3178882"
+      uid: 92c893f1-780d-4f87-a62c-2cac22309da4
     spec:
       predictor:
         containers:
@@ -78,12 +78,12 @@ steps:
         predictor:
           latestCreatedRevision: karta-e2e-kserve-failed-predictor-00001
       conditions:
-      - lastTransitionTime: "2026-07-26T20:35:23Z"
+      - lastTransitionTime: "2026-07-27T12:26:13Z"
         reason: PredictorConfigurationReady not ready
         severity: Info
         status: "False"
         type: LatestDeploymentReady
-      - lastTransitionTime: "2026-07-26T20:35:23Z"
+      - lastTransitionTime: "2026-07-27T12:26:13Z"
         message: 'Revision "karta-e2e-kserve-failed-predictor-00001" failed with message:
           Unable to fetch image "karta-e2e-no-such-registry.invalid/nope:latest":
           failed to resolve image to digest: Get "https://karta-e2e-no-such-registry.invalid/v2/":
@@ -93,26 +93,26 @@ steps:
         severity: Info
         status: "False"
         type: PredictorConfigurationReady
-      - lastTransitionTime: "2026-07-26T20:35:23Z"
+      - lastTransitionTime: "2026-07-27T12:26:13Z"
         message: Configuration "karta-e2e-kserve-failed-predictor" does not have any
           ready Revision.
         reason: RevisionMissing
         status: "False"
         type: PredictorReady
-      - lastTransitionTime: "2026-07-26T20:35:23Z"
+      - lastTransitionTime: "2026-07-27T12:26:13Z"
         message: Configuration "karta-e2e-kserve-failed-predictor" does not have any
           ready Revision.
         reason: RevisionMissing
         severity: Info
         status: "False"
         type: PredictorRouteReady
-      - lastTransitionTime: "2026-07-26T20:35:23Z"
+      - lastTransitionTime: "2026-07-27T12:26:13Z"
         message: Configuration "karta-e2e-kserve-failed-predictor" does not have any
           ready Revision.
         reason: RevisionMissing
         status: "False"
         type: Ready
-      - lastTransitionTime: "2026-07-26T20:35:23Z"
+      - lastTransitionTime: "2026-07-27T12:26:13Z"
         reason: PredictorRouteReady not ready
         severity: Info
         status: "False"

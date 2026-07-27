@@ -8,7 +8,7 @@ steps:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-07-26T15:51:41Z"
+      creationTimestamp: "2026-07-27T12:25:17Z"
       generation: 1
       managedFields:
       - apiVersion: jobset.x-k8s.io/v1alpha2
@@ -57,7 +57,7 @@ steps:
                         f:restartPolicy: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:51:41Z"
+        time: "2026-07-27T12:25:17Z"
       - apiVersion: jobset.x-k8s.io/v1alpha2
         fieldsType: FieldsV1
         fieldsV1:
@@ -77,11 +77,11 @@ steps:
         manager: jobset
         operation: Update
         subresource: status
-        time: "2026-07-26T15:51:41Z"
+        time: "2026-07-27T12:25:17Z"
       name: karta-e2e-jobset-failed
       namespace: default
-      resourceVersion: "2854684"
-      uid: 31b316a2-95e1-43ce-a9fa-b9329e5da11f
+      resourceVersion: "3178172"
+      uid: c0747511-cd38-4d45-86a2-a31009f9b04c
     spec:
       network:
         enableDNSHostnames: true
@@ -218,7 +218,7 @@ steps:
                         f:restartPolicy: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:51:41Z"
+        time: "2026-07-27T12:25:17Z"
       - apiVersion: jobset.x-k8s.io/v1alpha2
         fieldsType: FieldsV1
         fieldsV1:
@@ -248,11 +248,11 @@ steps:
         manager: jobset
         operation: Update
         subresource: status
-        time: "2026-07-26T15:51:49Z"
-      resourceVersion: "2854775"
+        time: "2026-07-27T12:25:25Z"
+      resourceVersion: "3178260"
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T15:51:49Z"
+      - lastTransitionTime: "2026-07-27T12:25:25Z"
         message: 'jobset failed due to one or more job failures (first failed job:
           karta-e2e-jobset-failed-workers-0)'
         reason: FailedJobs

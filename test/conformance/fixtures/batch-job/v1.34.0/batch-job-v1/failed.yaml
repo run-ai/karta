@@ -8,12 +8,12 @@ steps:
     apiVersion: batch/v1
     kind: Job
     metadata:
-      creationTimestamp: "2026-07-26T15:47:36Z"
+      creationTimestamp: "2026-07-27T12:22:56Z"
       generation: 1
       labels:
-        batch.kubernetes.io/controller-uid: 72a6071d-89dc-4b74-8bd8-c1cfa6fdd125
+        batch.kubernetes.io/controller-uid: 0784514f-4d2f-469f-ab69-a8927ce79f0c
         batch.kubernetes.io/job-name: karta-e2e-job-failed
-        controller-uid: 72a6071d-89dc-4b74-8bd8-c1cfa6fdd125
+        controller-uid: 0784514f-4d2f-469f-ab69-a8927ce79f0c
         job-name: karta-e2e-job-failed
       managedFields:
       - apiVersion: batch/v1
@@ -61,7 +61,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:47:36Z"
+        time: "2026-07-27T12:22:56Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -74,11 +74,11 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T15:47:36Z"
+        time: "2026-07-27T12:22:56Z"
       name: karta-e2e-job-failed
       namespace: default
-      resourceVersion: "2852307"
-      uid: 72a6071d-89dc-4b74-8bd8-c1cfa6fdd125
+      resourceVersion: "3176190"
+      uid: 0784514f-4d2f-469f-ab69-a8927ce79f0c
     spec:
       backoffLimit: 0
       completionMode: NonIndexed
@@ -88,14 +88,14 @@ steps:
       podReplacementPolicy: TerminatingOrFailed
       selector:
         matchLabels:
-          batch.kubernetes.io/controller-uid: 72a6071d-89dc-4b74-8bd8-c1cfa6fdd125
+          batch.kubernetes.io/controller-uid: 0784514f-4d2f-469f-ab69-a8927ce79f0c
       suspend: false
       template:
         metadata:
           labels:
-            batch.kubernetes.io/controller-uid: 72a6071d-89dc-4b74-8bd8-c1cfa6fdd125
+            batch.kubernetes.io/controller-uid: 0784514f-4d2f-469f-ab69-a8927ce79f0c
             batch.kubernetes.io/job-name: karta-e2e-job-failed
-            controller-uid: 72a6071d-89dc-4b74-8bd8-c1cfa6fdd125
+            controller-uid: 0784514f-4d2f-469f-ab69-a8927ce79f0c
             job-name: karta-e2e-job-failed
         spec:
           containers:
@@ -129,7 +129,7 @@ steps:
     status:
       active: 1
       ready: 0
-      startTime: "2026-07-26T15:47:36Z"
+      startTime: "2026-07-27T12:22:56Z"
       terminating: 0
       uncountedTerminatedPods: {}
   expected:
@@ -140,9 +140,9 @@ steps:
             podTemplateSpec:
               metadata:
                 labels:
-                  batch.kubernetes.io/controller-uid: 72a6071d-89dc-4b74-8bd8-c1cfa6fdd125
+                  batch.kubernetes.io/controller-uid: 0784514f-4d2f-469f-ab69-a8927ce79f0c
                   batch.kubernetes.io/job-name: karta-e2e-job-failed
-                  controller-uid: 72a6071d-89dc-4b74-8bd8-c1cfa6fdd125
+                  controller-uid: 0784514f-4d2f-469f-ab69-a8927ce79f0c
                   job-name: karta-e2e-job-failed
               spec:
                 containers:
@@ -237,7 +237,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:47:36Z"
+        time: "2026-07-27T12:22:56Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -251,19 +251,19 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T15:47:44Z"
-      resourceVersion: "2852386"
+        time: "2026-07-27T12:23:04Z"
+      resourceVersion: "3176270"
     status:
       active: null
       conditions:
-      - lastProbeTime: "2026-07-26T15:47:44Z"
-        lastTransitionTime: "2026-07-26T15:47:44Z"
+      - lastProbeTime: "2026-07-27T12:23:04Z"
+        lastTransitionTime: "2026-07-27T12:23:04Z"
         message: Job has reached the specified backoff limit
         reason: BackoffLimitExceeded
         status: "True"
         type: FailureTarget
-      - lastProbeTime: "2026-07-26T15:47:44Z"
-        lastTransitionTime: "2026-07-26T15:47:44Z"
+      - lastProbeTime: "2026-07-27T12:23:04Z"
+        lastTransitionTime: "2026-07-27T12:23:04Z"
         message: Job has reached the specified backoff limit
         reason: BackoffLimitExceeded
         status: "True"

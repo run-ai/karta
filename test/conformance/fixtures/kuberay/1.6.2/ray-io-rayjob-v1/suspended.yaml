@@ -8,7 +8,7 @@ steps:
     apiVersion: ray.io/v1
     kind: RayJob
     metadata:
-      creationTimestamp: "2026-07-26T20:37:48Z"
+      creationTimestamp: "2026-07-27T12:31:46Z"
       finalizers:
       - ray.io/rayjob-finalizer
       generation: 2
@@ -51,7 +51,7 @@ steps:
             f:ttlSecondsAfterFinished: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:37:48Z"
+        time: "2026-07-27T12:31:46Z"
       - apiVersion: ray.io/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -67,7 +67,7 @@ steps:
               f:workerGroupSpecs: {}
         manager: kuberay-operator
         operation: Update
-        time: "2026-07-26T20:37:48Z"
+        time: "2026-07-27T12:31:46Z"
       - apiVersion: ray.io/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -88,11 +88,11 @@ steps:
         manager: kuberay-operator
         operation: Update
         subresource: status
-        time: "2026-07-26T20:37:48Z"
+        time: "2026-07-27T12:31:46Z"
       name: karta-e2e-rayjob-suspended
       namespace: default
-      resourceVersion: "2988182"
-      uid: 80264f5e-2b2e-4565-9ac5-43969de788b3
+      resourceVersion: "3182758"
+      uid: 2e760fb5-4e66-4d4e-8a70-8c92de09cc2e
     spec:
       backoffLimit: 0
       entrypoint: python -c "print(1)"
@@ -145,7 +145,7 @@ steps:
         desiredTPU: "0"
         head: {}
       rayJobInfo: {}
-      startTime: "2026-07-26T20:37:48Z"
+      startTime: "2026-07-27T12:31:46Z"
       succeeded: 0
   expected:
     components:

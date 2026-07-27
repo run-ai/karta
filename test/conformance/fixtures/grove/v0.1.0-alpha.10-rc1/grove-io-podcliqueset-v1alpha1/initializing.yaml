@@ -8,9 +8,7 @@ steps:
     apiVersion: grove.io/v1alpha1
     kind: PodCliqueSet
     metadata:
-      creationTimestamp: "2026-07-26T16:43:57Z"
-      finalizers:
-      - grove.io/podcliqueset.grove.io
+      creationTimestamp: "2026-07-27T12:24:41Z"
       generation: 1
       managedFields:
       - apiVersion: grove.io/v1alpha1
@@ -48,33 +46,11 @@ steps:
                     f:roleName: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T16:43:57Z"
-      - apiVersion: grove.io/v1alpha1
-        fieldsType: FieldsV1
-        fieldsV1:
-          f:metadata:
-            f:finalizers:
-              .: {}
-              v:"grove.io/podcliqueset.grove.io": {}
-        manager: grove-operator
-        operation: Update
-        time: "2026-07-26T16:43:57Z"
-      - apiVersion: grove.io/v1alpha1
-        fieldsType: FieldsV1
-        fieldsV1:
-          f:status:
-            .: {}
-            f:availableReplicas: {}
-            f:currentGenerationHash: {}
-            f:updatedReplicas: {}
-        manager: grove-operator
-        operation: Update
-        subresource: status
-        time: "2026-07-26T16:43:57Z"
+        time: "2026-07-27T12:24:41Z"
       name: karta-e2e-grove-initializing
       namespace: default
-      resourceVersion: "2880129"
-      uid: 546dbcdd-6ef1-4634-9d5d-b05cabddf04a
+      resourceVersion: "3177614"
+      uid: 07742cfd-25b3-4972-b3a5-741b2b7ecf75
     spec:
       replicas: 1
       template:
@@ -102,10 +78,6 @@ steps:
         headlessServiceConfig:
           publishNotReadyAddresses: true
         terminationDelay: 4h0m0s
-    status:
-      availableReplicas: 0
-      currentGenerationHash: 764cc6885bfd777bbc6
-      updatedReplicas: 0
   expected:
     components:
       clique:

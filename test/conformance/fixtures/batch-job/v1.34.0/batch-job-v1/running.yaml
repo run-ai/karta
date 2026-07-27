@@ -8,12 +8,12 @@ steps:
     apiVersion: batch/v1
     kind: Job
     metadata:
-      creationTimestamp: "2026-07-26T15:47:06Z"
+      creationTimestamp: "2026-07-27T12:22:25Z"
       generation: 1
       labels:
-        batch.kubernetes.io/controller-uid: d854115b-f115-4212-b8f4-17897de0d522
+        batch.kubernetes.io/controller-uid: 73f17ff3-c334-4c19-9209-ed9f402f091d
         batch.kubernetes.io/job-name: karta-e2e-job-running
-        controller-uid: d854115b-f115-4212-b8f4-17897de0d522
+        controller-uid: 73f17ff3-c334-4c19-9209-ed9f402f091d
         job-name: karta-e2e-job-running
       managedFields:
       - apiVersion: batch/v1
@@ -61,7 +61,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:47:06Z"
+        time: "2026-07-27T12:22:25Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -74,11 +74,11 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T15:47:06Z"
+        time: "2026-07-27T12:22:25Z"
       name: karta-e2e-job-running
       namespace: default
-      resourceVersion: "2852036"
-      uid: d854115b-f115-4212-b8f4-17897de0d522
+      resourceVersion: "3175924"
+      uid: 73f17ff3-c334-4c19-9209-ed9f402f091d
     spec:
       backoffLimit: 0
       completionMode: NonIndexed
@@ -88,14 +88,14 @@ steps:
       podReplacementPolicy: TerminatingOrFailed
       selector:
         matchLabels:
-          batch.kubernetes.io/controller-uid: d854115b-f115-4212-b8f4-17897de0d522
+          batch.kubernetes.io/controller-uid: 73f17ff3-c334-4c19-9209-ed9f402f091d
       suspend: false
       template:
         metadata:
           labels:
-            batch.kubernetes.io/controller-uid: d854115b-f115-4212-b8f4-17897de0d522
+            batch.kubernetes.io/controller-uid: 73f17ff3-c334-4c19-9209-ed9f402f091d
             batch.kubernetes.io/job-name: karta-e2e-job-running
-            controller-uid: d854115b-f115-4212-b8f4-17897de0d522
+            controller-uid: 73f17ff3-c334-4c19-9209-ed9f402f091d
             job-name: karta-e2e-job-running
         spec:
           containers:
@@ -129,7 +129,7 @@ steps:
     status:
       active: 1
       ready: 0
-      startTime: "2026-07-26T15:47:06Z"
+      startTime: "2026-07-27T12:22:25Z"
       terminating: 0
       uncountedTerminatedPods: {}
   expected:
@@ -140,9 +140,9 @@ steps:
             podTemplateSpec:
               metadata:
                 labels:
-                  batch.kubernetes.io/controller-uid: d854115b-f115-4212-b8f4-17897de0d522
+                  batch.kubernetes.io/controller-uid: 73f17ff3-c334-4c19-9209-ed9f402f091d
                   batch.kubernetes.io/job-name: karta-e2e-job-running
-                  controller-uid: d854115b-f115-4212-b8f4-17897de0d522
+                  controller-uid: 73f17ff3-c334-4c19-9209-ed9f402f091d
                   job-name: karta-e2e-job-running
               spec:
                 containers:
@@ -228,7 +228,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:47:06Z"
+        time: "2026-07-27T12:22:25Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -241,8 +241,8 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T15:47:13Z"
-      resourceVersion: "2852108"
+        time: "2026-07-27T12:22:33Z"
+      resourceVersion: "3175997"
     status:
       ready: 1
   state: Running

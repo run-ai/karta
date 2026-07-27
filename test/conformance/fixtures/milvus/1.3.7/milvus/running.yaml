@@ -11,7 +11,7 @@ steps:
       annotations:
         milvus.io/dependency-values-merged: "true"
         milvus.io/pod-service-label-added: "true"
-      creationTimestamp: "2026-07-26T15:52:51Z"
+      creationTimestamp: "2026-07-27T09:57:08Z"
       finalizers:
       - milvus.milvus.io/finalizer
       generation: 3
@@ -66,7 +66,7 @@ steps:
             f:mode: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:52:51Z"
+        time: "2026-07-27T09:57:08Z"
       - apiVersion: milvus.io/v1beta1
         fieldsType: FieldsV1
         fieldsV1:
@@ -252,60 +252,26 @@ steps:
             f:hookConfig: {}
         manager: manager
         operation: Update
-        time: "2026-07-26T15:52:51Z"
+        time: "2026-07-27T09:57:08Z"
       - apiVersion: milvus.io/v1beta1
         fieldsType: FieldsV1
         fieldsV1:
           f:status:
             .: {}
-            f:componentsDeployStatus:
-              .: {}
-              f:standalone:
-                .: {}
-                f:generation: {}
-                f:image: {}
-                f:status:
-                  .: {}
-                  f:availableReplicas: {}
-                  f:conditions:
-                    .: {}
-                    k:{"type":"Available"}:
-                      .: {}
-                      f:lastTransitionTime: {}
-                      f:lastUpdateTime: {}
-                      f:message: {}
-                      f:reason: {}
-                      f:status: {}
-                      f:type: {}
-                    k:{"type":"Progressing"}:
-                      .: {}
-                      f:lastTransitionTime: {}
-                      f:lastUpdateTime: {}
-                      f:message: {}
-                      f:reason: {}
-                      f:status: {}
-                      f:type: {}
-                  f:observedGeneration: {}
-                  f:readyReplicas: {}
-                  f:replicas: {}
-                  f:updatedReplicas: {}
-            f:conditions: {}
             f:currentImage: {}
-            f:endpoint: {}
             f:ingress:
               .: {}
               f:loadBalancer: {}
-            f:observedGeneration: {}
             f:rollingModeVersion: {}
             f:status: {}
         manager: manager
         operation: Update
         subresource: status
-        time: "2026-07-26T15:54:28Z"
+        time: "2026-07-27T09:57:08Z"
       name: karta-e2e-milvus
       namespace: default
-      resourceVersion: "2856631"
-      uid: e40d0a21-7dfd-4996-a533-344f91d46c3b
+      resourceVersion: "3100960"
+      uid: a5a235c0-8c6d-4095-b250-1b3840a2439c
     spec:
       components:
         disableMetric: false
@@ -469,61 +435,11 @@ steps:
       hookConfig: null
       mode: standalone
     status:
-      componentsDeployStatus:
-        standalone:
-          generation: 1
-          image: milvusdb/milvus:v2.6.11
-          status:
-            availableReplicas: 1
-            conditions:
-            - lastTransitionTime: "2026-07-26T15:54:09Z"
-              lastUpdateTime: "2026-07-26T15:54:09Z"
-              message: Deployment has minimum availability.
-              reason: MinimumReplicasAvailable
-              status: "True"
-              type: Available
-            - lastTransitionTime: "2026-07-26T15:53:28Z"
-              lastUpdateTime: "2026-07-26T15:54:09Z"
-              message: ReplicaSet "karta-e2e-milvus-milvus-standalone-5bb7989f65"
-                has successfully progressed.
-              reason: NewReplicaSetAvailable
-              status: "True"
-              type: Progressing
-            observedGeneration: 1
-            readyReplicas: 1
-            replicas: 1
-            updatedReplicas: 1
-      conditions:
-      - lastTransitionTime: "2026-07-26T15:54:28Z"
-        message: All Milvus components are healthy
-        reason: ReasonMilvusHealthy
-        status: "True"
-        type: MilvusReady
-      - lastTransitionTime: "2026-07-26T15:54:28Z"
-        message: Milvus components are all updated
-        reason: MilvusComponentsUpdated
-        status: "True"
-        type: MilvusUpdated
-      - lastTransitionTime: "2026-07-26T15:53:01Z"
-        message: Etcd endpoints is healthy
-        reason: EtcdReady
-        status: "True"
-        type: EtcdReady
-      - lastTransitionTime: "2026-07-26T15:53:28Z"
-        reason: StorageReady
-        status: "True"
-        type: StorageReady
-      - lastTransitionTime: "2026-07-26T15:53:01Z"
-        reason: MsgStreamReady
-        status: "True"
-        type: MsgStreamReady
       currentImage: milvusdb/milvus:v2.6.11
-      endpoint: karta-e2e-milvus-milvus.default:19530
       ingress:
         loadBalancer: {}
-      observedGeneration: 3
       rollingModeVersion: 2
-      status: Healthy
+      status: Pending
   expected:
     components:
       etcd:
@@ -548,6 +464,1314 @@ steps:
                   memory: 1Gi
             scale:
               replicas: 1
+    matchedStatuses:
+    - Initializing
+    phase: Pending
+  state: Initializing
+- expectedPatch:
+    conditions:
+    - message: '[standalone] not ready, detail: component[standalone]: deployment
+        not created'
+      reason: MilvusComponentNotHealthy
+      status: "False"
+      type: MilvusReady
+    - message: Milvus is performing rolling upgrade pending components[standalone]
+      reason: MilvusUpgradingImage
+      status: "False"
+      type: MilvusUpdated
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:components:
+              .: {}
+              f:imageUpdateMode: {}
+              f:standalone:
+                .: {}
+                f:replicas: {}
+                f:resources:
+                  .: {}
+                  f:requests:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+                f:serviceType: {}
+              f:targetPortType: {}
+            f:dependencies:
+              .: {}
+              f:etcd:
+                .: {}
+                f:external: {}
+                f:inCluster:
+                  .: {}
+                  f:deletionPolicy: {}
+                  f:values:
+                    .: {}
+                    f:replicaCount: {}
+              f:storage:
+                .: {}
+                f:external: {}
+                f:inCluster:
+                  .: {}
+                  f:deletionPolicy: {}
+                  f:values:
+                    .: {}
+                    f:mode: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:memory: {}
+                f:type: {}
+            f:mode: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T09:57:08Z"
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:annotations:
+              .: {}
+              f:milvus.io/dependency-values-merged: {}
+              f:milvus.io/pod-service-label-added: {}
+            f:finalizers:
+              .: {}
+              v:"milvus.milvus.io/finalizer": {}
+            f:labels:
+              .: {}
+              f:milvus.io/operator-version: {}
+          f:spec:
+            f:components:
+              f:disableMetric: {}
+              f:enableRollingUpdate: {}
+              f:image: {}
+              f:metricInterval: {}
+              f:paused: {}
+              f:probes: {}
+              f:rollingMode: {}
+              f:securityContext: {}
+              f:standalone:
+                f:paused: {}
+                f:probes: {}
+                f:securityContext: {}
+              f:updateConfigMapOnly: {}
+            f:config:
+              .: {}
+              f:dataCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:indexCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:queryCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:rootCoord:
+                .: {}
+                f:enableActiveStandby: {}
+            f:dependencies:
+              f:customMsgStream: {}
+              f:etcd:
+                f:endpoints: {}
+                f:inCluster:
+                  f:chartVersion: {}
+                  f:values:
+                    f:auth:
+                      .: {}
+                      f:rbac:
+                        .: {}
+                        f:create: {}
+                        f:enabled: {}
+                      f:token:
+                        .: {}
+                        f:enabled: {}
+                    f:autoCompactionMode: {}
+                    f:autoCompactionRetention: {}
+                    f:enabled: {}
+                    f:extraEnvVars: {}
+                    f:image:
+                      .: {}
+                      f:pullPolicy: {}
+                      f:repository: {}
+                      f:tag: {}
+                    f:livenessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:timeoutSeconds: {}
+                    f:name: {}
+                    f:pdb:
+                      .: {}
+                      f:create: {}
+                    f:persistence:
+                      .: {}
+                      f:accessMode: {}
+                      f:enabled: {}
+                      f:size: {}
+                      f:storageClass: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:periodSeconds: {}
+                      f:timeoutSeconds: {}
+                    f:service:
+                      .: {}
+                      f:peerPort: {}
+                      f:port: {}
+                      f:type: {}
+              f:kafka:
+                .: {}
+                f:external: {}
+              f:msgStreamType: {}
+              f:natsmq:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+              f:pulsar:
+                .: {}
+                f:endpoint: {}
+                f:external: {}
+              f:rocksmq:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+              f:storage:
+                f:endpoint: {}
+                f:inCluster:
+                  f:values:
+                    f:accessKey: {}
+                    f:bucketName: {}
+                    f:enabled: {}
+                    f:existingSecret: {}
+                    f:iamEndpoint: {}
+                    f:image:
+                      .: {}
+                      f:pullPolicy: {}
+                      f:tag: {}
+                    f:livenessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:name: {}
+                    f:persistence:
+                      .: {}
+                      f:accessMode: {}
+                      f:enabled: {}
+                      f:existingClaim: {}
+                      f:size: {}
+                      f:storageClass: {}
+                    f:podDisruptionBudget:
+                      .: {}
+                      f:enabled: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:region: {}
+                    f:rootPath: {}
+                    f:secretKey: {}
+                    f:service:
+                      .: {}
+                      f:port: {}
+                      f:type: {}
+                    f:startupProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:useIAM: {}
+                    f:useVirtualHost: {}
+                f:secretRef: {}
+              f:tei:
+                .: {}
+                f:enabled: {}
+              f:woodpecker:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+            f:hookConfig: {}
+        manager: manager
+        operation: Update
+        time: "2026-07-27T09:57:08Z"
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions: {}
+            f:currentImage: {}
+            f:endpoint: {}
+            f:ingress:
+              .: {}
+              f:loadBalancer: {}
+            f:observedGeneration: {}
+            f:rollingModeVersion: {}
+            f:status: {}
+        manager: manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T09:57:08Z"
+      resourceVersion: "3101011"
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-27T09:57:08Z"
+        message: '[standalone] not ready, detail: component[standalone]: deployment
+          not created'
+        reason: MilvusComponentNotHealthy
+        status: "False"
+        type: MilvusReady
+      - lastTransitionTime: "2026-07-27T09:57:08Z"
+        message: Milvus is performing rolling upgrade pending components[standalone]
+        reason: MilvusUpgradingImage
+        status: "False"
+        type: MilvusUpdated
+      endpoint: karta-e2e-milvus-milvus.default:19530
+      observedGeneration: 3
+  state: Initializing
+- expectedPatch:
+    conditions:
+    - message: '[standalone] not ready, detail: component[standalone]: deployment
+        not created'
+      reason: MilvusComponentNotHealthy
+      status: "False"
+      type: MilvusReady
+    - message: Milvus is performing rolling upgrade pending components[standalone]
+      reason: MilvusUpgradingImage
+      status: "False"
+      type: MilvusUpdated
+    - message: Etcd endpoints is healthy
+      reason: EtcdReady
+      status: "True"
+      type: EtcdReady
+    - reason: StorageReady
+      status: "True"
+      type: StorageReady
+    - reason: MsgStreamReady
+      status: "True"
+      type: MsgStreamReady
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:components:
+              .: {}
+              f:imageUpdateMode: {}
+              f:standalone:
+                .: {}
+                f:replicas: {}
+                f:resources:
+                  .: {}
+                  f:requests:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+                f:serviceType: {}
+              f:targetPortType: {}
+            f:dependencies:
+              .: {}
+              f:etcd:
+                .: {}
+                f:external: {}
+                f:inCluster:
+                  .: {}
+                  f:deletionPolicy: {}
+                  f:values:
+                    .: {}
+                    f:replicaCount: {}
+              f:storage:
+                .: {}
+                f:external: {}
+                f:inCluster:
+                  .: {}
+                  f:deletionPolicy: {}
+                  f:values:
+                    .: {}
+                    f:mode: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:memory: {}
+                f:type: {}
+            f:mode: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T09:57:08Z"
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:annotations:
+              .: {}
+              f:milvus.io/dependency-values-merged: {}
+              f:milvus.io/pod-service-label-added: {}
+            f:finalizers:
+              .: {}
+              v:"milvus.milvus.io/finalizer": {}
+            f:labels:
+              .: {}
+              f:milvus.io/operator-version: {}
+          f:spec:
+            f:components:
+              f:disableMetric: {}
+              f:enableRollingUpdate: {}
+              f:image: {}
+              f:metricInterval: {}
+              f:paused: {}
+              f:probes: {}
+              f:rollingMode: {}
+              f:securityContext: {}
+              f:standalone:
+                f:paused: {}
+                f:probes: {}
+                f:securityContext: {}
+              f:updateConfigMapOnly: {}
+            f:config:
+              .: {}
+              f:dataCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:indexCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:queryCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:rootCoord:
+                .: {}
+                f:enableActiveStandby: {}
+            f:dependencies:
+              f:customMsgStream: {}
+              f:etcd:
+                f:endpoints: {}
+                f:inCluster:
+                  f:chartVersion: {}
+                  f:values:
+                    f:auth:
+                      .: {}
+                      f:rbac:
+                        .: {}
+                        f:create: {}
+                        f:enabled: {}
+                      f:token:
+                        .: {}
+                        f:enabled: {}
+                    f:autoCompactionMode: {}
+                    f:autoCompactionRetention: {}
+                    f:enabled: {}
+                    f:extraEnvVars: {}
+                    f:image:
+                      .: {}
+                      f:pullPolicy: {}
+                      f:repository: {}
+                      f:tag: {}
+                    f:livenessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:timeoutSeconds: {}
+                    f:name: {}
+                    f:pdb:
+                      .: {}
+                      f:create: {}
+                    f:persistence:
+                      .: {}
+                      f:accessMode: {}
+                      f:enabled: {}
+                      f:size: {}
+                      f:storageClass: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:periodSeconds: {}
+                      f:timeoutSeconds: {}
+                    f:service:
+                      .: {}
+                      f:peerPort: {}
+                      f:port: {}
+                      f:type: {}
+              f:kafka:
+                .: {}
+                f:external: {}
+              f:msgStreamType: {}
+              f:natsmq:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+              f:pulsar:
+                .: {}
+                f:endpoint: {}
+                f:external: {}
+              f:rocksmq:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+              f:storage:
+                f:endpoint: {}
+                f:inCluster:
+                  f:values:
+                    f:accessKey: {}
+                    f:bucketName: {}
+                    f:enabled: {}
+                    f:existingSecret: {}
+                    f:iamEndpoint: {}
+                    f:image:
+                      .: {}
+                      f:pullPolicy: {}
+                      f:tag: {}
+                    f:livenessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:name: {}
+                    f:persistence:
+                      .: {}
+                      f:accessMode: {}
+                      f:enabled: {}
+                      f:existingClaim: {}
+                      f:size: {}
+                      f:storageClass: {}
+                    f:podDisruptionBudget:
+                      .: {}
+                      f:enabled: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:region: {}
+                    f:rootPath: {}
+                    f:secretKey: {}
+                    f:service:
+                      .: {}
+                      f:port: {}
+                      f:type: {}
+                    f:startupProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:useIAM: {}
+                    f:useVirtualHost: {}
+                f:secretRef: {}
+              f:tei:
+                .: {}
+                f:enabled: {}
+              f:woodpecker:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+            f:hookConfig: {}
+        manager: manager
+        operation: Update
+        time: "2026-07-27T09:57:08Z"
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions: {}
+            f:currentImage: {}
+            f:endpoint: {}
+            f:ingress:
+              .: {}
+              f:loadBalancer: {}
+            f:observedGeneration: {}
+            f:rollingModeVersion: {}
+            f:status: {}
+        manager: manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T09:57:38Z"
+      resourceVersion: "3101326"
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-27T09:57:08Z"
+        message: '[standalone] not ready, detail: component[standalone]: deployment
+          not created'
+        reason: MilvusComponentNotHealthy
+        status: "False"
+        type: MilvusReady
+      - lastTransitionTime: "2026-07-27T09:57:08Z"
+        message: Milvus is performing rolling upgrade pending components[standalone]
+        reason: MilvusUpgradingImage
+        status: "False"
+        type: MilvusUpdated
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        message: Etcd endpoints is healthy
+        reason: EtcdReady
+        status: "True"
+        type: EtcdReady
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        reason: StorageReady
+        status: "True"
+        type: StorageReady
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        reason: MsgStreamReady
+        status: "True"
+        type: MsgStreamReady
+  state: Initializing
+- expectedPatch:
+    conditions:
+    - message: '[standalone] not ready, detail: component[standalone]: pod[karta-e2e-milvus-milvus-standalone-5bb7989f65-fm7dm]:
+        container[standalone]: currentState[waiting] reason[PodInitializing]'
+      reason: MilvusComponentNotHealthy
+      status: "False"
+      type: MilvusReady
+    - message: Milvus components[standalone] are updating
+      reason: MilvusComponentsUpdating
+      status: "False"
+      type: MilvusUpdated
+    - message: Etcd endpoints is healthy
+      reason: EtcdReady
+      status: "True"
+      type: EtcdReady
+    - reason: StorageReady
+      status: "True"
+      type: StorageReady
+    - reason: MsgStreamReady
+      status: "True"
+      type: MsgStreamReady
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:components:
+              .: {}
+              f:imageUpdateMode: {}
+              f:standalone:
+                .: {}
+                f:replicas: {}
+                f:resources:
+                  .: {}
+                  f:requests:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+                f:serviceType: {}
+              f:targetPortType: {}
+            f:dependencies:
+              .: {}
+              f:etcd:
+                .: {}
+                f:external: {}
+                f:inCluster:
+                  .: {}
+                  f:deletionPolicy: {}
+                  f:values:
+                    .: {}
+                    f:replicaCount: {}
+              f:storage:
+                .: {}
+                f:external: {}
+                f:inCluster:
+                  .: {}
+                  f:deletionPolicy: {}
+                  f:values:
+                    .: {}
+                    f:mode: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:memory: {}
+                f:type: {}
+            f:mode: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T09:57:08Z"
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:annotations:
+              .: {}
+              f:milvus.io/dependency-values-merged: {}
+              f:milvus.io/pod-service-label-added: {}
+            f:finalizers:
+              .: {}
+              v:"milvus.milvus.io/finalizer": {}
+            f:labels:
+              .: {}
+              f:milvus.io/operator-version: {}
+          f:spec:
+            f:components:
+              f:disableMetric: {}
+              f:enableRollingUpdate: {}
+              f:image: {}
+              f:metricInterval: {}
+              f:paused: {}
+              f:probes: {}
+              f:rollingMode: {}
+              f:securityContext: {}
+              f:standalone:
+                f:paused: {}
+                f:probes: {}
+                f:securityContext: {}
+              f:updateConfigMapOnly: {}
+            f:config:
+              .: {}
+              f:dataCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:indexCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:queryCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:rootCoord:
+                .: {}
+                f:enableActiveStandby: {}
+            f:dependencies:
+              f:customMsgStream: {}
+              f:etcd:
+                f:endpoints: {}
+                f:inCluster:
+                  f:chartVersion: {}
+                  f:values:
+                    f:auth:
+                      .: {}
+                      f:rbac:
+                        .: {}
+                        f:create: {}
+                        f:enabled: {}
+                      f:token:
+                        .: {}
+                        f:enabled: {}
+                    f:autoCompactionMode: {}
+                    f:autoCompactionRetention: {}
+                    f:enabled: {}
+                    f:extraEnvVars: {}
+                    f:image:
+                      .: {}
+                      f:pullPolicy: {}
+                      f:repository: {}
+                      f:tag: {}
+                    f:livenessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:timeoutSeconds: {}
+                    f:name: {}
+                    f:pdb:
+                      .: {}
+                      f:create: {}
+                    f:persistence:
+                      .: {}
+                      f:accessMode: {}
+                      f:enabled: {}
+                      f:size: {}
+                      f:storageClass: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:periodSeconds: {}
+                      f:timeoutSeconds: {}
+                    f:service:
+                      .: {}
+                      f:peerPort: {}
+                      f:port: {}
+                      f:type: {}
+              f:kafka:
+                .: {}
+                f:external: {}
+              f:msgStreamType: {}
+              f:natsmq:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+              f:pulsar:
+                .: {}
+                f:endpoint: {}
+                f:external: {}
+              f:rocksmq:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+              f:storage:
+                f:endpoint: {}
+                f:inCluster:
+                  f:values:
+                    f:accessKey: {}
+                    f:bucketName: {}
+                    f:enabled: {}
+                    f:existingSecret: {}
+                    f:iamEndpoint: {}
+                    f:image:
+                      .: {}
+                      f:pullPolicy: {}
+                      f:tag: {}
+                    f:livenessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:name: {}
+                    f:persistence:
+                      .: {}
+                      f:accessMode: {}
+                      f:enabled: {}
+                      f:existingClaim: {}
+                      f:size: {}
+                      f:storageClass: {}
+                    f:podDisruptionBudget:
+                      .: {}
+                      f:enabled: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:region: {}
+                    f:rootPath: {}
+                    f:secretKey: {}
+                    f:service:
+                      .: {}
+                      f:port: {}
+                      f:type: {}
+                    f:startupProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:useIAM: {}
+                    f:useVirtualHost: {}
+                f:secretRef: {}
+              f:tei:
+                .: {}
+                f:enabled: {}
+              f:woodpecker:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+            f:hookConfig: {}
+        manager: manager
+        operation: Update
+        time: "2026-07-27T09:57:08Z"
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:componentsDeployStatus:
+              .: {}
+              f:standalone:
+                .: {}
+                f:generation: {}
+                f:image: {}
+                f:status:
+                  .: {}
+                  f:conditions:
+                    .: {}
+                    k:{"type":"Available"}:
+                      .: {}
+                      f:lastTransitionTime: {}
+                      f:lastUpdateTime: {}
+                      f:message: {}
+                      f:reason: {}
+                      f:status: {}
+                      f:type: {}
+                    k:{"type":"Progressing"}:
+                      .: {}
+                      f:lastTransitionTime: {}
+                      f:lastUpdateTime: {}
+                      f:message: {}
+                      f:reason: {}
+                      f:status: {}
+                      f:type: {}
+                  f:observedGeneration: {}
+                  f:replicas: {}
+                  f:unavailableReplicas: {}
+                  f:updatedReplicas: {}
+            f:conditions: {}
+            f:currentImage: {}
+            f:endpoint: {}
+            f:ingress:
+              .: {}
+              f:loadBalancer: {}
+            f:observedGeneration: {}
+            f:rollingModeVersion: {}
+            f:status: {}
+        manager: manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T09:57:38Z"
+      resourceVersion: "3101344"
+    status:
+      componentsDeployStatus:
+        standalone:
+          generation: 1
+          image: milvusdb/milvus:v2.6.11
+          status:
+            conditions:
+            - lastTransitionTime: "2026-07-27T09:57:38Z"
+              lastUpdateTime: "2026-07-27T09:57:38Z"
+              message: Deployment does not have minimum availability.
+              reason: MinimumReplicasUnavailable
+              status: "False"
+              type: Available
+            - lastTransitionTime: "2026-07-27T09:57:38Z"
+              lastUpdateTime: "2026-07-27T09:57:38Z"
+              message: ReplicaSet "karta-e2e-milvus-milvus-standalone-5bb7989f65"
+                is progressing.
+              reason: ReplicaSetUpdated
+              status: "True"
+              type: Progressing
+            observedGeneration: 1
+            replicas: 1
+            unavailableReplicas: 1
+            updatedReplicas: 1
+      conditions:
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        message: '[standalone] not ready, detail: component[standalone]: pod[karta-e2e-milvus-milvus-standalone-5bb7989f65-fm7dm]:
+          container[standalone]: currentState[waiting] reason[PodInitializing]'
+        reason: MilvusComponentNotHealthy
+        status: "False"
+        type: MilvusReady
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        message: Milvus components[standalone] are updating
+        reason: MilvusComponentsUpdating
+        status: "False"
+        type: MilvusUpdated
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        message: Etcd endpoints is healthy
+        reason: EtcdReady
+        status: "True"
+        type: EtcdReady
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        reason: StorageReady
+        status: "True"
+        type: StorageReady
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        reason: MsgStreamReady
+        status: "True"
+        type: MsgStreamReady
+  state: Initializing
+- expectedPatch:
+    conditions:
+    - message: '[standalone] not ready, detail: component[standalone]: deployment
+        status[Available:False]: reason[MinimumReplicasUnavailable]: Deployment does
+        not have minimum availability.'
+      reason: MilvusComponentNotHealthy
+      status: "False"
+      type: MilvusReady
+    - message: Milvus components[standalone] are updating
+      reason: MilvusComponentsUpdating
+      status: "False"
+      type: MilvusUpdated
+    - message: Etcd endpoints is healthy
+      reason: EtcdReady
+      status: "True"
+      type: EtcdReady
+    - reason: StorageReady
+      status: "True"
+      type: StorageReady
+    - reason: MsgStreamReady
+      status: "True"
+      type: MsgStreamReady
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:components:
+              .: {}
+              f:imageUpdateMode: {}
+              f:standalone:
+                .: {}
+                f:replicas: {}
+                f:resources:
+                  .: {}
+                  f:requests:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+                f:serviceType: {}
+              f:targetPortType: {}
+            f:dependencies:
+              .: {}
+              f:etcd:
+                .: {}
+                f:external: {}
+                f:inCluster:
+                  .: {}
+                  f:deletionPolicy: {}
+                  f:values:
+                    .: {}
+                    f:replicaCount: {}
+              f:storage:
+                .: {}
+                f:external: {}
+                f:inCluster:
+                  .: {}
+                  f:deletionPolicy: {}
+                  f:values:
+                    .: {}
+                    f:mode: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:memory: {}
+                f:type: {}
+            f:mode: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T09:57:08Z"
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:annotations:
+              .: {}
+              f:milvus.io/dependency-values-merged: {}
+              f:milvus.io/pod-service-label-added: {}
+            f:finalizers:
+              .: {}
+              v:"milvus.milvus.io/finalizer": {}
+            f:labels:
+              .: {}
+              f:milvus.io/operator-version: {}
+          f:spec:
+            f:components:
+              f:disableMetric: {}
+              f:enableRollingUpdate: {}
+              f:image: {}
+              f:metricInterval: {}
+              f:paused: {}
+              f:probes: {}
+              f:rollingMode: {}
+              f:securityContext: {}
+              f:standalone:
+                f:paused: {}
+                f:probes: {}
+                f:securityContext: {}
+              f:updateConfigMapOnly: {}
+            f:config:
+              .: {}
+              f:dataCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:indexCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:queryCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:rootCoord:
+                .: {}
+                f:enableActiveStandby: {}
+            f:dependencies:
+              f:customMsgStream: {}
+              f:etcd:
+                f:endpoints: {}
+                f:inCluster:
+                  f:chartVersion: {}
+                  f:values:
+                    f:auth:
+                      .: {}
+                      f:rbac:
+                        .: {}
+                        f:create: {}
+                        f:enabled: {}
+                      f:token:
+                        .: {}
+                        f:enabled: {}
+                    f:autoCompactionMode: {}
+                    f:autoCompactionRetention: {}
+                    f:enabled: {}
+                    f:extraEnvVars: {}
+                    f:image:
+                      .: {}
+                      f:pullPolicy: {}
+                      f:repository: {}
+                      f:tag: {}
+                    f:livenessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:timeoutSeconds: {}
+                    f:name: {}
+                    f:pdb:
+                      .: {}
+                      f:create: {}
+                    f:persistence:
+                      .: {}
+                      f:accessMode: {}
+                      f:enabled: {}
+                      f:size: {}
+                      f:storageClass: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:periodSeconds: {}
+                      f:timeoutSeconds: {}
+                    f:service:
+                      .: {}
+                      f:peerPort: {}
+                      f:port: {}
+                      f:type: {}
+              f:kafka:
+                .: {}
+                f:external: {}
+              f:msgStreamType: {}
+              f:natsmq:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+              f:pulsar:
+                .: {}
+                f:endpoint: {}
+                f:external: {}
+              f:rocksmq:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+              f:storage:
+                f:endpoint: {}
+                f:inCluster:
+                  f:values:
+                    f:accessKey: {}
+                    f:bucketName: {}
+                    f:enabled: {}
+                    f:existingSecret: {}
+                    f:iamEndpoint: {}
+                    f:image:
+                      .: {}
+                      f:pullPolicy: {}
+                      f:tag: {}
+                    f:livenessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:name: {}
+                    f:persistence:
+                      .: {}
+                      f:accessMode: {}
+                      f:enabled: {}
+                      f:existingClaim: {}
+                      f:size: {}
+                      f:storageClass: {}
+                    f:podDisruptionBudget:
+                      .: {}
+                      f:enabled: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:region: {}
+                    f:rootPath: {}
+                    f:secretKey: {}
+                    f:service:
+                      .: {}
+                      f:port: {}
+                      f:type: {}
+                    f:startupProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:useIAM: {}
+                    f:useVirtualHost: {}
+                f:secretRef: {}
+              f:tei:
+                .: {}
+                f:enabled: {}
+              f:woodpecker:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+            f:hookConfig: {}
+        manager: manager
+        operation: Update
+        time: "2026-07-27T09:57:08Z"
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:componentsDeployStatus:
+              .: {}
+              f:standalone:
+                .: {}
+                f:generation: {}
+                f:image: {}
+                f:status:
+                  .: {}
+                  f:conditions:
+                    .: {}
+                    k:{"type":"Available"}:
+                      .: {}
+                      f:lastTransitionTime: {}
+                      f:lastUpdateTime: {}
+                      f:message: {}
+                      f:reason: {}
+                      f:status: {}
+                      f:type: {}
+                    k:{"type":"Progressing"}:
+                      .: {}
+                      f:lastTransitionTime: {}
+                      f:lastUpdateTime: {}
+                      f:message: {}
+                      f:reason: {}
+                      f:status: {}
+                      f:type: {}
+                  f:observedGeneration: {}
+                  f:readyReplicas: {}
+                  f:replicas: {}
+                  f:unavailableReplicas: {}
+                  f:updatedReplicas: {}
+            f:conditions: {}
+            f:currentImage: {}
+            f:endpoint: {}
+            f:ingress:
+              .: {}
+              f:loadBalancer: {}
+            f:observedGeneration: {}
+            f:rollingModeVersion: {}
+            f:status: {}
+        manager: manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T09:58:02Z"
+      resourceVersion: "3101557"
+    status:
+      componentsDeployStatus:
+        standalone:
+          status:
+            conditions:
+            - lastTransitionTime: "2026-07-27T09:57:38Z"
+              lastUpdateTime: "2026-07-27T09:57:38Z"
+              message: Deployment does not have minimum availability.
+              reason: MinimumReplicasUnavailable
+              status: "False"
+              type: Available
+            - lastTransitionTime: "2026-07-27T09:57:38Z"
+              lastUpdateTime: "2026-07-27T09:57:49Z"
+              message: ReplicaSet "karta-e2e-milvus-milvus-standalone-5bb7989f65"
+                is progressing.
+              reason: ReplicaSetUpdated
+              status: "True"
+              type: Progressing
+            readyReplicas: 1
+      conditions:
+      - lastTransitionTime: "2026-07-27T09:58:02Z"
+        message: '[standalone] not ready, detail: component[standalone]: deployment
+          status[Available:False]: reason[MinimumReplicasUnavailable]: Deployment
+          does not have minimum availability.'
+        reason: MilvusComponentNotHealthy
+        status: "False"
+        type: MilvusReady
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        message: Milvus components[standalone] are updating
+        reason: MilvusComponentsUpdating
+        status: "False"
+        type: MilvusUpdated
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        message: Etcd endpoints is healthy
+        reason: EtcdReady
+        status: "True"
+        type: EtcdReady
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        reason: StorageReady
+        status: "True"
+        type: StorageReady
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        reason: MsgStreamReady
+        status: "True"
+        type: MsgStreamReady
+  state: Initializing
+- expectedPatch:
     conditions:
     - message: All Milvus components are healthy
       reason: ReasonMilvusHealthy
@@ -570,6 +1794,339 @@ steps:
     matchedStatuses:
     - Running
     phase: Healthy
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:components:
+              .: {}
+              f:imageUpdateMode: {}
+              f:standalone:
+                .: {}
+                f:replicas: {}
+                f:resources:
+                  .: {}
+                  f:requests:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+                f:serviceType: {}
+              f:targetPortType: {}
+            f:dependencies:
+              .: {}
+              f:etcd:
+                .: {}
+                f:external: {}
+                f:inCluster:
+                  .: {}
+                  f:deletionPolicy: {}
+                  f:values:
+                    .: {}
+                    f:replicaCount: {}
+              f:storage:
+                .: {}
+                f:external: {}
+                f:inCluster:
+                  .: {}
+                  f:deletionPolicy: {}
+                  f:values:
+                    .: {}
+                    f:mode: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:memory: {}
+                f:type: {}
+            f:mode: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T09:57:08Z"
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:annotations:
+              .: {}
+              f:milvus.io/dependency-values-merged: {}
+              f:milvus.io/pod-service-label-added: {}
+            f:finalizers:
+              .: {}
+              v:"milvus.milvus.io/finalizer": {}
+            f:labels:
+              .: {}
+              f:milvus.io/operator-version: {}
+          f:spec:
+            f:components:
+              f:disableMetric: {}
+              f:enableRollingUpdate: {}
+              f:image: {}
+              f:metricInterval: {}
+              f:paused: {}
+              f:probes: {}
+              f:rollingMode: {}
+              f:securityContext: {}
+              f:standalone:
+                f:paused: {}
+                f:probes: {}
+                f:securityContext: {}
+              f:updateConfigMapOnly: {}
+            f:config:
+              .: {}
+              f:dataCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:indexCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:queryCoord:
+                .: {}
+                f:enableActiveStandby: {}
+              f:rootCoord:
+                .: {}
+                f:enableActiveStandby: {}
+            f:dependencies:
+              f:customMsgStream: {}
+              f:etcd:
+                f:endpoints: {}
+                f:inCluster:
+                  f:chartVersion: {}
+                  f:values:
+                    f:auth:
+                      .: {}
+                      f:rbac:
+                        .: {}
+                        f:create: {}
+                        f:enabled: {}
+                      f:token:
+                        .: {}
+                        f:enabled: {}
+                    f:autoCompactionMode: {}
+                    f:autoCompactionRetention: {}
+                    f:enabled: {}
+                    f:extraEnvVars: {}
+                    f:image:
+                      .: {}
+                      f:pullPolicy: {}
+                      f:repository: {}
+                      f:tag: {}
+                    f:livenessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:timeoutSeconds: {}
+                    f:name: {}
+                    f:pdb:
+                      .: {}
+                      f:create: {}
+                    f:persistence:
+                      .: {}
+                      f:accessMode: {}
+                      f:enabled: {}
+                      f:size: {}
+                      f:storageClass: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:periodSeconds: {}
+                      f:timeoutSeconds: {}
+                    f:service:
+                      .: {}
+                      f:peerPort: {}
+                      f:port: {}
+                      f:type: {}
+              f:kafka:
+                .: {}
+                f:external: {}
+              f:msgStreamType: {}
+              f:natsmq:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+              f:pulsar:
+                .: {}
+                f:endpoint: {}
+                f:external: {}
+              f:rocksmq:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+              f:storage:
+                f:endpoint: {}
+                f:inCluster:
+                  f:values:
+                    f:accessKey: {}
+                    f:bucketName: {}
+                    f:enabled: {}
+                    f:existingSecret: {}
+                    f:iamEndpoint: {}
+                    f:image:
+                      .: {}
+                      f:pullPolicy: {}
+                      f:tag: {}
+                    f:livenessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:name: {}
+                    f:persistence:
+                      .: {}
+                      f:accessMode: {}
+                      f:enabled: {}
+                      f:existingClaim: {}
+                      f:size: {}
+                      f:storageClass: {}
+                    f:podDisruptionBudget:
+                      .: {}
+                      f:enabled: {}
+                    f:readinessProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:region: {}
+                    f:rootPath: {}
+                    f:secretKey: {}
+                    f:service:
+                      .: {}
+                      f:port: {}
+                      f:type: {}
+                    f:startupProbe:
+                      .: {}
+                      f:enabled: {}
+                      f:failureThreshold: {}
+                      f:initialDelaySeconds: {}
+                      f:periodSeconds: {}
+                      f:successThreshold: {}
+                      f:timeoutSeconds: {}
+                    f:useIAM: {}
+                    f:useVirtualHost: {}
+                f:secretRef: {}
+              f:tei:
+                .: {}
+                f:enabled: {}
+              f:woodpecker:
+                .: {}
+                f:persistence:
+                  .: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:spec: {}
+            f:hookConfig: {}
+        manager: manager
+        operation: Update
+        time: "2026-07-27T09:57:08Z"
+      - apiVersion: milvus.io/v1beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:componentsDeployStatus:
+              .: {}
+              f:standalone:
+                .: {}
+                f:generation: {}
+                f:image: {}
+                f:status:
+                  .: {}
+                  f:availableReplicas: {}
+                  f:conditions:
+                    .: {}
+                    k:{"type":"Available"}:
+                      .: {}
+                      f:lastTransitionTime: {}
+                      f:lastUpdateTime: {}
+                      f:message: {}
+                      f:reason: {}
+                      f:status: {}
+                      f:type: {}
+                    k:{"type":"Progressing"}:
+                      .: {}
+                      f:lastTransitionTime: {}
+                      f:lastUpdateTime: {}
+                      f:message: {}
+                      f:reason: {}
+                      f:status: {}
+                      f:type: {}
+                  f:observedGeneration: {}
+                  f:readyReplicas: {}
+                  f:replicas: {}
+                  f:updatedReplicas: {}
+            f:conditions: {}
+            f:currentImage: {}
+            f:endpoint: {}
+            f:ingress:
+              .: {}
+              f:loadBalancer: {}
+            f:observedGeneration: {}
+            f:rollingModeVersion: {}
+            f:status: {}
+        manager: manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T09:58:38Z"
+      resourceVersion: "3101834"
+    status:
+      componentsDeployStatus:
+        standalone:
+          status:
+            availableReplicas: 1
+            conditions:
+            - lastTransitionTime: "2026-07-27T09:58:19Z"
+              lastUpdateTime: "2026-07-27T09:58:19Z"
+              message: Deployment has minimum availability.
+              reason: MinimumReplicasAvailable
+              status: "True"
+              type: Available
+            - lastTransitionTime: "2026-07-27T09:57:38Z"
+              lastUpdateTime: "2026-07-27T09:58:19Z"
+              message: ReplicaSet "karta-e2e-milvus-milvus-standalone-5bb7989f65"
+                has successfully progressed.
+              reason: NewReplicaSetAvailable
+              status: "True"
+              type: Progressing
+            unavailableReplicas: null
+      conditions:
+      - lastTransitionTime: "2026-07-27T09:58:38Z"
+        message: All Milvus components are healthy
+        reason: ReasonMilvusHealthy
+        status: "True"
+        type: MilvusReady
+      - lastTransitionTime: "2026-07-27T09:58:38Z"
+        message: Milvus components are all updated
+        reason: MilvusComponentsUpdated
+        status: "True"
+        type: MilvusUpdated
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        message: Etcd endpoints is healthy
+        reason: EtcdReady
+        status: "True"
+        type: EtcdReady
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        reason: StorageReady
+        status: "True"
+        type: StorageReady
+      - lastTransitionTime: "2026-07-27T09:57:38Z"
+        reason: MsgStreamReady
+        status: "True"
+        type: MsgStreamReady
+      status: Healthy
   state: Running
 version: 1.3.7
 want: Running

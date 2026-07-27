@@ -8,7 +8,7 @@ steps:
     apiVersion: v1
     kind: Pod
     metadata:
-      creationTimestamp: "2026-07-26T15:48:09Z"
+      creationTimestamp: "2026-07-27T12:28:21Z"
       generation: 1
       managedFields:
       - apiVersion: v1
@@ -55,11 +55,11 @@ steps:
             f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:48:09Z"
+        time: "2026-07-27T12:28:21Z"
       name: karta-e2e-pod
       namespace: default
-      resourceVersion: "2852608"
-      uid: 8d62a55d-6933-4701-9f50-d755885a0deb
+      resourceVersion: "3180684"
+      uid: b9533a8d-1096-45e3-97cd-515c7cabe4fd
     spec:
       automountServiceAccountToken: false
       containers:
@@ -113,7 +113,7 @@ steps:
     status:
       conditions:
       - lastProbeTime: null
-        lastTransitionTime: "2026-07-26T15:48:09Z"
+        lastTransitionTime: "2026-07-27T12:28:21Z"
         status: "True"
         type: PodScheduled
       phase: Pending
@@ -125,18 +125,18 @@ steps:
           "":
             podTemplateSpec:
               metadata:
-                creationTimestamp: "2026-07-26T15:48:09Z"
+                creationTimestamp: "2026-07-27T12:28:21Z"
                 generation: 1
                 managedFields:
                 - apiVersion: v1
                   fieldsType: FieldsV1
                   manager: e2e.test
                   operation: Update
-                  time: "2026-07-26T15:48:09Z"
+                  time: "2026-07-27T12:28:21Z"
                 name: karta-e2e-pod
                 namespace: default
-                resourceVersion: "2852608"
-                uid: 8d62a55d-6933-4701-9f50-d755885a0deb
+                resourceVersion: "3180684"
+                uid: b9533a8d-1096-45e3-97cd-515c7cabe4fd
               spec:
                 automountServiceAccountToken: false
                 containers:
@@ -207,14 +207,607 @@ steps:
                   fieldsType: FieldsV1
                   manager: e2e.test
                   operation: Update
-                  time: "2026-07-26T15:48:09Z"
+                  time: "2026-07-27T12:28:21Z"
                 - apiVersion: v1
                   fieldsType: FieldsV1
                   manager: kubelet
                   operation: Update
                   subresource: status
-                  time: "2026-07-26T15:48:19Z"
-                resourceVersion: "2852695"
+                  time: "2026-07-27T12:28:21Z"
+                resourceVersion: "3180686"
+    conditions:
+    - status: "False"
+      type: PodReadyToStartContainers
+    - message: 'containers with incomplete status: [init-wait]'
+      reason: ContainersNotInitialized
+      status: "False"
+      type: Initialized
+    - message: 'containers with unready status: [worker]'
+      reason: ContainersNotReady
+      status: "False"
+      type: Ready
+    - message: 'containers with unready status: [worker]'
+      reason: ContainersNotReady
+      status: "False"
+      type: ContainersReady
+    - status: "True"
+      type: PodScheduled
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:automountServiceAccountToken: {}
+            f:containers:
+              k:{"name":"worker"}:
+                .: {}
+                f:command: {}
+                f:image: {}
+                f:imagePullPolicy: {}
+                f:name: {}
+                f:resources:
+                  .: {}
+                  f:requests:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+                f:terminationMessagePath: {}
+                f:terminationMessagePolicy: {}
+            f:dnsPolicy: {}
+            f:enableServiceLinks: {}
+            f:initContainers:
+              .: {}
+              k:{"name":"init-wait"}:
+                .: {}
+                f:command: {}
+                f:image: {}
+                f:imagePullPolicy: {}
+                f:name: {}
+                f:resources:
+                  .: {}
+                  f:requests:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+                f:terminationMessagePath: {}
+                f:terminationMessagePolicy: {}
+            f:restartPolicy: {}
+            f:schedulerName: {}
+            f:securityContext: {}
+            f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:28:21Z"
+      - apiVersion: v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:conditions:
+              k:{"type":"ContainersReady"}:
+                .: {}
+                f:lastProbeTime: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Initialized"}:
+                .: {}
+                f:lastProbeTime: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"PodReadyToStartContainers"}:
+                .: {}
+                f:lastProbeTime: {}
+                f:lastTransitionTime: {}
+                f:observedGeneration: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"PodScheduled"}:
+                f:observedGeneration: {}
+              k:{"type":"Ready"}:
+                .: {}
+                f:lastProbeTime: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:containerStatuses: {}
+            f:hostIP: {}
+            f:hostIPs: {}
+            f:initContainerStatuses: {}
+            f:observedGeneration: {}
+            f:startTime: {}
+        manager: kubelet
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:28:21Z"
+      resourceVersion: "3180686"
+    status:
+      conditions:
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        observedGeneration: 1
+        status: "False"
+        type: PodReadyToStartContainers
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        message: 'containers with incomplete status: [init-wait]'
+        observedGeneration: 1
+        reason: ContainersNotInitialized
+        status: "False"
+        type: Initialized
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        message: 'containers with unready status: [worker]'
+        observedGeneration: 1
+        reason: ContainersNotReady
+        status: "False"
+        type: Ready
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        message: 'containers with unready status: [worker]'
+        observedGeneration: 1
+        reason: ContainersNotReady
+        status: "False"
+        type: ContainersReady
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        observedGeneration: 1
+        status: "True"
+        type: PodScheduled
+      containerStatuses:
+      - image: busybox:1.36
+        imageID: ""
+        lastState: {}
+        name: worker
+        ready: false
+        restartCount: 0
+        started: false
+        state:
+          waiting:
+            reason: PodInitializing
+      hostIP: 172.18.0.4
+      hostIPs:
+      - ip: 172.18.0.4
+      initContainerStatuses:
+      - image: busybox:1.36
+        imageID: ""
+        lastState: {}
+        name: init-wait
+        ready: false
+        restartCount: 0
+        started: false
+        state:
+          waiting:
+            reason: PodInitializing
+      observedGeneration: 1
+      startTime: "2026-07-27T12:28:21Z"
+  state: Initializing
+- expectedPatch:
+    components:
+      pod:
+        instances:
+          "":
+            podTemplateSpec:
+              metadata:
+                resourceVersion: "3180712"
+    conditions:
+    - status: "True"
+      type: PodReadyToStartContainers
+    - message: 'containers with incomplete status: [init-wait]'
+      reason: ContainersNotInitialized
+      status: "False"
+      type: Initialized
+    - message: 'containers with unready status: [worker]'
+      reason: ContainersNotReady
+      status: "False"
+      type: Ready
+    - message: 'containers with unready status: [worker]'
+      reason: ContainersNotReady
+      status: "False"
+      type: ContainersReady
+    - status: "True"
+      type: PodScheduled
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:automountServiceAccountToken: {}
+            f:containers:
+              k:{"name":"worker"}:
+                .: {}
+                f:command: {}
+                f:image: {}
+                f:imagePullPolicy: {}
+                f:name: {}
+                f:resources:
+                  .: {}
+                  f:requests:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+                f:terminationMessagePath: {}
+                f:terminationMessagePolicy: {}
+            f:dnsPolicy: {}
+            f:enableServiceLinks: {}
+            f:initContainers:
+              .: {}
+              k:{"name":"init-wait"}:
+                .: {}
+                f:command: {}
+                f:image: {}
+                f:imagePullPolicy: {}
+                f:name: {}
+                f:resources:
+                  .: {}
+                  f:requests:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+                f:terminationMessagePath: {}
+                f:terminationMessagePolicy: {}
+            f:restartPolicy: {}
+            f:schedulerName: {}
+            f:securityContext: {}
+            f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:28:21Z"
+      - apiVersion: v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:conditions:
+              k:{"type":"ContainersReady"}:
+                .: {}
+                f:lastProbeTime: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Initialized"}:
+                .: {}
+                f:lastProbeTime: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"PodReadyToStartContainers"}:
+                .: {}
+                f:lastProbeTime: {}
+                f:lastTransitionTime: {}
+                f:observedGeneration: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"PodScheduled"}:
+                f:observedGeneration: {}
+              k:{"type":"Ready"}:
+                .: {}
+                f:lastProbeTime: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:containerStatuses: {}
+            f:hostIP: {}
+            f:hostIPs: {}
+            f:initContainerStatuses: {}
+            f:observedGeneration: {}
+            f:podIP: {}
+            f:podIPs:
+              .: {}
+              k:{"ip":"10.244.1.194"}:
+                .: {}
+                f:ip: {}
+            f:startTime: {}
+        manager: kubelet
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:28:21Z"
+      resourceVersion: "3180712"
+    status:
+      conditions:
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        observedGeneration: 1
+        status: "True"
+        type: PodReadyToStartContainers
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        message: 'containers with incomplete status: [init-wait]'
+        observedGeneration: 1
+        reason: ContainersNotInitialized
+        status: "False"
+        type: Initialized
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        message: 'containers with unready status: [worker]'
+        observedGeneration: 1
+        reason: ContainersNotReady
+        status: "False"
+        type: Ready
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        message: 'containers with unready status: [worker]'
+        observedGeneration: 1
+        reason: ContainersNotReady
+        status: "False"
+        type: ContainersReady
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        observedGeneration: 1
+        status: "True"
+        type: PodScheduled
+      initContainerStatuses:
+      - allocatedResources:
+          cpu: 10m
+          memory: 16Mi
+        containerID: containerd://58a8588568902a971d3f4018edda050a997b0cb00f892d17540a0bb720850d8b
+        image: docker.io/library/busybox:1.36
+        imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+        lastState: {}
+        name: init-wait
+        ready: false
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+        restartCount: 0
+        started: true
+        state:
+          running:
+            startedAt: "2026-07-27T12:28:21Z"
+        user:
+          linux:
+            gid: 0
+            supplementalGroups:
+            - 0
+            - 10
+            uid: 0
+      podIP: 10.244.1.194
+      podIPs:
+      - ip: 10.244.1.194
+  state: Initializing
+- expectedPatch:
+    components:
+      pod:
+        instances:
+          "":
+            podTemplateSpec:
+              metadata:
+                managedFields:
+                - apiVersion: v1
+                  fieldsType: FieldsV1
+                  manager: e2e.test
+                  operation: Update
+                  time: "2026-07-27T12:28:21Z"
+                - apiVersion: v1
+                  fieldsType: FieldsV1
+                  manager: kubelet
+                  operation: Update
+                  subresource: status
+                  time: "2026-07-27T12:28:29Z"
+                resourceVersion: "3180774"
+    conditions:
+    - status: "True"
+      type: PodReadyToStartContainers
+    - status: "True"
+      type: Initialized
+    - message: 'containers with unready status: [worker]'
+      reason: ContainersNotReady
+      status: "False"
+      type: Ready
+    - message: 'containers with unready status: [worker]'
+      reason: ContainersNotReady
+      status: "False"
+      type: ContainersReady
+    - status: "True"
+      type: PodScheduled
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:automountServiceAccountToken: {}
+            f:containers:
+              k:{"name":"worker"}:
+                .: {}
+                f:command: {}
+                f:image: {}
+                f:imagePullPolicy: {}
+                f:name: {}
+                f:resources:
+                  .: {}
+                  f:requests:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+                f:terminationMessagePath: {}
+                f:terminationMessagePolicy: {}
+            f:dnsPolicy: {}
+            f:enableServiceLinks: {}
+            f:initContainers:
+              .: {}
+              k:{"name":"init-wait"}:
+                .: {}
+                f:command: {}
+                f:image: {}
+                f:imagePullPolicy: {}
+                f:name: {}
+                f:resources:
+                  .: {}
+                  f:requests:
+                    .: {}
+                    f:cpu: {}
+                    f:memory: {}
+                f:terminationMessagePath: {}
+                f:terminationMessagePolicy: {}
+            f:restartPolicy: {}
+            f:schedulerName: {}
+            f:securityContext: {}
+            f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:28:21Z"
+      - apiVersion: v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:conditions:
+              k:{"type":"ContainersReady"}:
+                .: {}
+                f:lastProbeTime: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Initialized"}:
+                .: {}
+                f:lastProbeTime: {}
+                f:lastTransitionTime: {}
+                f:observedGeneration: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"PodReadyToStartContainers"}:
+                .: {}
+                f:lastProbeTime: {}
+                f:lastTransitionTime: {}
+                f:observedGeneration: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"PodScheduled"}:
+                f:observedGeneration: {}
+              k:{"type":"Ready"}:
+                .: {}
+                f:lastProbeTime: {}
+                f:lastTransitionTime: {}
+                f:message: {}
+                f:observedGeneration: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:containerStatuses: {}
+            f:hostIP: {}
+            f:hostIPs: {}
+            f:initContainerStatuses: {}
+            f:observedGeneration: {}
+            f:podIP: {}
+            f:podIPs:
+              .: {}
+              k:{"ip":"10.244.1.194"}:
+                .: {}
+                f:ip: {}
+            f:startTime: {}
+        manager: kubelet
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:28:29Z"
+      resourceVersion: "3180774"
+    status:
+      conditions:
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        observedGeneration: 1
+        status: "True"
+        type: PodReadyToStartContainers
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:29Z"
+        observedGeneration: 1
+        status: "True"
+        type: Initialized
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        message: 'containers with unready status: [worker]'
+        observedGeneration: 1
+        reason: ContainersNotReady
+        status: "False"
+        type: Ready
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        message: 'containers with unready status: [worker]'
+        observedGeneration: 1
+        reason: ContainersNotReady
+        status: "False"
+        type: ContainersReady
+      - lastProbeTime: null
+        lastTransitionTime: "2026-07-27T12:28:21Z"
+        observedGeneration: 1
+        status: "True"
+        type: PodScheduled
+      initContainerStatuses:
+      - allocatedResources:
+          cpu: 10m
+          memory: 16Mi
+        containerID: containerd://58a8588568902a971d3f4018edda050a997b0cb00f892d17540a0bb720850d8b
+        image: docker.io/library/busybox:1.36
+        imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+        lastState: {}
+        name: init-wait
+        ready: true
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+        restartCount: 0
+        started: false
+        state:
+          terminated:
+            containerID: containerd://58a8588568902a971d3f4018edda050a997b0cb00f892d17540a0bb720850d8b
+            exitCode: 0
+            finishedAt: "2026-07-27T12:28:29Z"
+            reason: Completed
+            startedAt: "2026-07-27T12:28:21Z"
+        user:
+          linux:
+            gid: 0
+            supplementalGroups:
+            - 0
+            - 10
+            uid: 0
+  state: Initializing
+- expectedPatch:
+    components:
+      pod:
+        instances:
+          "":
+            podTemplateSpec:
+              metadata:
+                managedFields:
+                - apiVersion: v1
+                  fieldsType: FieldsV1
+                  manager: e2e.test
+                  operation: Update
+                  time: "2026-07-27T12:28:21Z"
+                - apiVersion: v1
+                  fieldsType: FieldsV1
+                  manager: kubelet
+                  operation: Update
+                  subresource: status
+                  time: "2026-07-27T12:28:30Z"
+                resourceVersion: "3180793"
     conditions:
     - status: "True"
       type: PodReadyToStartContainers
@@ -276,7 +869,7 @@ steps:
             f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:48:09Z"
+        time: "2026-07-27T12:28:21Z"
       - apiVersion: v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -321,39 +914,39 @@ steps:
             f:podIP: {}
             f:podIPs:
               .: {}
-              k:{"ip":"10.244.1.125"}:
+              k:{"ip":"10.244.1.194"}:
                 .: {}
                 f:ip: {}
             f:startTime: {}
         manager: kubelet
         operation: Update
         subresource: status
-        time: "2026-07-26T15:48:19Z"
-      resourceVersion: "2852695"
+        time: "2026-07-27T12:28:30Z"
+      resourceVersion: "3180793"
     status:
       conditions:
       - lastProbeTime: null
-        lastTransitionTime: "2026-07-26T15:48:10Z"
+        lastTransitionTime: "2026-07-27T12:28:21Z"
         observedGeneration: 1
         status: "True"
         type: PodReadyToStartContainers
       - lastProbeTime: null
-        lastTransitionTime: "2026-07-26T15:48:18Z"
+        lastTransitionTime: "2026-07-27T12:28:29Z"
         observedGeneration: 1
         status: "True"
         type: Initialized
       - lastProbeTime: null
-        lastTransitionTime: "2026-07-26T15:48:19Z"
+        lastTransitionTime: "2026-07-27T12:28:30Z"
         observedGeneration: 1
         status: "True"
         type: Ready
       - lastProbeTime: null
-        lastTransitionTime: "2026-07-26T15:48:19Z"
+        lastTransitionTime: "2026-07-27T12:28:30Z"
         observedGeneration: 1
         status: "True"
         type: ContainersReady
       - lastProbeTime: null
-        lastTransitionTime: "2026-07-26T15:48:09Z"
+        lastTransitionTime: "2026-07-27T12:28:21Z"
         observedGeneration: 1
         status: "True"
         type: PodScheduled
@@ -361,7 +954,7 @@ steps:
       - allocatedResources:
           cpu: 50m
           memory: 32Mi
-        containerID: containerd://9e6c3abe8e9685b14ba18783a8f36a971b3eb5a855bb3bc2f59a5471b3155f26
+        containerID: containerd://7becefb35bb98f1dce91b215decfaf6b234309414d42cfd5c2538f4bc3a1a614
         image: docker.io/library/busybox:1.36
         imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
         lastState: {}
@@ -375,7 +968,7 @@ steps:
         started: true
         state:
           running:
-            startedAt: "2026-07-26T15:48:18Z"
+            startedAt: "2026-07-27T12:28:29Z"
         user:
           linux:
             gid: 0
@@ -383,45 +976,7 @@ steps:
             - 0
             - 10
             uid: 0
-      hostIP: 172.18.0.4
-      hostIPs:
-      - ip: 172.18.0.4
-      initContainerStatuses:
-      - allocatedResources:
-          cpu: 10m
-          memory: 16Mi
-        containerID: containerd://dd2d8f64e4c7afae94313fac5bcea9c0d141e872e21440b236dbaf8232983c87
-        image: docker.io/library/busybox:1.36
-        imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
-        lastState: {}
-        name: init-wait
-        ready: true
-        resources:
-          requests:
-            cpu: 10m
-            memory: 16Mi
-        restartCount: 0
-        started: false
-        state:
-          terminated:
-            containerID: containerd://dd2d8f64e4c7afae94313fac5bcea9c0d141e872e21440b236dbaf8232983c87
-            exitCode: 0
-            finishedAt: "2026-07-26T15:48:17Z"
-            reason: Completed
-            startedAt: "2026-07-26T15:48:09Z"
-        user:
-          linux:
-            gid: 0
-            supplementalGroups:
-            - 0
-            - 10
-            uid: 0
-      observedGeneration: 1
       phase: Running
-      podIP: 10.244.1.125
-      podIPs:
-      - ip: 10.244.1.125
-      startTime: "2026-07-26T15:48:09Z"
   state: Running
 version: v1.34.0
 want: Running

@@ -8,7 +8,7 @@ steps:
     apiVersion: kubeflow.org/v1
     kind: PyTorchJob
     metadata:
-      creationTimestamp: "2026-07-26T16:22:22Z"
+      creationTimestamp: "2026-07-27T12:29:16Z"
       generation: 1
       managedFields:
       - apiVersion: kubeflow.org/v1
@@ -41,7 +41,7 @@ steps:
                             f:memory: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T16:22:22Z"
+        time: "2026-07-27T12:29:16Z"
       - apiVersion: kubeflow.org/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -52,17 +52,16 @@ steps:
               .: {}
               f:Master:
                 .: {}
-                f:active: {}
                 f:selector: {}
             f:startTime: {}
         manager: manager
         operation: Update
         subresource: status
-        time: "2026-07-26T16:22:23Z"
+        time: "2026-07-27T12:29:16Z"
       name: karta-e2e-pytorch-completed
       namespace: default
-      resourceVersion: "2869799"
-      uid: 845df4ee-d578-4796-8a8f-fff07ed11728
+      resourceVersion: "3181231"
+      uid: 304dc456-c6f7-4510-987f-263cb985b078
     spec:
       pytorchReplicaSpecs:
         Master:
@@ -83,23 +82,16 @@ steps:
                     memory: 64Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T16:22:22Z"
-        lastUpdateTime: "2026-07-26T16:22:22Z"
+      - lastTransitionTime: "2026-07-27T12:29:16Z"
+        lastUpdateTime: "2026-07-27T12:29:16Z"
         message: PyTorchJob karta-e2e-pytorch-completed is created.
         reason: PyTorchJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-07-26T16:22:23Z"
-        lastUpdateTime: "2026-07-26T16:22:23Z"
-        message: PyTorchJob karta-e2e-pytorch-completed is running.
-        reason: PyTorchJobRunning
-        status: "True"
-        type: Running
       replicaStatuses:
         Master:
-          active: 1
           selector: training.kubeflow.org/job-name=karta-e2e-pytorch-completed,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=master
-      startTime: "2026-07-26T16:22:22Z"
+      startTime: "2026-07-27T12:29:16Z"
   expected:
     components:
       master:
@@ -130,6 +122,15 @@ steps:
       reason: PyTorchJobCreated
       status: "True"
       type: Created
+    matchedStatuses:
+    - Initializing
+  state: Initializing
+- expectedPatch:
+    conditions:
+    - message: PyTorchJob karta-e2e-pytorch-completed is created.
+      reason: PyTorchJobCreated
+      status: "True"
+      type: Created
     - message: PyTorchJob karta-e2e-pytorch-completed is running.
       reason: PyTorchJobRunning
       status: "True"
@@ -137,6 +138,75 @@ steps:
     matchedStatuses:
     - Running
     - Initializing
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: kubeflow.org/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:pytorchReplicaSpecs:
+              .: {}
+              f:Master:
+                .: {}
+                f:replicas: {}
+                f:restartPolicy: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"pytorch"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:29:16Z"
+      - apiVersion: kubeflow.org/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions: {}
+            f:replicaStatuses:
+              .: {}
+              f:Master:
+                .: {}
+                f:active: {}
+                f:selector: {}
+            f:startTime: {}
+        manager: manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:29:17Z"
+      resourceVersion: "3181245"
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-27T12:29:16Z"
+        lastUpdateTime: "2026-07-27T12:29:16Z"
+        message: PyTorchJob karta-e2e-pytorch-completed is created.
+        reason: PyTorchJobCreated
+        status: "True"
+        type: Created
+      - lastTransitionTime: "2026-07-27T12:29:17Z"
+        lastUpdateTime: "2026-07-27T12:29:17Z"
+        message: PyTorchJob karta-e2e-pytorch-completed is running.
+        reason: PyTorchJobRunning
+        status: "True"
+        type: Running
+      replicaStatuses:
+        Master:
+          active: 1
   state: Running
 - expectedPatch:
     conditions:
@@ -188,7 +258,7 @@ steps:
                             f:memory: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T16:22:22Z"
+        time: "2026-07-27T12:29:16Z"
       - apiVersion: kubeflow.org/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -206,25 +276,25 @@ steps:
         manager: manager
         operation: Update
         subresource: status
-        time: "2026-07-26T16:22:39Z"
-      resourceVersion: "2869934"
+        time: "2026-07-27T12:29:33Z"
+      resourceVersion: "3181383"
     status:
-      completionTime: "2026-07-26T16:22:39Z"
+      completionTime: "2026-07-27T12:29:33Z"
       conditions:
-      - lastTransitionTime: "2026-07-26T16:22:22Z"
-        lastUpdateTime: "2026-07-26T16:22:22Z"
+      - lastTransitionTime: "2026-07-27T12:29:16Z"
+        lastUpdateTime: "2026-07-27T12:29:16Z"
         message: PyTorchJob karta-e2e-pytorch-completed is created.
         reason: PyTorchJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-07-26T16:22:23Z"
-        lastUpdateTime: "2026-07-26T16:22:23Z"
+      - lastTransitionTime: "2026-07-27T12:29:17Z"
+        lastUpdateTime: "2026-07-27T12:29:17Z"
         message: PyTorchJob karta-e2e-pytorch-completed is running.
         reason: PyTorchJobRunning
         status: "False"
         type: Running
-      - lastTransitionTime: "2026-07-26T16:22:39Z"
-        lastUpdateTime: "2026-07-26T16:22:39Z"
+      - lastTransitionTime: "2026-07-27T12:29:33Z"
+        lastUpdateTime: "2026-07-27T12:29:33Z"
         message: PyTorchJob karta-e2e-pytorch-completed is successfully completed.
         reason: PyTorchJobSucceeded
         status: "True"

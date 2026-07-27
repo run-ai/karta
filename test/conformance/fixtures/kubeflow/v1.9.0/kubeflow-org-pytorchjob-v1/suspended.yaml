@@ -8,7 +8,7 @@ steps:
     apiVersion: kubeflow.org/v1
     kind: PyTorchJob
     metadata:
-      creationTimestamp: "2026-07-26T18:12:29Z"
+      creationTimestamp: "2026-07-27T12:29:50Z"
       generation: 1
       managedFields:
       - apiVersion: kubeflow.org/v1
@@ -44,7 +44,7 @@ steps:
               f:suspend: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:12:29Z"
+        time: "2026-07-27T12:29:50Z"
       - apiVersion: kubeflow.org/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -54,11 +54,11 @@ steps:
         manager: manager
         operation: Update
         subresource: status
-        time: "2026-07-26T18:12:29Z"
+        time: "2026-07-27T12:29:50Z"
       name: karta-e2e-pytorch-suspended
       namespace: default
-      resourceVersion: "2921573"
-      uid: 949f21f1-e344-4817-abcd-9ca9773517c4
+      resourceVersion: "3181572"
+      uid: d2d2137e-44cb-461d-a89b-2974230ccd04
     spec:
       pytorchReplicaSpecs:
         Master:
@@ -81,14 +81,14 @@ steps:
         suspend: true
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T18:12:29Z"
-        lastUpdateTime: "2026-07-26T18:12:29Z"
+      - lastTransitionTime: "2026-07-27T12:29:50Z"
+        lastUpdateTime: "2026-07-27T12:29:50Z"
         message: PyTorchJob karta-e2e-pytorch-suspended is created.
         reason: PyTorchJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-07-26T18:12:29Z"
-        lastUpdateTime: "2026-07-26T18:12:29Z"
+      - lastTransitionTime: "2026-07-27T12:29:50Z"
+        lastUpdateTime: "2026-07-27T12:29:50Z"
         message: PyTorchJob karta-e2e-pytorch-suspended is suspended.
         reason: PyTorchJobSuspended
         status: "True"

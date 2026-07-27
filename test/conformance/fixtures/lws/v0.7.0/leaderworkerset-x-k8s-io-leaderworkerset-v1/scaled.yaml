@@ -4,12 +4,12 @@ kartaName: leaderworkerset-x-k8s-io-leaderworkerset-v1
 operator: lws
 schemaVersion: 6
 steps:
-- action: func42
+- action: func47
   cr:
     apiVersion: leaderworkerset.x-k8s.io/v1
     kind: LeaderWorkerSet
     metadata:
-      creationTimestamp: "2026-07-26T18:08:23Z"
+      creationTimestamp: "2026-07-27T12:26:20Z"
       generation: 1
       managedFields:
       - apiVersion: leaderworkerset.x-k8s.io/v1
@@ -59,7 +59,7 @@ steps:
             f:startupPolicy: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:08:23Z"
+        time: "2026-07-27T12:26:20Z"
       - apiVersion: leaderworkerset.x-k8s.io/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -73,11 +73,11 @@ steps:
         manager: lws
         operation: Update
         subresource: status
-        time: "2026-07-26T18:08:24Z"
+        time: "2026-07-27T12:26:21Z"
       name: karta-e2e-lws-scaled
       namespace: default
-      resourceVersion: "2919403"
-      uid: abd24883-8e61-4e7e-921d-a09ce0a6ada5
+      resourceVersion: "3179190"
+      uid: 820e787d-3466-49ea-815b-96112aa5b645
     spec:
       leaderWorkerTemplate:
         leaderTemplate:
@@ -120,12 +120,12 @@ steps:
       startupPolicy: LeaderCreated
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T18:08:23Z"
+      - lastTransitionTime: "2026-07-27T12:26:20Z"
         message: Replicas are progressing
         reason: GroupsProgressing
         status: "False"
         type: Progressing
-      - lastTransitionTime: "2026-07-26T18:08:24Z"
+      - lastTransitionTime: "2026-07-27T12:26:21Z"
         message: All replicas are ready
         reason: AllGroupsReady
         status: "True"
@@ -187,7 +187,7 @@ steps:
     matchedStatuses:
     - Running
   state: Running
-- action: func42
+- action: func47
   expectedPatch:
     components:
       leader:
@@ -251,7 +251,7 @@ steps:
             f:startupPolicy: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:08:24Z"
+        time: "2026-07-27T12:26:21Z"
       - apiVersion: leaderworkerset.x-k8s.io/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -265,27 +265,150 @@ steps:
         manager: lws
         operation: Update
         subresource: status
-        time: "2026-07-26T18:08:25Z"
-      resourceVersion: "2919442"
+        time: "2026-07-27T12:26:21Z"
+      resourceVersion: "3179191"
     spec:
       replicas: 2
+  state: Running
+- action: func47
+  expectedPatch:
+    conditions:
+    - message: Replicas are progressing
+      reason: GroupsProgressing
+      status: "True"
+      type: Progressing
+    - message: All replicas are ready
+      reason: AllGroupsReady
+      status: "False"
+      type: Available
+    matchedStatuses:
+    - Running
+    - Initializing
+  patch:
+    metadata:
+      resourceVersion: "3179194"
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T18:08:24Z"
+      - lastTransitionTime: "2026-07-27T12:26:21Z"
+        message: Replicas are progressing
+        reason: GroupsProgressing
+        status: "True"
+        type: Progressing
+      - lastTransitionTime: "2026-07-27T12:26:21Z"
+        message: All replicas are ready
+        reason: AllGroupsReady
+        status: "False"
+        type: Available
+  state: Running
+- expectedPatch:
+    matchedStatuses:
+    - Initializing
+  patch:
+    metadata:
+      resourceVersion: "3179204"
+    status:
+      updatedReplicas: 2
+  state: Initializing
+- patch:
+    metadata:
+      resourceVersion: "3179214"
+    status:
+      replicas: 2
+  state: Initializing
+- action: func47
+  expectedPatch:
+    conditions:
+    - message: Replicas are progressing
+      reason: GroupsProgressing
+      status: "False"
+      type: Progressing
+    - message: All replicas are ready
+      reason: AllGroupsReady
+      status: "True"
+      type: Available
+    matchedStatuses:
+    - Running
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: leaderworkerset.x-k8s.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:leaderWorkerTemplate:
+              .: {}
+              f:leaderTemplate:
+                .: {}
+                f:spec:
+                  .: {}
+                  f:containers:
+                    .: {}
+                    k:{"name":"leader"}:
+                      .: {}
+                      f:command: {}
+                      f:image: {}
+                      f:name: {}
+                      f:resources:
+                        .: {}
+                        f:requests:
+                          .: {}
+                          f:cpu: {}
+                          f:memory: {}
+              f:restartPolicy: {}
+              f:size: {}
+              f:workerTemplate:
+                .: {}
+                f:spec:
+                  .: {}
+                  f:containers:
+                    .: {}
+                    k:{"name":"worker"}:
+                      .: {}
+                      f:command: {}
+                      f:image: {}
+                      f:name: {}
+                      f:resources:
+                        .: {}
+                        f:requests:
+                          .: {}
+                          f:cpu: {}
+                          f:memory: {}
+            f:replicas: {}
+            f:startupPolicy: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:26:21Z"
+      - apiVersion: leaderworkerset.x-k8s.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions: {}
+            f:hpaPodSelector: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updatedReplicas: {}
+        manager: lws
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:26:22Z"
+      resourceVersion: "3179248"
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-27T12:26:21Z"
         message: Replicas are progressing
         reason: GroupsProgressing
         status: "False"
         type: Progressing
-      - lastTransitionTime: "2026-07-26T18:08:25Z"
+      - lastTransitionTime: "2026-07-27T12:26:22Z"
         message: All replicas are ready
         reason: AllGroupsReady
         status: "True"
         type: Available
       readyReplicas: 2
-      replicas: 2
-      updatedReplicas: 2
   state: Running
-- action: func42
+- action: func47
   expectedPatch:
     components:
       leader:
@@ -349,7 +472,7 @@ steps:
             f:startupPolicy: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:08:25Z"
+        time: "2026-07-27T12:26:22Z"
       - apiVersion: leaderworkerset.x-k8s.io/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -363,10 +486,78 @@ steps:
         manager: lws
         operation: Update
         subresource: status
-        time: "2026-07-26T18:08:57Z"
-      resourceVersion: "2919715"
+        time: "2026-07-27T12:26:22Z"
+      resourceVersion: "3179249"
     spec:
       replicas: 1
+  state: Running
+- action: func47
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: leaderworkerset.x-k8s.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:leaderWorkerTemplate:
+              .: {}
+              f:leaderTemplate:
+                .: {}
+                f:spec:
+                  .: {}
+                  f:containers:
+                    .: {}
+                    k:{"name":"leader"}:
+                      .: {}
+                      f:command: {}
+                      f:image: {}
+                      f:name: {}
+                      f:resources:
+                        .: {}
+                        f:requests:
+                          .: {}
+                          f:cpu: {}
+                          f:memory: {}
+              f:restartPolicy: {}
+              f:size: {}
+              f:workerTemplate:
+                .: {}
+                f:spec:
+                  .: {}
+                  f:containers:
+                    .: {}
+                    k:{"name":"worker"}:
+                      .: {}
+                      f:command: {}
+                      f:image: {}
+                      f:name: {}
+                      f:resources:
+                        .: {}
+                        f:requests:
+                          .: {}
+                          f:cpu: {}
+                          f:memory: {}
+            f:replicas: {}
+            f:startupPolicy: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:26:22Z"
+      - apiVersion: leaderworkerset.x-k8s.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions: {}
+            f:hpaPodSelector: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updatedReplicas: {}
+        manager: lws
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:26:54Z"
+      resourceVersion: "3179524"
     status:
       readyReplicas: 1
       replicas: 1

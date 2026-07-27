@@ -8,7 +8,7 @@ steps:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-07-26T15:51:18Z"
+      creationTimestamp: "2026-07-27T12:24:54Z"
       generation: 1
       managedFields:
       - apiVersion: jobset.x-k8s.io/v1alpha2
@@ -57,7 +57,7 @@ steps:
                         f:restartPolicy: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:51:18Z"
+        time: "2026-07-27T12:24:54Z"
       - apiVersion: jobset.x-k8s.io/v1alpha2
         fieldsType: FieldsV1
         fieldsV1:
@@ -77,11 +77,11 @@ steps:
         manager: jobset
         operation: Update
         subresource: status
-        time: "2026-07-26T15:51:18Z"
+        time: "2026-07-27T12:24:55Z"
       name: karta-e2e-jobset-completed
       namespace: default
-      resourceVersion: "2854464"
-      uid: d617e5eb-2734-4ea2-9da7-78074a8460fa
+      resourceVersion: "3177940"
+      uid: 73c0dfc4-1db8-4b55-8755-a6a365585474
     spec:
       network:
         enableDNSHostnames: true
@@ -213,7 +213,7 @@ steps:
                         f:restartPolicy: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:51:18Z"
+        time: "2026-07-27T12:24:54Z"
       - apiVersion: jobset.x-k8s.io/v1alpha2
         fieldsType: FieldsV1
         fieldsV1:
@@ -233,8 +233,8 @@ steps:
         manager: jobset
         operation: Update
         subresource: status
-        time: "2026-07-26T15:51:27Z"
-      resourceVersion: "2854549"
+        time: "2026-07-27T12:25:04Z"
+      resourceVersion: "3178034"
     status:
       replicatedJobsStatus:
       - active: 1
@@ -244,89 +244,6 @@ steps:
         succeeded: 0
         suspended: 0
   state: Running
-- expectedPatch:
-    matchedStatuses:
-    - Initializing
-  patch:
-    metadata:
-      managedFields:
-      - apiVersion: jobset.x-k8s.io/v1alpha2
-        fieldsType: FieldsV1
-        fieldsV1:
-          f:spec:
-            .: {}
-            f:replicatedJobs:
-              .: {}
-              k:{"name":"workers"}:
-                .: {}
-                f:groupName: {}
-                f:name: {}
-                f:replicas: {}
-                f:template:
-                  .: {}
-                  f:spec:
-                    .: {}
-                    f:backoffLimit: {}
-                    f:completions: {}
-                    f:parallelism: {}
-                    f:template:
-                      .: {}
-                      f:spec:
-                        .: {}
-                        f:containers:
-                          .: {}
-                          k:{"name":"worker"}:
-                            .: {}
-                            f:command: {}
-                            f:image: {}
-                            f:name: {}
-                            f:readinessProbe:
-                              .: {}
-                              f:exec:
-                                .: {}
-                                f:command: {}
-                              f:initialDelaySeconds: {}
-                              f:periodSeconds: {}
-                            f:resources:
-                              .: {}
-                              f:requests:
-                                .: {}
-                                f:cpu: {}
-                                f:memory: {}
-                        f:restartPolicy: {}
-        manager: e2e.test
-        operation: Update
-        time: "2026-07-26T15:51:18Z"
-      - apiVersion: jobset.x-k8s.io/v1alpha2
-        fieldsType: FieldsV1
-        fieldsV1:
-          f:status:
-            .: {}
-            f:replicatedJobsStatus:
-              .: {}
-              k:{"name":"workers"}:
-                .: {}
-                f:active: {}
-                f:failed: {}
-                f:name: {}
-                f:ready: {}
-                f:succeeded: {}
-                f:suspended: {}
-            f:restarts: {}
-        manager: jobset
-        operation: Update
-        subresource: status
-        time: "2026-07-26T15:51:40Z"
-      resourceVersion: "2854648"
-    status:
-      replicatedJobsStatus:
-      - active: 1
-        failed: 0
-        name: workers
-        ready: 0
-        succeeded: 0
-        suspended: 0
-  state: Initializing
 - expectedPatch:
     conditions:
     - message: jobset completed successfully
@@ -384,7 +301,7 @@ steps:
                         f:restartPolicy: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:51:18Z"
+        time: "2026-07-27T12:24:54Z"
       - apiVersion: jobset.x-k8s.io/v1alpha2
         fieldsType: FieldsV1
         fieldsV1:
@@ -414,11 +331,11 @@ steps:
         manager: jobset
         operation: Update
         subresource: status
-        time: "2026-07-26T15:51:41Z"
-      resourceVersion: "2854665"
+        time: "2026-07-27T12:25:17Z"
+      resourceVersion: "3178154"
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T15:51:41Z"
+      - lastTransitionTime: "2026-07-27T12:25:17Z"
         message: jobset completed successfully
         reason: AllJobsCompleted
         status: "True"

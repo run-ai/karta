@@ -4,17 +4,16 @@ kartaName: batch-job-v1
 operator: batch-job
 schemaVersion: 6
 steps:
-- action: func26
-  cr:
+- cr:
     apiVersion: batch/v1
     kind: Job
     metadata:
-      creationTimestamp: "2026-07-26T20:55:41Z"
+      creationTimestamp: "2026-07-27T12:23:29Z"
       generation: 1
       labels:
-        batch.kubernetes.io/controller-uid: c489f723-2f65-4bcc-823f-d9f461d0718d
+        batch.kubernetes.io/controller-uid: c10ed097-6307-4492-a768-f38480e92d04
         batch.kubernetes.io/job-name: karta-e2e-job-scaled
-        controller-uid: c489f723-2f65-4bcc-823f-d9f461d0718d
+        controller-uid: c10ed097-6307-4492-a768-f38480e92d04
         job-name: karta-e2e-job-scaled
       managedFields:
       - apiVersion: batch/v1
@@ -51,7 +50,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:55:41Z"
+        time: "2026-07-27T12:23:29Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -64,11 +63,11 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T20:55:43Z"
+        time: "2026-07-27T12:23:29Z"
       name: karta-e2e-job-scaled
       namespace: default
-      resourceVersion: "2996670"
-      uid: c489f723-2f65-4bcc-823f-d9f461d0718d
+      resourceVersion: "3176529"
+      uid: c10ed097-6307-4492-a768-f38480e92d04
     spec:
       backoffLimit: 0
       completionMode: NonIndexed
@@ -77,14 +76,14 @@ steps:
       podReplacementPolicy: TerminatingOrFailed
       selector:
         matchLabels:
-          batch.kubernetes.io/controller-uid: c489f723-2f65-4bcc-823f-d9f461d0718d
+          batch.kubernetes.io/controller-uid: c10ed097-6307-4492-a768-f38480e92d04
       suspend: false
       template:
         metadata:
           labels:
-            batch.kubernetes.io/controller-uid: c489f723-2f65-4bcc-823f-d9f461d0718d
+            batch.kubernetes.io/controller-uid: c10ed097-6307-4492-a768-f38480e92d04
             batch.kubernetes.io/job-name: karta-e2e-job-scaled
-            controller-uid: c489f723-2f65-4bcc-823f-d9f461d0718d
+            controller-uid: c10ed097-6307-4492-a768-f38480e92d04
             job-name: karta-e2e-job-scaled
         spec:
           containers:
@@ -108,8 +107,8 @@ steps:
           terminationGracePeriodSeconds: 30
     status:
       active: 1
-      ready: 1
-      startTime: "2026-07-26T20:55:41Z"
+      ready: 0
+      startTime: "2026-07-27T12:23:29Z"
       terminating: 0
       uncountedTerminatedPods: {}
   expected:
@@ -120,9 +119,9 @@ steps:
             podTemplateSpec:
               metadata:
                 labels:
-                  batch.kubernetes.io/controller-uid: c489f723-2f65-4bcc-823f-d9f461d0718d
+                  batch.kubernetes.io/controller-uid: c10ed097-6307-4492-a768-f38480e92d04
                   batch.kubernetes.io/job-name: karta-e2e-job-scaled
-                  controller-uid: c489f723-2f65-4bcc-823f-d9f461d0718d
+                  controller-uid: c10ed097-6307-4492-a768-f38480e92d04
                   job-name: karta-e2e-job-scaled
               spec:
                 containers:
@@ -146,9 +145,68 @@ steps:
             scale:
               replicas: 1
     matchedStatuses:
+    - Initializing
+  state: Initializing
+- action: func8
+  expectedPatch:
+    matchedStatuses:
     - Running
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:backoffLimit: {}
+            f:completionMode: {}
+            f:manualSelector: {}
+            f:parallelism: {}
+            f:podReplacementPolicy: {}
+            f:suspend: {}
+            f:template:
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:23:29Z"
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:active: {}
+            f:ready: {}
+            f:startTime: {}
+            f:terminating: {}
+            f:uncountedTerminatedPods: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:23:30Z"
+      resourceVersion: "3176554"
+    status:
+      ready: 1
   state: Running
-- action: func26
+- action: func8
   expectedPatch:
     components:
       job:
@@ -194,7 +252,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:55:43Z"
+        time: "2026-07-27T12:23:30Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -207,15 +265,75 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T20:55:44Z"
-      resourceVersion: "2996703"
+        time: "2026-07-27T12:23:30Z"
+      resourceVersion: "3176555"
     spec:
       parallelism: 3
+  state: Running
+- action: func8
+  patch:
+    metadata:
+      resourceVersion: "3176561"
     status:
       active: 3
+  state: Running
+- action: func8
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:backoffLimit: {}
+            f:completionMode: {}
+            f:manualSelector: {}
+            f:parallelism: {}
+            f:podReplacementPolicy: {}
+            f:suspend: {}
+            f:template:
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:23:30Z"
+      - apiVersion: batch/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:active: {}
+            f:ready: {}
+            f:startTime: {}
+            f:terminating: {}
+            f:uncountedTerminatedPods: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:23:31Z"
+      resourceVersion: "3176586"
+    status:
       ready: 3
   state: Running
-- action: func26
+- action: func8
   expectedPatch:
     components:
       job:
@@ -261,7 +379,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:55:44Z"
+        time: "2026-07-27T12:23:31Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -274,10 +392,15 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T20:55:45Z"
-      resourceVersion: "2996710"
+        time: "2026-07-27T12:23:31Z"
+      resourceVersion: "3176587"
     spec:
       parallelism: 1
+  state: Running
+- action: func8
+  patch:
+    metadata:
+      resourceVersion: "3176594"
     status:
       active: 1
       ready: 1

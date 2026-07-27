@@ -8,12 +8,12 @@ steps:
     apiVersion: batch/v1
     kind: Job
     metadata:
-      creationTimestamp: "2026-07-26T20:30:15Z"
+      creationTimestamp: "2026-07-27T12:23:27Z"
       generation: 1
       labels:
-        batch.kubernetes.io/controller-uid: 2a21f3f9-c863-4be7-ba62-541b630eb1a5
+        batch.kubernetes.io/controller-uid: 43ee5c32-d228-4aed-a741-42066f97074f
         batch.kubernetes.io/job-name: karta-e2e-job-degraded
-        controller-uid: 2a21f3f9-c863-4be7-ba62-541b630eb1a5
+        controller-uid: 43ee5c32-d228-4aed-a741-42066f97074f
         job-name: karta-e2e-job-degraded
       managedFields:
       - apiVersion: batch/v1
@@ -51,7 +51,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:30:15Z"
+        time: "2026-07-27T12:23:27Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -64,11 +64,11 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T20:30:15Z"
+        time: "2026-07-27T12:23:27Z"
       name: karta-e2e-job-degraded
       namespace: default
-      resourceVersion: "2984469"
-      uid: 2a21f3f9-c863-4be7-ba62-541b630eb1a5
+      resourceVersion: "3176484"
+      uid: 43ee5c32-d228-4aed-a741-42066f97074f
     spec:
       backoffLimit: 0
       completionMode: Indexed
@@ -78,14 +78,14 @@ steps:
       podReplacementPolicy: TerminatingOrFailed
       selector:
         matchLabels:
-          batch.kubernetes.io/controller-uid: 2a21f3f9-c863-4be7-ba62-541b630eb1a5
+          batch.kubernetes.io/controller-uid: 43ee5c32-d228-4aed-a741-42066f97074f
       suspend: false
       template:
         metadata:
           labels:
-            batch.kubernetes.io/controller-uid: 2a21f3f9-c863-4be7-ba62-541b630eb1a5
+            batch.kubernetes.io/controller-uid: 43ee5c32-d228-4aed-a741-42066f97074f
             batch.kubernetes.io/job-name: karta-e2e-job-degraded
-            controller-uid: 2a21f3f9-c863-4be7-ba62-541b630eb1a5
+            controller-uid: 43ee5c32-d228-4aed-a741-42066f97074f
             job-name: karta-e2e-job-degraded
         spec:
           containers:
@@ -111,7 +111,7 @@ steps:
     status:
       active: 2
       ready: 0
-      startTime: "2026-07-26T20:30:15Z"
+      startTime: "2026-07-27T12:23:27Z"
       terminating: 0
       uncountedTerminatedPods: {}
   expected:
@@ -122,9 +122,9 @@ steps:
             podTemplateSpec:
               metadata:
                 labels:
-                  batch.kubernetes.io/controller-uid: 2a21f3f9-c863-4be7-ba62-541b630eb1a5
+                  batch.kubernetes.io/controller-uid: 43ee5c32-d228-4aed-a741-42066f97074f
                   batch.kubernetes.io/job-name: karta-e2e-job-degraded
-                  controller-uid: 2a21f3f9-c863-4be7-ba62-541b630eb1a5
+                  controller-uid: 43ee5c32-d228-4aed-a741-42066f97074f
                   job-name: karta-e2e-job-degraded
               spec:
                 containers:
@@ -192,7 +192,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:30:15Z"
+        time: "2026-07-27T12:23:27Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -205,8 +205,8 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T20:30:17Z"
-      resourceVersion: "2984495"
+        time: "2026-07-27T12:23:28Z"
+      resourceVersion: "3176499"
     status:
       ready: 1
   state: Running
@@ -252,7 +252,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:30:15Z"
+        time: "2026-07-27T12:23:27Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -267,8 +267,8 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T20:30:18Z"
-      resourceVersion: "2984514"
+        time: "2026-07-27T12:23:29Z"
+      resourceVersion: "3176514"
     status:
       active: 1
       completedIndexes: "0"

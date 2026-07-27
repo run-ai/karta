@@ -8,7 +8,7 @@ steps:
     apiVersion: apps.nvidia.com/v1alpha1
     kind: NIMService
     metadata:
-      creationTimestamp: "2026-07-26T16:48:06Z"
+      creationTimestamp: "2026-07-27T12:28:18Z"
       finalizers:
       - finalizer.nimservice.apps.nvidia.com
       generation: 2
@@ -42,7 +42,7 @@ steps:
                 f:volumeAccessMode: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T16:48:06Z"
+        time: "2026-07-27T12:28:18Z"
       - apiVersion: apps.nvidia.com/v1alpha1
         fieldsType: FieldsV1
         fieldsV1:
@@ -71,7 +71,7 @@ steps:
               f:nimCache: {}
         manager: manager
         operation: Update
-        time: "2026-07-26T16:48:06Z"
+        time: "2026-07-27T12:28:18Z"
       - apiVersion: apps.nvidia.com/v1alpha1
         fieldsType: FieldsV1
         fieldsV1:
@@ -82,11 +82,11 @@ steps:
         manager: manager
         operation: Update
         subresource: status
-        time: "2026-07-26T16:48:06Z"
+        time: "2026-07-27T12:28:18Z"
       name: karta-e2e-nim-initializing
       namespace: default
-      resourceVersion: "2882314"
-      uid: 18a95a2f-1bd0-4f5a-a688-dda548ec1251
+      resourceVersion: "3180600"
+      uid: bef96171-e9ae-4fe5-a054-15b546c44b8c
     spec:
       authSecret: ngc-secret
       env:
@@ -121,12 +121,12 @@ steps:
           volumeAccessMode: ReadWriteOnce
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T16:48:06Z"
+      - lastTransitionTime: "2026-07-27T12:28:18Z"
         message: ""
         reason: NotReady
         status: "False"
         type: Ready
-      - lastTransitionTime: "2026-07-26T16:48:06Z"
+      - lastTransitionTime: "2026-07-27T12:28:18Z"
         message: ""
         reason: Ready
         status: "False"

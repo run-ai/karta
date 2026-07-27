@@ -4,17 +4,17 @@ kartaName: batch-job-v1
 operator: batch-job
 schemaVersion: 6
 steps:
-- action: unsuspend
+- action: Unsuspend
   cr:
     apiVersion: batch/v1
     kind: Job
     metadata:
-      creationTimestamp: "2026-07-26T15:47:44Z"
+      creationTimestamp: "2026-07-27T12:23:04Z"
       generation: 1
       labels:
-        batch.kubernetes.io/controller-uid: 5978b025-d741-4b83-ae99-4461dd9b022f
+        batch.kubernetes.io/controller-uid: 006461e2-43d3-4ef5-b216-0cc8be0e43f9
         batch.kubernetes.io/job-name: karta-e2e-job-resumed
-        controller-uid: 5978b025-d741-4b83-ae99-4461dd9b022f
+        controller-uid: 006461e2-43d3-4ef5-b216-0cc8be0e43f9
         job-name: karta-e2e-job-resumed
       managedFields:
       - apiVersion: batch/v1
@@ -62,7 +62,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:47:44Z"
+        time: "2026-07-27T12:23:04Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -74,11 +74,11 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T15:47:44Z"
+        time: "2026-07-27T12:23:04Z"
       name: karta-e2e-job-resumed
       namespace: default
-      resourceVersion: "2852392"
-      uid: 5978b025-d741-4b83-ae99-4461dd9b022f
+      resourceVersion: "3176276"
+      uid: 006461e2-43d3-4ef5-b216-0cc8be0e43f9
     spec:
       backoffLimit: 0
       completionMode: NonIndexed
@@ -88,14 +88,14 @@ steps:
       podReplacementPolicy: TerminatingOrFailed
       selector:
         matchLabels:
-          batch.kubernetes.io/controller-uid: 5978b025-d741-4b83-ae99-4461dd9b022f
+          batch.kubernetes.io/controller-uid: 006461e2-43d3-4ef5-b216-0cc8be0e43f9
       suspend: true
       template:
         metadata:
           labels:
-            batch.kubernetes.io/controller-uid: 5978b025-d741-4b83-ae99-4461dd9b022f
+            batch.kubernetes.io/controller-uid: 006461e2-43d3-4ef5-b216-0cc8be0e43f9
             batch.kubernetes.io/job-name: karta-e2e-job-resumed
-            controller-uid: 5978b025-d741-4b83-ae99-4461dd9b022f
+            controller-uid: 006461e2-43d3-4ef5-b216-0cc8be0e43f9
             job-name: karta-e2e-job-resumed
         spec:
           containers:
@@ -128,8 +128,8 @@ steps:
           terminationGracePeriodSeconds: 30
     status:
       conditions:
-      - lastProbeTime: "2026-07-26T15:47:44Z"
-        lastTransitionTime: "2026-07-26T15:47:44Z"
+      - lastProbeTime: "2026-07-27T12:23:04Z"
+        lastTransitionTime: "2026-07-27T12:23:04Z"
         message: Job suspended
         reason: JobSuspended
         status: "True"
@@ -145,9 +145,9 @@ steps:
             podTemplateSpec:
               metadata:
                 labels:
-                  batch.kubernetes.io/controller-uid: 5978b025-d741-4b83-ae99-4461dd9b022f
+                  batch.kubernetes.io/controller-uid: 006461e2-43d3-4ef5-b216-0cc8be0e43f9
                   batch.kubernetes.io/job-name: karta-e2e-job-resumed
-                  controller-uid: 5978b025-d741-4b83-ae99-4461dd9b022f
+                  controller-uid: 006461e2-43d3-4ef5-b216-0cc8be0e43f9
                   job-name: karta-e2e-job-resumed
               spec:
                 containers:
@@ -187,6 +187,14 @@ steps:
     matchedStatuses:
     - Suspended
   state: Suspended
+- action: Unsuspend
+  patch:
+    metadata:
+      generation: 2
+      resourceVersion: "3176278"
+    spec:
+      suspend: false
+  state: Suspended
 - expectedPatch:
     conditions:
     - message: Job resumed
@@ -197,7 +205,6 @@ steps:
     - Initializing
   patch:
     metadata:
-      generation: 2
       managedFields:
       - apiVersion: batch/v1
         fieldsType: FieldsV1
@@ -244,7 +251,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:47:44Z"
+        time: "2026-07-27T12:23:04Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -258,20 +265,18 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T15:47:44Z"
-      resourceVersion: "2852397"
-    spec:
-      suspend: false
+        time: "2026-07-27T12:23:04Z"
+      resourceVersion: "3176282"
     status:
       active: 1
       conditions:
-      - lastProbeTime: "2026-07-26T15:47:44Z"
-        lastTransitionTime: "2026-07-26T15:47:44Z"
+      - lastProbeTime: "2026-07-27T12:23:04Z"
+        lastTransitionTime: "2026-07-27T12:23:04Z"
         message: Job resumed
         reason: JobResumed
         status: "False"
         type: Suspended
-      startTime: "2026-07-26T15:47:44Z"
+      startTime: "2026-07-27T12:23:04Z"
   state: Initializing
 - expectedPatch:
     matchedStatuses:
@@ -324,7 +329,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:47:44Z"
+        time: "2026-07-27T12:23:04Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -338,8 +343,8 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T15:47:51Z"
-      resourceVersion: "2852453"
+        time: "2026-07-27T12:23:11Z"
+      resourceVersion: "3176354"
     status:
       ready: 1
   state: Running
@@ -394,7 +399,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:47:44Z"
+        time: "2026-07-27T12:23:04Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -408,8 +413,8 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T15:48:06Z"
-      resourceVersion: "2852571"
+        time: "2026-07-27T12:23:26Z"
+      resourceVersion: "3176459"
     status:
       ready: 0
   state: Initializing
@@ -477,7 +482,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:47:44Z"
+        time: "2026-07-27T12:23:04Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -492,26 +497,26 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T15:48:07Z"
-      resourceVersion: "2852585"
+        time: "2026-07-27T12:23:27Z"
+      resourceVersion: "3176474"
     status:
       active: null
-      completionTime: "2026-07-26T15:48:07Z"
+      completionTime: "2026-07-27T12:23:27Z"
       conditions:
-      - lastProbeTime: "2026-07-26T15:47:44Z"
-        lastTransitionTime: "2026-07-26T15:47:44Z"
+      - lastProbeTime: "2026-07-27T12:23:04Z"
+        lastTransitionTime: "2026-07-27T12:23:04Z"
         message: Job resumed
         reason: JobResumed
         status: "False"
         type: Suspended
-      - lastProbeTime: "2026-07-26T15:48:07Z"
-        lastTransitionTime: "2026-07-26T15:48:07Z"
+      - lastProbeTime: "2026-07-27T12:23:27Z"
+        lastTransitionTime: "2026-07-27T12:23:27Z"
         message: Reached expected number of succeeded pods
         reason: CompletionsReached
         status: "True"
         type: SuccessCriteriaMet
-      - lastProbeTime: "2026-07-26T15:48:07Z"
-        lastTransitionTime: "2026-07-26T15:48:07Z"
+      - lastProbeTime: "2026-07-27T12:23:27Z"
+        lastTransitionTime: "2026-07-27T12:23:27Z"
         message: Reached expected number of succeeded pods
         reason: CompletionsReached
         status: "True"

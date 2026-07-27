@@ -4,14 +4,13 @@ kartaName: apps-deployment-v1
 operator: deployment
 schemaVersion: 6
 steps:
-- action: func34
-  cr:
+- cr:
     apiVersion: apps/v1
     kind: Deployment
     metadata:
       annotations:
         deployment.kubernetes.io/revision: "1"
-      creationTimestamp: "2026-07-26T17:59:58Z"
+      creationTimestamp: "2026-07-27T12:24:02Z"
       generation: 1
       managedFields:
       - apiVersion: apps/v1
@@ -56,7 +55,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T17:59:58Z"
+        time: "2026-07-27T12:24:02Z"
       - apiVersion: apps/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -65,7 +64,6 @@ steps:
               .: {}
               f:deployment.kubernetes.io/revision: {}
           f:status:
-            f:availableReplicas: {}
             f:conditions:
               .: {}
               k:{"type":"Available"}:
@@ -85,17 +83,15 @@ steps:
                 f:status: {}
                 f:type: {}
             f:observedGeneration: {}
-            f:readyReplicas: {}
-            f:replicas: {}
-            f:updatedReplicas: {}
+            f:unavailableReplicas: {}
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T18:00:00Z"
+        time: "2026-07-27T12:24:02Z"
       name: karta-e2e-deploy
       namespace: default
-      resourceVersion: "2915344"
-      uid: 8ff9a307-166a-4c8e-be21-55218d3ccf31
+      resourceVersion: "3176873"
+      uid: 1736136a-c2e2-4d41-835d-d9df010fc92e
     spec:
       progressDeadlineSeconds: 600
       replicas: 1
@@ -133,24 +129,21 @@ steps:
           securityContext: {}
           terminationGracePeriodSeconds: 30
     status:
-      availableReplicas: 1
       conditions:
-      - lastTransitionTime: "2026-07-26T18:00:00Z"
-        lastUpdateTime: "2026-07-26T18:00:00Z"
-        message: Deployment has minimum availability.
-        reason: MinimumReplicasAvailable
-        status: "True"
-        type: Available
-      - lastTransitionTime: "2026-07-26T17:59:58Z"
-        lastUpdateTime: "2026-07-26T18:00:00Z"
-        message: ReplicaSet "karta-e2e-deploy-fd98c5489" has successfully progressed.
-        reason: NewReplicaSetAvailable
+      - lastTransitionTime: "2026-07-27T12:24:02Z"
+        lastUpdateTime: "2026-07-27T12:24:02Z"
+        message: Created new replica set "karta-e2e-deploy-fd98c5489"
+        reason: NewReplicaSetCreated
         status: "True"
         type: Progressing
+      - lastTransitionTime: "2026-07-27T12:24:02Z"
+        lastUpdateTime: "2026-07-27T12:24:02Z"
+        message: Deployment does not have minimum availability.
+        reason: MinimumReplicasUnavailable
+        status: "False"
+        type: Available
       observedGeneration: 1
-      readyReplicas: 1
-      replicas: 1
-      updatedReplicas: 1
+      unavailableReplicas: 1
   expected:
     components:
       deployment:
@@ -182,6 +175,128 @@ steps:
             scale:
               replicas: 1
     conditions:
+    - message: Created new replica set "karta-e2e-deploy-fd98c5489"
+      reason: NewReplicaSetCreated
+      status: "True"
+      type: Progressing
+    - message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+    matchedStatuses:
+    - Initializing
+  state: Initializing
+- expectedPatch:
+    conditions:
+    - message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+    - message: ReplicaSet "karta-e2e-deploy-fd98c5489" is progressing.
+      reason: ReplicaSetUpdated
+      status: "True"
+      type: Progressing
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:progressDeadlineSeconds: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:strategy:
+              f:rollingUpdate:
+                .: {}
+                f:maxSurge: {}
+                f:maxUnavailable: {}
+              f:type: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:24:02Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:annotations:
+              .: {}
+              f:deployment.kubernetes.io/revision: {}
+          f:status:
+            f:conditions:
+              .: {}
+              k:{"type":"Available"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Progressing"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:observedGeneration: {}
+            f:replicas: {}
+            f:unavailableReplicas: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:24:02Z"
+      resourceVersion: "3176876"
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-27T12:24:02Z"
+        lastUpdateTime: "2026-07-27T12:24:02Z"
+        message: Deployment does not have minimum availability.
+        reason: MinimumReplicasUnavailable
+        status: "False"
+        type: Available
+      - lastTransitionTime: "2026-07-27T12:24:02Z"
+        lastUpdateTime: "2026-07-27T12:24:02Z"
+        message: ReplicaSet "karta-e2e-deploy-fd98c5489" is progressing.
+        reason: ReplicaSetUpdated
+        status: "True"
+        type: Progressing
+      replicas: 1
+      updatedReplicas: 1
+  state: Initializing
+- action: func21
+  expectedPatch:
+    conditions:
     - message: Deployment has minimum availability.
       reason: MinimumReplicasAvailable
       status: "True"
@@ -192,8 +307,107 @@ steps:
       type: Progressing
     matchedStatuses:
     - Running
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:progressDeadlineSeconds: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:strategy:
+              f:rollingUpdate:
+                .: {}
+                f:maxSurge: {}
+                f:maxUnavailable: {}
+              f:type: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:24:02Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:annotations:
+              .: {}
+              f:deployment.kubernetes.io/revision: {}
+          f:status:
+            f:availableReplicas: {}
+            f:conditions:
+              .: {}
+              k:{"type":"Available"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Progressing"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:observedGeneration: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:24:03Z"
+      resourceVersion: "3176896"
+    status:
+      availableReplicas: 1
+      conditions:
+      - lastTransitionTime: "2026-07-27T12:24:03Z"
+        lastUpdateTime: "2026-07-27T12:24:03Z"
+        message: Deployment has minimum availability.
+        reason: MinimumReplicasAvailable
+        status: "True"
+        type: Available
+      - lastTransitionTime: "2026-07-27T12:24:02Z"
+        lastUpdateTime: "2026-07-27T12:24:03Z"
+        message: ReplicaSet "karta-e2e-deploy-fd98c5489" has successfully progressed.
+        reason: NewReplicaSetAvailable
+        status: "True"
+        type: Progressing
+      readyReplicas: 1
+      unavailableReplicas: null
   state: Running
-- action: func34
+- action: func21
   expectedPatch:
     components:
       deployment:
@@ -201,15 +415,6 @@ steps:
           "":
             scale:
               replicas: 3
-    conditions:
-    - message: ReplicaSet "karta-e2e-deploy-fd98c5489" has successfully progressed.
-      reason: NewReplicaSetAvailable
-      status: "True"
-      type: Progressing
-    - message: Deployment has minimum availability.
-      reason: MinimumReplicasAvailable
-      status: "True"
-      type: Available
   patch:
     metadata:
       generation: 2
@@ -256,7 +461,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:00:00Z"
+        time: "2026-07-27T12:24:03Z"
       - apiVersion: apps/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -291,31 +496,342 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T18:00:01Z"
-      resourceVersion: "2915389"
+        time: "2026-07-27T12:24:03Z"
+      resourceVersion: "3176897"
     spec:
       replicas: 3
+  state: Running
+- action: func21
+  expectedPatch:
+    conditions:
+    - message: ReplicaSet "karta-e2e-deploy-fd98c5489" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - message: Deployment does not have minimum availability.
+      reason: MinimumReplicasUnavailable
+      status: "False"
+      type: Available
+    matchedStatuses:
+    - Running
+    - Initializing
+  patch:
+    metadata:
+      resourceVersion: "3176903"
     status:
-      availableReplicas: 3
       conditions:
-      - lastTransitionTime: "2026-07-26T17:59:58Z"
-        lastUpdateTime: "2026-07-26T18:00:00Z"
+      - lastTransitionTime: "2026-07-27T12:24:02Z"
+        lastUpdateTime: "2026-07-27T12:24:03Z"
         message: ReplicaSet "karta-e2e-deploy-fd98c5489" has successfully progressed.
         reason: NewReplicaSetAvailable
         status: "True"
         type: Progressing
-      - lastTransitionTime: "2026-07-26T18:00:01Z"
-        lastUpdateTime: "2026-07-26T18:00:01Z"
+      - lastTransitionTime: "2026-07-27T12:24:03Z"
+        lastUpdateTime: "2026-07-27T12:24:03Z"
+        message: Deployment does not have minimum availability.
+        reason: MinimumReplicasUnavailable
+        status: "False"
+        type: Available
+      observedGeneration: 2
+  state: Running
+- action: func21
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:progressDeadlineSeconds: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:strategy:
+              f:rollingUpdate:
+                .: {}
+                f:maxSurge: {}
+                f:maxUnavailable: {}
+              f:type: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:24:03Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:annotations:
+              .: {}
+              f:deployment.kubernetes.io/revision: {}
+          f:status:
+            f:availableReplicas: {}
+            f:conditions:
+              .: {}
+              k:{"type":"Available"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Progressing"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:observedGeneration: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:unavailableReplicas: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:24:03Z"
+      resourceVersion: "3176908"
+    status:
+      unavailableReplicas: 2
+  state: Running
+- action: func21
+  patch:
+    metadata:
+      resourceVersion: "3176916"
+    status:
+      replicas: 3
+      updatedReplicas: 3
+  state: Running
+- action: func21
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:progressDeadlineSeconds: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:strategy:
+              f:rollingUpdate:
+                .: {}
+                f:maxSurge: {}
+                f:maxUnavailable: {}
+              f:type: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:24:03Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:annotations:
+              .: {}
+              f:deployment.kubernetes.io/revision: {}
+          f:status:
+            f:availableReplicas: {}
+            f:conditions:
+              .: {}
+              k:{"type":"Available"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Progressing"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:observedGeneration: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:unavailableReplicas: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:24:04Z"
+      resourceVersion: "3176927"
+    status:
+      availableReplicas: 2
+      readyReplicas: 2
+      unavailableReplicas: 1
+  state: Running
+- action: func21
+  expectedPatch:
+    conditions:
+    - message: ReplicaSet "karta-e2e-deploy-fd98c5489" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    matchedStatuses:
+    - Running
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:progressDeadlineSeconds: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:strategy:
+              f:rollingUpdate:
+                .: {}
+                f:maxSurge: {}
+                f:maxUnavailable: {}
+              f:type: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:24:03Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:annotations:
+              .: {}
+              f:deployment.kubernetes.io/revision: {}
+          f:status:
+            f:availableReplicas: {}
+            f:conditions:
+              .: {}
+              k:{"type":"Available"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Progressing"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:observedGeneration: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:24:04Z"
+      resourceVersion: "3176930"
+    status:
+      availableReplicas: 3
+      conditions:
+      - lastTransitionTime: "2026-07-27T12:24:02Z"
+        lastUpdateTime: "2026-07-27T12:24:03Z"
+        message: ReplicaSet "karta-e2e-deploy-fd98c5489" has successfully progressed.
+        reason: NewReplicaSetAvailable
+        status: "True"
+        type: Progressing
+      - lastTransitionTime: "2026-07-27T12:24:04Z"
+        lastUpdateTime: "2026-07-27T12:24:04Z"
         message: Deployment has minimum availability.
         reason: MinimumReplicasAvailable
         status: "True"
         type: Available
-      observedGeneration: 2
       readyReplicas: 3
-      replicas: 3
-      updatedReplicas: 3
+      unavailableReplicas: null
   state: Running
-- action: func34
+- action: func21
   expectedPatch:
     components:
       deployment:
@@ -369,7 +885,7 @@ steps:
                 f:terminationGracePeriodSeconds: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:00:01Z"
+        time: "2026-07-27T12:24:04Z"
       - apiVersion: apps/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -404,13 +920,24 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T18:00:01Z"
-      resourceVersion: "2915400"
+        time: "2026-07-27T12:24:04Z"
+      resourceVersion: "3176931"
     spec:
       replicas: 1
+  state: Running
+- action: func21
+  patch:
+    metadata:
+      resourceVersion: "3176934"
+    status:
+      observedGeneration: 3
+  state: Running
+- action: func21
+  patch:
+    metadata:
+      resourceVersion: "3176943"
     status:
       availableReplicas: 1
-      observedGeneration: 3
       readyReplicas: 1
       replicas: 1
       updatedReplicas: 1

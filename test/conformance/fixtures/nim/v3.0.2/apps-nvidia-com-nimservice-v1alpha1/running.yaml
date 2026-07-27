@@ -8,7 +8,7 @@ steps:
     apiVersion: apps.nvidia.com/v1alpha1
     kind: NIMService
     metadata:
-      creationTimestamp: "2026-07-26T15:54:30Z"
+      creationTimestamp: "2026-07-27T12:27:10Z"
       finalizers:
       - finalizer.nimservice.apps.nvidia.com
       generation: 2
@@ -42,7 +42,7 @@ steps:
                 f:volumeAccessMode: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T15:54:30Z"
+        time: "2026-07-27T12:27:10Z"
       - apiVersion: apps.nvidia.com/v1alpha1
         fieldsType: FieldsV1
         fieldsV1:
@@ -71,27 +71,22 @@ steps:
               f:nimCache: {}
         manager: manager
         operation: Update
-        time: "2026-07-26T15:54:30Z"
+        time: "2026-07-27T12:27:10Z"
       - apiVersion: apps.nvidia.com/v1alpha1
         fieldsType: FieldsV1
         fieldsV1:
           f:status:
             .: {}
             f:conditions: {}
-            f:model:
-              .: {}
-              f:clusterEndpoint: {}
-              f:externalEndpoint: {}
-              f:name: {}
             f:state: {}
         manager: manager
         operation: Update
         subresource: status
-        time: "2026-07-26T15:55:05Z"
+        time: "2026-07-27T12:27:10Z"
       name: karta-e2e-nim
       namespace: default
-      resourceVersion: "2857009"
-      uid: 0a9100fe-914c-4e77-8b1e-a5e749bdcadb
+      resourceVersion: "3179953"
+      uid: d54ddb0a-2e80-4923-abb0-0177fbaa4bfc
     spec:
       authSecret: ngc-secret
       env:
@@ -126,22 +121,17 @@ steps:
           volumeAccessMode: ReadWriteOnce
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T15:55:05Z"
-        message: |
-          deployment "karta-e2e-nim" successfully rolled out
-        reason: Ready
-        status: "True"
+      - lastTransitionTime: "2026-07-27T12:27:10Z"
+        message: ""
+        reason: NotReady
+        status: "False"
         type: Ready
-      - lastTransitionTime: "2026-07-26T15:54:30Z"
+      - lastTransitionTime: "2026-07-27T12:27:10Z"
         message: ""
         reason: Ready
         status: "False"
         type: Failed
-      model:
-        clusterEndpoint: 10.96.143.136:8000
-        externalEndpoint: ""
-        name: meta/llama-3.2-1b-instruct
-      state: Ready
+      state: NotReady
   expected:
     components:
       nimservice:
@@ -149,6 +139,78 @@ steps:
           "":
             scale:
               replicas: 1
+    conditions:
+    - reason: NotReady
+      status: "False"
+      type: Ready
+    - reason: Ready
+      status: "False"
+      type: Failed
+    matchedStatuses:
+    - Initializing
+    phase: NotReady
+  state: Initializing
+- expectedPatch:
+    conditions:
+    - message: |
+        Waiting for deployment "karta-e2e-nim" rollout to finish: 0 out of 1 new replicas have been updated...
+      reason: NotReady
+      status: "False"
+      type: Ready
+    - message: |
+        Waiting for deployment "karta-e2e-nim" rollout to finish: 0 out of 1 new replicas have been updated...
+      reason: Ready
+      status: "False"
+      type: Failed
+  patch:
+    metadata:
+      resourceVersion: "3179956"
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-27T12:27:10Z"
+        message: |
+          Waiting for deployment "karta-e2e-nim" rollout to finish: 0 out of 1 new replicas have been updated...
+        reason: NotReady
+        status: "False"
+        type: Ready
+      - lastTransitionTime: "2026-07-27T12:27:10Z"
+        message: |
+          Waiting for deployment "karta-e2e-nim" rollout to finish: 0 out of 1 new replicas have been updated...
+        reason: Ready
+        status: "False"
+        type: Failed
+  state: Initializing
+- expectedPatch:
+    conditions:
+    - message: |
+        Waiting for deployment "karta-e2e-nim" rollout to finish: 0 of 1 updated replicas are available...
+      reason: NotReady
+      status: "False"
+      type: Ready
+    - message: |
+        Waiting for deployment "karta-e2e-nim" rollout to finish: 0 of 1 updated replicas are available...
+      reason: Ready
+      status: "False"
+      type: Failed
+  patch:
+    metadata:
+      resourceVersion: "3179984"
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-27T12:27:10Z"
+        message: |
+          Waiting for deployment "karta-e2e-nim" rollout to finish: 0 of 1 updated replicas are available...
+        reason: NotReady
+        status: "False"
+        type: Ready
+      - lastTransitionTime: "2026-07-27T12:27:10Z"
+        message: |
+          Waiting for deployment "karta-e2e-nim" rollout to finish: 0 of 1 updated replicas are available...
+        reason: Ready
+        status: "False"
+        type: Failed
+  state: Initializing
+- expectedPatch:
     conditions:
     - message: |
         deployment "karta-e2e-nim" successfully rolled out
@@ -161,6 +223,103 @@ steps:
     matchedStatuses:
     - Running
     phase: Ready
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps.nvidia.com/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:authSecret: {}
+            f:env: {}
+            f:expose:
+              .: {}
+              f:service:
+                .: {}
+                f:port: {}
+                f:type: {}
+            f:image:
+              .: {}
+              f:pullPolicy: {}
+              f:repository: {}
+              f:tag: {}
+            f:inferencePlatform: {}
+            f:replicas: {}
+            f:storage:
+              .: {}
+              f:pvc:
+                .: {}
+                f:create: {}
+                f:size: {}
+                f:volumeAccessMode: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:27:10Z"
+      - apiVersion: apps.nvidia.com/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:metadata:
+            f:finalizers:
+              .: {}
+              v:"finalizer.nimservice.apps.nvidia.com": {}
+          f:spec:
+            f:expose:
+              f:ingress:
+                .: {}
+                f:spec: {}
+            f:livenessProbe: {}
+            f:metrics:
+              .: {}
+              f:serviceMonitor: {}
+            f:readinessProbe: {}
+            f:scale:
+              .: {}
+              f:hpa:
+                .: {}
+                f:maxReplicas: {}
+                f:minReplicas: {}
+            f:startupProbe: {}
+            f:storage:
+              f:nimCache: {}
+        manager: manager
+        operation: Update
+        time: "2026-07-27T12:27:10Z"
+      - apiVersion: apps.nvidia.com/v1alpha1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions: {}
+            f:model:
+              .: {}
+              f:clusterEndpoint: {}
+              f:externalEndpoint: {}
+              f:name: {}
+            f:state: {}
+        manager: manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:28:18Z"
+      resourceVersion: "3180570"
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-27T12:28:18Z"
+        message: |
+          deployment "karta-e2e-nim" successfully rolled out
+        reason: Ready
+        status: "True"
+        type: Ready
+      - lastTransitionTime: "2026-07-27T12:27:10Z"
+        message: ""
+        reason: Ready
+        status: "False"
+        type: Failed
+      model:
+        clusterEndpoint: 10.96.32.21:8000
+        externalEndpoint: ""
+        name: meta/llama-3.2-1b-instruct
+      state: Ready
   state: Running
 version: v3.0.2
 want: Running

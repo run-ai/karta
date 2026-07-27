@@ -8,7 +8,7 @@ steps:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
-      creationTimestamp: "2026-07-26T16:39:38Z"
+      creationTimestamp: "2026-07-27T12:30:06Z"
       generation: 1
       managedFields:
       - apiVersion: ray.io/v1
@@ -61,11 +61,11 @@ steps:
             f:workerGroupSpecs: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T16:39:38Z"
+        time: "2026-07-27T12:30:06Z"
       name: karta-e2e-ray-suspended
       namespace: default
-      resourceVersion: "2878074"
-      uid: 2b06ffaa-caf4-4082-b147-afb0935ff7d2
+      resourceVersion: "3181740"
+      uid: 3c060bb3-ce4d-48f2-87db-ba2d6c77d7f4
     spec:
       headGroupSpec:
         rayStartParams: {}

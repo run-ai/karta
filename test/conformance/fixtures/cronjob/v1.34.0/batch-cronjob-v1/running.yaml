@@ -8,7 +8,7 @@ steps:
     apiVersion: batch/v1
     kind: CronJob
     metadata:
-      creationTimestamp: "2026-07-26T20:24:29Z"
+      creationTimestamp: "2026-07-27T12:23:33Z"
       generation: 1
       managedFields:
       - apiVersion: batch/v1
@@ -46,21 +46,21 @@ steps:
             f:suspend: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:24:29Z"
+        time: "2026-07-27T12:23:33Z"
       - apiVersion: batch/v1
         fieldsType: FieldsV1
         fieldsV1:
           f:status:
+            f:active: {}
             f:lastScheduleTime: {}
-            f:lastSuccessfulTime: {}
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T20:25:03Z"
+        time: "2026-07-27T12:24:00Z"
       name: karta-e2e-cronjob-running
       namespace: default
-      resourceVersion: "2982069"
-      uid: 53c8d50e-91e6-4536-adc8-028bd83ad1da
+      resourceVersion: "3176831"
+      uid: 6a78d317-7436-4d90-8b37-37e7a57d068f
     spec:
       concurrencyPolicy: Allow
       failedJobsHistoryLimit: 1
@@ -91,8 +91,14 @@ steps:
       successfulJobsHistoryLimit: 3
       suspend: false
     status:
-      lastScheduleTime: "2026-07-26T20:25:00Z"
-      lastSuccessfulTime: "2026-07-26T20:25:03Z"
+      active:
+      - apiVersion: batch/v1
+        kind: Job
+        name: karta-e2e-cronjob-running-29752584
+        namespace: default
+        resourceVersion: "3176829"
+        uid: 4d3afa38-d394-4946-8a65-02190c4b16df
+      lastScheduleTime: "2026-07-27T12:24:00Z"
   expected:
     components:
       cronjob:

@@ -8,7 +8,7 @@ steps:
     apiVersion: kubeflow.org/v2beta1
     kind: MPIJob
     metadata:
-      creationTimestamp: "2026-07-26T16:27:18Z"
+      creationTimestamp: "2026-07-27T12:27:01Z"
       generation: 1
       managedFields:
       - apiVersion: kubeflow.org/v2beta1
@@ -70,7 +70,645 @@ steps:
             f:sshAuthMountPath: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T16:27:18Z"
+        time: "2026-07-27T12:27:01Z"
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions:
+              .: {}
+              k:{"type":"Created"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:replicaStatuses:
+              .: {}
+              f:Launcher: {}
+              f:Worker: {}
+            f:startTime: {}
+        manager: mpi-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:27:01Z"
+      name: karta-e2e-mpi-failed
+      namespace: default
+      resourceVersion: "3179727"
+      uid: 430c4b95-cb1c-4b3a-a414-933d4f0a8217
+    spec:
+      launcherCreationPolicy: AtStartup
+      mpiImplementation: OpenMPI
+      mpiReplicaSpecs:
+        Launcher:
+          replicas: 1
+          template:
+            spec:
+              containers:
+              - command:
+                - "false"
+                image: busybox:1.36
+                name: mpi-launcher
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 64Mi
+        Worker:
+          replicas: 1
+          template:
+            spec:
+              containers:
+              - command:
+                - sleep
+                - infinity
+                image: busybox:1.36
+                name: mpi-worker
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 64Mi
+      runLauncherAsWorker: false
+      runPolicy:
+        backoffLimit: 0
+        cleanPodPolicy: None
+        suspend: false
+      slotsPerWorker: 1
+      sshAuthMountPath: /root/.ssh
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-27T12:27:01Z"
+        lastUpdateTime: "2026-07-27T12:27:01Z"
+        message: MPIJob default/karta-e2e-mpi-failed is created.
+        reason: MPIJobCreated
+        status: "True"
+        type: Created
+      replicaStatuses:
+        Launcher: {}
+        Worker: {}
+      startTime: "2026-07-27T12:27:01Z"
+  expected:
+    components:
+      launcher:
+        instances:
+          "":
+            podTemplateSpec:
+              spec:
+                containers:
+                - command:
+                  - "false"
+                  image: busybox:1.36
+                  name: mpi-launcher
+                  resources:
+                    requests:
+                      cpu: 50m
+                      memory: 64Mi
+            scale:
+              replicas: 1
+      worker:
+        instances:
+          "":
+            podTemplateSpec:
+              spec:
+                containers:
+                - command:
+                  - sleep
+                  - infinity
+                  image: busybox:1.36
+                  name: mpi-worker
+                  resources:
+                    requests:
+                      cpu: 50m
+                      memory: 64Mi
+            scale:
+              replicas: 1
+    conditions:
+    - message: MPIJob default/karta-e2e-mpi-failed is created.
+      reason: MPIJobCreated
+      status: "True"
+      type: Created
+    matchedStatuses:
+    - Initializing
+  state: Initializing
+- patch:
+    metadata:
+      managedFields:
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:launcherCreationPolicy: {}
+            f:mpiImplementation: {}
+            f:mpiReplicaSpecs:
+              .: {}
+              f:Launcher:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-launcher"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+              f:Worker:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-worker"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+            f:runLauncherAsWorker: {}
+            f:runPolicy:
+              .: {}
+              f:backoffLimit: {}
+              f:cleanPodPolicy: {}
+              f:suspend: {}
+            f:slotsPerWorker: {}
+            f:sshAuthMountPath: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:27:01Z"
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions:
+              .: {}
+              k:{"type":"Created"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:replicaStatuses:
+              .: {}
+              f:Launcher: {}
+              f:Worker:
+                .: {}
+                f:active: {}
+            f:startTime: {}
+        manager: mpi-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:27:02Z"
+      resourceVersion: "3179750"
+    status:
+      replicaStatuses:
+        Worker:
+          active: 1
+  state: Initializing
+- expectedPatch:
+    conditions:
+    - message: MPIJob default/karta-e2e-mpi-failed is created.
+      reason: MPIJobCreated
+      status: "True"
+      type: Created
+    - message: MPIJob default/karta-e2e-mpi-failed is running.
+      reason: MPIJobRunning
+      status: "True"
+      type: Running
+    matchedStatuses:
+    - Running
+    - Initializing
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:launcherCreationPolicy: {}
+            f:mpiImplementation: {}
+            f:mpiReplicaSpecs:
+              .: {}
+              f:Launcher:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-launcher"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+              f:Worker:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-worker"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+            f:runLauncherAsWorker: {}
+            f:runPolicy:
+              .: {}
+              f:backoffLimit: {}
+              f:cleanPodPolicy: {}
+              f:suspend: {}
+            f:slotsPerWorker: {}
+            f:sshAuthMountPath: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:27:01Z"
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions:
+              .: {}
+              k:{"type":"Created"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Running"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:replicaStatuses:
+              .: {}
+              f:Launcher:
+                .: {}
+                f:active: {}
+              f:Worker:
+                .: {}
+                f:active: {}
+            f:startTime: {}
+        manager: mpi-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:27:02Z"
+      resourceVersion: "3179755"
+    status:
+      conditions:
+      - lastTransitionTime: "2026-07-27T12:27:01Z"
+        lastUpdateTime: "2026-07-27T12:27:01Z"
+        message: MPIJob default/karta-e2e-mpi-failed is created.
+        reason: MPIJobCreated
+        status: "True"
+        type: Created
+      - lastTransitionTime: "2026-07-27T12:27:02Z"
+        lastUpdateTime: "2026-07-27T12:27:02Z"
+        message: MPIJob default/karta-e2e-mpi-failed is running.
+        reason: MPIJobRunning
+        status: "True"
+        type: Running
+      replicaStatuses:
+        Launcher:
+          active: 1
+  state: Running
+- patch:
+    metadata:
+      managedFields:
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:launcherCreationPolicy: {}
+            f:mpiImplementation: {}
+            f:mpiReplicaSpecs:
+              .: {}
+              f:Launcher:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-launcher"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+              f:Worker:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-worker"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+            f:runLauncherAsWorker: {}
+            f:runPolicy:
+              .: {}
+              f:backoffLimit: {}
+              f:cleanPodPolicy: {}
+              f:suspend: {}
+            f:slotsPerWorker: {}
+            f:sshAuthMountPath: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:27:01Z"
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions:
+              .: {}
+              k:{"type":"Created"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Running"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:replicaStatuses:
+              .: {}
+              f:Launcher:
+                .: {}
+                f:active: {}
+                f:failed: {}
+              f:Worker:
+                .: {}
+                f:active: {}
+            f:startTime: {}
+        manager: mpi-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:27:04Z"
+      resourceVersion: "3179786"
+    status:
+      replicaStatuses:
+        Launcher:
+          failed: 1
+  state: Running
+- patch:
+    metadata:
+      managedFields:
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:launcherCreationPolicy: {}
+            f:mpiImplementation: {}
+            f:mpiReplicaSpecs:
+              .: {}
+              f:Launcher:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-launcher"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+              f:Worker:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-worker"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+            f:runLauncherAsWorker: {}
+            f:runPolicy:
+              .: {}
+              f:backoffLimit: {}
+              f:cleanPodPolicy: {}
+              f:suspend: {}
+            f:slotsPerWorker: {}
+            f:sshAuthMountPath: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:27:01Z"
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:conditions:
+              .: {}
+              k:{"type":"Created"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+              k:{"type":"Running"}:
+                .: {}
+                f:lastTransitionTime: {}
+                f:lastUpdateTime: {}
+                f:message: {}
+                f:reason: {}
+                f:status: {}
+                f:type: {}
+            f:replicaStatuses:
+              .: {}
+              f:Launcher:
+                .: {}
+                f:failed: {}
+              f:Worker:
+                .: {}
+                f:active: {}
+            f:startTime: {}
+        manager: mpi-operator
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:27:04Z"
+      resourceVersion: "3179790"
+    status:
+      replicaStatuses:
+        Launcher:
+          active: null
+  state: Running
+- expectedPatch:
+    conditions:
+    - message: MPIJob default/karta-e2e-mpi-failed is created.
+      reason: MPIJobCreated
+      status: "True"
+      type: Created
+    - message: MPIJob default/karta-e2e-mpi-failed is running.
+      reason: MPIJobRunning
+      status: "False"
+      type: Running
+    - message: Job has reached the specified backoff limit
+      reason: BackoffLimitExceeded
+      status: "True"
+      type: Failed
+    matchedStatuses:
+    - Failed
+    - Initializing
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: kubeflow.org/v2beta1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:launcherCreationPolicy: {}
+            f:mpiImplementation: {}
+            f:mpiReplicaSpecs:
+              .: {}
+              f:Launcher:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-launcher"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+              f:Worker:
+                .: {}
+                f:replicas: {}
+                f:template:
+                  .: {}
+                  f:spec:
+                    .: {}
+                    f:containers:
+                      .: {}
+                      k:{"name":"mpi-worker"}:
+                        .: {}
+                        f:command: {}
+                        f:image: {}
+                        f:name: {}
+                        f:resources:
+                          .: {}
+                          f:requests:
+                            .: {}
+                            f:cpu: {}
+                            f:memory: {}
+            f:runLauncherAsWorker: {}
+            f:runPolicy:
+              .: {}
+              f:backoffLimit: {}
+              f:cleanPodPolicy: {}
+              f:suspend: {}
+            f:slotsPerWorker: {}
+            f:sshAuthMountPath: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:27:01Z"
       - apiVersion: kubeflow.org/v2beta1
         fieldsType: FieldsV1
         fieldsV1:
@@ -113,126 +751,32 @@ steps:
         manager: mpi-operator
         operation: Update
         subresource: status
-        time: "2026-07-26T16:27:43Z"
-      name: karta-e2e-mpi-failed
-      namespace: default
-      resourceVersion: "2872448"
-      uid: ceeaa5cf-0d58-4364-af27-c2b21f7b5d45
-    spec:
-      launcherCreationPolicy: AtStartup
-      mpiImplementation: OpenMPI
-      mpiReplicaSpecs:
-        Launcher:
-          replicas: 1
-          template:
-            spec:
-              containers:
-              - command:
-                - "false"
-                image: busybox:1.36
-                name: mpi-launcher
-                resources:
-                  requests:
-                    cpu: 50m
-                    memory: 64Mi
-        Worker:
-          replicas: 1
-          template:
-            spec:
-              containers:
-              - command:
-                - sleep
-                - infinity
-                image: busybox:1.36
-                name: mpi-worker
-                resources:
-                  requests:
-                    cpu: 50m
-                    memory: 64Mi
-      runLauncherAsWorker: false
-      runPolicy:
-        backoffLimit: 0
-        cleanPodPolicy: None
-        suspend: false
-      slotsPerWorker: 1
-      sshAuthMountPath: /root/.ssh
+        time: "2026-07-27T12:27:05Z"
+      resourceVersion: "3179809"
     status:
-      completionTime: "2026-07-26T16:27:43Z"
+      completionTime: "2026-07-27T12:27:05Z"
       conditions:
-      - lastTransitionTime: "2026-07-26T16:27:39Z"
-        lastUpdateTime: "2026-07-26T16:27:39Z"
+      - lastTransitionTime: "2026-07-27T12:27:01Z"
+        lastUpdateTime: "2026-07-27T12:27:01Z"
         message: MPIJob default/karta-e2e-mpi-failed is created.
         reason: MPIJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-07-26T16:27:40Z"
-        lastUpdateTime: "2026-07-26T16:27:40Z"
+      - lastTransitionTime: "2026-07-27T12:27:02Z"
+        lastUpdateTime: "2026-07-27T12:27:02Z"
         message: MPIJob default/karta-e2e-mpi-failed is running.
         reason: MPIJobRunning
         status: "False"
         type: Running
-      - lastTransitionTime: "2026-07-26T16:27:43Z"
-        lastUpdateTime: "2026-07-26T16:27:43Z"
+      - lastTransitionTime: "2026-07-27T12:27:05Z"
+        lastUpdateTime: "2026-07-27T12:27:05Z"
         message: Job has reached the specified backoff limit
         reason: BackoffLimitExceeded
         status: "True"
         type: Failed
       replicaStatuses:
-        Launcher:
-          failed: 1
-        Worker: {}
-      startTime: "2026-07-26T16:27:39Z"
-  expected:
-    components:
-      launcher:
-        instances:
-          "":
-            podTemplateSpec:
-              spec:
-                containers:
-                - command:
-                  - "false"
-                  image: busybox:1.36
-                  name: mpi-launcher
-                  resources:
-                    requests:
-                      cpu: 50m
-                      memory: 64Mi
-            scale:
-              replicas: 1
-      worker:
-        instances:
-          "":
-            podTemplateSpec:
-              spec:
-                containers:
-                - command:
-                  - sleep
-                  - infinity
-                  image: busybox:1.36
-                  name: mpi-worker
-                  resources:
-                    requests:
-                      cpu: 50m
-                      memory: 64Mi
-            scale:
-              replicas: 1
-    conditions:
-    - message: MPIJob default/karta-e2e-mpi-failed is created.
-      reason: MPIJobCreated
-      status: "True"
-      type: Created
-    - message: MPIJob default/karta-e2e-mpi-failed is running.
-      reason: MPIJobRunning
-      status: "False"
-      type: Running
-    - message: Job has reached the specified backoff limit
-      reason: BackoffLimitExceeded
-      status: "True"
-      type: Failed
-    matchedStatuses:
-    - Failed
-    - Initializing
+        Worker:
+          active: null
   state: Failed
 version: v1.9.0
 want: Failed

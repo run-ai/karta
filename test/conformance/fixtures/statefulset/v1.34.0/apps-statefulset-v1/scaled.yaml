@@ -4,12 +4,11 @@ kartaName: apps-statefulset-v1
 operator: statefulset
 schemaVersion: 6
 steps:
-- action: func45
-  cr:
+- cr:
     apiVersion: apps/v1
     kind: StatefulSet
     metadata:
-      creationTimestamp: "2026-07-26T18:02:29Z"
+      creationTimestamp: "2026-07-27T12:33:11Z"
       generation: 1
       managedFields:
       - apiVersion: apps/v1
@@ -58,28 +57,23 @@ steps:
               f:type: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:02:29Z"
+        time: "2026-07-27T12:33:11Z"
       - apiVersion: apps/v1
         fieldsType: FieldsV1
         fieldsV1:
           f:status:
-            f:availableReplicas: {}
             f:collisionCount: {}
-            f:currentReplicas: {}
             f:currentRevision: {}
             f:observedGeneration: {}
-            f:readyReplicas: {}
-            f:replicas: {}
             f:updateRevision: {}
-            f:updatedReplicas: {}
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T18:02:31Z"
+        time: "2026-07-27T12:33:11Z"
       name: karta-e2e-sts
       namespace: default
-      resourceVersion: "2916573"
-      uid: 56a6317e-d980-4385-8f47-ba97e583c0f7
+      resourceVersion: "3183409"
+      uid: a7e20078-8774-4c6b-8ee2-5f5d6f83e1ba
     spec:
       persistentVolumeClaimRetentionPolicy:
         whenDeleted: Retain
@@ -120,15 +114,12 @@ steps:
           partition: 0
         type: RollingUpdate
     status:
-      availableReplicas: 1
+      availableReplicas: 0
       collisionCount: 0
-      currentReplicas: 1
       currentRevision: karta-e2e-sts-7775b6b476
       observedGeneration: 1
-      readyReplicas: 1
-      replicas: 1
+      replicas: 0
       updateRevision: karta-e2e-sts-7775b6b476
-      updatedReplicas: 1
   expected:
     components:
       statefulset:
@@ -160,16 +151,164 @@ steps:
             scale:
               replicas: 1
     matchedStatuses:
-    - Running
-  state: Running
-- action: func45
+    - Initializing
+  state: Initializing
+- patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:persistentVolumeClaimRetentionPolicy:
+              .: {}
+              f:whenDeleted: {}
+              f:whenScaled: {}
+            f:podManagementPolicy: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:serviceName: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+            f:updateStrategy:
+              f:rollingUpdate:
+                .: {}
+                f:partition: {}
+              f:type: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:33:11Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:collisionCount: {}
+            f:currentReplicas: {}
+            f:currentRevision: {}
+            f:observedGeneration: {}
+            f:replicas: {}
+            f:updateRevision: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:33:11Z"
+      resourceVersion: "3183410"
+    status:
+      currentReplicas: 1
+      replicas: 1
+      updatedReplicas: 1
+  state: Initializing
+- action: func80
   expectedPatch:
+    matchedStatuses:
+    - Running
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:persistentVolumeClaimRetentionPolicy:
+              .: {}
+              f:whenDeleted: {}
+              f:whenScaled: {}
+            f:podManagementPolicy: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:serviceName: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+            f:updateStrategy:
+              f:rollingUpdate:
+                .: {}
+                f:partition: {}
+              f:type: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:33:11Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:availableReplicas: {}
+            f:collisionCount: {}
+            f:currentReplicas: {}
+            f:currentRevision: {}
+            f:observedGeneration: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updateRevision: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:33:12Z"
+      resourceVersion: "3183424"
+    status:
+      availableReplicas: 1
+      readyReplicas: 1
+  state: Running
+- expectedPatch:
     components:
       statefulset:
         instances:
           "":
             scale:
               replicas: 3
+    matchedStatuses:
+    - Initializing
   patch:
     metadata:
       generation: 2
@@ -220,7 +359,7 @@ steps:
               f:type: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:02:31Z"
+        time: "2026-07-27T12:33:12Z"
       - apiVersion: apps/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -237,26 +376,193 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T18:02:32Z"
-      resourceVersion: "2916607"
+        time: "2026-07-27T12:33:12Z"
+      resourceVersion: "3183425"
     spec:
       replicas: 3
+  state: Initializing
+- patch:
+    metadata:
+      resourceVersion: "3183428"
     status:
-      availableReplicas: 3
-      currentReplicas: 3
       observedGeneration: 2
-      readyReplicas: 3
+  state: Initializing
+- patch:
+    metadata:
+      resourceVersion: "3183431"
+    status:
+      currentReplicas: 2
+      replicas: 2
+      updatedReplicas: 2
+  state: Initializing
+- patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:persistentVolumeClaimRetentionPolicy:
+              .: {}
+              f:whenDeleted: {}
+              f:whenScaled: {}
+            f:podManagementPolicy: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:serviceName: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+            f:updateStrategy:
+              f:rollingUpdate:
+                .: {}
+                f:partition: {}
+              f:type: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:33:12Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:availableReplicas: {}
+            f:collisionCount: {}
+            f:currentReplicas: {}
+            f:currentRevision: {}
+            f:observedGeneration: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updateRevision: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:33:13Z"
+      resourceVersion: "3183484"
+    status:
+      availableReplicas: 2
+      readyReplicas: 2
+  state: Initializing
+- expectedPatch:
+    matchedStatuses:
+    - Degraded
+  patch:
+    metadata:
+      resourceVersion: "3183486"
+    status:
+      currentReplicas: 3
       replicas: 3
       updatedReplicas: 3
-  state: Running
-- action: func45
+  state: Degraded
+- action: func80
   expectedPatch:
+    matchedStatuses:
+    - Running
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:persistentVolumeClaimRetentionPolicy:
+              .: {}
+              f:whenDeleted: {}
+              f:whenScaled: {}
+            f:podManagementPolicy: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:serviceName: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+            f:updateStrategy:
+              f:rollingUpdate:
+                .: {}
+                f:partition: {}
+              f:type: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:33:12Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:availableReplicas: {}
+            f:collisionCount: {}
+            f:currentReplicas: {}
+            f:currentRevision: {}
+            f:observedGeneration: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updateRevision: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:33:15Z"
+      resourceVersion: "3183504"
+    status:
+      availableReplicas: 3
+      readyReplicas: 3
+  state: Running
+- expectedPatch:
     components:
       statefulset:
         instances:
           "":
             scale:
               replicas: 1
+    matchedStatuses:
+    - Initializing
   patch:
     metadata:
       generation: 3
@@ -307,7 +613,7 @@ steps:
               f:type: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:02:32Z"
+        time: "2026-07-27T12:33:15Z"
       - apiVersion: apps/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -324,17 +630,251 @@ steps:
         manager: kube-controller-manager
         operation: Update
         subresource: status
-        time: "2026-07-26T18:03:35Z"
-      resourceVersion: "2917095"
+        time: "2026-07-27T12:33:15Z"
+      resourceVersion: "3183507"
     spec:
       replicas: 1
+  state: Initializing
+- patch:
+    metadata:
+      resourceVersion: "3183510"
+    status:
+      observedGeneration: 3
+  state: Initializing
+- patch:
+    metadata:
+      resourceVersion: "3183511"
+    status:
+      currentReplicas: 2
+      updatedReplicas: 2
+  state: Initializing
+- patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:persistentVolumeClaimRetentionPolicy:
+              .: {}
+              f:whenDeleted: {}
+              f:whenScaled: {}
+            f:podManagementPolicy: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:serviceName: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+            f:updateStrategy:
+              f:rollingUpdate:
+                .: {}
+                f:partition: {}
+              f:type: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:33:15Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:availableReplicas: {}
+            f:collisionCount: {}
+            f:currentReplicas: {}
+            f:currentRevision: {}
+            f:observedGeneration: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updateRevision: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:33:47Z"
+      resourceVersion: "3183766"
+    status:
+      availableReplicas: 2
+      readyReplicas: 2
+  state: Initializing
+- patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:persistentVolumeClaimRetentionPolicy:
+              .: {}
+              f:whenDeleted: {}
+              f:whenScaled: {}
+            f:podManagementPolicy: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:serviceName: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+            f:updateStrategy:
+              f:rollingUpdate:
+                .: {}
+                f:partition: {}
+              f:type: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:33:15Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:availableReplicas: {}
+            f:collisionCount: {}
+            f:currentReplicas: {}
+            f:currentRevision: {}
+            f:observedGeneration: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updateRevision: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:33:48Z"
+      resourceVersion: "3183770"
+    status:
+      replicas: 2
+  state: Initializing
+- action: func80
+  expectedPatch:
+    matchedStatuses:
+    - Running
+  patch:
+    metadata:
+      managedFields:
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:persistentVolumeClaimRetentionPolicy:
+              .: {}
+              f:whenDeleted: {}
+              f:whenScaled: {}
+            f:podManagementPolicy: {}
+            f:replicas: {}
+            f:revisionHistoryLimit: {}
+            f:selector: {}
+            f:serviceName: {}
+            f:template:
+              f:metadata:
+                f:labels:
+                  .: {}
+                  f:app: {}
+              f:spec:
+                f:containers:
+                  k:{"name":"worker"}:
+                    .: {}
+                    f:command: {}
+                    f:image: {}
+                    f:imagePullPolicy: {}
+                    f:name: {}
+                    f:resources:
+                      .: {}
+                      f:requests:
+                        .: {}
+                        f:cpu: {}
+                        f:memory: {}
+                    f:terminationMessagePath: {}
+                    f:terminationMessagePolicy: {}
+                f:dnsPolicy: {}
+                f:restartPolicy: {}
+                f:schedulerName: {}
+                f:securityContext: {}
+                f:terminationGracePeriodSeconds: {}
+            f:updateStrategy:
+              f:rollingUpdate:
+                .: {}
+                f:partition: {}
+              f:type: {}
+        manager: e2e.test
+        operation: Update
+        time: "2026-07-27T12:33:15Z"
+      - apiVersion: apps/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            f:availableReplicas: {}
+            f:collisionCount: {}
+            f:currentReplicas: {}
+            f:currentRevision: {}
+            f:observedGeneration: {}
+            f:readyReplicas: {}
+            f:replicas: {}
+            f:updateRevision: {}
+            f:updatedReplicas: {}
+        manager: kube-controller-manager
+        operation: Update
+        subresource: status
+        time: "2026-07-27T12:34:18Z"
+      resourceVersion: "3184018"
     status:
       availableReplicas: 1
       currentReplicas: 1
-      observedGeneration: 3
       readyReplicas: 1
-      replicas: 1
       updatedReplicas: 1
+  state: Running
+- action: func80
+  patch:
+    metadata:
+      resourceVersion: "3184021"
+    status:
+      replicas: 1
   state: Running
 version: v1.34.0
 want: Running

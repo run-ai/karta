@@ -8,7 +8,7 @@ steps:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-07-26T20:30:39Z"
+      creationTimestamp: "2026-07-27T12:25:48Z"
       generation: 1
       managedFields:
       - apiVersion: jobset.x-k8s.io/v1alpha2
@@ -51,7 +51,7 @@ steps:
             f:suspend: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:30:39Z"
+        time: "2026-07-27T12:25:48Z"
       - apiVersion: jobset.x-k8s.io/v1alpha2
         fieldsType: FieldsV1
         fieldsV1:
@@ -80,11 +80,11 @@ steps:
         manager: jobset
         operation: Update
         subresource: status
-        time: "2026-07-26T20:30:39Z"
+        time: "2026-07-27T12:25:48Z"
       name: karta-e2e-jobset-suspended
       namespace: default
-      resourceVersion: "2984746"
-      uid: 3ddceb3c-110e-4f26-8089-486e1b20f065
+      resourceVersion: "3178510"
+      uid: 71b2d5cc-cbca-44be-a301-bd69242891fa
     spec:
       network:
         enableDNSHostnames: true
@@ -120,7 +120,7 @@ steps:
       suspend: true
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T20:30:39Z"
+      - lastTransitionTime: "2026-07-27T12:25:48Z"
         message: jobset is suspended
         reason: SuspendedJobs
         status: "True"

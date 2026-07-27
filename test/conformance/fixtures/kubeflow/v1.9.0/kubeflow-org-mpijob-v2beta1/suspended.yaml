@@ -8,7 +8,7 @@ steps:
     apiVersion: kubeflow.org/v2beta1
     kind: MPIJob
     metadata:
-      creationTimestamp: "2026-07-26T18:12:29Z"
+      creationTimestamp: "2026-07-27T12:27:05Z"
       generation: 1
       managedFields:
       - apiVersion: kubeflow.org/v2beta1
@@ -69,7 +69,7 @@ steps:
             f:sshAuthMountPath: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T18:12:29Z"
+        time: "2026-07-27T12:27:05Z"
       - apiVersion: kubeflow.org/v2beta1
         fieldsType: FieldsV1
         fieldsV1:
@@ -108,11 +108,11 @@ steps:
         manager: mpi-operator
         operation: Update
         subresource: status
-        time: "2026-07-26T18:12:29Z"
+        time: "2026-07-27T12:27:05Z"
       name: karta-e2e-mpi-suspended
       namespace: default
-      resourceVersion: "2921557"
-      uid: 79318a8b-a62d-48ba-a67b-3a925af4b092
+      resourceVersion: "3179831"
+      uid: e16e3393-bb8d-46eb-a372-f657c5d50520
     spec:
       launcherCreationPolicy: AtStartup
       mpiImplementation: OpenMPI
@@ -152,20 +152,20 @@ steps:
       sshAuthMountPath: /root/.ssh
     status:
       conditions:
-      - lastTransitionTime: "2026-07-26T18:12:29Z"
-        lastUpdateTime: "2026-07-26T18:12:29Z"
+      - lastTransitionTime: "2026-07-27T12:27:05Z"
+        lastUpdateTime: "2026-07-27T12:27:05Z"
         message: MPIJob default/karta-e2e-mpi-suspended is created.
         reason: MPIJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-07-26T18:12:29Z"
-        lastUpdateTime: "2026-07-26T18:12:29Z"
+      - lastTransitionTime: "2026-07-27T12:27:05Z"
+        lastUpdateTime: "2026-07-27T12:27:05Z"
         message: MPIJob suspended
         reason: MPIJobSuspended
         status: "True"
         type: Suspended
-      - lastTransitionTime: "2026-07-26T18:12:29Z"
-        lastUpdateTime: "2026-07-26T18:12:29Z"
+      - lastTransitionTime: "2026-07-27T12:27:05Z"
+        lastUpdateTime: "2026-07-27T12:27:05Z"
         message: MPIJob default/karta-e2e-mpi-suspended is suspended.
         reason: MPIJobSuspended
         status: "False"

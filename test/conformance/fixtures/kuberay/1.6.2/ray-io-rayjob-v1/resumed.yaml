@@ -4,12 +4,12 @@ kartaName: ray-io-rayjob-v1
 operator: kuberay
 schemaVersion: 6
 steps:
-- action: unsuspend
+- action: Unsuspend
   cr:
     apiVersion: ray.io/v1
     kind: RayJob
     metadata:
-      creationTimestamp: "2026-07-26T20:51:25Z"
+      creationTimestamp: "2026-07-27T12:31:46Z"
       finalizers:
       - ray.io/rayjob-finalizer
       generation: 2
@@ -64,7 +64,7 @@ steps:
             f:ttlSecondsAfterFinished: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:51:25Z"
+        time: "2026-07-27T12:31:46Z"
       - apiVersion: ray.io/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -80,7 +80,7 @@ steps:
               f:workerGroupSpecs: {}
         manager: kuberay-operator
         operation: Update
-        time: "2026-07-26T20:51:25Z"
+        time: "2026-07-27T12:31:46Z"
       - apiVersion: ray.io/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -101,11 +101,11 @@ steps:
         manager: kuberay-operator
         operation: Update
         subresource: status
-        time: "2026-07-26T20:51:25Z"
+        time: "2026-07-27T12:31:46Z"
       name: karta-e2e-rayjob-resumed
       namespace: default
-      resourceVersion: "2994573"
-      uid: 76554918-6c45-4c87-aff5-f2fe035e500f
+      resourceVersion: "3182776"
+      uid: 8a86d6bf-fcef-40b8-b4b5-7e9c64ef1090
     spec:
       backoffLimit: 0
       entrypoint: python -c "import time; time.sleep(300)"
@@ -167,7 +167,7 @@ steps:
         desiredTPU: "0"
         head: {}
       rayJobInfo: {}
-      startTime: "2026-07-26T20:51:25Z"
+      startTime: "2026-07-27T12:31:46Z"
       succeeded: 0
   expected:
     components:
@@ -214,13 +214,20 @@ steps:
     - Suspended
     phase: ""
   state: Suspended
+- action: Unsuspend
+  patch:
+    metadata:
+      generation: 3
+      resourceVersion: "3182777"
+    spec:
+      suspend: false
+  state: Suspended
 - expectedPatch:
     matchedStatuses:
     - Running
     phase: RUNNING
   patch:
     metadata:
-      generation: 3
       managedFields:
       - apiVersion: ray.io/v1
         fieldsType: FieldsV1
@@ -272,7 +279,7 @@ steps:
             f:ttlSecondsAfterFinished: {}
         manager: e2e.test
         operation: Update
-        time: "2026-07-26T20:51:25Z"
+        time: "2026-07-27T12:31:46Z"
       - apiVersion: ray.io/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -288,7 +295,7 @@ steps:
               f:workerGroupSpecs: {}
         manager: kuberay-operator
         operation: Update
-        time: "2026-07-26T20:51:25Z"
+        time: "2026-07-27T12:31:46Z"
       - apiVersion: ray.io/v1
         fieldsType: FieldsV1
         fieldsV1:
@@ -364,35 +371,33 @@ steps:
         manager: kuberay-operator
         operation: Update
         subresource: status
-        time: "2026-07-26T20:51:50Z"
-      resourceVersion: "2994817"
-    spec:
-      suspend: false
+        time: "2026-07-27T12:33:09Z"
+      resourceVersion: "3183376"
     status:
-      dashboardURL: karta-e2e-rayjob-resumed-f6bdj-head-svc.default.svc.cluster.local:8265
+      dashboardURL: karta-e2e-rayjob-resumed-jsjqt-head-svc.default.svc.cluster.local:8265
       jobDeploymentStatus: Running
-      jobId: karta-e2e-rayjob-resumed-8m6wh
+      jobId: karta-e2e-rayjob-resumed-9mkhq
       jobStatus: RUNNING
       message: Job is currently running.
-      rayClusterName: karta-e2e-rayjob-resumed-f6bdj
+      rayClusterName: karta-e2e-rayjob-resumed-jsjqt
       rayClusterStatus:
         conditions:
-        - lastTransitionTime: "2026-07-26T20:51:43Z"
+        - lastTransitionTime: "2026-07-27T12:32:03Z"
           message: ""
           reason: HeadPodRunningAndReady
           status: "True"
           type: HeadPodReady
-        - lastTransitionTime: "2026-07-26T20:51:43Z"
+        - lastTransitionTime: "2026-07-27T12:32:03Z"
           message: All Ray Pods are ready for the first time
           reason: AllPodRunningAndReadyFirstTime
           status: "True"
           type: RayClusterProvisioned
-        - lastTransitionTime: "2026-07-26T20:51:25Z"
+        - lastTransitionTime: "2026-07-27T12:31:46Z"
           message: ""
           reason: RayClusterSuspended
           status: "False"
           type: RayClusterSuspended
-        - lastTransitionTime: "2026-07-26T20:51:25Z"
+        - lastTransitionTime: "2026-07-27T12:31:46Z"
           message: ""
           reason: RayClusterSuspending
           status: "False"
@@ -406,17 +411,17 @@ steps:
           metrics: "8080"
           serve: "8000"
         head:
-          podIP: 10.244.1.189
-          podName: karta-e2e-rayjob-resumed-f6bdj-head-dlmwb
-          serviceIP: 10.244.1.189
-          serviceName: karta-e2e-rayjob-resumed-f6bdj-head-svc
-        lastUpdateTime: "2026-07-26T20:51:43Z"
+          podIP: 10.244.1.211
+          podName: karta-e2e-rayjob-resumed-jsjqt-head-mtqwl
+          serviceIP: 10.244.1.211
+          serviceName: karta-e2e-rayjob-resumed-jsjqt-head-svc
+        lastUpdateTime: "2026-07-27T12:32:03Z"
         observedGeneration: 1
         state: ready
         stateTransitionTimes:
-          ready: "2026-07-26T20:51:43Z"
+          ready: "2026-07-27T12:32:03Z"
       rayJobInfo:
-        startTime: "2026-07-26T20:51:46Z"
+        startTime: "2026-07-27T12:32:13Z"
   state: Running
 version: 1.6.2
 want: Running
