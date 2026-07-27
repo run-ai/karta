@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
+// Package e2e runs the Karta end-to-end suite against a real cluster provisioned by
+// hack/e2e/up.sh. It is its own Go module so the cluster deps stay out of the library.
 package e2e
 
 import (
@@ -20,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
@@ -29,6 +30,7 @@ import (
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/test/conformance"
+	"github.com/run-ai/karta/test/e2e/cases"
 )
 
 var (
@@ -37,16 +39,10 @@ var (
 	dynClient dynamic.Interface
 )
 
-func emptyLike(src *unstructured.Unstructured) *unstructured.Unstructured {
-	u := &unstructured.Unstructured{}
-	u.SetGroupVersionKind(src.GroupVersionKind())
-	return u
-}
-
 // observeTransitions watches one workload from creation and records every distinct settled CR
 // it moves through, firing each journey action once when its state is reached, until the
 // terminal state is reached with all actions fired (or the timeout).
-func observeTransitions(tc workloadCase, fl flow, obj *unstructured.Unstructured, timeout time.Duration) *recording {
+func observeTransitions(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, timeout time.Duration) *recording {
 	gvk := obj.GroupVersionKind()
 	mapping, err := k8sClient.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
 	Expect(err).NotTo(HaveOccurred(), "rest mapping for %s", gvk)
@@ -59,7 +55,7 @@ func observeTransitions(tc workloadCase, fl flow, obj *unstructured.Unstructured
 	// Watch from the workload's creation resourceVersion so no early state is missed.
 	initialRV := obj.GetResourceVersion()
 	if initialRV == "" {
-		seed := emptyLike(obj)
+		seed := cases.EmptyLike(obj)
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed)).To(Succeed())
 		initialRV = seed.GetResourceVersion()
 	}
@@ -78,23 +74,23 @@ func observeTransitions(tc workloadCase, fl flow, obj *unstructured.Unstructured
 	// A journey that gates any step on the workload's own fields (a scale flow, where the state stays
 	// Running while the replica count changes) is driven strictly by position: one CR captured per
 	// step, so a repeated state is recorded each time. The default path below dedups on the state.
-	if journeyGated(fl.journey) {
+	if journeyGated(fl.Journey) {
 		observeGated(ctx, tc, fl, obj, watcher, timeout, rec)
 		return rec
 	}
 
-	var pending []step // journey steps with an action, fired head-first in order
-	for _, st := range fl.journey {
-		if st.action != nil {
+	var pending []cases.Step // journey steps with an action, fired head-first in order
+	for _, st := range fl.Journey {
+		if st.Action != nil {
 			pending = append(pending, st)
 		}
 	}
-	done := func(state kartav1alpha1.ResourceStatus) bool { return state == fl.want() && len(pending) == 0 }
+	done := func(state kartav1alpha1.ResourceStatus) bool { return state == fl.Want() && len(pending) == 0 }
 	var lastSeen *unstructured.Unstructured
 
 	// A workload terminal at creation never fires a watch event; take the create response.
-	if statusSettled(obj) && done(classify(obj, tc.states)) {
-		rec.keep(obj, fl.want())
+	if statusSettled(obj) && done(cases.Classify(obj, tc.States)) {
+		rec.keep(obj, fl.Want())
 		return rec
 	}
 
@@ -103,7 +99,7 @@ func observeTransitions(tc workloadCase, fl flow, obj *unstructured.Unstructured
 		select {
 		case <-deadline:
 			Fail(fmt.Sprintf("workload %s flow %q did not finish within %s; observed %v, want %q, unfired %v\nlast-seen status:\n%s",
-				tc.name, fl.name, timeout, rec.order, fl.want(), stepStates(pending), dumpStatus(lastSeen)))
+				tc.Name, fl.Name, timeout, rec.order, fl.Want(), stepStates(pending), dumpStatus(lastSeen)))
 		case event, open := <-watcher.ResultChan():
 			if !open {
 				Fail("watch closed before terminal state")
@@ -113,13 +109,13 @@ func observeTransitions(tc workloadCase, fl flow, obj *unstructured.Unstructured
 				continue // a bookmark or error frame carries no workload object
 			}
 			lastSeen = u
-			state := classify(u, tc.states)
+			state := cases.Classify(u, tc.States)
 			if !statusSettled(u) || state == "" {
 				continue // mid-reconcile or unrecognised: nothing to replay against
 			}
 			rec.keep(u, state)
-			if len(pending) > 0 && state == pending[0].state {
-				Expect(pending[0].action(ctx, obj)).NotTo(HaveOccurred(), "action at state %q", state)
+			if len(pending) > 0 && state == pending[0].State {
+				Expect(pending[0].Action(ctx, obj)).NotTo(HaveOccurred(), "action at state %q", state)
 				pending = pending[1:]
 			}
 			if done(state) {
@@ -130,20 +126,20 @@ func observeTransitions(tc workloadCase, fl flow, obj *unstructured.Unstructured
 }
 
 // observeGated drives a gated journey strictly by position: it walks the steps in order, and a step
-// is reached only when classify returns its state and its settle gate holds. Each reached step's CR
+// is reached only when Classify returns its state and its settle gate holds. Each reached step's CR
 // is captured (even when the state repeats) and its action fires to drive toward the next step. This
 // is the scale path - the workload stays Running while spec.replicas and the ready count change, and
-// settle (replicasReady) picks out the CR settled at each count.
-func observeGated(ctx context.Context, tc workloadCase, fl flow, obj *unstructured.Unstructured, watcher watch.Interface, timeout time.Duration, rec *recording) {
+// settle (ReplicasReady) picks out the CR settled at each count.
+func observeGated(ctx context.Context, tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, watcher watch.Interface, timeout time.Duration, rec *recording) {
 	pos := 0
 	var lastSeen *unstructured.Unstructured
 	deadline := time.After(timeout)
 	for {
 		select {
 		case <-deadline:
-			st := fl.journey[pos]
+			st := fl.Journey[pos]
 			Fail(fmt.Sprintf("workload %s flow %q stuck at step %d (want %q + settle); recorded %v\nlast-seen status:\n%s",
-				tc.name, fl.name, pos, st.state, rec.order, dumpStatus(lastSeen)))
+				tc.Name, fl.Name, pos, st.State, rec.order, dumpStatus(lastSeen)))
 		case event, open := <-watcher.ResultChan():
 			if !open {
 				Fail("watch closed before the journey finished")
@@ -153,20 +149,20 @@ func observeGated(ctx context.Context, tc workloadCase, fl flow, obj *unstructur
 				continue
 			}
 			lastSeen = u
-			state := classify(u, tc.states)
+			state := cases.Classify(u, tc.States)
 			if !statusSettled(u) || state == "" {
 				continue
 			}
-			st := fl.journey[pos]
-			if state != st.state || (st.settle != nil && !st.settle(u)) {
+			st := fl.Journey[pos]
+			if state != st.State || (st.Settle != nil && !st.Settle(u)) {
 				continue
 			}
 			rec.keepForced(u, state)
-			if st.action != nil {
-				Expect(st.action(ctx, obj)).NotTo(HaveOccurred(), "action at step %d state %q", pos, state)
+			if st.Action != nil {
+				Expect(st.Action(ctx, obj)).NotTo(HaveOccurred(), "action at step %d state %q", pos, state)
 			}
 			pos++
-			if pos == len(fl.journey) {
+			if pos == len(fl.Journey) {
 				return
 			}
 		}
@@ -174,9 +170,9 @@ func observeGated(ctx context.Context, tc workloadCase, fl flow, obj *unstructur
 }
 
 // journeyGated reports whether any step carries a settle gate, so the flow needs the position path.
-func journeyGated(journey []step) bool {
+func journeyGated(journey []cases.Step) bool {
 	for _, st := range journey {
-		if st.settle != nil {
+		if st.Settle != nil {
 			return true
 		}
 	}
@@ -216,21 +212,10 @@ func (r *recording) keepForced(u *unstructured.Unstructured, state kartav1alpha1
 	r.order = append(r.order, state)
 }
 
-// classify returns the furthest-along state the workload matches, judged from its own fields.
-func classify(u *unstructured.Unstructured, states []namedState) kartav1alpha1.ResourceStatus {
-	var name kartav1alpha1.ResourceStatus
-	for _, s := range states {
-		if s.ready(u) {
-			name = s.name
-		}
-	}
-	return name
-}
-
-func stepStates(sts []step) []kartav1alpha1.ResourceStatus {
+func stepStates(sts []cases.Step) []kartav1alpha1.ResourceStatus {
 	out := make([]kartav1alpha1.ResourceStatus, len(sts))
 	for i, st := range sts {
-		out[i] = st.state
+		out[i] = st.State
 	}
 	return out
 }
@@ -246,7 +231,7 @@ func statusSettled(u *unstructured.Unstructured) bool {
 	return obs >= gen
 }
 
-func assertObservedOrder(fl flow, order []kartav1alpha1.ResourceStatus) {
+func assertObservedOrder(fl cases.Flow, order []kartav1alpha1.ResourceStatus) {
 	Expect(observedOrderErr(fl, order)).To(Succeed())
 }
 
@@ -255,12 +240,12 @@ func assertObservedOrder(fl flow, order []kartav1alpha1.ResourceStatus) {
 // of order or not declared at all is a regression. A workload that genuinely revisits a state - a Job
 // or JobSet reads active-not-ready again as its pod terminates, so Running dips back to Initializing -
 // declares that revisit as its own step in the journey, so the dip is stated, never waived.
-func observedOrderErr(fl flow, order []kartav1alpha1.ResourceStatus) error {
+func observedOrderErr(fl cases.Flow, order []kartav1alpha1.ResourceStatus) error {
 	seq := slices.Compact(slices.Clone(order))
 	if len(seq) == 0 {
 		return fmt.Errorf("no states observed")
 	}
-	declared := stepStates(fl.journey)
+	declared := stepStates(fl.Journey)
 	j := 0
 	for _, s := range seq {
 		for j < len(declared) && declared[j] != s {
@@ -274,8 +259,8 @@ func observedOrderErr(fl flow, order []kartav1alpha1.ResourceStatus) error {
 		}
 		j++
 	}
-	if last := seq[len(seq)-1]; last != fl.want() {
-		return fmt.Errorf("terminal must be %q, observed %q", fl.want(), last)
+	if last := seq[len(seq)-1]; last != fl.Want() {
+		return fmt.Errorf("terminal must be %q, observed %q", fl.Want(), last)
 	}
 	return nil
 }
@@ -285,16 +270,16 @@ func observedOrderErr(fl flow, order []kartav1alpha1.ResourceStatus) error {
 // CR, and what Karta read of it; the CR and the reading are both a full value on the first step and a
 // merge-patch from the previous step on every later step, so the file holds only what changed. No
 // sanitize - the offline golden rebuilds the exact CR, so Karta reads the exact same bytes back.
-func writeFixture(tc workloadCase, fl flow, rec *recording, karta *kartav1alpha1.Karta) {
-	version := operatorVersion(tc.operator)
+func writeFixture(tc cases.WorkloadCase, fl cases.Flow, rec *recording, karta *kartav1alpha1.Karta) {
+	version := operatorVersion(tc.Operator)
 	rc := conformance.Recording{
 		SchemaVersion: conformance.SchemaVersion,
-		Operator:      tc.operator,
+		Operator:      tc.Operator,
 		Version:       version,
-		KartaName:     tc.kartaName,
-		Flow:          fl.name,
-		Want:          string(fl.want()),
-		KartaFile:     strings.TrimPrefix(tc.kartaFile, "../../"),
+		KartaName:     tc.KartaName,
+		Flow:          fl.Name,
+		Want:          string(fl.Want()),
+		KartaFile:     strings.TrimPrefix(tc.KartaFile, "../../"),
 	}
 	var prevCR, prevExp map[string]interface{}
 	for i, snap := range rec.snapshots {
@@ -315,14 +300,14 @@ func writeFixture(tc workloadCase, fl flow, rec *recording, karta *kartav1alpha1
 
 	path := conformance.RecordingPath(filepath.Join("..", "conformance", "fixtures"), rc)
 	Expect(conformance.WriteRecording(path, rc)).To(Succeed())
-	GinkgoWriter.Printf("recorded %s/%s/%s/%s.yaml (%d steps %v)\n", tc.operator, version, tc.kartaName, fl.name, len(rc.Steps), rec.order)
+	GinkgoWriter.Printf("recorded %s/%s/%s/%s.yaml (%d steps %v)\n", tc.Operator, version, tc.KartaName, fl.Name, len(rc.Steps), rec.order)
 }
 
 // actionName is the name of the action fired when a state is reached, for recording provenance.
-func actionName(fl flow, state kartav1alpha1.ResourceStatus) string {
-	for _, st := range fl.journey {
-		if st.state == state && st.action != nil {
-			full := runtime.FuncForPC(reflect.ValueOf(st.action).Pointer()).Name()
+func actionName(fl cases.Flow, state kartav1alpha1.ResourceStatus) string {
+	for _, st := range fl.Journey {
+		if st.State == state && st.Action != nil {
+			full := runtime.FuncForPC(reflect.ValueOf(st.Action).Pointer()).Name()
 			if i := strings.LastIndexByte(full, '.'); i >= 0 {
 				return full[i+1:]
 			}
@@ -344,51 +329,6 @@ func operatorVersion(op string) string {
 		}
 	}
 	return "unknown"
-}
-
-// unsuspend clears spec.suspend so a suspended workload resumes. A merge patch, not a
-// read-modify-write Update, so it does not race the controller reconciling a just-created
-// workload, which would make an Update conflict on the resourceVersion.
-func unsuspend(ctx context.Context, obj *unstructured.Unstructured) error {
-	target := emptyLike(obj)
-	target.SetName(obj.GetName())
-	target.SetNamespace(obj.GetNamespace())
-	return k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, []byte(`{"spec":{"suspend":false}}`)))
-}
-
-// scaleParallelism patches spec.parallelism, the Job analog of scaleReplicas, to drive a batch Job's
-// pod count up or down. A merge patch, so it does not race the controller on the resourceVersion.
-func scaleParallelism(n int) stateAction {
-	return func(ctx context.Context, obj *unstructured.Unstructured) error {
-		target := emptyLike(obj)
-		target.SetName(obj.GetName())
-		target.SetNamespace(obj.GetNamespace())
-		patch := []byte(fmt.Sprintf(`{"spec":{"parallelism":%d}}`, n))
-		return k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, patch))
-	}
-}
-
-// unsuspendRunPolicy clears spec.runPolicy.suspend so a suspended Kubeflow job (PyTorchJob, MPIJob)
-// resumes. Kubeflow puts the suspend flag under runPolicy, unlike the top-level spec.suspend that
-// unsuspend patches for batch-job, jobset, and raycluster.
-func unsuspendRunPolicy(ctx context.Context, obj *unstructured.Unstructured) error {
-	target := emptyLike(obj)
-	target.SetName(obj.GetName())
-	target.SetNamespace(obj.GetNamespace())
-	return k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, []byte(`{"spec":{"runPolicy":{"suspend":false}}}`)))
-}
-
-// scaleReplicas patches spec.replicas, the merge-patch analog of kubectl scale, to drive a scale up
-// or down on any workload with a scalar spec.replicas. A merge patch, not a read-modify-write Update,
-// so it does not race the controller on the resourceVersion.
-func scaleReplicas(n int) stateAction {
-	return func(ctx context.Context, obj *unstructured.Unstructured) error {
-		target := emptyLike(obj)
-		target.SetName(obj.GetName())
-		target.SetNamespace(obj.GetNamespace())
-		patch := []byte(fmt.Sprintf(`{"spec":{"replicas":%d}}`, n))
-		return k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, patch))
-	}
 }
 
 // dumpStatus renders a CR's status for a timeout failure message.

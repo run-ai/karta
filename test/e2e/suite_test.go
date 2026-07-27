@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+	"github.com/run-ai/karta/test/e2e/cases"
 )
 
 func TestE2E(t *testing.T) {
@@ -32,6 +33,7 @@ var _ = BeforeSuite(func() {
 	var err error
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
+	cases.SetClient(k8sClient)
 
 	dynClient, err = dynamic.NewForConfig(cfg)
 	Expect(err).NotTo(HaveOccurred())

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package e2e
+package cases
 
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // Shared state predicates: each reads a workload's own fields to recognise one stable
-// state. The pod case uses phaseEq; the rest serve the per-operator cases in follow-up PRs.
+// state. The pod case uses PhaseEq; the rest serve the per-operator cases in follow-up PRs.
 
-// allOf matches when every check matches, for a state a definition reads from more than one
+// AllOf matches when every check matches, for a state a definition reads from more than one
 // condition (a Deployment is initializing while Progressing is True and Available is False).
-func allOf(checks ...stateCheck) stateCheck {
+func AllOf(checks ...StateCheck) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		for _, c := range checks {
 			if !c(u) {
@@ -23,7 +23,7 @@ func allOf(checks ...stateCheck) stateCheck {
 	}
 }
 
-func condTrue(condType string) stateCheck {
+func CondTrue(condType string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		conds, _, _ := unstructured.NestedSlice(u.Object, "status", "conditions")
 		for _, c := range conds {
@@ -36,8 +36,8 @@ func condTrue(condType string) stateCheck {
 	}
 }
 
-// condFalse matches when a condition of the given type is present and False.
-func condFalse(condType string) stateCheck {
+// CondFalse matches when a condition of the given type is present and False.
+func CondFalse(condType string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		conds, _, _ := unstructured.NestedSlice(u.Object, "status", "conditions")
 		for _, c := range conds {
@@ -50,16 +50,16 @@ func condFalse(condType string) stateCheck {
 	}
 }
 
-func phaseEq(want string, path ...string) stateCheck {
+func PhaseEq(want string, path ...string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		got, _, _ := unstructured.NestedString(u.Object, path...)
 		return got == want
 	}
 }
 
-// phaseAny matches when the string at the path equals any of wants (some operators map
+// PhaseAny matches when the string at the path equals any of wants (some operators map
 // one state from several phase strings).
-func phaseAny(wants []string, path ...string) stateCheck {
+func PhaseAny(wants []string, path ...string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		got, _, _ := unstructured.NestedString(u.Object, path...)
 		for _, w := range wants {
@@ -71,17 +71,17 @@ func phaseAny(wants []string, path ...string) stateCheck {
 	}
 }
 
-func intAtLeast(min int64, path ...string) stateCheck {
+func IntAtLeast(min int64, path ...string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		got, found, err := unstructured.NestedInt64(u.Object, path...)
 		return err == nil && found && got >= min
 	}
 }
 
-// replicasReady matches a workload settled at exactly n replicas: status.replicas and
+// ReplicasReady matches a workload settled at exactly n replicas: status.replicas and
 // status.readyReplicas both equal n. It gates a scale flow's step so each replica count is captured
 // only once the controller has finished scaling to it, not mid-rollout.
-func replicasReady(n int64) stateCheck {
+func ReplicasReady(n int64) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		replicas, ok, _ := unstructured.NestedInt64(u.Object, "status", "replicas")
 		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
@@ -89,21 +89,21 @@ func replicasReady(n int64) stateCheck {
 	}
 }
 
-// intEq matches when the integer field at the given path is present and exactly n. It gates a scale
+// IntEq matches when the integer field at the given path is present and exactly n. It gates a scale
 // flow's step for a workload whose readiness count is a single field (a Grove PodCliqueSet reports
-// status.availableReplicas), where replicasReady's replicas+readyReplicas pair does not apply.
-func intEq(n int64, path ...string) stateCheck {
+// status.availableReplicas), where ReplicasReady's replicas+readyReplicas pair does not apply.
+func IntEq(n int64, path ...string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		got, found, err := unstructured.NestedInt64(u.Object, path...)
 		return err == nil && found && got == n
 	}
 }
 
-// fullyAvailable matches a replicated workload with every replica ready (replicas > 0 and
+// FullyAvailable matches a replicated workload with every replica ready (replicas > 0 and
 // readyReplicas == replicas), at any count. It is the running state for a Deployment or StatefulSet:
 // the rollout is complete, which is when Karta reads it as Running. During a scale it goes false
 // mid-rollout, so a scale flow only classifies Running at the settled counts.
-func fullyAvailable() stateCheck {
+func FullyAvailable() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		replicas, ok, _ := unstructured.NestedInt64(u.Object, "status", "replicas")
 		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
@@ -111,12 +111,12 @@ func fullyAvailable() stateCheck {
 	}
 }
 
-// replicasDegraded matches a replicated workload that has settled degraded: the
+// ReplicasDegraded matches a replicated workload that has settled degraded: the
 // controller has created every replica (updatedReplicas == replicas) but some are
 // not ready (0 < readyReplicas < replicas). Requiring updatedReplicas == replicas
 // excludes the transient mid-rollout where a StatefulSet has only brought up its
 // first ordinals, so the assertion never races the workload into a false Degraded.
-func replicasDegraded() stateCheck {
+func ReplicasDegraded() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		replicas, ok, _ := unstructured.NestedInt64(u.Object, "status", "replicas")
 		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
@@ -125,38 +125,38 @@ func replicasDegraded() stateCheck {
 	}
 }
 
-// intBelow matches when an integer field at the given path is present and < max. It
-// is the counterpart of intAtLeast for an initializing state (a Grove PodCliqueSet has
+// IntBelow matches when an integer field at the given path is present and < max. It
+// is the counterpart of IntAtLeast for an initializing state (a Grove PodCliqueSet has
 // availableReplicas present and below spec.replicas while its clique pods start). The
 // field must be present, so the empty pre-reconcile status is not mistaken for it.
-func intBelow(max int64, path ...string) stateCheck {
+func IntBelow(max int64, path ...string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		got, found, err := unstructured.NestedInt64(u.Object, path...)
 		return err == nil && found && got < max
 	}
 }
 
-func boolTrue(path ...string) stateCheck {
+func BoolTrue(path ...string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		got, found, err := unstructured.NestedBool(u.Object, path...)
 		return err == nil && found && got
 	}
 }
 
-// absent matches when the field at the given path is not present, for example a
+// Absent matches when the field at the given path is not present, for example a
 // CronJob that has not scheduled yet (status.lastScheduleTime missing).
-func absent(path ...string) stateCheck {
+func Absent(path ...string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		_, found, _ := unstructured.NestedFieldNoCopy(u.Object, path...)
 		return !found
 	}
 }
 
-// cronjobFired matches a CronJob that has scheduled at least once
+// CronjobFired matches a CronJob that has scheduled at least once
 // (status.lastScheduleTime set) and whose spawned Job has finished
 // (status.active empty), so the recorded snapshot carries no timestamped active-Job
 // reference. Karta reads a fired, enabled CronJob as Running.
-func cronjobFired() stateCheck {
+func CronjobFired() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		_, scheduled, _ := unstructured.NestedFieldNoCopy(u.Object, "status", "lastScheduleTime")
 		active, _, _ := unstructured.NestedSlice(u.Object, "status", "active")
@@ -164,10 +164,10 @@ func cronjobFired() stateCheck {
 	}
 }
 
-// condsFalse matches when every listed status condition is present and False, for
+// CondsFalse matches when every listed status condition is present and False, for
 // example the KServe failed mapping (PredictorReady, PredictorConfigurationReady, and
 // RoutesReady all False).
-func condsFalse(types ...string) stateCheck {
+func CondsFalse(types ...string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		conds, _, _ := unstructured.NestedSlice(u.Object, "status", "conditions")
 		for _, want := range types {
@@ -186,9 +186,9 @@ func condsFalse(types ...string) stateCheck {
 	}
 }
 
-// jobsetRunning matches a JobSet with a running replicated job: some replicatedJob is
+// JobsetRunning matches a JobSet with a running replicated job: some replicatedJob is
 // ready and active with no failures (the definition's running expression).
-func jobsetRunning() stateCheck {
+func JobsetRunning() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		rjs, _, _ := unstructured.NestedSlice(u.Object, "status", "replicatedJobsStatus")
 		anyReadyActive := false
@@ -210,11 +210,11 @@ func jobsetRunning() stateCheck {
 	}
 }
 
-// jobsetInitializing matches a JobSet whose pods are active but not yet ready: some
+// JobsetInitializing matches a JobSet whose pods are active but not yet ready: some
 // replicatedJob has active > 0 and ready == 0, none failed. It mirrors the definition's
-// initializing expression and is the ready==0 counterpart of jobsetRunning, so a
+// initializing expression and is the ready==0 counterpart of JobsetRunning, so a
 // readiness probe on the job pods yields Initializing before Running.
-func jobsetInitializing() stateCheck {
+func JobsetInitializing() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		rjs, _, _ := unstructured.NestedSlice(u.Object, "status", "replicatedJobsStatus")
 		anyActiveNotReady := false
@@ -236,10 +236,10 @@ func jobsetInitializing() stateCheck {
 	}
 }
 
-// jobDegraded matches a parallel Job settled degraded: parallelism > 1, some but not
+// JobDegraded matches a parallel Job settled degraded: parallelism > 1, some but not
 // all pods ready, and at least one pod already succeeded or failed - the Job analog of
-// replicasDegraded.
-func jobDegraded() stateCheck {
+// ReplicasDegraded.
+func JobDegraded() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		par, ok, _ := unstructured.NestedInt64(u.Object, "spec", "parallelism")
 		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "ready")
@@ -249,10 +249,10 @@ func jobDegraded() stateCheck {
 	}
 }
 
-// raySuspended matches a RayCluster suspended at creation: spec.suspend is true and
+// RaySuspended matches a RayCluster suspended at creation: spec.suspend is true and
 // status.state is either "suspended" or not yet set (the definition's suspended expr,
 // which also matches when the operator has not written a state yet).
-func raySuspended() stateCheck {
+func RaySuspended() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		if suspend, _, _ := unstructured.NestedBool(u.Object, "spec", "suspend"); !suspend {
 			return false
