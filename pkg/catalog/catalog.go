@@ -163,7 +163,6 @@ func MarshalYAML(k *v1alpha1.Karta) ([]byte, error) {
 		return nil, fmt.Errorf("re-parse Karta %q: %w", k.Name, err)
 	}
 	clearStyle(&node)
-	// KartaStatus is a value field, so json always emits an empty "status": {}.
 	dropMapKey(node.Content[0], "status")
 	var buf bytes.Buffer
 	buf.WriteString(yamlHeader)

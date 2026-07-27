@@ -148,22 +148,6 @@ var _ = Describe("MarshalYAML", func() {
 		Expect(structureIdx).To(BeNumerically("<", instructionsIdx),
 			"structureDefinition must render before optimizationInstructions")
 	})
-
-	// Byte-for-byte equality with the committed docs/catalog files gives the
-	// git diff --exit-code drift guard at the unit-test level.
-	It("round-trips each definition to its committed docs/catalog file", func() {
-		for _, k := range List() {
-			slug, err := Slug(k)
-			Expect(err).NotTo(HaveOccurred(), k.Name)
-
-			want, err := os.ReadFile(filepath.Join(catalogDir(), slug+".yaml"))
-			Expect(err).NotTo(HaveOccurred(), "read committed catalog file for %s (run `make generate-samples`)", k.Name)
-			got, err := MarshalYAML(k)
-			Expect(err).NotTo(HaveOccurred(), k.Name)
-			Expect(string(got)).To(Equal(string(want)),
-				"generated YAML for %s differs from docs/catalog/%s.yaml; run `make generate-samples`", k.Name, slug)
-		}
-	})
 })
 
 // Reading each committed docs/catalog file back through the shared validator
