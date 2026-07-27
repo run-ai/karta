@@ -1,48 +1,48 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
-apiVersion: run.ai/v1alpha1
 kind: Karta
+apiVersion: run.ai/v1alpha1
 metadata:
   name: apps-nvidia-com-nimservice-v1alpha1
 spec:
+  structureDefinition:
+    rootComponent:
+      name: nimservice
+      kind:
+        group: apps.nvidia.com
+        version: v1alpha1
+        kind: NIMService
+      specDefinition:
+        fragmentedPodSpecDefinition:
+          schedulerNamePath: .spec.schedulerName
+          labelsPath: .spec.labels
+          annotationsPath: .spec.annotations
+          resourcesPath: .spec.resources
+          podAffinityPath: .spec.affinity.podAffinity
+          nodeAffinityPath: .spec.affinity.nodeAffinity
+      scaleDefinition:
+        replicasPath: .spec.replicas // 1
+      statusDefinition:
+        phaseDefinition:
+          path: .status.state
+        conditionsDefinition:
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
+        statusMappings:
+          initializing:
+            - byPhase: NotReady
+            - byPhase: Pending
+          running:
+            - byPhase: Ready
+          failed:
+            - byPhase: Failed
   optimizationInstructions:
     gangScheduling:
       podGroups:
-      - members:
-        - componentName: nimservice
-          groupByKeyPaths:
-          - .metadata.labels["app.kubernetes.io/name"]
-        name: service
-  structureDefinition:
-    rootComponent:
-      kind:
-        group: apps.nvidia.com
-        kind: NIMService
-        version: v1alpha1
-      name: nimservice
-      scaleDefinition:
-        replicasPath: .spec.replicas // 1
-      specDefinition:
-        fragmentedPodSpecDefinition:
-          annotationsPath: .spec.annotations
-          labelsPath: .spec.labels
-          nodeAffinityPath: .spec.affinity.nodeAffinity
-          podAffinityPath: .spec.affinity.podAffinity
-          resourcesPath: .spec.resources
-          schedulerNamePath: .spec.schedulerName
-      statusDefinition:
-        conditionsDefinition:
-          messageFieldName: message
-          path: .status.conditions
-          statusFieldName: status
-          typeFieldName: type
-        phaseDefinition:
-          path: .status.state
-        statusMappings:
-          failed:
-          - byPhase: Failed
-          initializing:
-          - byPhase: NotReady
-          - byPhase: Pending
-          running:
-          - byPhase: Ready
+        - name: service
+          members:
+            - componentName: nimservice
+              groupByKeyPaths:
+                - .metadata.labels["app.kubernetes.io/name"]
