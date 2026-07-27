@@ -33,12 +33,12 @@ For complete license texts, please refer to the source repositories or the LICEN
 
 ### k8s.io/api
 - Name: k8s.io/api
-- Version: v0.36.2
+- Version: v0.36.3
 - License: Apache-2.0
 
 ### k8s.io/apimachinery
 - Name: k8s.io/apimachinery
-- Version: v0.36.2
+- Version: v0.36.3
 - License: Apache-2.0
 
 ### k8s.io/utils
@@ -63,7 +63,7 @@ For complete license texts, please refer to the source repositories or the LICEN
 
 ### github.com/go-logr/logr
 - Name: github.com/go-logr/logr
-- Version: v1.4.3
+- Version: v1.4.4
 - License: Apache-2.0
 
 ### github.com/go-task/slim-sprig/v3
@@ -178,7 +178,7 @@ For complete license texts, please refer to the source repositories or the LICEN
 
 ### sigs.k8s.io/structured-merge-diff/v6
 - Name: sigs.k8s.io/structured-merge-diff/v6
-- Version: v6.3.2
+- Version: v6.3.3
 - License: Apache-2.0
 
 
