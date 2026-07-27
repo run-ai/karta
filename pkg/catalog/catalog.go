@@ -172,6 +172,9 @@ func MarshalYAML(k *v1alpha1.Karta) ([]byte, error) {
 // clearStyle strips per-node style recursively so JSON flow syntax ({...}, "...")
 // re-renders as block-style YAML.
 func clearStyle(n *yamlv3.Node) {
+	// The JSON parse stamps each node with flow style (the {...} JSON form).
+	// Converting to block style, the zero value of Style, makes the encoder
+	// render indented YAML instead.
 	n.Style = 0
 	for _, c := range n.Content {
 		clearStyle(c)
