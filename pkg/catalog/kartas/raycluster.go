@@ -30,8 +30,10 @@ func Raycluster() *v1alpha1.Karta {
 							Path: ".status.state",
 						},
 						StatusMappings: v1alpha1.StatusMappings{
-							Running: []v1alpha1.StatusMatcher{{ByPhase: "ready"}},
-							Failed:  []v1alpha1.StatusMatcher{{ByPhase: "failed"}},
+							// RayCluster .status.state is one of ready / unhealthy / suspended;
+							// there is no "failed" state, so unhealthy maps to Degraded.
+							Running:  []v1alpha1.StatusMatcher{{ByPhase: "ready"}},
+							Degraded: []v1alpha1.StatusMatcher{{ByPhase: "unhealthy"}},
 							Suspended: []v1alpha1.StatusMatcher{{ByExpression: &v1alpha1.ExpressionMatcher{
 								Expression:     `.spec.suspend == true and (.status.state == "suspended" or (.status.state | not))`,
 								ExpectedResult: "true",

@@ -25,18 +25,21 @@ spec:
         version: v1
       name: revision
       ownerRef: knativeservice
-      scaleDefinition:
-        maxReplicasPath: .spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]
-        minReplicasPath: .spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"]
-          // 1
-      specDefinition:
-        podTemplateSpecPath: .spec.template
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["serving.knative.dev/revision"]
     rootComponent:
       kind:
         group: serving.knative.dev
         kind: Service
         version: v1
       name: knativeservice
+      scaleDefinition:
+        maxReplicasPath: .spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]
+        minReplicasPath: .spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"]
+          // 1
+      specDefinition:
+        podTemplateSpecPath: .spec.template
       statusDefinition:
         conditionsDefinition:
           messageFieldName: message

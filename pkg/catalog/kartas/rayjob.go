@@ -29,12 +29,6 @@ func Rayjob() *v1alpha1.Karta {
 						PhaseDefinition: &v1alpha1.PhaseDefinition{
 							Path: ".status.jobStatus",
 						},
-						ConditionsDefinition: &v1alpha1.ConditionsDefinition{
-							Path:             ".status.conditions",
-							TypeFieldName:    "type",
-							StatusFieldName:  "status",
-							MessageFieldName: ptr.To("message"),
-						},
 						StatusMappings: v1alpha1.StatusMappings{
 							Initializing: []v1alpha1.StatusMatcher{{ByPhase: "PENDING"}},
 							Running:      []v1alpha1.StatusMatcher{{ByPhase: "RUNNING"}},

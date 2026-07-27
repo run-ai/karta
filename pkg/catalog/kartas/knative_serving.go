@@ -21,6 +21,16 @@ func KnativeServing() *v1alpha1.Karta {
 				RootComponent: v1alpha1.ComponentDefinition{
 					Name: "knativeservice",
 					Kind: &v1alpha1.GroupVersionKind{Group: "serving.knative.dev", Version: "v1", Kind: "Service"},
+					// The pod template and autoscaling annotations live on the Service
+					// (.spec.template is a RevisionTemplateSpec). A Revision is immutable,
+					// so the template and scale are read and mutated here, not on the child.
+					SpecDefinition: &v1alpha1.SpecDefinition{
+						PodTemplateSpecPath: ptr.To(".spec.template"),
+					},
+					ScaleDefinition: &v1alpha1.ScaleDefinition{
+						MinReplicasPath: ptr.To(`.spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"] // 1`),
+						MaxReplicasPath: ptr.To(`.spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]`),
+					},
 					StatusDefinition: &v1alpha1.StatusDefinition{
 						ConditionsDefinition: &v1alpha1.ConditionsDefinition{
 							Path:             ".status.conditions",
@@ -38,12 +48,12 @@ func KnativeServing() *v1alpha1.Karta {
 						Name:     "revision",
 						Kind:     &v1alpha1.GroupVersionKind{Group: "serving.knative.dev", Version: "v1", Kind: "Revision"},
 						OwnerRef: ptr.To("knativeservice"),
-						SpecDefinition: &v1alpha1.SpecDefinition{
-							PodTemplateSpecPath: ptr.To(".spec.template"),
-						},
-						ScaleDefinition: &v1alpha1.ScaleDefinition{
-							MinReplicasPath: ptr.To(`.spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"] // 1`),
-							MaxReplicasPath: ptr.To(`.spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]`),
+						// Pods created for a Revision carry the serving.knative.dev/revision
+						// label. The pod template itself lives on the root Service above.
+						PodSelector: &v1alpha1.PodSelector{
+							ComponentTypeSelector: &v1alpha1.ComponentTypeSelector{
+								KeyPath: `.metadata.labels["serving.knative.dev/revision"]`,
+							},
 						},
 					},
 				},
