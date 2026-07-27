@@ -121,6 +121,18 @@ Matcher semantics (`StatusMatcher`):
 - Rules under one status are OR'd: any matching rule resolves the status.
 - Several statuses can match at once. Map only what the workload reports.
 
+One matcher may combine kinds. A single `StatusMatcher` can set more than one of
+`byPhase`, `byConditions`, and `byExpression` at once, and then all of them must
+hold (AND). Use this when a status needs both a phase and an extra field check.
+This is distinct from listing separate rules under a status, which are OR'd.
+
+Not every controller has a phase or conditions. Some report only replica counts
+or other status fields (for example Grove PodCliqueSet has no aggregate phase).
+Do not invent a phase or a condition type the controller never sets: that
+produces a definition that validates but never resolves. Match such states with
+`byExpression` over the real status fields, for example
+`(.status.availableReplicas // 0) >= (.spec.replicas // 0)` for running.
+
 Example combining expression and condition rules:
 
 ```yaml
@@ -179,6 +191,34 @@ podSelector:
 `componentInstanceSelector` must pair with a component-level `instanceIdPath`,
 and vice versa. Selectors of the same kind must be mutually exclusive across
 components.
+
+Role-label keys are framework-specific, and differ even between operators from
+the same project. Do not copy a selector key from the nearest sample without
+checking the target controller's real pod labels. For example the Kubeflow
+training-operator (PyTorchJob, TFJob) labels role with
+`training.kubeflow.org/replica-type` (values `master`, `worker`), while the
+Kubeflow mpi-operator (MPIJob v2beta1) labels role with
+`training.kubeflow.org/job-role` (values `launcher`, `worker`). Read the actual
+pod labels the controller sets before writing `keyPath`.
+
+Disambiguating roles that share a label. When two components would match the
+same pod label, a plain value match is not mutually exclusive. Separate them by
+matching on a key that only one role carries, using key existence (omit `value`).
+LeaderWorkerSet is the canonical case: both leader and worker pods carry
+`leaderworkerset.sigs.k8s.io/worker-index`, so the leader is matched by that
+label with `value: "0"`, and the worker is matched by the existence of the
+`leaderworkerset.sigs.k8s.io/leader-name` annotation, which only worker pods
+have.
+
+```yaml
+# leader: value match on the shared label
+componentTypeSelector:
+  keyPath: .metadata.labels["leaderworkerset.sigs.k8s.io/worker-index"]
+  value: "0"
+# worker: key existence of a role-specific annotation (no value)
+componentTypeSelector:
+  keyPath: .metadata.annotations["leaderworkerset.sigs.k8s.io/leader-name"]
+```
 
 ## Multi-instance components
 

@@ -71,8 +71,25 @@ These pass validation but behave incorrectly. Check them first when a definition
 - A path evaluated against the wrong resource. Spec, scale, and status paths run
   against the workload object; selector and optimization paths run against pod
   manifests. A selector pointing at a workload field matches nothing.
-- Listing a defined component's kind under `additionalChildKinds`. That list is
-  only for managed kinds not already modeled as components.
+- Listing a defined component's kind under `additionalChildKinds`. The list is
+  for managed kinds, and duplicating a kind already modeled as a component is
+  usually redundant. The validator does not reject it, though, and it is
+  legitimate when a kind must also be declared for RBAC or owner traversal (for
+  example a scaling-group kind that is both a component and an ancestor to walk).
+  Duplicate only with that intent, not by accident.
+- A role selector key copied from the nearest sample without checking the target
+  controller's real pod labels. Role-label keys are operator-specific (PyTorchJob
+  `training.kubeflow.org/replica-type` vs MPIJob `training.kubeflow.org/job-role`),
+  so a copied key silently matches nothing. Read the controller's actual pod
+  labels.
+- Two role components matching the same pod label. A plain value match on a
+  shared label is not mutually exclusive. Disambiguate by matching a key only one
+  role carries, using key existence (omit `value`), as LeaderWorkerSet does for
+  leader versus worker.
+- Inventing a phase or condition for a controller that reports neither. Some
+  controllers expose only status fields such as replica counts. A `byPhase` or
+  `byConditions` rule then never matches. Map those states with `byExpression`
+  over the real fields instead.
 - Mapping to `Undefined`. It is the implicit no-match result, not a target to
   map. Map only the statuses the workload reports.
 - A non-assignable jq path in a `fragmentedPodSpecDefinition`. These paths are

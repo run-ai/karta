@@ -110,9 +110,14 @@ workload's own conditions or phases into Karta's normalized statuses:
   (AND). Each entry needs at least a `status` or a `reason`.
 - To match a phase string, add `phaseDefinition` (its path), then use `byPhase`.
 - When the state lives in status fields rather than conditions or a phase, use
-  `byExpression` with a jq expression and an expected result string.
+  `byExpression` with a jq expression and an expected result string. Some
+  controllers report only status fields (for example replica counts) and no
+  aggregate phase; match those with `byExpression`. Do not invent a phase value
+  or condition type the controller never sets.
 - Rules listed under the same status are OR'd; any one matching resolves that
-  status. Map only the statuses the workload actually reports.
+  status. A single matcher may also combine `byPhase`, `byConditions`, and
+  `byExpression`, in which case all of them must hold (AND). Map only the
+  statuses the workload actually reports.
 
 ### 6. Self-check against the validator
 
@@ -127,7 +132,9 @@ Before finishing, confirm each item:
 - `instanceIdPath` and a `componentInstanceSelector` are either both present or
   both absent on a component.
 - Pod selectors reference pod fields, not workload fields, and are mutually
-  exclusive across components.
+  exclusive across components. Verify role-label keys against the controller's
+  real pod labels (they are operator-specific), and when two roles share a label,
+  disambiguate by matching a key only one role carries (key existence).
 - Status conditions and phases match the workload's real API.
 - Every gang-scheduling member names a defined component.
 
