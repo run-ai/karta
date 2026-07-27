@@ -4,12 +4,13 @@
 package catalog
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
-	"testing"
+	"strings"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
 
@@ -17,215 +18,153 @@ import (
 	"github.com/run-ai/karta/pkg/catalog/kartas"
 )
 
-// TestGetHit resolves a known workload GVK to its built-in Karta.
-func TestGetHit(t *testing.T) {
-	gvk := schema.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
-	k, err := Get(gvk)
-	if err != nil {
-		t.Fatalf("Get(%s): %v", gvk, err)
-	}
-	if got := k.Spec.StructureDefinition.RootComponent.Kind; got == nil || got.Kind != "Job" {
-		t.Fatalf("resolved root kind = %v, want Job", got)
-	}
+// catalogDir returns the docs/catalog directory relative to this test file.
+func catalogDir() string {
+	_, thisFile, _, ok := runtime.Caller(0)
+	Expect(ok).To(BeTrue(), "cannot locate test file")
+	return filepath.Join(filepath.Dir(thisFile), "..", "..", "docs", "catalog")
 }
 
-// TestGetMiss returns ErrNotFound for an unregistered GVK.
-func TestGetMiss(t *testing.T) {
-	_, err := Get(schema.GroupVersionKind{Group: "example.com", Version: "v1", Kind: "Nope"})
-	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("Get miss error = %v, want ErrNotFound", err)
-	}
-}
+var _ = Describe("Get", func() {
+	It("resolves a known workload GVK to its built-in Karta", func() {
+		gvk := schema.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
 
-// TestGetReturnsDeepCopy asserts that mutating a Karta returned by Get does not
-// affect the catalog: a later Get returns the unmodified definition.
-func TestGetReturnsDeepCopy(t *testing.T) {
-	gvk := schema.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
-	first, err := Get(gvk)
-	if err != nil {
-		t.Fatalf("Get(%s): %v", gvk, err)
-	}
-	original := first.Spec.StructureDefinition.RootComponent.Name
-	first.Spec.StructureDefinition.RootComponent.Name = original + "-mutated"
+		k, err := Get(gvk)
 
-	second, err := Get(gvk)
-	if err != nil {
-		t.Fatalf("Get(%s): %v", gvk, err)
-	}
-	if got := second.Spec.StructureDefinition.RootComponent.Name; got != original {
-		t.Fatalf("catalog mutated through Get: root name = %q, want %q", got, original)
-	}
-}
+		Expect(err).NotTo(HaveOccurred())
+		Expect(k.Spec.StructureDefinition.RootComponent.Kind).NotTo(BeNil())
+		Expect(k.Spec.StructureDefinition.RootComponent.Kind.Kind).To(Equal("Job"))
+	})
 
-// TestListDeterministic asserts List is sorted by GVK and stable across calls.
-func TestListDeterministic(t *testing.T) {
-	first := List()
-	second := List()
-	if len(first) != len(second) {
-		t.Fatalf("List length changed: %d vs %d", len(first), len(second))
-	}
-	for i := range first {
-		gi := RootKey(first[i])
-		gj := RootKey(second[i])
-		if gi != gj {
-			t.Fatalf("List order not stable at %d: %s vs %s", i, gi, gj)
-		}
-		if i > 0 {
-			prev := RootKey(first[i-1])
-			if prev.String() > gi.String() {
-				t.Fatalf("List not sorted: %s before %s", prev, gi)
+	It("returns ErrNotFound for an unregistered GVK", func() {
+		_, err := Get(schema.GroupVersionKind{Group: "example.com", Version: "v1", Kind: "Nope"})
+
+		Expect(err).To(MatchError(ErrNotFound))
+	})
+
+	It("returns a deep copy so mutations do not affect the catalog", func() {
+		gvk := schema.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
+		first, err := Get(gvk)
+		Expect(err).NotTo(HaveOccurred())
+		original := first.Spec.StructureDefinition.RootComponent.Name
+
+		first.Spec.StructureDefinition.RootComponent.Name = original + "-mutated"
+
+		second, err := Get(gvk)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(second.Spec.StructureDefinition.RootComponent.Name).To(Equal(original))
+	})
+})
+
+var _ = Describe("List", func() {
+	It("is sorted by GVK and stable across calls", func() {
+		first := List()
+		second := List()
+
+		Expect(second).To(HaveLen(len(first)))
+		for i := range first {
+			Expect(RootKey(first[i])).To(Equal(RootKey(second[i])), "List order not stable at %d", i)
+			if i > 0 {
+				prev := RootKey(first[i-1])
+				Expect(prev.String() <= RootKey(first[i]).String()).To(BeTrue(),
+					"List not sorted: %s before %s", prev, RootKey(first[i]))
 			}
 		}
-	}
-}
+	})
 
-// TestListReturnsCopy asserts mutating the returned slice does not affect the
-// catalog's internal order.
-func TestListReturnsCopy(t *testing.T) {
-	l := List()
-	if len(l) < 2 {
-		t.Skip("need at least two definitions")
-	}
-	l[0], l[1] = l[1], l[0]
-	again := List()
-	if again[0] == l[0] {
-		t.Fatal("List did not return a defensive copy")
-	}
-}
+	It("returns a defensive copy of the slice", func() {
+		l := List()
+		if len(l) < 2 {
+			Skip("need at least two definitions")
+		}
 
-// TestListReturnsDeepCopies asserts mutating a Karta returned by List does not
-// affect the catalog.
-func TestListReturnsDeepCopies(t *testing.T) {
-	l := List()
-	if len(l) == 0 {
-		t.Skip("catalog is empty")
-	}
-	original := l[0].Spec.StructureDefinition.RootComponent.Name
-	l[0].Spec.StructureDefinition.RootComponent.Name = original + "-mutated"
+		l[0], l[1] = l[1], l[0]
 
-	again := List()
-	if got := again[0].Spec.StructureDefinition.RootComponent.Name; got != original {
-		t.Fatalf("catalog mutated through List: root name = %q, want %q", got, original)
-	}
-}
+		again := List()
+		Expect(again[0]).NotTo(BeIdenticalTo(l[0]))
+	})
 
-// TestNewCatalogDuplicateGVK asserts two definitions with the same root GVK
-// fail construction.
-func TestNewCatalogDuplicateGVK(t *testing.T) {
-	if _, err := newCatalog([]func() *v1alpha1.Karta{kartas.BatchJob, kartas.BatchJob}); err == nil {
-		t.Fatal("expected error on duplicate GVK")
-	}
-}
+	It("returns deep copies so mutations do not affect the catalog", func() {
+		l := List()
+		Expect(l).NotTo(BeEmpty())
+		original := l[0].Spec.StructureDefinition.RootComponent.Name
 
-// TestNewCatalogIncompleteGVK asserts a definition whose root GVK is missing a
-// version or kind fails construction rather than being indexed under a partial
-// GVK. An empty group stays valid (core workloads such as Pod).
-func TestNewCatalogIncompleteGVK(t *testing.T) {
-	withKind := func(gvk *v1alpha1.GroupVersionKind) func() *v1alpha1.Karta {
+		l[0].Spec.StructureDefinition.RootComponent.Name = original + "-mutated"
+
+		again := List()
+		Expect(again[0].Spec.StructureDefinition.RootComponent.Name).To(Equal(original))
+	})
+
+	It("contains only entries with Karta TypeMeta that pass the shared validator", func() {
+		entries := List()
+
+		Expect(entries).NotTo(BeEmpty())
+		for _, k := range entries {
+			Expect(k.APIVersion).To(Equal("run.ai/v1alpha1"), k.Name)
+			Expect(k.Kind).To(Equal("Karta"), k.Name)
+			Expect(v1alpha1.NewKartaValidator(k).Validate()).To(Succeed(), k.Name)
+		}
+	})
+})
+
+var _ = Describe("newCatalog", func() {
+	newKartaWithKind := func(gvk *v1alpha1.GroupVersionKind) func() *v1alpha1.Karta {
 		return func() *v1alpha1.Karta {
 			return &v1alpha1.Karta{Spec: v1alpha1.KartaSpec{StructureDefinition: v1alpha1.StructureDefinition{
 				RootComponent: v1alpha1.ComponentDefinition{Name: "root", Kind: gvk},
 			}}}
 		}
 	}
-	cases := map[string]*v1alpha1.GroupVersionKind{
-		"missing version": {Group: "example.com", Kind: "Thing"},
-		"missing kind":    {Group: "example.com", Version: "v1"},
-	}
-	for name, gvk := range cases {
-		t.Run(name, func(t *testing.T) {
-			if _, err := newCatalog([]func() *v1alpha1.Karta{withKind(gvk)}); !errors.Is(err, ErrInvalidGVK) {
-				t.Fatalf("error = %v, want ErrInvalidGVK", err)
-			}
-		})
-	}
-}
 
-// TestRoundTrip asserts each definition marshals byte-for-byte to its committed
-// docs/catalog file. This gives the git diff --exit-code drift guard at the
-// unit-test level.
-func TestRoundTrip(t *testing.T) {
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("cannot locate test file")
-	}
-	catalogDir := filepath.Join(filepath.Dir(thisFile), "..", "..", "docs", "catalog")
+	It("rejects two definitions with the same root GVK", func() {
+		_, err := newCatalog([]func() *v1alpha1.Karta{kartas.BatchJob, kartas.BatchJob})
 
-	for _, k := range List() {
-		t.Run(k.Name, func(t *testing.T) {
-			slug, err := Slug(k)
-			if err != nil {
-				t.Fatal(err)
-			}
-			want, err := os.ReadFile(filepath.Join(catalogDir, slug+".yaml"))
-			if err != nil {
-				t.Fatalf("read committed catalog file: %v (run `make generate-samples`)", err)
-			}
-			got, err := MarshalYAML(k)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if string(got) != string(want) {
-				t.Errorf("generated YAML for %s differs from docs/catalog/%s.yaml; run `make generate-samples`", k.Name, slug)
-			}
-		})
-	}
-}
+		Expect(err).To(HaveOccurred())
+	})
 
-// TestCatalogFilesUnmarshalAndValidate reads each committed docs/catalog file,
-// unmarshals it back into a Karta, and runs the shared validator. This guards the
-// on-disk YAML directly: it proves the generated files parse (including folded
-// multi-line expressions) and satisfy the same validation as the Go definitions.
-func TestCatalogFilesUnmarshalAndValidate(t *testing.T) {
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("cannot locate test file")
-	}
-	catalogDir := filepath.Join(filepath.Dir(thisFile), "..", "..", "docs", "catalog")
+	// An empty group stays valid (core workloads such as Pod); a missing version
+	// or kind must fail construction rather than be indexed under a partial GVK.
+	DescribeTable("rejects a definition whose root GVK is incomplete",
+		func(gvk *v1alpha1.GroupVersionKind) {
+			_, err := newCatalog([]func() *v1alpha1.Karta{newKartaWithKind(gvk)})
 
-	files, err := filepath.Glob(filepath.Join(catalogDir, "*.yaml"))
-	if err != nil {
-		t.Fatalf("glob catalog dir: %v", err)
-	}
-	if len(files) == 0 {
-		t.Fatal("no catalog files found")
-	}
+			Expect(err).To(MatchError(ErrInvalidGVK))
+		},
+		Entry("missing version", &v1alpha1.GroupVersionKind{Group: "example.com", Kind: "Thing"}),
+		Entry("missing kind", &v1alpha1.GroupVersionKind{Group: "example.com", Version: "v1"}),
+	)
+})
 
-	for _, path := range files {
-		t.Run(filepath.Base(path), func(t *testing.T) {
+var _ = Describe("MarshalYAML", func() {
+	It("renders fields in struct declaration order", func() {
+		out, err := MarshalYAML(kartas.BatchJob())
+
+		Expect(err).NotTo(HaveOccurred())
+		yamlText := string(out)
+		structureIdx := strings.Index(yamlText, "structureDefinition:")
+		instructionsIdx := strings.Index(yamlText, "optimizationInstructions:")
+		Expect(structureIdx).To(BeNumerically(">", -1))
+		Expect(instructionsIdx).To(BeNumerically(">", -1))
+		Expect(structureIdx).To(BeNumerically("<", instructionsIdx),
+			"structureDefinition must render before optimizationInstructions")
+	})
+})
+
+// Reading each committed docs/catalog file back through the shared validator
+// guards the on-disk YAML directly: it proves the generated files parse and
+// satisfy the same validation as the Go definitions.
+var _ = Describe("catalog files", func() {
+	It("unmarshal into valid Kartas", func() {
+		files, err := filepath.Glob(filepath.Join(catalogDir(), "*.yaml"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(files).NotTo(BeEmpty())
+
+		for _, path := range files {
 			data, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatalf("read %s: %v", path, err)
-			}
+			Expect(err).NotTo(HaveOccurred(), path)
 			var k v1alpha1.Karta
-			if err := yaml.Unmarshal(data, &k); err != nil {
-				t.Fatalf("unmarshal %s: %v", path, err)
-			}
-			if err := v1alpha1.NewKartaValidator(&k).Validate(); err != nil {
-				t.Errorf("validate %s: %v", path, err)
-			}
-		})
-	}
-}
-
-// TestListEntriesAreValid asserts every built-in definition carries the Karta
-// TypeMeta and passes the shared Karta validator.
-func TestListEntriesAreValid(t *testing.T) {
-	entries := List()
-	if len(entries) == 0 {
-		t.Fatal("builtin catalog is empty")
-	}
-	for _, k := range entries {
-		t.Run(k.Name, func(t *testing.T) {
-			if k.APIVersion != "run.ai/v1alpha1" {
-				t.Errorf("apiVersion = %q, want run.ai/v1alpha1", k.APIVersion)
-			}
-			if k.Kind != "Karta" {
-				t.Errorf("kind = %q, want Karta", k.Kind)
-			}
-			if err := v1alpha1.NewKartaValidator(k).Validate(); err != nil {
-				t.Errorf("validate: %v", err)
-			}
-		})
-	}
-}
+			Expect(yaml.Unmarshal(data, &k)).To(Succeed(), path)
+			Expect(v1alpha1.NewKartaValidator(&k).Validate()).To(Succeed(), path)
+		}
+	})
+})
