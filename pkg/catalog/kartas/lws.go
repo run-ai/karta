@@ -56,8 +56,11 @@ func LWS() *v1alpha1.Karta {
 					{
 						Name:     "group",
 						OwnerRef: ptr.To("leaderworkerset"),
+						// group is identified by the group-index label, so its replica count is
+						// the number of groups (.spec.replicas). size is pods-per-group and is
+						// used only to derive the worker count below.
 						ScaleDefinition: &v1alpha1.ScaleDefinition{
-							ReplicasPath: ptr.To(".spec.leaderWorkerTemplate.size"),
+							ReplicasPath: ptr.To(".spec.replicas // 1"),
 						},
 						PodSelector: &v1alpha1.PodSelector{
 							ReplicaSelector: &v1alpha1.ReplicaSelector{

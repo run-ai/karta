@@ -22,7 +22,7 @@ spec:
         replicaSelector:
           keyPath: .metadata.labels["leaderworkerset.sigs.k8s.io/group-index"]
       scaleDefinition:
-        replicasPath: .spec.leaderWorkerTemplate.size
+        replicasPath: .spec.replicas // 1
     - kind:
         group: apps
         kind: StatefulSet
