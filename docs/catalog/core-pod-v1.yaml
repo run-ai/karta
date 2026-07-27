@@ -35,4 +35,3 @@ spec:
           failed:
             - byPhase: Failed
   optimizationInstructions: {}
-status: {}

@@ -1,5 +1,7 @@
-apiVersion: run.ai/v1alpha1
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
 kind: Karta
+apiVersion: run.ai/v1alpha1
 metadata:
   name: kubeflow-org-pytorchjob-v1
 spec:
@@ -10,13 +12,6 @@ spec:
         group: kubeflow.org
         version: v1
         kind: PyTorchJob
-      suspendDefinition:
-        suspendActions:
-          - path: .spec.runPolicy.suspend
-            value: "true"
-        resumeActions:
-          - path: .spec.runPolicy.suspend
-            value: "false"
       statusDefinition:
         conditionsDefinition:
           path: .status.conditions
@@ -25,25 +20,32 @@ spec:
           messageFieldName: message
         statusMappings:
           initializing:
-          - byConditions:
-              - type: Created
-                status: "True"
+            - byConditions:
+                - type: Created
+                  status: "True"
           running:
-          - byConditions:
-              - type: Running
-                status: "True"
+            - byConditions:
+                - type: Running
+                  status: "True"
           completed:
-          - byConditions:
-              - type: Succeeded
-                status: "True"
+            - byConditions:
+                - type: Succeeded
+                  status: "True"
           failed:
-          - byConditions:
-              - type: Failed
-                status: "True"
+            - byConditions:
+                - type: Failed
+                  status: "True"
           suspended:
-          - byConditions:
-              - type: Suspended
-                status: "True"
+            - byConditions:
+                - type: Suspended
+                  status: "True"
+      suspendDefinition:
+        suspendActions:
+          - path: .spec.runPolicy.suspend
+            value: "true"
+        resumeActions:
+          - path: .spec.runPolicy.suspend
+            value: "false"
     childComponents:
       - name: master
         kind:

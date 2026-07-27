@@ -3,19 +3,15 @@
 kind: Karta
 apiVersion: run.ai/v1alpha1
 metadata:
-  name: batch-job-v1
+  name: jobset-x-k8s-io-jobset-v1alpha2
 spec:
   structureDefinition:
     rootComponent:
-      name: job
+      name: jobset
       kind:
-        group: batch
-        version: v1
-        kind: Job
-      specDefinition:
-        podTemplateSpecPath: .spec.template
-      scaleDefinition:
-        replicasPath: .spec.parallelism // 1
+        group: jobset.x-k8s.io
+        version: v1alpha2
+        kind: JobSet
       statusDefinition:
         conditionsDefinition:
           path: .status.conditions
@@ -26,24 +22,20 @@ spec:
         statusMappings:
           initializing:
             - byExpression:
-                expression: (.status.active // 0) > 0 and (.status.ready // 0) == 0
+                expression: (.status.replicatedJobsStatus // []) | any(.active > 0 and (.ready // 0) == 0) and all(.failed == 0)
                 expectedResult: "true"
           running:
             - byExpression:
-                expression: (.status.active // 0) > 0 and (.status.ready // 0) > 0
+                expression: (.status.replicatedJobsStatus // []) | any(.ready > 0 and .active > 0) and all(.failed == 0)
                 expectedResult: "true"
           completed:
             - byConditions:
-                - type: Complete
+                - type: Completed
                   status: "True"
           failed:
             - byConditions:
                 - type: Failed
                   status: "True"
-          degraded:
-            - byExpression:
-                expression: .spec.parallelism > 1 and (.status.ready // 0) < .spec.parallelism and ((.status.succeeded // 0) > 0 or (.status.failed // 0) > 0)
-                expectedResult: "true"
           suspended:
             - byConditions:
                 - type: Suspended
@@ -55,11 +47,26 @@ spec:
         resumeActions:
           - path: .spec.suspend
             value: "false"
+    childComponents:
+      - name: replicatedjob
+        kind:
+          group: batch
+          version: v1
+          kind: Job
+        ownerRef: jobset
+        specDefinition:
+          podTemplateSpecPath: .spec.replicatedJobs[].template.spec.template
+        scaleDefinition:
+          replicasPath: .spec.replicatedJobs[] | .replicas * .template.spec.parallelism
+        instanceIdPath: .spec.replicatedJobs[].name
+        podSelector:
+          componentInstanceSelector:
+            idPath: .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]
   optimizationInstructions:
     gangScheduling:
       podGroups:
         - name: job
           members:
-            - componentName: job
+            - componentName: replicatedjob
               groupByKeyPaths:
-                - .metadata.labels["batch.kubernetes.io/job-name"]
+                - .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]

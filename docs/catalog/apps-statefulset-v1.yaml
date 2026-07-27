@@ -31,4 +31,3 @@ spec:
                 expression: (.status.readyReplicas // 0) > 0 and (.status.readyReplicas // 0) < (.spec.replicas // 1) and (.status.updatedReplicas // 0) == (.spec.replicas // 1) and (.status.currentRevision == .status.updateRevision) and (.status.observedGeneration // 0) == (.metadata.generation // 0)
                 expectedResult: "true"
   optimizationInstructions: {}
-status: {}

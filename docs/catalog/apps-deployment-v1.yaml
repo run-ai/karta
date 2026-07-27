@@ -48,4 +48,3 @@ spec:
           kind: ReplicaSet
         ownerRef: deployment
   optimizationInstructions: {}
-status: {}

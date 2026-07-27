@@ -1,5 +1,7 @@
-apiVersion: run.ai/v1alpha1
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
 kind: Karta
+apiVersion: run.ai/v1alpha1
 metadata:
   name: ray-io-rayservice-v1
 spec:
@@ -15,32 +17,32 @@ spec:
           path: .status.conditions
           typeFieldName: type
           statusFieldName: status
-          reasonFieldName: reason
           messageFieldName: message
+          reasonFieldName: reason
         statusMappings:
-          running:
-          - byConditions:
-              - type: Ready
-                status: "True"
           initializing:
-          - byConditions:
-              - type: Ready
-                status: "False"
-                reason: Initializing
-          degraded:
-          - byConditions:
-              - type: Ready
-                status: "False"
-                reason: ZeroServeEndpoints
+            - byConditions:
+                - type: Ready
+                  status: "False"
+                  reason: Initializing
+          running:
+            - byConditions:
+                - type: Ready
+                  status: "True"
           failed:
-          - byConditions:
-              - type: Ready
-                status: "False"
-                reason: InitializingTimeout
-          - byConditions:
-              - type: Ready
-                status: "False"
-                reason: ValidationFailed
+            - byConditions:
+                - type: Ready
+                  status: "False"
+                  reason: InitializingTimeout
+            - byConditions:
+                - type: Ready
+                  status: "False"
+                  reason: ValidationFailed
+          degraded:
+            - byConditions:
+                - type: Ready
+                  status: "False"
+                  reason: ZeroServeEndpoints
     childComponents:
       - name: head
         kind:

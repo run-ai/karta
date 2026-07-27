@@ -45,4 +45,3 @@ spec:
           kind: Job
         ownerRef: cronjob
   optimizationInstructions: {}
-status: {}

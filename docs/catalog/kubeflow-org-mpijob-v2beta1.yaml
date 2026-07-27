@@ -1,5 +1,7 @@
-apiVersion: run.ai/v1alpha1
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
 kind: Karta
+apiVersion: run.ai/v1alpha1
 metadata:
   name: kubeflow-org-mpijob-v2beta1
 spec:
@@ -10,6 +12,34 @@ spec:
         group: kubeflow.org
         version: v2beta1
         kind: MPIJob
+      statusDefinition:
+        conditionsDefinition:
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
+          reasonFieldName: reason
+        statusMappings:
+          initializing:
+            - byConditions:
+                - type: Created
+                  status: "True"
+          running:
+            - byConditions:
+                - type: Running
+                  status: "True"
+          completed:
+            - byConditions:
+                - type: Succeeded
+                  status: "True"
+          failed:
+            - byConditions:
+                - type: Failed
+                  status: "True"
+          suspended:
+            - byConditions:
+                - type: Suspended
+                  status: "True"
       suspendDefinition:
         suspendActions:
           - path: .spec.runPolicy.suspend
@@ -17,34 +47,6 @@ spec:
         resumeActions:
           - path: .spec.runPolicy.suspend
             value: "false"
-      statusDefinition:
-        conditionsDefinition:
-          path: .status.conditions
-          typeFieldName: type
-          statusFieldName: status
-          reasonFieldName: reason
-          messageFieldName: message
-        statusMappings:
-          initializing:
-          - byConditions:
-              - type: Created
-                status: "True"
-          running:
-          - byConditions:
-              - type: Running
-                status: "True"
-          completed:
-          - byConditions:
-              - type: Succeeded
-                status: "True"
-          failed:
-          - byConditions:
-              - type: Failed
-                status: "True"
-          suspended:
-          - byConditions:
-              - type: Suspended
-                status: "True"
     childComponents:
       - name: launcher
         kind:

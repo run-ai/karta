@@ -39,6 +39,12 @@ var definitions = []func() *v1alpha1.Karta{
 	kartas.Deployment,
 	kartas.StatefulSet,
 	kartas.Pod,
+	kartas.Jobset,
+	kartas.Pytorch,
+	kartas.Mpijob,
+	kartas.Raycluster,
+	kartas.Rayjob,
+	kartas.RayService,
 }
 
 // Catalog is an immutable set of built-in Kartas indexed by their root component GVK.
@@ -138,7 +144,8 @@ func Slug(k *v1alpha1.Karta) (string, error) {
 }
 
 // MarshalYAML renders a Karta into YAML with required header, keeping fields in
-// Go struct declaration order.
+// Go struct declaration order. The catalog files are pure definitions, so the
+// empty generated status field is dropped.
 func MarshalYAML(k *v1alpha1.Karta) ([]byte, error) {
 	// Rendering through JSON is what keeps the field order. The API types carry
 	// only json tags, so a YAML encoder cannot marshal them directly (it would
@@ -156,6 +163,15 @@ func MarshalYAML(k *v1alpha1.Karta) ([]byte, error) {
 		return nil, fmt.Errorf("re-parse Karta %q: %w", k.Name, err)
 	}
 	clearStyle(&node)
+	// KartaStatus is a value field, so json always emits an empty "status": {}.
+	// The catalog files are pure definitions, so drop it from the root mapping.
+	root := node.Content[0]
+	for i := 0; i+1 < len(root.Content); i += 2 {
+		if root.Content[i].Value == "status" {
+			root.Content = append(root.Content[:i], root.Content[i+2:]...)
+			break
+		}
+	}
 	var buf bytes.Buffer
 	buf.WriteString(yamlHeader)
 	enc := yamlv3.NewEncoder(&buf)
