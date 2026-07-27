@@ -1,0 +1,40 @@
+{
+  "skill_name": "add-workload-type",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We run Argo Workflows on our cluster and want Karta to understand them. Add support for the Argo Workflow type.",
+      "expected_output": "The agent selects the add-workload-type skill from intent, gathers the Argo facts, and produces a valid Karta definition for argoproj.io/v1alpha1 Workflow with a phase-based status mapping and null-safe jq paths.",
+      "expectations": [
+        "The add-workload-type skill is selected without the user naming it",
+        "The root component declares the full GVK: group argoproj.io, version v1alpha1, kind Workflow",
+        "The root component has a statusDefinition",
+        "Status is mapped from the real .status.phase values (for example Pending, Running, Succeeded, Failed, Error) rather than invented condition types",
+        "Every jq path is absolute and null-safe",
+        "The definition satisfies the skill's validation checklist"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Write a Karta definition for a batch/v1 CronJob. It should report status and expose the pod template.",
+      "expected_output": "A valid Karta definition for batch/v1 CronJob that uses the nested jobTemplate pod-template path, sets exactly one spec pattern per component, and maps status from real fields with null-safe expressions.",
+      "expectations": [
+        "Exactly one specDefinition pattern is set on each component",
+        "The pod template path is .spec.jobTemplate.spec.template, not .spec.template",
+        "Every jq path is null-safe and evaluated against the workload object, not a pod",
+        "Status mapping references real fields such as .spec.suspend or .status via byExpression",
+        "The definition passes the KartaValidator and the skill's validation checklist"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "What does the Karta offline quickstart print when I run it, and where is its source?",
+      "expected_output": "A direct answer that describes the quickstart output and points at docs/examples/quickstart/, without authoring a new Karta definition. This is a non-authoring, boundary case: the skill should not drive the response.",
+      "expectations": [
+        "The response does not author or scaffold a Karta definition",
+        "The answer points at docs/examples/quickstart/ and describes its output",
+        "The add-workload-type skill does not drive the response"
+      ]
+    }
+  ]
+}
