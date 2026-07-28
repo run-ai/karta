@@ -87,10 +87,8 @@ against a live cluster changes them.
 ## Working with recordings
 
 - Verify (every PR, no cluster): `make test`, or `cd test/e2e && go test ./conformance/... -run TestGolden`
-- Refresh the reading after an intended library change (no cluster): `make regolden`. It replays each
-  frozen CR through the current Karta and rewrites only `expected`; the CRs and states are untouched,
-  and the correctness anchor still fails if Karta no longer reads a recorded state.
-- Re-record from live workloads: `make record-e2e` (needs a cluster; see `test/e2e`).
+- Refresh the reading after an intended library change by re-recording: `make record-e2e` (needs a
+  cluster; see `test/e2e`). It re-runs the workloads and captures fresh CRs and readings.
 
 Do not hand-edit recordings. The set of recordings is Karta's tested matrix - which workload types it
 reads correctly, at which versions, through which states.

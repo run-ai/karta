@@ -34,7 +34,6 @@ test/e2e/
     read.go            Reading(), the single path that runs Karta on one CR
     golden_test.go     TestGolden, replay every recording through the current Karta (make test)
     fixtures/          the recordings, fixtures/<operator>/<version>/<definition>/<flow>.yaml
-  cmd/regolden/   offline tool: refresh a recording's expected reading after a library change (make regolden)
   testdata/       online input: the manifest the recorder applies, testdata/<type>/<flow>.yaml
 ```
 
@@ -167,7 +166,7 @@ fixtures. `want` is the last step's state.
   before it, tagged with its state and any action. What Karta read of each CR is stored the same way
   (first reading + patches) as `expected`. The offline golden rebuilds each CR and reading, re-runs
   Karta, and diffs. No sanitize - it rebuilds the exact CR, so the reading is stable without a denylist.
-  Refresh the reading after an intended library change with `make regolden` (offline, no cluster).
+  Refresh the reading after an intended library change by re-recording (`make record-e2e`, needs a cluster).
 - Actions: a step's action fires once when its state is reached, in journey order, to drive a transition
   the operator will not make itself (e.g. clear `spec.suspend` to resume). Put actions on states the
   operator holds at, like Suspended.

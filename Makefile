@@ -189,10 +189,6 @@ test-e2e: ## Run the e2e suite (run e2e-up first; WORKLOADS="nim" runs a subset 
 record-e2e: ## Record conformance fixtures (needs a cluster; WORKLOADS="kuberay" one operator, FLOW="scaled" one flow)
 	KARTA_RECORD=1 $(MAKE) test-e2e E2E_FOCUS="$(E2E_FOCUS)" E2E_LABELS="$(E2E_LABELS)"
 
-.PHONY: regolden
-regolden: ## Refresh each recording's expected Karta reading offline (no cluster); run after an intended library change
-	cd test/e2e && go run ./cmd/regolden
-
 # The e2e shell scripts to shellcheck: the provisioner, teardown, the shared
 # helpers, and every per-operator install.sh/verify.sh.
 E2E_SHELL := hack/e2e/up.sh hack/e2e/down.sh \

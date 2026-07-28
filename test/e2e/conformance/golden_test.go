@@ -33,7 +33,7 @@ var terminalStates = []string{string(v1alpha1.CompletedStatus), string(v1alpha1.
 //     golden can never quietly accept Karta drifting away from what the workload actually did.
 //   - Golden: Karta's reading (status, conditions, per-component extraction) equals the recorded
 //     reading. This catches any change in what Karta reads, not only a wrong state. Refresh it
-//     deliberately after an intended change with make regolden.
+//     deliberately after an intended change by re-recording (make record-e2e).
 //   - Legal transition: a terminal state appears only as the last step, and the last step is want.
 //
 // This is the per-version guarantee run on every PR. New recordings are picked up automatically.
@@ -93,7 +93,7 @@ func TestGolden(t *testing.T) {
 					t.Errorf("step %d: recorded state %s but Karta matched %v", i, step.State, matched)
 				}
 				if diff := cmp.Diff(want[i], got); diff != "" {
-					t.Errorf("step %d (%s): Karta reading drifted from the recording (-recorded +now):\n%s\nif this change is intended, refresh with make regolden", i, step.State, diff)
+					t.Errorf("step %d (%s): Karta reading drifted from the recording (-recorded +now):\n%s\nif this change is intended, re-record with make record-e2e", i, step.State, diff)
 				}
 			}
 
