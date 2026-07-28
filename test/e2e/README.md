@@ -52,9 +52,9 @@ Three data locations, easy to confuse:
   order live, but never checks Karta; that is the offline golden's job.
 - Offline, `make test` (which runs the golden under `test/e2e/conformance`): with no cluster, rebuild
   each CR and reading, run the CR through the current Karta, and check it matches the recorded state at
-  every step, that its reading matches, and that the sequence is a legal transition ending at `want`.
-  This is the only place Karta
-  is checked. A change that misreads any recorded workload fails fast, for every operator and version
+  every step, that its reading matches, and that the observed order is a legal subsequence of the
+  case's journey, ending at `want`. This is the only place Karta is checked. A change that misreads any
+  recorded workload fails fast, for every operator and version
   captured. There is no sanitize denylist - the golden rebuilds the exact CR, so Karta reads the same
   bytes back and per-run volatile fields never change the result.
 

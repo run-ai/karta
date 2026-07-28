@@ -69,15 +69,17 @@ just what changed between states.
 ## What the golden checks
 
 `TestGolden` rebuilds each CR and each reading by applying the patches, runs the CR through the current
-Karta library, and at every step asserts:
+Karta library, and asserts:
 
 - Correctness anchor: Karta matches the recorded `state`. Because the state came from the workload's
   own fields, a refreshed golden can never quietly accept Karta drifting away from what the workload
   actually did.
 - Golden: Karta's reading equals the recorded `expected`. This catches any change in what Karta reads,
   not only a wrong state.
-- Legal transition: a terminal state (`Completed`, `Failed`) appears only as the last step, and the
-  last step is `want`.
+- Order: the recorded states are a legal subsequence of the case's declared journey (looked up in
+  `cases.All` by operator, definition, and flow), ending at `want`. This is the same check the recorder
+  runs live, now enforced offline, so a fixture whose order was hand-edited or has drifted from its case
+  fails here too.
 
 There is no sanitize and no denylist. The golden rebuilds the exact CR that was recorded, so Karta
 reads the same bytes back and the diff is stable; per-run volatile fields (uids, timestamps, the node a
