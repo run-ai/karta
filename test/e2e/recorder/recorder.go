@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
-	"slices"
 	"strings"
 	"time"
 
@@ -179,6 +178,8 @@ func recordUntil(ctx context.Context, tc cases.WorkloadCase, fl cases.Flow, kart
 				if ks := kartaState(karta, u); statusSettled(u) && ks != "" {
 					Fail(fmt.Sprintf("%s flow %q: Karta reads %q here but no predicate in the registry "+
 						"declares it - add one, or the mapping over-reads. full CR:\n%s", tc.Name, fl.Name, ks, dumpCR(u)))
+				} else if ks == "" {
+					GinkgoWriter.Printf("no Karta state for %s flow %q: CR is outside the registry\n%s", tc.Name, fl.Name, dumpCR(u))
 				}
 				continue
 			}
@@ -274,34 +275,10 @@ func stepStates(steps []cases.Step) []kartav1alpha1.ResourceStatus {
 	return out
 }
 
-// observedOrderErr checks the observed states are an in-order subsequence of the journey, ending on the
-// terminal. A skipped step is fine; an out-of-order or undeclared state is a regression. A genuine
-// revisit (a Job dips Running -> Initializing as its pod terminates) is declared as its own step.
+// observedOrderErr checks the recorder's observed states against the flow's declared journey, using the
+// same conformance.ObservedOrderErr the offline golden runs on the recorded fixture.
 func observedOrderErr(fl cases.Flow, order []kartav1alpha1.ResourceStatus) error {
-	observed := slices.Compact(slices.Clone(order)) // collapse consecutive repeats
-	if len(observed) == 0 {
-		return fmt.Errorf("no states observed")
-	}
-	declared := stepStates(fl.Journey)
-
-	// Walk declared forward, matching each observed state to the next declared one (subsequence check).
-	di := 0
-	for _, state := range observed {
-		for di < len(declared) && declared[di] != state {
-			di++
-		}
-		if di == len(declared) {
-			if slices.Contains(declared, state) {
-				return fmt.Errorf("state %q observed out of journey %v; observed %v", state, declared, observed)
-			}
-			return fmt.Errorf("observed undeclared state %q; journey is %v; observed %v", state, declared, observed)
-		}
-		di++
-	}
-	if last := observed[len(observed)-1]; last != fl.Want() {
-		return fmt.Errorf("terminal must be %q, observed %q; sequence %v", fl.Want(), last, observed)
-	}
-	return nil
+	return conformance.ObservedOrderErr(stepStates(fl.Journey), order, fl.Want())
 }
 
 // writeFixture writes the run as one <flow>.yaml under test/e2e/conformance/fixtures/. Each step holds the
@@ -407,9 +384,4 @@ func dumpStatus(u *unstructured.Unstructured) string {
 		return fmt.Sprintf("(status marshal error: %v)", err)
 	}
 	return "  " + string(b)
-}
-
-// recordEnabled gates fixture writing to make record-e2e (KARTA_RECORD=1).
-func recordEnabled() bool {
-	return os.Getenv("KARTA_RECORD") == "1"
 }

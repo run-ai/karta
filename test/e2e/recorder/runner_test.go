@@ -83,10 +83,8 @@ func run(tc cases.WorkloadCase) {
 				rec := observeTransitions(tc, fl, obj, karta, timeout)
 				assertObservedOrder(fl, rec.order)
 
-				if recordEnabled() {
-					By("recording the conformance fixture")
-					writeFixture(tc, fl, rec, karta)
-				}
+				By("recording the conformance fixture")
+				writeFixture(tc, fl, rec, karta)
 			})
 		}
 	})

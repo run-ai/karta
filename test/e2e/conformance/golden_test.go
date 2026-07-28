@@ -15,14 +15,12 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+	"github.com/run-ai/karta/test/e2e/cases"
 )
 
 // repoRoot is reached from this package's directory: go test runs with the working directory at
 // test/e2e/conformance, so the repo root is three up. Recordings live under fixtures/.
 const repoRoot = "../../.."
-
-// terminalStates are sinks: once a workload reads as one, nothing legal may come after.
-var terminalStates = []string{string(v1alpha1.CompletedStatus), string(v1alpha1.FailedStatus)}
 
 // TestGolden replays every recorded flow through the CURRENT Karta library with no cluster and no
 // operators. For each flow it reconstructs each CR (first CR + merge-patches) and each stored reading
@@ -34,7 +32,8 @@ var terminalStates = []string{string(v1alpha1.CompletedStatus), string(v1alpha1.
 //   - Golden: Karta's reading (status, conditions, per-component extraction) equals the recorded
 //     reading. This catches any change in what Karta reads, not only a wrong state. Refresh it
 //     deliberately after an intended change by re-recording (make record-e2e).
-//   - Legal transition: a terminal state appears only as the last step, and the last step is want.
+//   - Order: the recorded states are a legal subsequence of the case's declared journey (from
+//     cases.All), ending at want - the same check the recorder runs live, now enforced offline too.
 //
 // This is the per-version guarantee run on every PR. New recordings are picked up automatically.
 func TestGolden(t *testing.T) {
@@ -104,16 +103,42 @@ func TestGolden(t *testing.T) {
 				}
 			}
 
-			for i, s := range rec.Steps {
-				if i < len(rec.Steps)-1 && slices.Contains(terminalStates, s.State) {
-					t.Errorf("terminal state %s at step %d is not last; nothing may follow a terminal", s.State, i)
-				}
+			// Order: the recorded states must be a legal subsequence of the case's declared journey (the
+			// same check the recorder runs live), ending at want. This catches a fixture whose order was
+			// hand-edited or has drifted from its case.
+			declared, ok := journeyFor(rec.Operator, rec.KartaName, rec.Flow)
+			if !ok {
+				t.Errorf("no case in cases.All for operator=%q kartaName=%q flow=%q", rec.Operator, rec.KartaName, rec.Flow)
+				return
 			}
-			if rec.Want != "" && len(rec.Steps) > 0 {
-				if last := rec.Steps[len(rec.Steps)-1].State; last != rec.Want {
-					t.Errorf("last state %s != want %s", last, rec.Want)
-				}
+			observed := make([]v1alpha1.ResourceStatus, len(rec.Steps))
+			for i, s := range rec.Steps {
+				observed[i] = v1alpha1.ResourceStatus(s.State)
+			}
+			if err := ObservedOrderErr(declared, observed, v1alpha1.ResourceStatus(rec.Want)); err != nil {
+				t.Errorf("order: %v", err)
 			}
 		})
 	}
+}
+
+// journeyFor is the declared journey of the case that produced this recording, looked up in cases.All
+// by operator, definition, and flow. The journey is code, not stored in the fixture, so a recording
+// whose order has drifted from its case is caught here.
+func journeyFor(operator, kartaName, flow string) ([]v1alpha1.ResourceStatus, bool) {
+	for _, tc := range cases.All {
+		if tc.Operator != operator || tc.KartaName != kartaName {
+			continue
+		}
+		for _, fl := range tc.Flows {
+			if fl.Name == flow {
+				out := make([]v1alpha1.ResourceStatus, len(fl.Journey))
+				for i, st := range fl.Journey {
+					out[i] = st.State
+				}
+				return out, true
+			}
+		}
+	}
+	return nil, false
 }

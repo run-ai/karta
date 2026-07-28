@@ -48,8 +48,8 @@ Three data locations, easy to confuse:
 - Online, `make record-e2e`: against a live cluster, drive each workload through its states (firing
   actions like resume where the operator will not), and record what it saw - for each state, the CR
   (first CR, then a merge-patch per change), the state judged from the workload's own fields, and what
-  Karta read of it (also a first value plus patches) - as one `<flow>.yaml`. `make test-e2e` drives the
-  same workloads and checks the order, but does not check Karta and writes nothing.
+  Karta read of it (also a first value plus patches) - as one `<flow>.yaml`. It also checks the observed
+  order live, but never checks Karta; that is the offline golden's job.
 - Offline, `make test` (which runs the golden under `test/e2e/conformance`): with no cluster, rebuild
   each CR and reading, run the CR through the current Karta, and check it matches the recorded state at
   every step, that its reading matches, and that the sequence is a legal transition ending at `want`.
@@ -64,16 +64,15 @@ The suite is online. It needs a cluster with the operators already installed.
 
 ```sh
 make e2e-up      # kind cluster + operators (once)
-make test-e2e    # run the checks; writes nothing
-make record-e2e  # run the checks and record fixtures under test/e2e/conformance/
+make record-e2e  # drive the workloads and record fixtures under test/e2e/conformance/
 make e2e-down    # tear it down
 ```
 
 Install and test a subset with the same `WORKLOADS` list:
 
 ```sh
-make e2e-up   WORKLOADS="nim"   # only the NIM operator
-make test-e2e WORKLOADS="nim"   # only the NIMService case
+make e2e-up     WORKLOADS="nim"   # only the NIM operator
+make record-e2e WORKLOADS="nim"   # only the NIMService case
 ```
 
 While adding or fixing one case, `FLOW="<name>"` narrows a record to a single flow, so you

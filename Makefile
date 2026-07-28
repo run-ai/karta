@@ -151,7 +151,7 @@ endif
 # suite); override for a quick subset, e.g. E2E_TIMEOUT=20m.
 E2E_TIMEOUT ?= 30m
 
-# Select cases by operator with the same WORKLOADS list as e2e-up: test-e2e WORKLOADS="nim"
+# Select cases by operator with the same WORKLOADS list as e2e-up: record-e2e WORKLOADS="nim"
 # runs the nim case, WORKLOADS="jobset kuberay" runs both. Each case is labelled with its
 # hack/e2e operator key (plus "builtin" for built-in kinds), and the WORKLOADS list is turned
 # into a Ginkgo label filter below. E2E_LABELS overrides it with a raw label expression for set
@@ -180,14 +180,10 @@ e2e-up: ## Provision a kind cluster + operators (WORKLOADS="jobset kuberay" for 
 e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)
 	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/down.sh
 
-.PHONY: test-e2e
-test-e2e: ## Run the e2e suite (run e2e-up first; WORKLOADS="nim" runs a subset like e2e-up; CLUSTER_NAME to match; E2E_FOCUS/E2E_LABELS for finer filters)
+.PHONY: record-e2e
+record-e2e: ## Drive the e2e suite against a live cluster and record the fixtures (run e2e-up first; WORKLOADS="nim" a subset like e2e-up, FLOW="scaled" one flow, CLUSTER_NAME to match; E2E_FOCUS/E2E_LABELS for finer filters)
 	cd test/e2e && go test -count=1 ./cases
 	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) ./recorder $(if $(E2E_FOCUS)$(E2E_LABELS),-args $(if $(E2E_FOCUS),-ginkgo.focus="$(E2E_FOCUS)") $(if $(E2E_LABELS),-ginkgo.label-filter="$(E2E_LABELS)"))
-
-.PHONY: record-e2e
-record-e2e: ## Record conformance fixtures (needs a cluster; WORKLOADS="kuberay" one operator, FLOW="scaled" one flow)
-	KARTA_RECORD=1 $(MAKE) test-e2e E2E_FOCUS="$(E2E_FOCUS)" E2E_LABELS="$(E2E_LABELS)"
 
 # The e2e shell scripts to shellcheck: the provisioner, teardown, the shared
 # helpers, and every per-operator install.sh/verify.sh.
