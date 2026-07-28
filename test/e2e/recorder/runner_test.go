@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package e2e
+package recorder
 
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -98,8 +99,10 @@ var _ = Describe("Karta against live workloads", func() {
 	}
 })
 
+// mustRead reads a case file (KartaFile or WorkloadFile), whose path is declared relative to the
+// test/e2e module root, from this package one level below it.
 func mustRead(path string) []byte {
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(filepath.Join(e2eRoot, path))
 	Expect(err).NotTo(HaveOccurred(), "read %s", path)
 	return b
 }

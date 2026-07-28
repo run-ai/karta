@@ -183,7 +183,7 @@ e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)
 .PHONY: test-e2e
 test-e2e: ## Run the e2e suite (run e2e-up first; WORKLOADS="nim" runs a subset like e2e-up; CLUSTER_NAME to match; E2E_FOCUS/E2E_LABELS for finer filters)
 	cd test/e2e && go test -count=1 ./cases
-	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) . $(if $(E2E_FOCUS)$(E2E_LABELS),-args $(if $(E2E_FOCUS),-ginkgo.focus="$(E2E_FOCUS)") $(if $(E2E_LABELS),-ginkgo.label-filter="$(E2E_LABELS)"))
+	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) ./recorder $(if $(E2E_FOCUS)$(E2E_LABELS),-args $(if $(E2E_FOCUS),-ginkgo.focus="$(E2E_FOCUS)") $(if $(E2E_LABELS),-ginkgo.label-filter="$(E2E_LABELS)"))
 
 .PHONY: record-e2e
 record-e2e: ## Record conformance fixtures (needs a cluster; WORKLOADS="kuberay" one operator, FLOW="scaled" one flow)

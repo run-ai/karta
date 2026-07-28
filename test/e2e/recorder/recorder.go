@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Package e2e runs the Karta end-to-end suite against a real cluster provisioned by
-// hack/e2e/up.sh. It is its own Go module so the cluster deps stay out of the library.
-package e2e
+// Package recorder runs the Karta end-to-end suite against a real cluster provisioned by hack/e2e/up.sh.
+// It drives each workload and records what it does under ../conformance/fixtures, which the offline
+// golden there replays. It lives in the test/e2e module so the cluster deps stay out of the library.
+package recorder
 
 import (
 	"context"
@@ -39,6 +40,11 @@ var (
 	k8sClient client.Client
 	dynClient dynamic.Interface
 )
+
+// e2eRoot is the module root (test/e2e) relative to this package's dir. go test runs with the working
+// directory at test/e2e/recorder, while the case KartaFile/WorkloadFile paths and the fixtures dir are
+// all relative to test/e2e, so paths out of this package resolve through e2eRoot.
+const e2eRoot = ".."
 
 // observeTransitions watches one workload from creation and records every distinct CR it moves through
 // until the flow finishes (or the timeout). An ordinary flow uses driveByState; a scale flow, whose
@@ -321,7 +327,7 @@ func writeFixture(tc cases.WorkloadCase, fl cases.Flow, rec *recording, karta *k
 		prevCR, prevExp = cur, exp
 	}
 
-	path := conformance.RecordingPath(filepath.Join("conformance", "fixtures"), rc)
+	path := conformance.RecordingPath(filepath.Join(e2eRoot, "conformance", "fixtures"), rc)
 	Expect(conformance.WriteRecording(path, rc)).To(Succeed())
 	GinkgoWriter.Printf("recorded %s/%s/%s/%s.yaml (%d steps %v)\n", tc.Operator, version, tc.KartaName, fl.Name, len(rc.Steps), rec.order)
 }
@@ -342,7 +348,7 @@ func actionName(fl cases.Flow, state kartav1alpha1.ResourceStatus) string {
 
 // operatorVersion is the version hack/e2e/up.sh installed for op, or "unknown".
 func operatorVersion(op string) string {
-	b, err := os.ReadFile(filepath.Join("..", "..", "hack", "e2e", "operators", ".installed-versions"))
+	b, err := os.ReadFile(filepath.Join(e2eRoot, "..", "..", "hack", "e2e", "operators", ".installed-versions"))
 	if err != nil {
 		return "unknown"
 	}
