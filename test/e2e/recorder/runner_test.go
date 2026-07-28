@@ -67,7 +67,6 @@ func run(tc cases.WorkloadCase) {
 		})
 
 		for _, fl := range tc.Flows {
-			fl := fl
 			It(fmt.Sprintf("%s flow reaches %s", fl.Name, fl.Want()), func() {
 				timeout := tc.Timeout
 				if timeout == 0 {

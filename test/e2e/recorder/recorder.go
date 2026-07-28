@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -146,6 +147,7 @@ type advanceFunc func(u *unstructured.Unstructured, state kartav1alpha1.Resource
 func recordUntil(tc cases.WorkloadCase, fl cases.Flow, karta *kartav1alpha1.Karta, watcher watch.Interface, timeout time.Duration, rec *recording, advance advanceFunc) {
 	deadline := time.After(timeout)
 	var lastSeen *unstructured.Unstructured
+	var lastErr error // the most recent watch.Error frame, for the close message
 	for {
 		select {
 		case <-deadline:
@@ -153,11 +155,16 @@ func recordUntil(tc cases.WorkloadCase, fl cases.Flow, karta *kartav1alpha1.Kart
 				tc.Name, fl.Name, fl.Want(), timeout, rec.order, dumpStatus(lastSeen)))
 		case event, open := <-watcher.ResultChan():
 			if !open {
-				Fail("watch closed before the flow finished")
+				Fail(fmt.Sprintf("%s flow %q: watch closed before reaching %q; recorded %v; last watch error: %v\nlast-seen status:\n%s",
+					tc.Name, fl.Name, fl.Want(), rec.order, lastErr, dumpStatus(lastSeen)))
+			}
+			if event.Type == watch.Error {
+				lastErr = apierrors.FromObject(event.Object) // explains a later close; keep the latest
+				continue
 			}
 			u, ok := event.Object.(*unstructured.Unstructured)
 			if !ok {
-				continue // a bookmark or error frame carries no workload object
+				continue // a bookmark carries no workload object
 			}
 			lastSeen = u
 			state := cases.Classify(u, tc.States)
@@ -284,14 +291,14 @@ func observedOrderErr(fl cases.Flow, order []kartav1alpha1.ResourceStatus) error
 		}
 		if di == len(declared) {
 			if slices.Contains(declared, state) {
-				return fmt.Errorf("state %q observed out of journey %v", state, declared)
+				return fmt.Errorf("state %q observed out of journey %v; observed %v", state, declared, observed)
 			}
-			return fmt.Errorf("observed undeclared state %q; journey is %v", state, declared)
+			return fmt.Errorf("observed undeclared state %q; journey is %v; observed %v", state, declared, observed)
 		}
 		di++
 	}
 	if last := observed[len(observed)-1]; last != fl.Want() {
-		return fmt.Errorf("terminal must be %q, observed %q", fl.Want(), last)
+		return fmt.Errorf("terminal must be %q, observed %q; sequence %v", fl.Want(), last, observed)
 	}
 	return nil
 }
@@ -365,9 +372,10 @@ func operatorVersion(op string) string {
 func kartaState(karta *kartav1alpha1.Karta, u *unstructured.Unstructured) string {
 	reading, err := conformance.Reading(karta, u)
 	if err != nil {
+		GinkgoWriter.Printf("kartaState: Karta read failed, undeclared-state guard may under-report: %v\n", err)
 		return ""
 	}
-	matched, _ := reading["matchedStatuses"].([]interface{})
+	matched, _ := reading["matchedStatuses"].([]any)
 	for _, s := range matched {
 		if str, ok := s.(string); ok && str != string(kartav1alpha1.UndefinedStatus) {
 			return str

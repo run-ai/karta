@@ -71,10 +71,10 @@ func PhaseAny(wants []string, path ...string) StateCheck {
 	}
 }
 
-func IntAtLeast(min int64, path ...string) StateCheck {
+func IntAtLeast(n int64, path ...string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		got, found, err := unstructured.NestedInt64(u.Object, path...)
-		return err == nil && found && got >= min
+		return err == nil && found && got >= n
 	}
 }
 

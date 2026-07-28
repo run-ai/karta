@@ -41,14 +41,21 @@ func TestGolden(t *testing.T) {
 	root := "fixtures"
 
 	var files []string
-	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err == nil && !d.IsDir() && strings.HasSuffix(d.Name(), ".yaml") {
+	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && strings.HasSuffix(d.Name(), ".yaml") {
 			files = append(files, path)
 		}
 		return nil
-	})
+	}); err != nil {
+		abs, _ := filepath.Abs(root)
+		t.Fatalf("walk %s: %v", abs, err)
+	}
 	if len(files) == 0 {
-		t.Skip("no recordings yet (run: make record-e2e)")
+		abs, _ := filepath.Abs(root)
+		t.Fatalf("no recordings found under %s; a mis-pathed fixtures dir is a bug, not a pass (record with make record-e2e)", abs)
 	}
 
 	for _, file := range files {

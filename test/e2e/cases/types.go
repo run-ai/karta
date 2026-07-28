@@ -71,6 +71,9 @@ func Steps(states ...kartav1alpha1.ResourceStatus) []Step {
 }
 
 func (tc WorkloadCase) Validate() error {
+	if tc.Operator == "" || tc.KartaFile == "" || tc.KartaName == "" {
+		return fmt.Errorf("case %q: Operator, KartaFile, and KartaName are required", tc.Name)
+	}
 	known := map[kartav1alpha1.ResourceStatus]bool{}
 	for _, s := range tc.States {
 		known[s.Name] = true
@@ -78,6 +81,14 @@ func (tc WorkloadCase) Validate() error {
 	for _, fl := range tc.Flows {
 		if len(fl.Journey) == 0 {
 			return fmt.Errorf("case %q flow %q: empty journey", tc.Name, fl.Name)
+		}
+		if fl.WorkloadFile == "" {
+			return fmt.Errorf("case %q flow %q: empty WorkloadFile", tc.Name, fl.Name)
+		}
+		// Want() is the last step's state, so a terminal Optional step would make the flow's target a
+		// dip that driveByPosition skips - the run could report done without the last real settle firing.
+		if last := fl.Journey[len(fl.Journey)-1]; last.Optional {
+			return fmt.Errorf("case %q flow %q: journey ends on an Optional step %q; the last step must be a real settle", tc.Name, fl.Name, last.State)
 		}
 		for _, st := range fl.Journey {
 			if !known[st.State] {
