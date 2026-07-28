@@ -16,7 +16,12 @@ var lwsCase = WorkloadCase{
 		{running, ReplicasSettled()},
 	},
 	Flows: []Flow{
-		{Name: "running", WorkloadFile: "testdata/lws/running.yaml", Journey: Steps(initializing, running)},
+		// Initializing is Optional: a LeaderWorkerSet that comes up fast can be Available before the run
+		// ever catches the Progressing state.
+		{Name: "running", WorkloadFile: "testdata/lws/running.yaml", Journey: []Step{
+			{State: initializing, Optional: true},
+			{State: running},
+		}},
 		{Name: "scaled", WorkloadFile: "testdata/lws/scaled.yaml", Journey: []Step{
 			{State: initializing, Optional: true},
 			{State: running, Settle: ReplicasReady(1), Action: ScaleReplicas(2)},

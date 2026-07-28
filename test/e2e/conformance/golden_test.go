@@ -125,16 +125,16 @@ func TestGolden(t *testing.T) {
 // journeyFor is the declared journey of the case that produced this recording, looked up in cases.All
 // by operator, definition, and flow. The journey is code, not stored in the fixture, so a recording
 // whose order has drifted from its case is caught here.
-func journeyFor(operator, kartaName, flow string) ([]v1alpha1.ResourceStatus, bool) {
+func journeyFor(operator, kartaName, flow string) ([]JourneyStep, bool) {
 	for _, tc := range cases.All {
 		if tc.Operator != operator || tc.KartaName != kartaName {
 			continue
 		}
 		for _, fl := range tc.Flows {
 			if fl.Name == flow {
-				out := make([]v1alpha1.ResourceStatus, len(fl.Journey))
+				out := make([]JourneyStep, len(fl.Journey))
 				for i, st := range fl.Journey {
-					out[i] = st.State
+					out[i] = JourneyStep{State: st.State, Optional: st.Optional}
 				}
 				return out, true
 			}

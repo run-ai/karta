@@ -266,11 +266,12 @@ func assertObservedOrder(fl cases.Flow, order []kartav1alpha1.ResourceStatus) {
 	Expect(observedOrderErr(fl, order)).To(Succeed())
 }
 
-// stepStates is the journey's declared states, in order.
-func stepStates(steps []cases.Step) []kartav1alpha1.ResourceStatus {
-	out := make([]kartav1alpha1.ResourceStatus, len(steps))
+// journeySteps converts a flow's journey into the order check's declared steps, keeping each step's
+// Optional flag so a required step that never appears fails while an optional dip may be absent.
+func journeySteps(steps []cases.Step) []conformance.JourneyStep {
+	out := make([]conformance.JourneyStep, len(steps))
 	for i, st := range steps {
-		out[i] = st.State
+		out[i] = conformance.JourneyStep{State: st.State, Optional: st.Optional}
 	}
 	return out
 }
@@ -278,7 +279,7 @@ func stepStates(steps []cases.Step) []kartav1alpha1.ResourceStatus {
 // observedOrderErr checks the recorder's observed states against the flow's declared journey, using the
 // same conformance.ObservedOrderErr the offline golden runs on the recorded fixture.
 func observedOrderErr(fl cases.Flow, order []kartav1alpha1.ResourceStatus) error {
-	return conformance.ObservedOrderErr(stepStates(fl.Journey), order, fl.Want())
+	return conformance.ObservedOrderErr(journeySteps(fl.Journey), order, fl.Want())
 }
 
 // writeFixture writes the run as one <flow>.yaml under test/e2e/conformance/fixtures/. Each step holds the

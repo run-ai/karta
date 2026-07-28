@@ -19,11 +19,11 @@ var pytorchCase = WorkloadCase{
 	},
 	Flows: []Flow{
 		{Name: "running", WorkloadFile: "testdata/pytorch/running.yaml", Journey: Steps(initializing, running)},
-		// completed/failed declare Initializing twice: Kubeflow keeps the Created (init) condition set for
-		// the job's whole life, so if Running flips off a tick before Succeeded/Failed flips on, the CR
-		// reads Initializing again before the terminal. Declaring the revisit keeps the order check strict.
-		{Name: "completed", WorkloadFile: "testdata/pytorch/completed.yaml", Journey: Steps(initializing, running, initializing, completed)},
-		{Name: "failed", WorkloadFile: "testdata/pytorch/failed.yaml", Journey: Steps(initializing, running, initializing, failed)},
+		// completed/failed: the launcher can finish before Running is ever observed, so Running is
+		// Optional; and Kubeflow keeps Created (init) set, so the CR can read Initializing again for a
+		// tick before the terminal - a repeat the order check tolerates whether or not a run catches it.
+		{Name: "completed", WorkloadFile: "testdata/pytorch/completed.yaml", Journey: []Step{{State: initializing}, {State: running, Optional: true}, {State: initializing}, {State: completed}}},
+		{Name: "failed", WorkloadFile: "testdata/pytorch/failed.yaml", Journey: []Step{{State: initializing}, {State: running, Optional: true}, {State: initializing}, {State: failed}}},
 		{Name: "suspended", WorkloadFile: "testdata/pytorch/suspended.yaml", Journey: Steps(suspended)},
 		{Name: "resumed", WorkloadFile: "testdata/pytorch/resumed.yaml", Journey: []Step{
 			{State: suspended, Action: UnsuspendRunPolicy},

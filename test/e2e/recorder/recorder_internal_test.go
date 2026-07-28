@@ -72,10 +72,13 @@ func TestObservedOrder(t *testing.T) {
 		ok       bool
 	}{
 		{"exact", cases.Flow{Journey: cases.Steps(initializing, running, completed)}, []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
-		{"skip a step", cases.Flow{Journey: cases.Steps(initializing, running, completed)}, []kartav1alpha1.ResourceStatus{initializing, completed}, true},
+		{"skip a required step fails", cases.Flow{Journey: cases.Steps(initializing, running, completed)}, []kartav1alpha1.ResourceStatus{initializing, completed}, false},
+		{"skip an optional step is ok", cases.Flow{Journey: []cases.Step{{State: initializing}, {State: running, Optional: true}, {State: completed}}}, []kartav1alpha1.ResourceStatus{initializing, completed}, true},
 		{"undeclared state", cases.Flow{Journey: cases.Steps(initializing, running)}, []kartav1alpha1.ResourceStatus{initializing, failed}, false},
-		{"backwards not declared", cases.Flow{Journey: cases.Steps(initializing, running, completed)}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, false},
-		{"backwards declared", cases.Flow{Journey: cases.Steps(initializing, running, initializing, completed)}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, true},
+		{"repeat dip missed is ok", cases.Flow{Journey: cases.Steps(initializing, running, initializing, completed)}, []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
+		{"optional dip missed is ok", cases.Flow{Journey: []cases.Step{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}}}, []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
+		{"optional dip caught is ok", cases.Flow{Journey: []cases.Step{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}}}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, true},
+		{"undeclared dip fails", cases.Flow{Journey: cases.Steps(initializing, running, completed)}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, false},
 		{"wrong terminal", cases.Flow{Journey: cases.Steps(initializing, running, completed)}, []kartav1alpha1.ResourceStatus{initializing, running}, false},
 	}
 	for _, c := range tests {
