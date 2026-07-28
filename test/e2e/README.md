@@ -68,55 +68,74 @@ For each case, in order:
    condition, a replica count), never from Karta. Asking Karta when to check
    Karta would just let it agree with itself.
 4. Check the workload moved through its states in the declared order.
-5. Record each state's CR and what Karta read of it. Karta is not checked here:
-   whether it reads each state correctly, and extracts the same components, is
-   asserted offline against the recording by `go test ./test/conformance`. The
-   live run stays a pure recorder.
+5. Record every distinct CR the workload settled in, and what Karta read of each. Karta is not checked
+   here: whether it reads each state correctly, and extracts the same components, is asserted offline
+   against the recording by `go test ./test/conformance`. The live run stays a pure recorder.
 
-Only stable states are recorded, never a transient one, so the offline golden does
-not flake.
+Every distinct settled CR is kept, including the transient dips a workload takes while scaling, so the
+golden validates each. If a settled CR maps to no declared state but Karta reads a real one, the run
+fails with the whole CR - the undeclared-state guard - so a state Karta reads is never silently skipped.
+A CR outside the definition (Karta reads nothing either) is skipped, not a failure.
 
 ## Add a case or a flow
 
-A case is one `workloadCase` in `cases_<type>.go`. It names its states once (the
-registry, each a check on the workload's own fields), then each flow is a journey
-through those states, with a manifest under `testdata/<type>/<flow>.yaml`:
+A case is one `WorkloadCase` in `cases/cases_<type>.go`. It names its states once (the registry, each a
+check on the workload's own fields), then each flow is a journey through those states, with a manifest
+under `testdata/<type>/<flow>.yaml`:
 
 ```go
-states: []namedState{
-    {initializing, phaseEq("Pending", "status", "phase")},
-    {running, phaseEq("Running", "status", "phase")},
-    {failed, phaseEq("Failed", "status", "phase")},
+States: []NamedState{
+    {initializing, PhaseEq("Pending", "status", "phase")},
+    {running, PhaseEq("Running", "status", "phase")},
+    {failed, PhaseEq("Failed", "status", "phase")},
 },
-flows: []flow{
-    {name: "failed", workloadFile: "testdata/pod/failed.yaml", journey: steps(initializing, running, failed)},
+Flows: []Flow{
+    {Name: "failed", WorkloadFile: "testdata/pod/failed.yaml", Journey: Steps(initializing, running, failed)},
 },
 ```
 
-A step can carry an action, a mutation the operator will not make itself. A resume
-flow reaches Suspended, resumes, then runs to completion:
+A step can carry an action, a mutation the operator will not make itself. A resume flow reaches
+Suspended, resumes, then runs to completion:
 
 ```go
-journey: []step{{state: suspended, action: unsuspend}, {state: running}, {state: completed}},
+Journey: []Step{{State: suspended, Action: Unsuspend}, {State: running}, {State: completed}},
 ```
 
-Add the flow, drop its manifest next to the others, run `make record-e2e` once, and
-commit the fixtures. `want` is the last step's state.
+A scale flow repeats the same state at each replica count, told apart by a `Settle` gate, and lists the
+transient dips as `Optional` markers - `driveByPosition` skips them, and the order check tolerates a run
+that does not hit one:
+
+```go
+Journey: []Step{
+    {State: initializing, Optional: true},
+    {State: running, Settle: ReplicasReady(1), Action: ScaleReplicas(3)},
+    {State: initializing, Optional: true},
+    {State: running, Settle: ReplicasReady(3), Action: ScaleReplicas(1)},
+    {State: running, Settle: ReplicasReady(1)},
+},
+```
+
+Add the flow, drop its manifest next to the others, run `make record-e2e` once, and commit the
+fixtures. `want` is the last step's state.
 
 ## How it works
 
-- Recorder: watches the workload from creation, classifies each settled CR from its own fields, and
-  keeps one CR per state change (a return to an earlier state is kept, so a backwards jump is caught).
-  Deduping on the state needs no denylist to tell a real change from resourceVersion churn.
-- Recording: the first kept CR is stored in full; every later state is a merge-patch (RFC 7386) from
-  the CR before it, tagged with the state it reaches and the action fired there. What Karta read of each
-  CR is stored the same way (first reading + patches) as `expected`. The offline golden applies the
-  patches to rebuild each CR and reading, re-runs Karta, and diffs. No sanitize - the golden rebuilds
-  the exact CR, so the reading is stable without a denylist. Refresh the reading after an intended
-  library change with `make regolden` (offline, no cluster).
-- Actions: a step's action fires once when its state is reached, in journey order, to drive a
-  transition the operator will not make itself (e.g. clear `spec.suspend` to resume). Put actions on
-  states the operator holds at, like Suspended.
+- Recorder: watches the workload from creation and keeps every distinct CR it settles in (dedup on the
+  CR bytes ignoring resourceVersion and managedFields, not on the state), so an intermediate CR at the
+  same state - a scale ramp - is captured too. Each CR's state comes from its own fields, never Karta.
+- Two drivers: an ordinary flow follows the states as they appear (`driveByState`); a scale flow, whose
+  state stays Running while the replica count changes, walks the journey by position with a `Settle`
+  gate per step (`driveByPosition`), skipping `Optional` dip markers.
+- Guard: if a settled CR maps to no declared state but Karta reads a real one, the run fails with the
+  whole CR - the registry is missing a predicate, so a state Karta reads is never silently skipped.
+- Recording: the first kept CR is stored in full; every later CR is a merge-patch (RFC 7386) from the CR
+  before it, tagged with its state and any action. What Karta read of each CR is stored the same way
+  (first reading + patches) as `expected`. The offline golden rebuilds each CR and reading, re-runs
+  Karta, and diffs. No sanitize - it rebuilds the exact CR, so the reading is stable without a denylist.
+  Refresh the reading after an intended library change with `make regolden` (offline, no cluster).
+- Actions: a step's action fires once when its state is reached, in journey order, to drive a transition
+  the operator will not make itself (e.g. clear `spec.suspend` to resume). Put actions on states the
+  operator holds at, like Suspended.
 
 ## Prerequisites
 
@@ -126,11 +145,10 @@ docker, kind, kubectl, helm, Go. No GPU.
 
 | Workload type | Operator |
 |---|---|
-| Pod, BatchJob | built-in |
+| Pod, BatchJob, Deployment, StatefulSet, CronJob | built-in |
 | JobSet | jobset |
 | RayCluster, RayJob | kuberay |
-| PyTorchJob | kubeflow |
-| MPIJob | mpi-operator |
+| PyTorchJob, MPIJob | kubeflow |
 | LeaderWorkerSet | lws |
 | KnativeService | knative |
 | KServe InferenceService | kserve |
