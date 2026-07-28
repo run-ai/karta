@@ -7,7 +7,7 @@
 // both as a first value plus a merge-patch per state change, so the file holds only what changed.
 // The recorder writes recordings; the offline test rebuilds each CR, re-reads it through the current
 // Karta, and diffs against the stored reading. Recordings live under
-// test/conformance/fixtures/<operator>/<version>/<kartaName>/<flow>.yaml.
+// test/e2e/conformance/fixtures/<operator>/<version>/<kartaName>/<flow>.yaml.
 package conformance
 
 import (
@@ -27,7 +27,7 @@ import (
 const SchemaVersion = 6
 
 // Recording is one flow: metadata plus an ordered list of steps, one per state the workload passed
-// through. The set of recordings under test/conformance/fixtures/ is the tested operator matrix.
+// through. The set of recordings under test/e2e/conformance/fixtures/ is the tested operator matrix.
 type Recording struct {
 	SchemaVersion int    `json:"schemaVersion"`
 	Operator      string `json:"operator"`

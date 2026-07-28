@@ -30,8 +30,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
-	"github.com/run-ai/karta/test/conformance"
 	"github.com/run-ai/karta/test/e2e/cases"
+	"github.com/run-ai/karta/test/e2e/conformance"
 )
 
 var (
@@ -290,7 +290,7 @@ func observedOrderErr(fl cases.Flow, order []kartav1alpha1.ResourceStatus) error
 	return nil
 }
 
-// writeFixture writes the run as one <flow>.yaml under test/conformance/fixtures/. Each step holds the
+// writeFixture writes the run as one <flow>.yaml under test/e2e/conformance/fixtures/. Each step holds the
 // own-fields state, the CR, and what Karta read of it - full on the first step, a merge-patch from the
 // previous step after, so the file holds only what changed.
 func writeFixture(tc cases.WorkloadCase, fl cases.Flow, rec *recording, karta *kartav1alpha1.Karta) {
@@ -321,7 +321,7 @@ func writeFixture(tc cases.WorkloadCase, fl cases.Flow, rec *recording, karta *k
 		prevCR, prevExp = cur, exp
 	}
 
-	path := conformance.RecordingPath(filepath.Join("..", "conformance", "fixtures"), rc)
+	path := conformance.RecordingPath(filepath.Join("conformance", "fixtures"), rc)
 	Expect(conformance.WriteRecording(path, rc)).To(Succeed())
 	GinkgoWriter.Printf("recorded %s/%s/%s/%s.yaml (%d steps %v)\n", tc.Operator, version, tc.KartaName, fl.Name, len(rc.Steps), rec.order)
 }

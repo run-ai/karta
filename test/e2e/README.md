@@ -6,8 +6,8 @@
 Karta reads any workload from a catalog of definitions (`docs/catalog`). This
 suite is how we guarantee those definitions stay correct: it brings up real
 operators, runs real workloads, and records what they do. Karta itself is checked
-offline, against those recordings, by `go test ./test/conformance` (see
-`test/conformance`) - never in the live run, so the recorder can never validate
+offline, against those recordings, by the golden in `conformance/` (`make test` runs
+it, no cluster) - never in the live run, so the recorder can never validate
 Karta by asking Karta.
 
 ## Online and offline
@@ -17,9 +17,10 @@ Karta by asking Karta.
   (first CR, then a merge-patch per change), the state judged from the workload's own fields, and what
   Karta read of it (also a first value plus patches) - as one `<flow>.yaml`. `make test-e2e` drives the
   same workloads and checks the order, but does not check Karta and writes nothing.
-- Offline, `go test ./test/conformance`: with no cluster, rebuild each CR and reading, run the CR
-  through the current Karta, and check it matches the recorded state at every step, that its reading
-  matches, and that the sequence is a legal transition ending at `want`. This is the only place Karta
+- Offline, `make test` (which runs the golden under `test/e2e/conformance`): with no cluster, rebuild
+  each CR and reading, run the CR through the current Karta, and check it matches the recorded state at
+  every step, that its reading matches, and that the sequence is a legal transition ending at `want`.
+  This is the only place Karta
   is checked. A change that misreads any recorded workload fails fast, for every operator and version
   captured. There is no sanitize denylist - the golden rebuilds the exact CR, so Karta reads the same
   bytes back and per-run volatile fields never change the result.
@@ -31,7 +32,7 @@ The suite is online. It needs a cluster with the operators already installed.
 ```sh
 make e2e-up      # kind cluster + operators (once)
 make test-e2e    # run the checks; writes nothing
-make record-e2e  # run the checks and record fixtures under test/conformance/
+make record-e2e  # run the checks and record fixtures under test/e2e/conformance/
 make e2e-down    # tear it down
 ```
 
@@ -70,7 +71,7 @@ For each case, in order:
 4. Check the workload moved through its states in the declared order.
 5. Record every distinct CR the workload settled in, and what Karta read of each. Karta is not checked
    here: whether it reads each state correctly, and extracts the same components, is asserted offline
-   against the recording by `go test ./test/conformance`. The live run stays a pure recorder.
+   against the recording by the golden in `conformance/` (`make test`). The live run stays a pure recorder.
 
 Every distinct settled CR is kept, including the transient dips a workload takes while scaling, so the
 golden validates each. If a settled CR maps to no declared state but Karta reads a real one, the run

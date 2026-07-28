@@ -8,7 +8,7 @@
 // the CRs and the recorded states are left untouched. The golden's correctness anchor still holds
 // afterwards: if Karta no longer reads a step's recorded state, the refreshed reading will not contain
 // it and TestGolden fails, so regolden cannot paper over Karta drifting from the ground truth. Run
-// from the repo root: go run ./hack/regolden
+// from test/e2e: go run ./cmd/regolden (or make regolden)
 package main
 
 import (
@@ -21,11 +21,11 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
-	"github.com/run-ai/karta/test/conformance"
+	"github.com/run-ai/karta/test/e2e/conformance"
 )
 
 func main() {
-	root := "test/conformance/fixtures"
+	root := "conformance/fixtures"
 	var files []string
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -54,7 +54,7 @@ func regen(file string) error {
 	if err != nil {
 		return err
 	}
-	kb, err := os.ReadFile(rec.KartaFile)
+	kb, err := os.ReadFile(filepath.Join("..", "..", rec.KartaFile))
 	if err != nil {
 		return err
 	}

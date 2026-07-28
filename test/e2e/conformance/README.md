@@ -86,7 +86,7 @@ against a live cluster changes them.
 
 ## Working with recordings
 
-- Verify (every PR, no cluster): `go test ./test/conformance -run TestGolden`
+- Verify (every PR, no cluster): `make test`, or `cd test/e2e && go test ./conformance/... -run TestGolden`
 - Refresh the reading after an intended library change (no cluster): `make regolden`. It replays each
   frozen CR through the current Karta and rewrites only `expected`; the CRs and states are untouched,
   and the correctness anchor still fails if Karta no longer reads a recorded state.

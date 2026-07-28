@@ -42,6 +42,7 @@ generate-mocks: ## Generate mocks using go generate
 .PHONY: test
 test: generate-mocks ## Run tests with mock generation
 	go test ./...
+	cd test/e2e && go test -count=1 ./conformance/...
 
 lint-go: golangci-lint
 	echo "Running golangci linter"
@@ -190,7 +191,7 @@ record-e2e: ## Record conformance fixtures (needs a cluster; WORKLOADS="kuberay"
 
 .PHONY: regolden
 regolden: ## Refresh each recording's expected Karta reading offline (no cluster); run after an intended library change
-	go run ./hack/regolden
+	cd test/e2e && go run ./cmd/regolden
 
 # The e2e shell scripts to shellcheck: the provisioner, teardown, the shared
 # helpers, and every per-operator install.sh/verify.sh.

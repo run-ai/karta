@@ -18,8 +18,8 @@ import (
 )
 
 // repoRoot is reached from this package's directory: go test runs with the working directory at
-// test/conformance, so the repo root is two up. Recordings live under fixtures/.
-const repoRoot = "../.."
+// test/e2e/conformance, so the repo root is three up. Recordings live under fixtures/.
+const repoRoot = "../../.."
 
 // terminalStates are sinks: once a workload reads as one, nothing legal may come after.
 var terminalStates = []string{string(v1alpha1.CompletedStatus), string(v1alpha1.FailedStatus)}
@@ -33,7 +33,7 @@ var terminalStates = []string{string(v1alpha1.CompletedStatus), string(v1alpha1.
 //     golden can never quietly accept Karta drifting away from what the workload actually did.
 //   - Golden: Karta's reading (status, conditions, per-component extraction) equals the recorded
 //     reading. This catches any change in what Karta reads, not only a wrong state. Refresh it
-//     deliberately after an intended change with go run ./hack/regolden.
+//     deliberately after an intended change with make regolden.
 //   - Legal transition: a terminal state appears only as the last step, and the last step is want.
 //
 // This is the per-version guarantee run on every PR. New recordings are picked up automatically.
@@ -93,7 +93,7 @@ func TestGolden(t *testing.T) {
 					t.Errorf("step %d: recorded state %s but Karta matched %v", i, step.State, matched)
 				}
 				if diff := cmp.Diff(want[i], got); diff != "" {
-					t.Errorf("step %d (%s): Karta reading drifted from the recording (-recorded +now):\n%s\nif this change is intended, refresh with go run ./hack/regolden", i, step.State, diff)
+					t.Errorf("step %d (%s): Karta reading drifted from the recording (-recorded +now):\n%s\nif this change is intended, refresh with make regolden", i, step.State, diff)
 				}
 			}
 
