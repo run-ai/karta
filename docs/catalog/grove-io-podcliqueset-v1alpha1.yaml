@@ -30,7 +30,8 @@ spec:
       kind: PodGang
       version: v1alpha1
     childComponents:
-    - instanceIdPath: .spec.template.cliques[].name
+    - instanceIdPath: .spec.template as $t | $t.cliques[] | select(.name as $n | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?]
+        | index($n) | not)) | .name
       kind:
         group: grove.io
         kind: PodClique
@@ -43,20 +44,38 @@ spec:
         replicaSelector:
           keyPath: .metadata.labels["grove.io/podcliqueset-replica-index"]
       scaleDefinition:
-        maxReplicasPath: .spec.template.cliques[].spec.autoScalingConfig.maxReplicas
-        minReplicasPath: .spec.template.cliques[].spec.autoScalingConfig.minReplicas
-        replicasPath: (.spec.replicas // 1) * (.spec.template.cliques[].spec.replicas
-          // 1)
+        maxReplicasPath: .spec.template as $t | $t.cliques[] | select(.name as $n
+          | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?] | index($n) | not)) | .spec.autoScalingConfig.maxReplicas
+        minReplicasPath: .spec.template as $t | $t.cliques[] | select(.name as $n
+          | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?] | index($n) | not)) | .spec.autoScalingConfig.minReplicas
+        replicasPath: .spec.replicas as $r | .spec.template as $t | $t.cliques[] |
+          select(.name as $n | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?] | index($n)
+          | not)) | (($r // 1) * (.spec.replicas // 1))
       specDefinition:
         fragmentedPodSpecDefinition:
-          annotationsPath: .spec.template.cliques[].annotations
-          containersPath: .spec.template.cliques[].spec.podSpec.containers
-          labelsPath: .spec.template.cliques[].labels
-          nodeAffinityPath: .spec.template.cliques[].spec.podSpec.affinity.nodeAffinity
-          podAffinityPath: .spec.template.cliques[].spec.podSpec.affinity.podAffinity
-          priorityClassNamePath: .spec.template.cliques[].spec.podSpec.priorityClassName
-          resourceClaimsPath: .spec.template.cliques[].spec.podSpec.resourceClaims
-          schedulerNamePath: .spec.template.cliques[].spec.podSpec.schedulerName
+          annotationsPath: .spec.template as $t | $t.cliques[] | select(.name as $n
+            | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?] | index($n) | not)) |
+            .annotations
+          containersPath: .spec.template as $t | $t.cliques[] | select(.name as $n
+            | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?] | index($n) | not)) |
+            .spec.podSpec.containers
+          labelsPath: .spec.template as $t | $t.cliques[] | select(.name as $n | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?]
+            | index($n) | not)) | .labels
+          nodeAffinityPath: .spec.template as $t | $t.cliques[] | select(.name as
+            $n | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?] | index($n) | not))
+            | .spec.podSpec.affinity.nodeAffinity
+          podAffinityPath: .spec.template as $t | $t.cliques[] | select(.name as $n
+            | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?] | index($n) | not)) |
+            .spec.podSpec.affinity.podAffinity
+          priorityClassNamePath: .spec.template as $t | $t.cliques[] | select(.name
+            as $n | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?] | index($n) | not))
+            | .spec.podSpec.priorityClassName
+          resourceClaimsPath: .spec.template as $t | $t.cliques[] | select(.name as
+            $n | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?] | index($n) | not))
+            | .spec.podSpec.resourceClaims
+          schedulerNamePath: .spec.template as $t | $t.cliques[] | select(.name as
+            $n | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?] | index($n) | not))
+            | .spec.podSpec.schedulerName
     - instanceIdPath: .spec.template.podCliqueScalingGroups[].name
       kind:
         group: grove.io

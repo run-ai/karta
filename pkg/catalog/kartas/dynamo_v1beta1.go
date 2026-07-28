@@ -51,7 +51,10 @@ func DynamoV1beta1() *v1alpha1.Karta {
 							},
 						},
 						ScaleDefinition: &v1alpha1.ScaleDefinition{
-							ReplicasPath: ptr.To(".spec.components[] | (.replicas // 1) * (.multinode.nodeCount // 1)"),
+							// Logical replicas of the component. multinode.nodeCount is
+							// pods-per-replica (topology), not a scale multiplier, and folding it
+							// in overcounts and breaks writeback to .replicas.
+							ReplicasPath: ptr.To(".spec.components[] | (.replicas // 1)"),
 						},
 						InstanceIdPath: ptr.To(".spec.components[] | .name"),
 						PodSelector: &v1alpha1.PodSelector{

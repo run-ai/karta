@@ -26,6 +26,10 @@ func NIMCache() *v1alpha1.Karta {
 					},
 					SpecDefinition: &v1alpha1.SpecDefinition{
 						FragmentedPodSpecDefinition: &v1alpha1.FragmentedPodSpecDefinition{
+							// .spec.resources is a bare resource list, wrapped as requests to
+							// form a ResourceRequirements. This is a read-only projection: an
+							// object construction is not an assignable jq path, so resource
+							// mutation is not supported here (acceptable for a cache job).
 							ResourcesPath: ptr.To("{requests: .spec.resources}"),
 						},
 					},

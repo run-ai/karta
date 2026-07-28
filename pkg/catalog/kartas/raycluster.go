@@ -30,6 +30,8 @@ func Raycluster() *v1alpha1.Karta {
 							Path: ".status.state",
 						},
 						StatusMappings: v1alpha1.StatusMappings{
+							// RayCluster .status.state (ClusterState) is ready / failed / suspended.
+							// "failed" is deprecated upstream but still a valid enum value.
 							Running: []v1alpha1.StatusMatcher{{ByPhase: "ready"}},
 							Failed:  []v1alpha1.StatusMatcher{{ByPhase: "failed"}},
 							Suspended: []v1alpha1.StatusMatcher{{ByExpression: &v1alpha1.ExpressionMatcher{

@@ -52,7 +52,11 @@ func Dynamo() *v1alpha1.Karta {
 							},
 						},
 						ScaleDefinition: &v1alpha1.ScaleDefinition{
-							ReplicasPath:    ptr.To(".spec.services[] | (.replicas // 1) * (.multinode.nodeCount // 1)"),
+							// Replica count is the service's logical replicas, matching the units
+							// of autoscaling min/max below. multinode.nodeCount is pods-per-replica
+							// (topology), not a scale multiplier; folding it in overcounts and can
+							// exceed maxReplicas.
+							ReplicasPath:    ptr.To(".spec.services[] | (.replicas // 1)"),
 							MinReplicasPath: ptr.To(".spec.services | .[] | .autoscaling.minReplicas"),
 							MaxReplicasPath: ptr.To(".spec.services | .[] | .autoscaling.maxReplicas"),
 						},

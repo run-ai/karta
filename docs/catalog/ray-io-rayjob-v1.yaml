@@ -58,11 +58,6 @@ spec:
         version: v1
       name: rayjob
       statusDefinition:
-        conditionsDefinition:
-          messageFieldName: message
-          path: .status.conditions
-          statusFieldName: status
-          typeFieldName: type
         phaseDefinition:
           path: .status.jobStatus
         statusMappings:

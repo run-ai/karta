@@ -44,8 +44,7 @@ spec:
           keyPath: .metadata.labels["grove.io/podcliquescalinggroup-replica-index"]
             // .metadata.labels["leaderworkerset.sigs.k8s.io/group-index"]
       scaleDefinition:
-        replicasPath: .spec.components[] | (.replicas // 1) * (.multinode.nodeCount
-          // 1)
+        replicasPath: .spec.components[] | (.replicas // 1)
       specDefinition:
         fragmentedPodSpecDefinition:
           annotationsPath: .spec.components[] | .podTemplate.metadata.annotations
