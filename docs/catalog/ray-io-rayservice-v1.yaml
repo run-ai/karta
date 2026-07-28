@@ -21,68 +21,68 @@ spec:
           reasonFieldName: reason
         statusMappings:
           initializing:
-            - byConditions:
-                - type: Ready
-                  status: "False"
-                  reason: Initializing
+          - byConditions:
+            - type: Ready
+              status: "False"
+              reason: Initializing
           running:
-            - byConditions:
-                - type: Ready
-                  status: "True"
+          - byConditions:
+            - type: Ready
+              status: "True"
           failed:
-            - byConditions:
-                - type: Ready
-                  status: "False"
-                  reason: InitializingTimeout
-            - byConditions:
-                - type: Ready
-                  status: "False"
-                  reason: ValidationFailed
+          - byConditions:
+            - type: Ready
+              status: "False"
+              reason: InitializingTimeout
+          - byConditions:
+            - type: Ready
+              status: "False"
+              reason: ValidationFailed
           degraded:
-            - byConditions:
-                - type: Ready
-                  status: "False"
-                  reason: ZeroServeEndpoints
+          - byConditions:
+            - type: Ready
+              status: "False"
+              reason: ZeroServeEndpoints
     childComponents:
-      - name: head
-        kind:
-          group: ""
-          version: v1
-          kind: Pod
-        ownerRef: rayservice
-        specDefinition:
-          podTemplateSpecPath: .spec.rayClusterConfig.headGroupSpec.template
-        scaleDefinition:
-          replicasPath: "1"
-        podSelector:
-          componentTypeSelector:
-            keyPath: .metadata.labels["ray.io/node-type"]
-            value: head
-      - name: worker
-        kind:
-          group: ""
-          version: v1
-          kind: Pod
-        ownerRef: rayservice
-        specDefinition:
-          podTemplateSpecPath: .spec.rayClusterConfig.workerGroupSpecs[].template
-        scaleDefinition:
-          replicasPath: .spec.rayClusterConfig.workerGroupSpecs[].replicas // 1
-        instanceIdPath: .spec.rayClusterConfig.workerGroupSpecs[].groupName
-        podSelector:
-          componentTypeSelector:
-            keyPath: .metadata.labels["ray.io/node-type"]
-            value: worker
-          componentInstanceSelector:
-            idPath: .metadata.labels["ray.io/group"]
+    - name: head
+      kind:
+        group: ""
+        version: v1
+        kind: Pod
+      ownerRef: rayservice
+      specDefinition:
+        podTemplateSpecPath: .spec.rayClusterConfig.headGroupSpec.template
+      scaleDefinition:
+        replicasPath: "1"
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["ray.io/node-type"]
+          value: head
+    - name: worker
+      kind:
+        group: ""
+        version: v1
+        kind: Pod
+      ownerRef: rayservice
+      specDefinition:
+        podTemplateSpecPath: .spec.rayClusterConfig.workerGroupSpecs[].template
+      scaleDefinition:
+        replicasPath: .spec.rayClusterConfig.workerGroupSpecs[].replicas // 1
+      instanceIdPath: .spec.rayClusterConfig.workerGroupSpecs[].groupName
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["ray.io/node-type"]
+          value: worker
+        componentInstanceSelector:
+          idPath: .metadata.labels["ray.io/group"]
   optimizationInstructions:
     gangScheduling:
       podGroups:
-        - name: service
-          members:
-            - componentName: head
-              groupByKeyPaths:
-                - .metadata.labels["ray.io/cluster"]
-            - componentName: worker
-              groupByKeyPaths:
-                - .metadata.labels["ray.io/cluster"]
+      - name: service
+        members:
+        - componentName: head
+          groupByKeyPaths:
+          - .metadata.labels["ray.io/cluster"]
+        - componentName: worker
+          groupByKeyPaths:
+          - .metadata.labels["ray.io/cluster"]

@@ -25,26 +25,26 @@ spec:
           reasonFieldName: reason
         statusMappings:
           initializing:
-            - byConditions:
-                - type: Progressing
-                  status: "True"
-                - type: Available
-                  status: "False"
+          - byConditions:
+            - type: Progressing
+              status: "True"
+            - type: Available
+              status: "False"
           running:
-            - byConditions:
-                - type: Progressing
-                  status: "True"
-                  reason: NewReplicaSetAvailable
+          - byConditions:
+            - type: Progressing
+              status: "True"
+              reason: NewReplicaSetAvailable
           failed:
-            - byConditions:
-                - type: Progressing
-                  status: "False"
-                  reason: ProgressDeadlineExceeded
+          - byConditions:
+            - type: Progressing
+              status: "False"
+              reason: ProgressDeadlineExceeded
     childComponents:
-      - name: replicaset
-        kind:
-          group: apps
-          version: v1
-          kind: ReplicaSet
-        ownerRef: deployment
+    - name: replicaset
+      kind:
+        group: apps
+        version: v1
+        kind: ReplicaSet
+      ownerRef: deployment
   optimizationInstructions: {}

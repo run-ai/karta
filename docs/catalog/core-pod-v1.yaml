@@ -27,11 +27,11 @@ spec:
           reasonFieldName: reason
         statusMappings:
           initializing:
-            - byPhase: Pending
+          - byPhase: Pending
           running:
-            - byPhase: Running
+          - byPhase: Running
           completed:
-            - byPhase: Succeeded
+          - byPhase: Succeeded
           failed:
-            - byPhase: Failed
+          - byPhase: Failed
   optimizationInstructions: {}

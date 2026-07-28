@@ -32,17 +32,17 @@ spec:
           messageFieldName: message
         statusMappings:
           initializing:
-            - byPhase: NotReady
-            - byPhase: Pending
+          - byPhase: NotReady
+          - byPhase: Pending
           running:
-            - byPhase: Ready
+          - byPhase: Ready
           failed:
-            - byPhase: Failed
+          - byPhase: Failed
   optimizationInstructions:
     gangScheduling:
       podGroups:
-        - name: service
-          members:
-            - componentName: nimservice
-              groupByKeyPaths:
-                - .metadata.labels["app.kubernetes.io/name"]
+      - name: service
+        members:
+        - componentName: nimservice
+          groupByKeyPaths:
+          - .metadata.labels["app.kubernetes.io/name"]

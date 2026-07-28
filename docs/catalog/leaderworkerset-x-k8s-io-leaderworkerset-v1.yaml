@@ -20,72 +20,72 @@ spec:
           messageFieldName: message
         statusMappings:
           initializing:
-            - byConditions:
-                - type: Progressing
-                  status: "True"
-                - type: Available
-                  status: "False"
+          - byConditions:
+            - type: Progressing
+              status: "True"
+            - type: Available
+              status: "False"
           running:
-            - byConditions:
-                - type: Available
-                  status: "True"
-                  reason: AllGroupsReady
-                - type: Progressing
-                  status: "False"
-                - type: UpdateInProgress
-                  status: "False"
-            - byExpression:
-                expression: (.status.replicas // 0) > 0 and .status.readyReplicas == .status.replicas and .status.updatedReplicas == .status.replicas
-                expectedResult: "true"
+          - byConditions:
+            - type: Available
+              status: "True"
+              reason: AllGroupsReady
+            - type: Progressing
+              status: "False"
+            - type: UpdateInProgress
+              status: "False"
+          - byExpression:
+              expression: (.status.replicas // 0) > 0 and .status.readyReplicas == .status.replicas and .status.updatedReplicas == .status.replicas
+              expectedResult: "true"
           failed:
-            - byConditions:
-                - type: Available
-                  status: "False"
-                - type: Progressing
-                  status: "False"
-                - type: UpdateInProgress
-                  status: "False"
+          - byConditions:
+            - type: Available
+              status: "False"
+            - type: Progressing
+              status: "False"
+            - type: UpdateInProgress
+              status: "False"
     childComponents:
-      - name: group
-        ownerRef: leaderworkerset
-        scaleDefinition:
-          replicasPath: .spec.leaderWorkerTemplate.size
-        podSelector:
-          replicaSelector:
-            keyPath: .metadata.labels["leaderworkerset.sigs.k8s.io/group-index"]
-      - name: leader
-        kind:
-          group: apps
-          version: v1
-          kind: StatefulSet
-        ownerRef: group
-        specDefinition:
-          podTemplateSpecPath: .spec.leaderWorkerTemplate.leaderTemplate
-        scaleDefinition:
-          replicasPath: .spec.replicas // 1
-        podSelector:
-          componentTypeSelector:
-            keyPath: .metadata.labels["leaderworkerset.sigs.k8s.io/worker-index"]
-            value: "0"
-      - name: worker
-        kind:
-          group: apps
-          version: v1
-          kind: StatefulSet
-        ownerRef: group
-        specDefinition:
-          podTemplateSpecPath: .spec.leaderWorkerTemplate.workerTemplate
-        scaleDefinition:
-          replicasPath: (.spec.replicas // 1) * ((.spec.leaderWorkerTemplate.size // 1) - 1)
-        podSelector:
-          componentTypeSelector:
-            keyPath: .metadata.annotations["leaderworkerset.sigs.k8s.io/leader-name"]
+    - name: group
+      ownerRef: leaderworkerset
+      scaleDefinition:
+        replicasPath: .spec.leaderWorkerTemplate.size
+      podSelector:
+        replicaSelector:
+          keyPath: .metadata.labels["leaderworkerset.sigs.k8s.io/group-index"]
+    - name: leader
+      kind:
+        group: apps
+        version: v1
+        kind: StatefulSet
+      ownerRef: group
+      specDefinition:
+        podTemplateSpecPath: .spec.leaderWorkerTemplate.leaderTemplate
+      scaleDefinition:
+        replicasPath: .spec.replicas // 1
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["leaderworkerset.sigs.k8s.io/worker-index"]
+          value: "0"
+    - name: worker
+      kind:
+        group: apps
+        version: v1
+        kind: StatefulSet
+      ownerRef: group
+      specDefinition:
+        podTemplateSpecPath: .spec.leaderWorkerTemplate.workerTemplate
+      scaleDefinition:
+        replicasPath: "(.spec.replicas // 1) * ((.spec.leaderWorkerTemplate.size // 1) - 1)"
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.annotations["leaderworkerset.sigs.k8s.io/leader-name"]
   optimizationInstructions:
     gangScheduling:
       podGroups:
-        - name: group
-          members:
-            - componentName: group
-              groupByKeyPaths:
-                - .metadata.labels["leaderworkerset.sigs.k8s.io/name"]
-                - .metadata.labels["leaderworkerset.sigs.k8s.io/group-index"] // "0"
+      - name: group
+        members:
+        - componentName: group
+          groupByKeyPaths:
+          - .metadata.labels["leaderworkerset.sigs.k8s.io/name"]
+          - .metadata.labels["leaderworkerset.sigs.k8s.io/group-index"] // "0"

@@ -16,7 +16,7 @@ import (
 	"slices"
 	"strings"
 
-	yamlv3 "go.yaml.in/yaml/v3"
+	goyaml "github.com/goccy/go-yaml"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	v1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
@@ -156,50 +156,38 @@ func MarshalYAML(k *v1alpha1.Karta) ([]byte, error) {
 	// only json tags, so a YAML encoder cannot marshal them directly (it would
 	// lowercase field names), and sigs.k8s.io/yaml converts through a Go map,
 	// which sorts keys alphabetically. encoding/json honors the tags and walks
-	// fields in declaration order; the JSON is then re-encoded as YAML through a
-	// yaml.Node, which keeps that order because a Node stores mapping keys in a
-	// slice rather than a map.
+	// fields in declaration order; UseOrderedMap decodes that JSON into a
+	// MapSlice, which keeps declaration order at every level because it stores
+	// keys in a slice rather than a map.
 	jsonBytes, err := json.Marshal(k)
 	if err != nil {
 		return nil, fmt.Errorf("marshal Karta %q: %w", k.Name, err)
 	}
-	var node yamlv3.Node
-	if err := yamlv3.Unmarshal(jsonBytes, &node); err != nil {
+	var doc goyaml.MapSlice
+	if err := goyaml.UnmarshalWithOptions(jsonBytes, &doc, goyaml.UseOrderedMap()); err != nil {
 		return nil, fmt.Errorf("re-parse Karta %q: %w", k.Name, err)
 	}
-	clearStyle(&node)
-	dropMapKey(node.Content[0], "status")
+	// status is a value struct, so json omitempty cannot drop it.
+	doc = dropMapKey(doc, "status")
 	var buf bytes.Buffer
 	buf.WriteString(yamlHeader)
-	enc := yamlv3.NewEncoder(&buf)
-	enc.SetIndent(2)
-	if err := enc.Encode(&node); err != nil {
+	// IndentSequence(false) keeps list items flush-left ("- item"), matching
+	// kubectl and the generated CRDs under charts/karta/crds.
+	body, err := goyaml.MarshalWithOptions(doc, goyaml.IndentSequence(false), goyaml.Indent(2))
+	if err != nil {
 		return nil, fmt.Errorf("encode Karta %q: %w", k.Name, err)
 	}
-	if err := enc.Close(); err != nil {
-		return nil, fmt.Errorf("encode Karta %q: %w", k.Name, err)
-	}
+	buf.Write(body)
 	return buf.Bytes(), nil
 }
 
-// dropMapKey removes key and its value from a mapping node.
-func dropMapKey(mapping *yamlv3.Node, key string) {
-	for i := 0; i+1 < len(mapping.Content); i += 2 {
-		if mapping.Content[i].Value == key {
-			mapping.Content = append(mapping.Content[:i], mapping.Content[i+2:]...)
-			return
+// dropMapKey returns mapping without key.
+func dropMapKey(mapping goyaml.MapSlice, key string) goyaml.MapSlice {
+	out := make(goyaml.MapSlice, 0, len(mapping))
+	for _, item := range mapping {
+		if item.Key != key {
+			out = append(out, item)
 		}
 	}
-}
-
-// clearStyle strips per-node style recursively so JSON flow syntax ({...}, "...")
-// re-renders as block-style YAML.
-func clearStyle(n *yamlv3.Node) {
-	// The JSON parse stamps each node with flow style (the {...} JSON form).
-	// Converting to block style, the zero value of Style, makes the encoder
-	// render indented YAML instead.
-	n.Style = 0
-	for _, c := range n.Content {
-		clearStyle(c)
-	}
+	return out
 }

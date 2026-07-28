@@ -9,12 +9,12 @@ For a complete list of third-party software licenses, please see the
 THIRD_PARTY_LICENSES file.
 
 Third-party Dependencies:
+- github.com/goccy/go-yaml (MIT)
 - github.com/itchyny/gojq (MIT)
 - github.com/onsi/ginkgo/v2 (MIT)
 - github.com/onsi/gomega (MIT)
 - github.com/samber/lo (MIT)
 - go.uber.org/mock (Apache-2.0)
-- go.yaml.in/yaml/v3 (MIT)
 - k8s.io/api (Apache-2.0)
 - k8s.io/apimachinery (Apache-2.0)
 - k8s.io/utils (Apache-2.0)
@@ -32,6 +32,7 @@ Third-party Dependencies:
 - github.com/spf13/pflag (BSD-3-Clause)
 - github.com/x448/float16 (MIT)
 - go.yaml.in/yaml/v2 (Apache-2.0)
+- go.yaml.in/yaml/v3 (MIT)
 - golang.org/x/mod (BSD-3-Clause)
 - golang.org/x/net (BSD-3-Clause)
 - golang.org/x/sync (BSD-3-Clause)

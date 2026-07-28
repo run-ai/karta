@@ -21,69 +21,69 @@ spec:
           reasonFieldName: reason
         statusMappings:
           initializing:
-            - byConditions:
-                - type: Created
-                  status: "True"
+          - byConditions:
+            - type: Created
+              status: "True"
           running:
-            - byConditions:
-                - type: Running
-                  status: "True"
+          - byConditions:
+            - type: Running
+              status: "True"
           completed:
-            - byConditions:
-                - type: Succeeded
-                  status: "True"
+          - byConditions:
+            - type: Succeeded
+              status: "True"
           failed:
-            - byConditions:
-                - type: Failed
-                  status: "True"
+          - byConditions:
+            - type: Failed
+              status: "True"
           suspended:
-            - byConditions:
-                - type: Suspended
-                  status: "True"
+          - byConditions:
+            - type: Suspended
+              status: "True"
       suspendDefinition:
         suspendActions:
-          - path: .spec.runPolicy.suspend
-            value: "true"
+        - path: .spec.runPolicy.suspend
+          value: "true"
         resumeActions:
-          - path: .spec.runPolicy.suspend
-            value: "false"
+        - path: .spec.runPolicy.suspend
+          value: "false"
     childComponents:
-      - name: launcher
-        kind:
-          group: ""
-          version: v1
-          kind: Pod
-        ownerRef: mpijob
-        specDefinition:
-          podTemplateSpecPath: .spec.mpiReplicaSpecs.Launcher.template
-        scaleDefinition:
-          replicasPath: .spec.mpiReplicaSpecs.Launcher.replicas // 1
-        podSelector:
-          componentTypeSelector:
-            keyPath: .metadata.labels["training.kubeflow.org/job-role"]
-            value: launcher
-      - name: worker
-        kind:
-          group: ""
-          version: v1
-          kind: Pod
-        ownerRef: mpijob
-        specDefinition:
-          podTemplateSpecPath: .spec.mpiReplicaSpecs.Worker.template
-        scaleDefinition:
-          replicasPath: .spec.mpiReplicaSpecs.Worker.replicas // 1
-        podSelector:
-          componentTypeSelector:
-            keyPath: .metadata.labels["training.kubeflow.org/job-role"]
-            value: worker
+    - name: launcher
+      kind:
+        group: ""
+        version: v1
+        kind: Pod
+      ownerRef: mpijob
+      specDefinition:
+        podTemplateSpecPath: .spec.mpiReplicaSpecs.Launcher.template
+      scaleDefinition:
+        replicasPath: .spec.mpiReplicaSpecs.Launcher.replicas // 1
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["training.kubeflow.org/job-role"]
+          value: launcher
+    - name: worker
+      kind:
+        group: ""
+        version: v1
+        kind: Pod
+      ownerRef: mpijob
+      specDefinition:
+        podTemplateSpecPath: .spec.mpiReplicaSpecs.Worker.template
+      scaleDefinition:
+        replicasPath: .spec.mpiReplicaSpecs.Worker.replicas // 1
+      podSelector:
+        componentTypeSelector:
+          keyPath: .metadata.labels["training.kubeflow.org/job-role"]
+          value: worker
   optimizationInstructions:
     gangScheduling:
       podGroups:
-        - name: job
-          members:
-            - componentName: launcher
-              groupByKeyPaths:
-                - .metadata.labels["training.kubeflow.org/job-name"]
-            - componentName: worker
-              groupByKeyPaths:
-                - .metadata.labels["training.kubeflow.org/job-name"]
+      - name: job
+        members:
+        - componentName: launcher
+          groupByKeyPaths:
+          - .metadata.labels["training.kubeflow.org/job-name"]
+        - componentName: worker
+          groupByKeyPaths:
+          - .metadata.labels["training.kubeflow.org/job-name"]

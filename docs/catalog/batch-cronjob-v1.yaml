@@ -19,29 +19,29 @@ spec:
       statusDefinition:
         statusMappings:
           initializing:
-            - byExpression:
-                expression: (.spec.suspend // false) != true and (.status.lastScheduleTime == null)
-                expectedResult: "true"
+          - byExpression:
+              expression: (.spec.suspend // false) != true and (.status.lastScheduleTime == null)
+              expectedResult: "true"
           running:
-            - byExpression:
-                expression: (.spec.suspend // false) != true and (.status.lastScheduleTime != null)
-                expectedResult: "true"
+          - byExpression:
+              expression: (.spec.suspend // false) != true and (.status.lastScheduleTime != null)
+              expectedResult: "true"
           suspended:
-            - byExpression:
-                expression: (.spec.suspend // false) == true
-                expectedResult: "true"
+          - byExpression:
+              expression: (.spec.suspend // false) == true
+              expectedResult: "true"
       suspendDefinition:
         suspendActions:
-          - path: .spec.suspend
-            value: "true"
+        - path: .spec.suspend
+          value: "true"
         resumeActions:
-          - path: .spec.suspend
-            value: "false"
+        - path: .spec.suspend
+          value: "false"
     childComponents:
-      - name: job
-        kind:
-          group: batch
-          version: v1
-          kind: Job
-        ownerRef: cronjob
+    - name: job
+      kind:
+        group: batch
+        version: v1
+        kind: Job
+      ownerRef: cronjob
   optimizationInstructions: {}

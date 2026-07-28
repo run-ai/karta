@@ -14,7 +14,7 @@ spec:
         kind: NIMCache
       specDefinition:
         fragmentedPodSpecDefinition:
-          resourcesPath: '{requests: .spec.resources}'
+          resourcesPath: "{requests: .spec.resources}"
       scaleDefinition:
         replicasPath: "1"
       statusDefinition:
@@ -28,20 +28,20 @@ spec:
           reasonFieldName: reason
         statusMappings:
           initializing:
-            - byPhase: Pending
-            - byPhase: NotReady
-            - byPhase: PVC-Created
-            - byPhase: Started
-            - byConditions:
-                - type: NIM_CACHE_JOB_CREATED
-                  status: "True"
+          - byPhase: Pending
+          - byPhase: NotReady
+          - byPhase: PVC-Created
+          - byPhase: Started
+          - byConditions:
+            - type: NIM_CACHE_JOB_CREATED
+              status: "True"
           running:
-            - byPhase: InProgress
+          - byPhase: InProgress
           completed:
-            - byPhase: Ready
-              byConditions:
-                - type: NIM_CACHE_JOB_COMPLETED
-                  status: "True"
+          - byPhase: Ready
+            byConditions:
+            - type: NIM_CACHE_JOB_COMPLETED
+              status: "True"
           failed:
-            - byPhase: Failed
+          - byPhase: Failed
   optimizationInstructions: {}

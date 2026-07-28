@@ -20,30 +20,30 @@ spec:
           messageFieldName: message
         statusMappings:
           running:
-            - byConditions:
-                - type: Ready
-                  status: "True"
+          - byConditions:
+            - type: Ready
+              status: "True"
     childComponents:
-      - name: revision
-        kind:
-          group: serving.knative.dev
-          version: v1
-          kind: Revision
-        ownerRef: knativeservice
-        specDefinition:
-          podTemplateSpecPath: .spec.template
-        scaleDefinition:
-          minReplicasPath: .spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"] // 1
-          maxReplicasPath: .spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]
-    additionalChildKinds:
-      - group: apps
+    - name: revision
+      kind:
+        group: serving.knative.dev
         version: v1
-        kind: Deployment
+        kind: Revision
+      ownerRef: knativeservice
+      specDefinition:
+        podTemplateSpecPath: .spec.template
+      scaleDefinition:
+        minReplicasPath: .spec.template.metadata.annotations["autoscaling.knative.dev/min-scale"] // 1
+        maxReplicasPath: .spec.template.metadata.annotations["autoscaling.knative.dev/max-scale"]
+    additionalChildKinds:
+    - group: apps
+      version: v1
+      kind: Deployment
   optimizationInstructions:
     gangScheduling:
       podGroups:
-        - name: revision
-          members:
-            - componentName: revision
-              groupByKeyPaths:
-                - .metadata.labels["serving.knative.dev/revision"]
+      - name: revision
+        members:
+        - componentName: revision
+          groupByKeyPaths:
+          - .metadata.labels["serving.knative.dev/revision"]
