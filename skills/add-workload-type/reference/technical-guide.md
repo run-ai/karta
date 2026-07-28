@@ -236,7 +236,9 @@ instanceIdPath: .spec.services | to_entries[] | .key
 ## Additional child kinds
 
 List GVKs the workload creates or manages that are not modeled as components.
-Used for RBAC. Do not duplicate a kind already declared by a component.
+Used for RBAC. Avoid duplicating a kind already declared as a component, unless
+the kind must also be listed here for RBAC or owner traversal (the validator does
+not reject it).
 
 ```yaml
 additionalChildKinds:
@@ -283,7 +285,7 @@ Rules for correct paths:
 - Component names are unique and non-empty.
 - No component sets more than one spec pattern.
 - `instanceIdPath` and `componentInstanceSelector` are both present or both absent.
-- Pod selectors reference pod fields and are mutually exclusive.
+- Pod selectors reference pod fields; selectors of the same kind are mutually exclusive across components.
 - Status conditions and phases match the workload's real API.
-- No duplicated child kinds in `additionalChildKinds`.
+- No redundant duplicate kinds in `additionalChildKinds` (duplicates are allowed only when needed for RBAC or owner traversal).
 - Every gang-scheduling member names a defined component.

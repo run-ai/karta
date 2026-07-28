@@ -131,10 +131,13 @@ Before finishing, confirm each item:
 - No component sets more than one of the three spec patterns.
 - `instanceIdPath` and a `componentInstanceSelector` are either both present or
   both absent on a component.
-- Pod selectors reference pod fields, not workload fields, and are mutually
-  exclusive across components. Verify role-label keys against the controller's
-  real pod labels (they are operator-specific), and when two roles share a label,
-  disambiguate by matching a key only one role carries (key existence).
+- Pod selectors reference pod fields, not workload fields. Selectors of the same
+  kind must be mutually exclusive across components so a pod maps to one component
+  of that kind; different selector kinds may coexist on a component. This is an
+  authoring guideline, not a validator check. Verify role-label keys against the
+  controller's real pod labels (they are operator-specific), and when two roles
+  share a label, disambiguate by matching a key only one role carries (key
+  existence).
 - Status conditions and phases match the workload's real API.
 - Every gang-scheduling member names a defined component.
 

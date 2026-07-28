@@ -10,7 +10,10 @@ Minimal, suspend-aware catalog definitions for built-in kinds live in
 
 ## How to choose
 
-Answer these in order and take the first matching row in the table below.
+Answer these, then choose the most specific matching row in the table below (the
+one naming the most of your workload's traits). When several rows match, a
+multi-instance or nested pattern (for example Ray worker groups needing
+`instanceIdPath`) takes precedence over a generic role-based row.
 
 1. Does the workload own other resources, or is it a single object with pods
    defined in its own spec?
