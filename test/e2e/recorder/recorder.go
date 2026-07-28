@@ -51,19 +51,24 @@ const e2eRoot = ".."
 // until the flow finishes (or the timeout). An ordinary flow uses driveByState; a scale flow, whose
 // state stays Running while the replica count changes, uses driveByPosition.
 func observeTransitions(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, timeout time.Duration) *recording {
-	watcher := watchWorkload(obj)
+	// One deadline for the whole flow: it bounds the watcher setup, the seed Get, and every action, and
+	// cancelling it on timeout tears the in-flight RPCs down instead of a stuck call hanging to the suite budget.
+	flowCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	watcher := watchWorkload(flowCtx, obj)
 	defer watcher.Stop()
 
 	rec := &recording{}
 	if journeyGated(fl.Journey) {
-		driveByPosition(tc, fl, obj, karta, watcher, timeout, rec)
+		driveByPosition(flowCtx, tc, fl, obj, karta, watcher, timeout, rec)
 	} else {
-		driveByState(tc, fl, obj, karta, watcher, timeout, rec)
+		driveByState(flowCtx, tc, fl, obj, karta, watcher, timeout, rec)
 	}
 	return rec
 }
 
-func watchWorkload(obj *unstructured.Unstructured) watch.Interface {
+func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) watch.Interface {
 	gvk := obj.GroupVersionKind()
 	mapping, err := k8sClient.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
 	Expect(err).NotTo(HaveOccurred(), "rest mapping for %s", gvk)
@@ -92,7 +97,7 @@ func watchWorkload(obj *unstructured.Unstructured) watch.Interface {
 
 // driveByState follows the states as they appear, firing each journey action when its state is reached,
 // until the workload is at the terminal state with every action fired.
-func driveByState(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, watcher watch.Interface, timeout time.Duration, rec *recording) {
+func driveByState(ctx context.Context, tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, watcher watch.Interface, timeout time.Duration, rec *recording) {
 	pending := actionSteps(fl.Journey)
 	done := func(state kartav1alpha1.ResourceStatus) bool { return state == fl.Want() && len(pending) == 0 }
 
@@ -103,7 +108,7 @@ func driveByState(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstru
 		return
 	}
 
-	recordUntil(tc, fl, karta, watcher, timeout, rec, func(_ *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool {
+	recordUntil(ctx, tc, fl, karta, watcher, timeout, rec, func(_ *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool {
 		if len(pending) > 0 && state == pending[0].State {
 			Expect(pending[0].Action(ctx, obj)).NotTo(HaveOccurred(), "action at state %q", state)
 			pending = pending[1:]
@@ -114,9 +119,9 @@ func driveByState(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstru
 
 // driveByPosition walks a gated journey step by step: a step is reached only when its state matches and
 // its settle gate holds. The scale path - the gate (a replica count), not the state, is what advances.
-func driveByPosition(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, watcher watch.Interface, timeout time.Duration, rec *recording) {
+func driveByPosition(ctx context.Context, tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, watcher watch.Interface, timeout time.Duration, rec *recording) {
 	pos := 0
-	recordUntil(tc, fl, karta, watcher, timeout, rec, func(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool {
+	recordUntil(ctx, tc, fl, karta, watcher, timeout, rec, func(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool {
 		// An Optional step is a transient scale dip declared for the order check only, not a drive stop -
 		// skip past it. driveByPosition waits only at the real steps.
 		for pos < len(fl.Journey) && fl.Journey[pos].Optional {
@@ -144,13 +149,12 @@ type advanceFunc func(u *unstructured.Unstructured, state kartav1alpha1.Resource
 // recordUntil is the shared watch loop: it keeps every distinct CR (even mid-reconcile) and, once the
 // status has settled, calls advance to drive the journey. Recording is unconditional; advancing waits
 // for settle. It returns when advance reports done, and fails on the deadline.
-func recordUntil(tc cases.WorkloadCase, fl cases.Flow, karta *kartav1alpha1.Karta, watcher watch.Interface, timeout time.Duration, rec *recording, advance advanceFunc) {
-	deadline := time.After(timeout)
+func recordUntil(ctx context.Context, tc cases.WorkloadCase, fl cases.Flow, karta *kartav1alpha1.Karta, watcher watch.Interface, timeout time.Duration, rec *recording, advance advanceFunc) {
 	var lastSeen *unstructured.Unstructured
 	var lastErr error // the most recent watch.Error frame, for the close message
 	for {
 		select {
-		case <-deadline:
+		case <-ctx.Done():
 			Fail(fmt.Sprintf("workload %s flow %q did not reach %q within %s; recorded %v\nlast-seen status:\n%s",
 				tc.Name, fl.Name, fl.Want(), timeout, rec.order, dumpStatus(lastSeen)))
 		case event, open := <-watcher.ResultChan():
@@ -216,7 +220,7 @@ func journeyGated(journey []cases.Step) bool {
 type recording struct {
 	order     []kartav1alpha1.ResourceStatus // the state of each snapshot, flat for the order check
 	snapshots []capture
-	lastRaw   *unstructured.Unstructured
+	lastSig   map[string]any // significant form of the last kept CR, to dedup the next without recomputing it
 }
 
 type capture struct {
@@ -227,21 +231,18 @@ type capture struct {
 // keep records the CR when it differs (by sameCR) from the last one kept, storing its classified state
 // alongside for the golden's anchor and the order check.
 func (r *recording) keep(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) {
-	if r.lastRaw != nil && sameCR(r.lastRaw, u) {
+	sig := significantCR(u)
+	if r.lastSig != nil && reflect.DeepEqual(r.lastSig, sig) {
 		return
 	}
-	raw := u.DeepCopy()
-	r.lastRaw = raw
-	r.snapshots = append(r.snapshots, capture{state: state, raw: raw})
+	r.lastSig = sig
+	r.snapshots = append(r.snapshots, capture{state: state, raw: u.DeepCopy()})
 	r.order = append(r.order, state)
 }
 
-// sameCR reports whether two CRs are equal ignoring resourceVersion and managedFields, which the
-// apiserver bumps on every event with no workload change. Every other field counts.
-func sameCR(a, b *unstructured.Unstructured) bool {
-	return reflect.DeepEqual(significantCR(a), significantCR(b))
-}
-
+// significantCR is the CR without the fields the apiserver bumps on every event with no workload
+// change - resourceVersion and managedFields. keep dedups on it, so an event that only bumps those is
+// dropped and every other field counts.
 func significantCR(u *unstructured.Unstructured) map[string]any {
 	c := u.DeepCopy().Object
 	unstructured.RemoveNestedField(c, "metadata", "resourceVersion")
