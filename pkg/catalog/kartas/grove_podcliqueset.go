@@ -13,6 +13,14 @@ import (
 // GrovePodCliqueSet returns the built-in Karta for the Grove PodCliqueSet
 // workload (grove.io/v1alpha1).
 func GrovePodCliqueSet() *v1alpha1.Karta {
+	// standaloneCliques selects only the PodClique templates that are NOT referenced by
+	// any podCliqueScalingGroups[].cliqueNames. In Grove, .spec.template.cliques is the
+	// shared master list of all clique templates; cliques named by a scaling group are
+	// owned by that PodCliqueScalingGroup, not directly by the PodCliqueSet. Every clique
+	// path derives from this expression so the instance, scale, and spec arrays stay
+	// aligned on the same standalone cliques.
+	standaloneCliques := `.spec.template as $t | $t.cliques[] | ` +
+		`select(.name as $n | ([$t.podCliqueScalingGroups[]?.cliqueNames[]?] | index($n) | not))`
 	return &v1alpha1.Karta{
 		TypeMeta:   metav1.TypeMeta{APIVersion: "run.ai/v1alpha1", Kind: "Karta"},
 		ObjectMeta: metav1.ObjectMeta{Name: "grove-io-podcliqueset-v1alpha1"},
@@ -50,33 +58,36 @@ func GrovePodCliqueSet() *v1alpha1.Karta {
 					},
 				},
 				ChildComponents: []v1alpha1.ComponentDefinition{
-					// Standalone PodCliques (entries under .spec.template.cliques that are NOT
-					// referenced by any .spec.template.podCliqueScalingGroups[].cliqueNames).
-					// PodCliques inside a scaling group are owned by the PodCliqueScalingGroup,
-					// so they are reached through the `scalinggroup` child below.
+					// Standalone PodCliques: entries under .spec.template.cliques NOT referenced by
+					// any .spec.template.podCliqueScalingGroups[].cliqueNames. PodCliques inside a
+					// scaling group are owned by the PodCliqueScalingGroup and reached via the
+					// `scalinggroup` child below.
+					// TODO(follow-up): scaling-group member cliques' pod specs are not extracted
+					// here; `scalinggroup` has no SpecDefinition, so per-clique spec/scale for
+					// cliques inside a scaling group needs a dedicated component.
 					{
 						Name:     "clique",
 						Kind:     &v1alpha1.GroupVersionKind{Group: "grove.io", Version: "v1alpha1", Kind: "PodClique"},
 						OwnerRef: ptr.To("podcliqueset"),
 						SpecDefinition: &v1alpha1.SpecDefinition{
 							FragmentedPodSpecDefinition: &v1alpha1.FragmentedPodSpecDefinition{
-								SchedulerNamePath:     ptr.To(".spec.template.cliques[].spec.podSpec.schedulerName"),
-								LabelsPath:            ptr.To(".spec.template.cliques[].labels"),
-								AnnotationsPath:       ptr.To(".spec.template.cliques[].annotations"),
-								ContainersPath:        ptr.To(".spec.template.cliques[].spec.podSpec.containers"),
-								ResourceClaimsPath:    ptr.To(".spec.template.cliques[].spec.podSpec.resourceClaims"),
-								PriorityClassNamePath: ptr.To(".spec.template.cliques[].spec.podSpec.priorityClassName"),
-								PodAffinityPath:       ptr.To(".spec.template.cliques[].spec.podSpec.affinity.podAffinity"),
-								NodeAffinityPath:      ptr.To(".spec.template.cliques[].spec.podSpec.affinity.nodeAffinity"),
+								SchedulerNamePath:     ptr.To(standaloneCliques + " | .spec.podSpec.schedulerName"),
+								LabelsPath:            ptr.To(standaloneCliques + " | .labels"),
+								AnnotationsPath:       ptr.To(standaloneCliques + " | .annotations"),
+								ContainersPath:        ptr.To(standaloneCliques + " | .spec.podSpec.containers"),
+								ResourceClaimsPath:    ptr.To(standaloneCliques + " | .spec.podSpec.resourceClaims"),
+								PriorityClassNamePath: ptr.To(standaloneCliques + " | .spec.podSpec.priorityClassName"),
+								PodAffinityPath:       ptr.To(standaloneCliques + " | .spec.podSpec.affinity.podAffinity"),
+								NodeAffinityPath:      ptr.To(standaloneCliques + " | .spec.podSpec.affinity.nodeAffinity"),
 							},
 						},
 						ScaleDefinition: &v1alpha1.ScaleDefinition{
-							// PCS multiplies replicas: total pods = PCS.replicas * clique.replicas
-							ReplicasPath:    ptr.To("(.spec.replicas // 1) * (.spec.template.cliques[].spec.replicas // 1)"),
-							MinReplicasPath: ptr.To(".spec.template.cliques[].spec.autoScalingConfig.minReplicas"),
-							MaxReplicasPath: ptr.To(".spec.template.cliques[].spec.autoScalingConfig.maxReplicas"),
+							// A standalone clique's pods = PCS.replicas * clique.replicas.
+							ReplicasPath:    ptr.To(".spec.replicas as $r | " + standaloneCliques + " | (($r // 1) * (.spec.replicas // 1))"),
+							MinReplicasPath: ptr.To(standaloneCliques + " | .spec.autoScalingConfig.minReplicas"),
+							MaxReplicasPath: ptr.To(standaloneCliques + " | .spec.autoScalingConfig.maxReplicas"),
 						},
-						InstanceIdPath: ptr.To(".spec.template.cliques[].name"),
+						InstanceIdPath: ptr.To(standaloneCliques + " | .name"),
 						PodSelector: &v1alpha1.PodSelector{
 							ComponentInstanceSelector: &v1alpha1.ComponentInstanceSelector{
 								IdPath: `.metadata.labels["grove.io/podclique"]`,
