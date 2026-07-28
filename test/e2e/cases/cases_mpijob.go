@@ -17,10 +17,11 @@ var mpijobCase = WorkloadCase{
 	},
 	Flows: []Flow{
 		{Name: "running", WorkloadFile: "testdata/mpijob/running.yaml", Journey: Steps(initializing, running)},
-		// completed/failed use instant launchers that may skip Running; the subsequence check tolerates
-		// a skipped step, so declaring running then the terminal is enough (no backwards here).
-		{Name: "completed", WorkloadFile: "testdata/mpijob/completed.yaml", Journey: Steps(initializing, running, completed)},
-		{Name: "failed", WorkloadFile: "testdata/mpijob/failed.yaml", Journey: Steps(initializing, running, failed)},
+		// completed/failed declare Initializing twice: Kubeflow keeps the Created (init) condition set for
+		// the job's whole life, so if Running flips off a tick before Succeeded/Failed flips on, the CR
+		// reads Initializing again before the terminal. Declaring the revisit keeps the order check strict.
+		{Name: "completed", WorkloadFile: "testdata/mpijob/completed.yaml", Journey: Steps(initializing, running, initializing, completed)},
+		{Name: "failed", WorkloadFile: "testdata/mpijob/failed.yaml", Journey: Steps(initializing, running, initializing, failed)},
 		{Name: "suspended", WorkloadFile: "testdata/mpijob/suspended.yaml", Journey: Steps(suspended)},
 		{Name: "resumed", WorkloadFile: "testdata/mpijob/resumed.yaml", Journey: []Step{
 			{State: suspended, Action: UnsuspendRunPolicy},
