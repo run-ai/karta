@@ -70,6 +70,12 @@ func GrovePodCliqueSet() *v1alpha1.Karta {
 						Kind:     &v1alpha1.GroupVersionKind{Group: "grove.io", Version: "v1alpha1", Kind: "PodClique"},
 						OwnerRef: ptr.To("podcliqueset"),
 						SpecDefinition: &v1alpha1.SpecDefinition{
+							// These paths derive from standaloneCliques, whose cross-reference filter
+							// needs a `.spec.template as $t` binding. A jq expression with a binding is
+							// not an assignable path, so these are read-only projections: pod-spec reads
+							// work, but mutation is not supported for standalone-clique pods. Removing
+							// the binding would drop the scaling-group filtering, so this is a
+							// deliberate trade-off, not an oversight.
 							FragmentedPodSpecDefinition: &v1alpha1.FragmentedPodSpecDefinition{
 								SchedulerNamePath:     ptr.To(standaloneCliques + " | .spec.podSpec.schedulerName"),
 								LabelsPath:            ptr.To(standaloneCliques + " | .labels"),

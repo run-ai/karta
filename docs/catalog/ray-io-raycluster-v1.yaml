@@ -61,8 +61,8 @@ spec:
         phaseDefinition:
           path: .status.state
         statusMappings:
-          degraded:
-          - byPhase: unhealthy
+          failed:
+          - byPhase: failed
           running:
           - byPhase: ready
           suspended:

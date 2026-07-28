@@ -46,8 +46,7 @@ spec:
       scaleDefinition:
         maxReplicasPath: .spec.services | .[] | .autoscaling.maxReplicas
         minReplicasPath: .spec.services | .[] | .autoscaling.minReplicas
-        replicasPath: .spec.services[] | (.replicas // 1) * (.multinode.nodeCount
-          // 1)
+        replicasPath: .spec.services[] | (.replicas // 1)
       specDefinition:
         fragmentedPodSpecDefinition:
           annotationsPath: .spec.services | .[] | .annotations
