@@ -53,7 +53,7 @@ Karta stays declarative: it still fetches nothing itself. Resolving references i
 
 A reference takes one of two shapes, declared in the API - `lookup` or `list` - and the shape decides what the variable holds:
 
-- `lookup` - fetch a single object (a `Get`). `$<Name>` is that one object, read like any object (`$<name>.field`), or null if it does not exist.
+- `lookup` - fetch a single object (a `Get`). `$<Name>` is that one object, read like any object (`$<name>.field`).
   
 - `list` - fetch a set of objects (a `List`). `$<Name>` is an array, read and iterated as `$<name>[]`, possibly empty.
   
@@ -63,6 +63,8 @@ Naming the two cases after what they return - one object versus many - keeps the
 References are declared on the structure definition, as a list, alongside the root component, child components, and additional child kinds. Each entry names the variable, the GVK to fetch, and one of `lookup` or `list`. The list is keyed by the unique `name`.
 
 A `lookup` names the single object to fetch: its `nameExpression` is a JQ expression against the root object that resolves the resource's name, and the consumer `Get`s that object.
+
+A reference is required by use. A `lookup` that finds no object is not an error by itself: the failure surfaces when an expression that uses `$<Name>` is evaluated, and expressions that do not mention it are unaffected. A `list` has no existence question - matching nothing yields an empty array. If optional references turn out to be needed, an explicit `optional` boolean can be introduced later without breaking the API.
 
 There is no namespace field, deliberately. A namespaced reference always resolves in the workload's own namespace; a cluster-scoped GVK (such as `ClusterTrainingRuntime`) has none. A definition can never reach into another namespace, which keeps references inside the workload's isolation boundary by construction.
 
@@ -182,7 +184,7 @@ References add a new surface to the Karta library. It is backward compatible - e
 ```go
 // ReferenceValue is the fetched value of one reference.
 type ReferenceValue struct {
-    Object *unstructured.Unstructured  // set for a lookup; nil when the object was not found
+    Object *unstructured.Unstructured  // set for a lookup; nil when the object was not found (never bound to JQ)
     List   []unstructured.Unstructured // set for a list; possibly empty
 }
 
