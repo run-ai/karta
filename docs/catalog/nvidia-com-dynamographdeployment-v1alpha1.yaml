@@ -1,5 +1,7 @@
-apiVersion: run.ai/v1alpha1
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
 kind: Karta
+apiVersion: run.ai/v1alpha1
 metadata:
   name: nvidia-com-dynamographdeployment-v1alpha1
 spec:
@@ -15,12 +17,12 @@ spec:
           path: .status.state
         statusMappings:
           initializing:
-          - byPhase: initializing
-          - byPhase: pending
+            - byPhase: initializing
+            - byPhase: pending
           running:
-          - byPhase: successful
+            - byPhase: successful
           failed:
-          - byPhase: failed
+            - byPhase: failed
     childComponents:
       - name: service
         ownerRef: dynamographdeployment
