@@ -173,7 +173,7 @@ kubectl edit karta leaderworkerset-x-k8s-io-leaderworkerset-v1
 ```
 
 This is the deeper layer of the example: the workload structure is cluster data,
-not code. See [docs/samples/](../../samples/) for ready-made definitions covering
+not code. See [docs/catalog/](../../catalog/) for ready-made definitions covering
 PyTorchJob, RayCluster, JobSet, and more.
 
 ## Manage another workload type (no code change)

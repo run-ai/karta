@@ -31,7 +31,7 @@ When something does not validate, see [Troubleshooting](./Troubleshooting.md).
 
 A Karta for the built-in `batch/v1` Job. A Job is the simplest useful example:
 one component, one pod template, and a status reported through conditions. The
-13 definitions in [`docs/samples/`](./samples/) cover more complex workloads
+definitions in [`docs/catalog/`](./catalog/) cover more complex workloads
 (JobSet, PyTorchJob, RayCluster, KServe, and more); start from the one closest
 to your workload when you write your own.
 

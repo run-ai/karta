@@ -50,7 +50,7 @@ of the roadmap is itself public and reviewable.
   #67–#72 (core logic, conditions, packaging, end-to-end tests).
 - **Validated, non-rotting examples.** Automated tests that check the bundled
   Karta definitions against the upstream CRDs they target, so the
-  [`docs/samples/`](docs/samples/) set stays correct as upstream APIs evolve.
+  [`docs/catalog/`](docs/catalog/) set stays correct as upstream APIs evolve.
   Tracked by [#79](https://github.com/run-ai/karta/issues/79).
 - **Workload visibility.** Tooling to render and explore the structure of any
   Karta-described workload — the most approachable on-ramp to the project. This
@@ -61,7 +61,7 @@ of the roadmap is itself public and reviewable.
 - **Karta as a registry.** A discoverable catalog of Karta definitions, so the
   community can publish, find, and reuse descriptions for common workload types
   instead of every consumer re-bundling its own copies. Turns the bundled
-  `docs/samples/` set into a shared, versioned source the ecosystem can pull from.
+  `docs/catalog/` set into a shared, versioned source the ecosystem can pull from.
   Tracked by [#86](https://github.com/run-ai/karta/issues/86).
 
 ## Next
@@ -124,8 +124,9 @@ it stay vendor-neutral and broadly adoptable.
 
 - Browse [open issues](https://github.com/run-ai/karta/issues) and look for
   `good first issue` and `help wanted` labels.
-- Have a workload type Karta should describe? Open an issue or contribute an
-  example to [`docs/samples/`](docs/samples/).
+- Have a workload type Karta should describe? Open an issue or contribute a
+  typed definition under [`pkg/catalog/kartas/`](pkg/catalog/kartas/); the
+  generated YAML lands in [`docs/catalog/`](docs/catalog/).
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) to get started (DCO sign-off required).
 
 *This roadmap is reviewed regularly and updated as priorities shift with
