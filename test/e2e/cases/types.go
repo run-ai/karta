@@ -43,7 +43,9 @@ type Flow struct {
 	Journey      []Step
 }
 
-func (f Flow) Want() kartav1alpha1.ResourceStatus { return f.Journey[len(f.Journey)-1].State }
+func (f Flow) DesiredFinalStatus() kartav1alpha1.ResourceStatus {
+	return f.Journey[len(f.Journey)-1].State
+}
 
 type WorkloadCase struct {
 	Name      string
@@ -63,29 +65,29 @@ func Steps(states ...kartav1alpha1.ResourceStatus) []Step {
 	return j
 }
 
-func (tc WorkloadCase) Validate() error {
-	if tc.Operator == "" || tc.KartaFile == "" || tc.KartaName == "" {
-		return fmt.Errorf("case %q: Operator, KartaFile, and KartaName are required", tc.Name)
+func (wc WorkloadCase) Validate() error {
+	if wc.Operator == "" || wc.KartaFile == "" || wc.KartaName == "" {
+		return fmt.Errorf("case %q: Operator, KartaFile or KartaName are required", wc.Name)
 	}
 	known := map[kartav1alpha1.ResourceStatus]bool{}
-	for _, s := range tc.States {
+	for _, s := range wc.States {
 		known[s.Name] = true
 	}
-	for _, fl := range tc.Flows {
+	for _, fl := range wc.Flows {
 		if len(fl.Journey) == 0 {
-			return fmt.Errorf("case %q flow %q: empty journey", tc.Name, fl.Name)
+			return fmt.Errorf("case %q flow %q: empty journey", wc.Name, fl.Name)
 		}
 		if fl.WorkloadFile == "" {
-			return fmt.Errorf("case %q flow %q: empty WorkloadFile", tc.Name, fl.Name)
+			return fmt.Errorf("case %q flow %q: empty WorkloadFile", wc.Name, fl.Name)
 		}
-		// A terminal Optional step would make Want() a dip driveByPosition skips, so the run could finish
-		// without the last real settle firing.
+		// A terminal Optional step would make DesiredFinalStatus() a dip that driveByPosition
+		// skips, so the run could finish without the last real settle firing.
 		if last := fl.Journey[len(fl.Journey)-1]; last.Optional {
-			return fmt.Errorf("case %q flow %q: journey ends on an Optional step %q; the last step must be a real settle", tc.Name, fl.Name, last.State)
+			return fmt.Errorf("case %q flow %q: journey ends on an Optional step %q; the last step must be a real settle", wc.Name, fl.Name, last.State)
 		}
 		for _, st := range fl.Journey {
 			if !known[st.State] {
-				return fmt.Errorf("case %q flow %q: state %q not in registry", tc.Name, fl.Name, st.State)
+				return fmt.Errorf("case %q flow %q: state %q not in registry", wc.Name, fl.Name, st.State)
 			}
 		}
 	}

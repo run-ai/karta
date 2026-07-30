@@ -15,8 +15,7 @@ import (
 // Reading runs the Karta library on one CR and returns everything it reads (matched statuses, phase,
 // conditions, per-component extraction) as a generic map with empty leaves pruned. No denylist: the
 // golden rebuilds the exact CR, so Karta reads the same bytes back and the diff is stable.
-func Reading(karta *v1alpha1.Karta, obj resource.KubernetesObject) (map[string]interface{}, error) {
-	ctx := context.Background()
+func Reading(ctx context.Context, karta *v1alpha1.Karta, obj resource.KubernetesObject) (map[string]interface{}, error) {
 	factory := resource.NewComponentFactoryFromObject(karta, obj)
 
 	root, err := factory.GetRootComponent()

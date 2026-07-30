@@ -6,8 +6,8 @@ package cases
 var batchJobCase = WorkloadCase{
 	Name:      "BatchJob (built-in)",
 	Operator:  "batch-job",
-	KartaFile: "../../docs/samples/batch-job.yaml",
-	KartaName: "batch-v1-job",
+	KartaFile: "../../docs/catalog/batch-job-v1.yaml",
+	KartaName: "batch-job-v1",
 	States: []NamedState{
 		{suspended, CondTrue("Suspended")},
 		{initializing, IntAtLeast(1, "status", "active")},

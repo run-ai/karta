@@ -15,7 +15,7 @@ import (
 
 // Plain unit tests for the pure recorder helpers; no cluster (RunSpecs is not invoked).
 
-func obj(status map[string]any) *unstructured.Unstructured {
+func objWithStatus(status map[string]any) *unstructured.Unstructured {
 	return &unstructured.Unstructured{Object: map[string]any{"status": status}}
 }
 
@@ -32,13 +32,13 @@ func TestRecorderCatchesBackwardsJump(t *testing.T) {
 		{Name: completed, Match: cases.CondTrue("Complete")},
 	}
 	initCR := func() *unstructured.Unstructured {
-		return obj(map[string]any{"active": int64(1), "ready": int64(0)})
+		return objWithStatus(map[string]any{"active": int64(1), "ready": int64(0)})
 	}
 	seq := []*unstructured.Unstructured{
 		initCR(),
-		obj(map[string]any{"active": int64(1), "ready": int64(1)}),
+		objWithStatus(map[string]any{"active": int64(1), "ready": int64(1)}),
 		initCR(),
-		obj(map[string]any{"conditions": []any{map[string]any{"type": "Complete", "status": "True"}}}),
+		objWithStatus(map[string]any{"conditions": []any{map[string]any{"type": "Complete", "status": "True"}}}),
 	}
 
 	rec := &recording{}
@@ -92,9 +92,9 @@ func TestObservedOrder(t *testing.T) {
 }
 
 func TestCasesValid(t *testing.T) {
-	for _, tc := range cases.All {
-		if err := tc.Validate(); err != nil {
-			t.Errorf("%s: %v", tc.Name, err)
+	for _, wc := range cases.All {
+		if err := wc.Validate(); err != nil {
+			t.Errorf("%s: %v", wc.Name, err)
 		}
 	}
 }

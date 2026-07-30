@@ -18,7 +18,7 @@ import (
 )
 
 // SchemaVersion is bumped when the on-disk format changes incompatibly.
-const SchemaVersion = 6
+const SchemaVersion = 1
 
 // Recording is one flow: metadata plus the ordered steps a workload passed through.
 type Recording struct {

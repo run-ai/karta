@@ -46,9 +46,9 @@ const e2eRoot = ".."
 
 // observeTransitions watches one workload and records every distinct CR until the flow finishes. A scale
 // flow (state stays Running while the replica count changes) uses driveByPosition, others driveByState.
-func observeTransitions(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta) *recording {
+func observeTransitions(wc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta) *recording {
 	// One deadline for the whole flow, so a stuck RPC fails at the flow timeout, not the suite budget.
-	flowCtx, cancel := context.WithTimeout(ctx, tc.Timeout)
+	flowCtx, cancel := context.WithTimeout(ctx, wc.Timeout)
 	defer cancel()
 
 	watcher := watchWorkload(flowCtx, obj)
@@ -56,9 +56,9 @@ func observeTransitions(tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.
 
 	rec := &recording{}
 	if journeyGated(fl.Journey) {
-		driveByPosition(flowCtx, tc, fl, obj, karta, watcher, rec)
+		driveByPosition(flowCtx, wc, fl, obj, karta, watcher, rec)
 	} else {
-		driveByState(flowCtx, tc, fl, obj, karta, watcher, rec)
+		driveByState(flowCtx, wc, fl, obj, karta, watcher, rec)
 	}
 	return rec
 }
@@ -75,7 +75,7 @@ func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) watch.In
 
 	initialRV := obj.GetResourceVersion()
 	if initialRV == "" { // Create was a no-op (object already existed); fetch a current RV to start from
-		seed := cases.EmptyLike(obj)
+		seed := cases.GVKOnly(obj)
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed)).To(Succeed())
 		initialRV = seed.GetResourceVersion()
 	}
@@ -90,18 +90,20 @@ func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) watch.In
 	return watcher
 }
 
-func driveByState(ctx context.Context, tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, watcher watch.Interface, rec *recording) {
+func driveByState(ctx context.Context, wc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, watcher watch.Interface, rec *recording) {
 	pending := actionSteps(fl.Journey)
-	done := func(state kartav1alpha1.ResourceStatus) bool { return state == fl.Want() && len(pending) == 0 }
+	done := func(state kartav1alpha1.ResourceStatus) bool {
+		return state == fl.DesiredFinalStatus() && len(pending) == 0
+	}
 
 	// A workload already at its terminal state when Create returns never fires a watch event (the watch
 	// replays only newer resourceVersions), so take that first snapshot from the create response.
-	if state := cases.Classify(obj, tc.States); statusSettled(obj) && done(state) {
+	if state := cases.Classify(obj, wc.States); statusSettled(obj) && done(state) {
 		rec.keep(obj, state)
 		return
 	}
 
-	recordUntil(ctx, tc, fl, karta, watcher, rec, func(_ *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool {
+	recordUntil(ctx, wc, fl, karta, watcher, rec, func(_ *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool {
 		if len(pending) > 0 && state == pending[0].State {
 			Expect(pending[0].Action(ctx, obj)).NotTo(HaveOccurred(), "action at state %q", state)
 			pending = pending[1:]
@@ -112,9 +114,9 @@ func driveByState(ctx context.Context, tc cases.WorkloadCase, fl cases.Flow, obj
 
 // driveByPosition walks a gated journey step by step: a step is reached only when its state matches and
 // its settle gate holds. The scale path - the gate (a replica count), not the state, is what advances.
-func driveByPosition(ctx context.Context, tc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, watcher watch.Interface, rec *recording) {
+func driveByPosition(ctx context.Context, wc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, karta *kartav1alpha1.Karta, watcher watch.Interface, rec *recording) {
 	pos := 0
-	recordUntil(ctx, tc, fl, karta, watcher, rec, func(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool {
+	recordUntil(ctx, wc, fl, karta, watcher, rec, func(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool {
 		// Skip Optional steps: they are order-check-only dips, not drive stops.
 		for pos < len(fl.Journey) && fl.Journey[pos].Optional {
 			pos++
@@ -137,18 +139,18 @@ func driveByPosition(ctx context.Context, tc cases.WorkloadCase, fl cases.Flow, 
 type advanceFunc func(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) bool
 
 // recordUntil is the watch loop: keep every distinct CR, but call advance only once the status settles.
-func recordUntil(ctx context.Context, tc cases.WorkloadCase, fl cases.Flow, karta *kartav1alpha1.Karta, watcher watch.Interface, rec *recording, advance advanceFunc) {
+func recordUntil(ctx context.Context, wc cases.WorkloadCase, fl cases.Flow, karta *kartav1alpha1.Karta, watcher watch.Interface, rec *recording, advance advanceFunc) {
 	var lastSeen *unstructured.Unstructured
 	var lastErr error
 	for {
 		select {
 		case <-ctx.Done():
 			Fail(fmt.Sprintf("workload %s flow %q did not reach %q within %s; recorded %v\nlast-seen status:\n%s",
-				tc.Name, fl.Name, fl.Want(), tc.Timeout, rec.order, dumpStatus(lastSeen)))
+				wc.Name, fl.Name, fl.DesiredFinalStatus(), wc.Timeout, rec.order, dumpStatus(lastSeen)))
 		case event, open := <-watcher.ResultChan():
 			if !open {
 				Fail(fmt.Sprintf("%s flow %q: watch closed before reaching %q; recorded %v; last watch error: %v\nlast-seen status:\n%s",
-					tc.Name, fl.Name, fl.Want(), rec.order, lastErr, dumpStatus(lastSeen)))
+					wc.Name, fl.Name, fl.DesiredFinalStatus(), rec.order, lastErr, dumpStatus(lastSeen)))
 			}
 			if event.Type == watch.Error {
 				lastErr = apierrors.FromObject(event.Object)
@@ -159,15 +161,15 @@ func recordUntil(ctx context.Context, tc cases.WorkloadCase, fl cases.Flow, kart
 				continue // a bookmark carries no workload object
 			}
 			lastSeen = u
-			state := cases.Classify(u, tc.States)
+			state := cases.Classify(u, wc.States)
 			if state == "" {
 				// No predicate matched. If Karta still reads a real state the registry is missing a predicate
 				// (fail, else it goes unvalidated); if Karta reads nothing either, the CR is outside the case.
-				if ks := kartaState(karta, u); statusSettled(u) && ks != "" {
+				if ks := kartaState(ctx, karta, u); statusSettled(u) && ks != "" {
 					Fail(fmt.Sprintf("%s flow %q: Karta reads %q here but no predicate in the registry "+
-						"declares it - add one, or the mapping over-reads. full CR:\n%s", tc.Name, fl.Name, ks, dumpCR(u)))
+						"declares it - add one, or the mapping over-reads. full CR:\n%s", wc.Name, fl.Name, ks, dumpCR(u)))
 				} else if ks == "" {
-					GinkgoWriter.Printf("no Karta state for %s flow %q: CR is outside the registry\n%s", tc.Name, fl.Name, dumpCR(u))
+					GinkgoWriter.Printf("no Karta state for %s flow %q: CR is outside the registry\n%s", wc.Name, fl.Name, dumpCR(u))
 				}
 				continue
 			}
@@ -257,26 +259,26 @@ func journeySteps(steps []cases.Step) []conformance.JourneyStep {
 
 // observedOrderErr runs the recorder's observed states through the same check the offline golden uses.
 func observedOrderErr(fl cases.Flow, order []kartav1alpha1.ResourceStatus) error {
-	return conformance.ObservedOrderErr(journeySteps(fl.Journey), order, fl.Want())
+	return conformance.ObservedOrderErr(journeySteps(fl.Journey), order, fl.DesiredFinalStatus())
 }
 
 // writeFixture writes the run as one <flow>.yaml under conformance/fixtures/: each step's own-fields state,
 // CR, and Karta reading, full on the first step and a merge-patch from the previous after.
-func writeFixture(tc cases.WorkloadCase, fl cases.Flow, rec *recording, karta *kartav1alpha1.Karta) {
-	version := operatorVersion(tc.Operator)
+func writeFixture(wc cases.WorkloadCase, fl cases.Flow, rec *recording, karta *kartav1alpha1.Karta) {
+	version := operatorVersion(wc.Operator)
 	rc := conformance.Recording{
 		SchemaVersion: conformance.SchemaVersion,
-		Operator:      tc.Operator,
+		Operator:      wc.Operator,
 		Version:       version,
-		KartaName:     tc.KartaName,
+		KartaName:     wc.KartaName,
 		Flow:          fl.Name,
-		Want:          string(fl.Want()),
-		KartaFile:     strings.TrimPrefix(tc.KartaFile, "../../"),
+		Want:          string(fl.DesiredFinalStatus()),
+		KartaFile:     strings.TrimPrefix(wc.KartaFile, "../../"),
 	}
 	var prevCR, prevExp map[string]any
 	for i, snap := range rec.snapshots {
 		cur := snap.raw.Object
-		exp, err := conformance.Reading(karta, snap.raw)
+		exp, err := conformance.Reading(ctx, karta, snap.raw)
 		Expect(err).NotTo(HaveOccurred(), "read Karta at state %q", snap.state)
 		st := conformance.Step{State: string(snap.state), Action: actionName(fl, snap.state)}
 		if i == 0 {
@@ -292,17 +294,22 @@ func writeFixture(tc cases.WorkloadCase, fl cases.Flow, rec *recording, karta *k
 
 	path := conformance.RecordingPath(filepath.Join(e2eRoot, "conformance", "fixtures"), rc)
 	Expect(conformance.WriteRecording(path, rc)).To(Succeed())
-	GinkgoWriter.Printf("recorded %s/%s/%s/%s.yaml (%d steps %v)\n", tc.Operator, version, tc.KartaName, fl.Name, len(rc.Steps), rec.order)
+	GinkgoWriter.Printf("recorded %s/%s/%s/%s.yaml (%d steps %v)\n", wc.Operator, version, wc.KartaName, fl.Name, len(rc.Steps), rec.order)
 }
 
 func actionName(fl cases.Flow, state kartav1alpha1.ResourceStatus) string {
 	for _, st := range fl.Journey {
 		if st.State == state && st.Action != nil {
+			// ScaleParallelism returns a closure named ...funcN; walk to the constructor name, not func8.
 			full := runtime.FuncForPC(reflect.ValueOf(st.Action).Pointer()).Name()
-			if i := strings.LastIndexByte(full, '.'); i >= 0 {
-				return full[i+1:]
+			for {
+				i := strings.LastIndexByte(full, '.')
+				base := full[i+1:]
+				if i < 0 || len(base) <= 4 || base[:4] != "func" || strings.Trim(base[4:], "0123456789") != "" {
+					return base
+				}
+				full = full[:i]
 			}
-			return full
 		}
 	}
 	return ""
@@ -323,8 +330,8 @@ func operatorVersion(op string) string {
 
 // kartaState returns the state Karta reads for this CR, or "" if it matches nothing (Undefined counts
 // as no match).
-func kartaState(karta *kartav1alpha1.Karta, u *unstructured.Unstructured) string {
-	reading, err := conformance.Reading(karta, u)
+func kartaState(ctx context.Context, karta *kartav1alpha1.Karta, u *unstructured.Unstructured) string {
+	reading, err := conformance.Reading(ctx, karta, u)
 	if err != nil {
 		GinkgoWriter.Printf("kartaState: Karta read failed, undeclared-state guard may under-report: %v\n", err)
 		return ""

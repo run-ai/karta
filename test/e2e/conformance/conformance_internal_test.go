@@ -129,7 +129,7 @@ func TestReadingRunsKarta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reading, err := Reading(karta, &unstructured.Unstructured{Object: m})
+	reading, err := Reading(t.Context(), karta, &unstructured.Unstructured{Object: m})
 	if err != nil {
 		t.Fatalf("reading: %v", err)
 	}

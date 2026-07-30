@@ -26,26 +26,26 @@ var builtinOperators = map[string]bool{
 }
 
 // ginkgoLabels tags a case with its operator key and "builtin", so -ginkgo.label-filter can select cases.
-func ginkgoLabels(tc cases.WorkloadCase) Labels {
-	if tc.Operator == "" {
+func ginkgoLabels(wc cases.WorkloadCase) Labels {
+	if wc.Operator == "" {
 		return Label()
 	}
-	ls := []string{tc.Operator}
-	if builtinOperators[tc.Operator] {
+	ls := []string{wc.Operator}
+	if builtinOperators[wc.Operator] {
 		ls = append(ls, "builtin")
 	}
 	return Label(ls...)
 }
 
-func run(tc cases.WorkloadCase) {
-	Describe(tc.Name, Ordered, ginkgoLabels(tc), func() {
+func run(wc cases.WorkloadCase) {
+	Describe(wc.Name, Ordered, ginkgoLabels(wc), func() {
 		var karta *kartav1alpha1.Karta
 
 		BeforeAll(func() {
 			karta = &kartav1alpha1.Karta{}
-			Expect(yaml.Unmarshal(mustRead(tc.KartaFile), karta)).To(Succeed())
+			Expect(yaml.Unmarshal(mustRead(wc.KartaFile), karta)).To(Succeed())
 			if karta.GetName() == "" {
-				karta.SetName(tc.KartaName) // some bundled definitions omit metadata.name
+				karta.SetName(wc.KartaName) // some bundled definitions omit metadata.name
 			}
 			Expect(client.IgnoreAlreadyExists(k8sClient.Create(ctx, karta))).To(Succeed())
 			DeferCleanup(func() { _ = k8sClient.Delete(ctx, karta) })
@@ -54,17 +54,17 @@ func run(tc cases.WorkloadCase) {
 		It("the operator reconciles the Karta definition (Validated, CRDExists, Ready)", func() {
 			Eventually(func(g Gomega) {
 				got := &kartav1alpha1.Karta{}
-				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: tc.KartaName}, got)).To(Succeed())
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: wc.KartaName}, got)).To(Succeed())
 				g.Expect(apimeta.IsStatusConditionTrue(got.Status.Conditions, "Validated")).To(BeTrue(), "Validated")
 				g.Expect(apimeta.IsStatusConditionTrue(got.Status.Conditions, "CRDExists")).To(BeTrue(), "CRDExists")
 				g.Expect(apimeta.IsStatusConditionTrue(got.Status.Conditions, "Ready")).To(BeTrue(), "Ready")
 			}, time.Minute, 2*time.Second).Should(Succeed())
 		})
 
-		for _, fl := range tc.Flows {
-			It(fmt.Sprintf("%s flow reaches %s", fl.Name, fl.Want()), func() {
-				if tc.Timeout == 0 {
-					tc.Timeout = 3 * time.Minute
+		for _, fl := range wc.Flows {
+			It(fmt.Sprintf("%s flow reaches %s", fl.Name, fl.DesiredFinalStatus()), func() {
+				if wc.Timeout == 0 {
+					wc.Timeout = 3 * time.Minute
 				}
 
 				By("creating the workload")
@@ -74,19 +74,19 @@ func run(tc cases.WorkloadCase) {
 				DeferCleanup(func() { _ = k8sClient.Delete(ctx, obj) })
 
 				By("watching it move through its states, in the declared order")
-				rec := observeTransitions(tc, fl, obj, karta)
+				rec := observeTransitions(wc, fl, obj, karta)
 				assertObservedOrder(fl, rec.order)
 
 				By("recording the conformance fixture")
-				writeFixture(tc, fl, rec, karta)
+				writeFixture(wc, fl, rec, karta)
 			})
 		}
 	})
 }
 
 var _ = Describe("Karta against live workloads", func() {
-	for _, tc := range cases.All {
-		run(tc)
+	for _, wc := range cases.All {
+		run(wc)
 	}
 })
 
