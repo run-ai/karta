@@ -14,6 +14,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/run-ai/karta/cmd/karta/internal/physical"
 	"github.com/run-ai/karta/pkg/tree"
 )
 
@@ -28,6 +29,9 @@ type WorkloadView struct {
 }
 
 // ComponentView holds the rendered fields for a tree component.
+//
+// The physical fields (DeviceCount, DegradedNodes, Domains) stay zero unless
+// Enrich has run, so a logical-only render is unaffected.
 type ComponentView struct {
 	Name            string
 	DesiredReplicas int32
@@ -37,6 +41,23 @@ type ComponentView struct {
 	Nodes           []string
 	Pods            []PodView
 	Children        []ComponentView
+
+	// DeviceCount is the number of individually-identified DRA devices held
+	// across this component's pods. It differs from GPUs, which is the
+	// requested count off the pod spec: GPUs is what was asked for, DeviceCount
+	// is what was actually allocated and can be named.
+	DeviceCount int
+	// DegradedNodes lists nodes under this component that are NotReady or
+	// cordoned.
+	DegradedNodes []string
+	// Domains lists the distinct topology domains this component's pods span.
+	// More than one entry on a gang-scheduled component means the collective
+	// crosses a domain boundary.
+	Domains []string
+
+	// degradedConditions maps a degraded node name to its condition, kept
+	// unexported so roll-ups can merge child state without widening the API.
+	degradedConditions map[string]string
 }
 
 // PodView holds the rendered fields for a single pod under a component.
@@ -46,6 +67,15 @@ type PodView struct {
 	Ready bool
 	Node  string
 	GPUs  int64
+
+	// NodeCondition is "NotReady", "cordoned", or "" when the node is healthy
+	// or was not resolved.
+	NodeCondition string
+	// Domain is the topology domain of the pod's node, when labelled.
+	Domain string
+	// Devices are the DRA devices allocated to this pod, empty on clusters
+	// without DRA.
+	Devices []physical.Device
 }
 
 // Build computes a WorkloadView from a raw WorkloadTree and the kind / name /

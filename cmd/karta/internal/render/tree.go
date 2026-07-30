@@ -8,6 +8,8 @@ import (
 	"io"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/run-ai/karta/cmd/karta/internal/physical"
 )
 
 // visibleLen returns the number of visible terminal columns a string takes,
@@ -159,7 +161,7 @@ func writeComponentAt(w io.Writer, c ComponentView, parentPrefix string, isLast 
 		readyStyled,
 		strings.Repeat(" ", leadingPad)+columnGap,
 		gpuStyled, columnGap,
-		nodeListDim(c.Nodes, s),
+		componentTrailing(c, s),
 	)
 
 	if len(c.Children) > 0 {
@@ -187,11 +189,7 @@ func writePod(w io.Writer, p PodView, parentPrefix string, isLast bool, widths p
 	phaseStyled := padTo(s.Phase(p.Phase), len(phasePlain), widths.phase)
 	gpuStyled := padTo(gpuLabel(p.GPUs, s), len(gpuPlain), layout.maxGPU)
 
-	node := p.Node
-	if node == "" {
-		node = "<none>"
-	}
-	nodeStyled := s.Dim(node)
+	nodeStyled := podTrailing(p, s)
 
 	leadingPlain := visibleLen(parentPrefix) + visibleLen(branch) + 1 +
 		widths.name + visibleLen(columnGap) + widths.phase
@@ -277,4 +275,53 @@ func nodeListDim(ns []string, s Style) string {
 		return s.Dim("<none>")
 	}
 	return s.Dim(strings.Join(ns, ","))
+}
+
+// componentTrailing renders the right-most cell of a component row: the node
+// list, plus the physical annotations when Enrich has run.
+//
+// This column is last on the line and is not part of the alignment math, so it
+// can grow without disturbing the tree's geometry.
+func componentTrailing(c ComponentView, s Style) string {
+	parts := []string{nodeListDim(c.Nodes, s)}
+
+	if len(c.DegradedNodes) > 0 {
+		parts = append(parts, s.Red("!"+strings.Join(c.DegradedNodes, ",")+" degraded"))
+	}
+	if c.DeviceCount > 0 {
+		parts = append(parts, s.Dim("dev: ")+itoa(c.DeviceCount))
+	}
+	if len(c.Domains) > 0 {
+		domains := s.Dim("@") + strings.Join(c.Domains, ",")
+		if SplitAcrossDomains(c) {
+			// A component whose pods span domains is the case the logical tree
+			// cannot show: everything reads Ready while the collective is
+			// crossing a fabric boundary.
+			domains += " " + s.Yellow("(split)")
+		}
+		parts = append(parts, domains)
+	}
+	return strings.Join(parts, columnGap)
+}
+
+// podTrailing renders the right-most cell of a pod row: the node it landed on,
+// its condition when unhealthy, the topology domain, and the identities of the
+// devices it holds.
+func podTrailing(p PodView, s Style) string {
+	node := p.Node
+	if node == "" {
+		node = "<none>"
+	}
+	parts := []string{s.Dim(node)}
+
+	if p.NodeCondition != "" {
+		parts = append(parts, s.Red("!"+p.NodeCondition))
+	}
+	if p.Domain != "" {
+		parts = append(parts, s.Dim("@")+p.Domain)
+	}
+	if len(p.Devices) > 0 {
+		parts = append(parts, s.Dim("dev: ")+physical.FormatDevices(p.Devices, maxDevicesPerRow))
+	}
+	return strings.Join(parts, columnGap)
 }
