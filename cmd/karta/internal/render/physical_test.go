@@ -223,3 +223,64 @@ func TestTreeWithoutEnrichIsUnchanged(t *testing.T) {
 		}
 	}
 }
+
+func TestEnrichRecoversGPUCountFromDRA(t *testing.T) {
+	// On a DRA cluster a GPU pod carries no nvidia.com/gpu resource, so the
+	// spec-derived count is 0 for every GPU workload. The allocation result is
+	// the only truthful count.
+	view := WorkloadView{
+		Namespace: "ns",
+		Components: []ComponentView{{
+			Name: "worker",
+			Pods: []PodView{
+				{Name: "worker-0", Node: "node-a", GPUs: 0},
+				{Name: "worker-1", Node: "node-a", GPUs: 0},
+			},
+		}},
+	}
+
+	Enrich(&view, snapshot())
+	c := view.Components[0]
+
+	if c.Pods[0].GPUs != 2 || c.Pods[1].GPUs != 1 {
+		t.Errorf("pod GPU recovery = %d/%d, want 2/1", c.Pods[0].GPUs, c.Pods[1].GPUs)
+	}
+	if c.GPUs != 3 {
+		t.Errorf("component GPUs = %d, want 3", c.GPUs)
+	}
+}
+
+func TestEnrichDoesNotOverrideSpecGPUCount(t *testing.T) {
+	// A classic device-plugin pod already reports a real count. DRA devices
+	// must not double it.
+	view := WorkloadView{
+		Namespace:  "ns",
+		Components: []ComponentView{{Name: "worker", GPUs: 8, Pods: []PodView{{Name: "worker-0", Node: "node-a", GPUs: 8}}}},
+	}
+	Enrich(&view, snapshot())
+
+	if got := view.Components[0].Pods[0].GPUs; got != 8 {
+		t.Errorf("pod GPUs = %d, want 8 (spec count preserved)", got)
+	}
+	if got := view.Components[0].GPUs; got != 8 {
+		t.Errorf("component GPUs = %d, want 8", got)
+	}
+}
+
+func TestEnrichGPURecoveryRollsUpThroughChildren(t *testing.T) {
+	view := WorkloadView{
+		Namespace: "ns",
+		Components: []ComponentView{{
+			Name: "group",
+			Children: []ComponentView{
+				{Name: "leader", Pods: []PodView{{Name: "worker-0", Node: "node-a"}}},
+				{Name: "worker", Pods: []PodView{{Name: "worker-1", Node: "node-b"}}},
+			},
+		}},
+	}
+	Enrich(&view, snapshot())
+
+	if got := view.Components[0].GPUs; got != 3 {
+		t.Errorf("parent GPUs = %d, want 3", got)
+	}
+}

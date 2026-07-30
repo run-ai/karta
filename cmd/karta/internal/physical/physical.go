@@ -358,11 +358,25 @@ func FormatDevices(devices []Device, max int) string {
 	}
 	names := make([]string, 0, len(devices))
 	for _, d := range devices {
-		names = append(names, d.Name)
+		names = append(names, ShortDeviceName(d.Name))
 	}
 	if max > 0 && len(names) > max {
 		extra := len(names) - max
 		names = append(names[:max:max], fmt.Sprintf("+%d more", extra))
 	}
 	return strings.Join(names, ",")
+}
+
+// ShortDeviceName trims a device identifier for display. Real DRA drivers name
+// devices by hardware UUID (gpu-58719de1-c4ad-5038-a163-c74eff36f8db), and a
+// pod holding eight of them would run several hundred columns wide. The
+// leading segment is enough to tell devices apart by eye; the full identifier
+// stays on the ResourceClaim for anyone who needs to copy it.
+func ShortDeviceName(name string) string {
+	const keep = 8
+	prefix, rest, found := strings.Cut(name, "-")
+	if !found || len(rest) <= keep {
+		return name
+	}
+	return prefix + "-" + rest[:keep] + "..."
 }

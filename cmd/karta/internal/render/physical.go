@@ -32,10 +32,13 @@ func Enrich(view *WorkloadView, snap *physical.Snapshot) {
 	}
 }
 
-func enrichComponent(c *ComponentView, namespace string, snap *physical.Snapshot) {
+// enrichComponent annotates one component and returns the GPU count it
+// recovered from DRA, so parents can fold it into their own roll-up.
+func enrichComponent(c *ComponentView, namespace string, snap *physical.Snapshot) int64 {
 	degraded := map[string]string{}
 	domains := map[string]struct{}{}
 	deviceCount := 0
+	var gpuDelta int64
 
 	for i := range c.Pods {
 		p := &c.Pods[i]
@@ -51,11 +54,21 @@ func enrichComponent(c *ComponentView, namespace string, snap *physical.Snapshot
 		}
 		p.Devices = snap.DevicesFor(namespace, p.Name)
 		deviceCount += len(p.Devices)
+
+		// A DRA pod requests devices through spec.resourceClaims, not through
+		// the nvidia.com/gpu extended resource, so the count derived from the
+		// pod spec is zero for every GPU workload on a DRA cluster. The
+		// allocation result is the only truthful count available, so use it
+		// when the spec-derived one has nothing to say.
+		if p.GPUs == 0 && len(p.Devices) > 0 {
+			p.GPUs = int64(len(p.Devices))
+			gpuDelta += p.GPUs
+		}
 	}
 
 	for i := range c.Children {
 		child := &c.Children[i]
-		enrichComponent(child, namespace, snap)
+		gpuDelta += enrichComponent(child, namespace, snap)
 		deviceCount += child.DeviceCount
 		for _, n := range child.DegradedNodes {
 			degraded[n] = child.degradedConditions[n]
@@ -65,10 +78,12 @@ func enrichComponent(c *ComponentView, namespace string, snap *physical.Snapshot
 		}
 	}
 
+	c.GPUs += gpuDelta
 	c.DeviceCount = deviceCount
 	c.degradedConditions = degraded
 	c.DegradedNodes = sortedMapKeys(degraded)
 	c.Domains = sortedSetKeys(domains)
+	return gpuDelta
 }
 
 func sortedMapKeys(m map[string]string) []string {

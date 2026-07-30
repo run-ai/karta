@@ -51,12 +51,18 @@ What the annotations mean:
   * `@<domain>` — the node's topology domain. `(split)` on a component
     means its pods span more than one, which for a gang-scheduled
     component is a placement problem the logical tree cannot show.
-  * `dev:` — the individual devices allocated to the pod. `gpu:` is what
-    the pod *asked for*; `dev:` is what it actually *holds*.
+  * `dev:` — the individual devices allocated to the pod, identified by
+    hardware UUID and abbreviated for width. `gpu:` is what the pod
+    *asked for*; `dev:` is what it actually *holds*.
 
 Device identity requires Dynamic Resource Allocation. Without DRA a pod
 records only a count (`nvidia.com/gpu: 8`), so no traversal can recover
 which GPUs it got, and the node annotations render on their own.
+
+Note that a DRA pod requests devices through `spec.resourceClaims`, not
+through the `nvidia.com/gpu` extended resource, so without `--physical`
+the `gpu:` column reads `0` for every GPU workload on a DRA cluster. With
+`--physical` the count is taken from the allocation result instead.
 
 Set `--topology-label` when your cluster names domains its own way; the
 defaults are `nvidia.com/gpu.clique` then `topology.kubernetes.io/zone`.

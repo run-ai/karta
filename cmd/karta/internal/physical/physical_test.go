@@ -192,3 +192,17 @@ func node(name string, ready corev1.ConditionStatus, cordoned bool, labels map[s
 		},
 	}
 }
+
+func TestShortDeviceName(t *testing.T) {
+	// Real DRA drivers name devices by hardware UUID.
+	full := "gpu-58719de1-c4ad-5038-a163-c74eff36f8db"
+	if got := ShortDeviceName(full); got != "gpu-58719de1..." {
+		t.Errorf("ShortDeviceName(%q) = %q", full, got)
+	}
+	// Short names are left alone.
+	for _, short := range []string{"gpu-0", "gpu", ""} {
+		if got := ShortDeviceName(short); got != short {
+			t.Errorf("ShortDeviceName(%q) = %q, want unchanged", short, got)
+		}
+	}
+}
