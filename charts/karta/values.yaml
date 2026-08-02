@@ -72,3 +72,32 @@ resources:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# A pre-install/pre-upgrade Job server-side-applies the bundled CRD, so
+# `helm upgrade` rolls the schema forward (Helm never upgrades crds/ itself).
+crdUpgrader:
+  enabled: true
+  image:
+    repository: registry.k8s.io/kubectl
+    tag: v1.34.0
+    pullPolicy: IfNotPresent
+  backoffLimit: 3
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 0
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
