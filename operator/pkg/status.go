@@ -81,7 +81,6 @@ func setReady(status *kartav1alpha1.KartaStatus, generation int64) metav1.Condit
 	return readyStatus
 }
 
-// setReadyDuplicate marks a Karta not ready because another Karta owns its GVK.
 func setReadyDuplicate(status *kartav1alpha1.KartaStatus, generation int64, msg string) {
 	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
 		Type:               string(kartav1alpha1.ConditionReady),

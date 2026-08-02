@@ -1,6 +1,4 @@
 {{- if and .Values.operator.enabled .Values.webhook.enabled (eq .Values.webhook.cert.source "selfSigned") -}}
-# The self-signed cert rotator manages its serving-cert Secret in this namespace
-# (webhook config patching is granted cluster-scoped by the ClusterRole).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -9,7 +7,6 @@ metadata:
   labels:
     {{- include "karta.labels" . | nindent 4 }}
 rules:
-  # update only: the rotator patches the chart-created placeholder in place.
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "list", "watch", "update"]

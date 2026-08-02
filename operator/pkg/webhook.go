@@ -16,7 +16,6 @@ import (
 
 // +kubebuilder:webhook:path=/mutate-run-ai-v1alpha1-karta,mutating=true,failurePolicy=ignore,sideEffects=None,groups=run.ai,resources=kartas,verbs=create,versions=v1alpha1,name=mkarta.run.ai,admissionReviewVersions=v1
 
-// KartaLabeler stamps the GVK index labels on a Karta at admission (issue #99).
 type KartaLabeler struct{}
 
 var _ admission.Defaulter[*kartav1alpha1.Karta] = (*KartaLabeler)(nil)
@@ -44,10 +43,7 @@ func (w *KartaLabeler) Default(_ context.Context, karta *kartav1alpha1.Karta) er
 
 // +kubebuilder:webhook:path=/validate-run-ai-v1alpha1-karta,mutating=false,failurePolicy=ignore,sideEffects=None,groups=run.ai,resources=kartas,verbs=create;update,versions=v1alpha1,name=vkarta.run.ai,admissionReviewVersions=v1
 
-// KartaValidator validates a Karta at admission: spec validity and one Karta per
-// root GVK (issue #198).
 type KartaValidator struct {
-	// reader reads from the apiserver, not the cache, so the uniqueness check is current.
 	reader client.Reader
 }
 
@@ -72,8 +68,6 @@ func (v *KartaValidator) validate(ctx context.Context, karta *kartav1alpha1.Kart
 	return v.validateUniqueGVK(ctx, karta)
 }
 
-// validateUniqueGVK enforces one Karta per root GVK. Best-effort: admission is not
-// transactional, so two created at once can both pass; the reconciler is the backstop.
 func (v *KartaValidator) validateUniqueGVK(ctx context.Context, karta *kartav1alpha1.Karta) error {
 	gvk := rootGVK(karta)
 	if gvk == nil {

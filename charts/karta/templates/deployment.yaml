@@ -91,11 +91,7 @@ spec:
       volumes:
         - name: webhook-certs
           secret:
-            {{- if eq .Values.webhook.cert.source "existingSecret" }}
-            secretName: {{ required "webhook.cert.existingSecret.name is required when webhook.cert.source=existingSecret" .Values.webhook.cert.existingSecret.name }}
-            {{- else }}
             secretName: {{ include "karta.webhook.secretName" . }}
-            {{- end }}
             optional: true
       {{- end }}
       {{- with .Values.nodeSelector }}

@@ -12,7 +12,6 @@ metadata:
 webhooks:
   - name: vkarta.run.ai
     admissionReviewVersions: ["v1"]
-    # Ignore so a disabled or broken webhook never blocks Karta creation.
     failurePolicy: Ignore
     sideEffects: None
     matchPolicy: Equivalent
@@ -28,7 +27,4 @@ webhooks:
         namespace: {{ .Release.Namespace }}
         path: /validate-run-ai-v1alpha1-karta
         port: 443
-      {{- if eq .Values.webhook.cert.source "existingSecret" }}
-      caBundle: {{ required "webhook.cert.existingSecret.caBundle is required when webhook.cert.source=existingSecret" .Values.webhook.cert.existingSecret.caBundle }}
-      {{- end }}
 {{- end -}}

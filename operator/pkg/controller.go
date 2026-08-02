@@ -82,8 +82,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.MapCRDToKartaEvent),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
-		// Re-evaluate GVK ownership when a sibling Karta changes, so a duplicate
-		// recovers once the owner is removed.
 		Watches(
 			&kartav1alpha1.Karta{},
 			handler.EnqueueRequestsFromMapFunc(r.MapKartaToSiblings),
@@ -130,8 +128,6 @@ func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *k
 		return err
 	}
 
-	// Uniqueness backstop (issue #198): the always-on guarantee behind the webhook.
-	// A newer duplicate of a GVK is marked not ready rather than deleted.
 	if owner := r.gvkOwnerConflict(ctx, karta); owner != "" {
 		msg := fmt.Sprintf("another Karta already owns this GVK: %q", owner)
 		logger.Info("Karta duplicates an existing GVK owner", "owner", owner)
@@ -145,9 +141,6 @@ func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *k
 	return nil
 }
 
-// gvkOwnerConflict returns the name of an older Karta that owns this Karta's root
-// GVK, or "" when this Karta is the owner. The owner is deterministic (oldest
-// CreationTimestamp, name as tiebreak) so every reconcile agrees without coordination.
 func (r *Reconciler) gvkOwnerConflict(ctx context.Context, karta *kartav1alpha1.Karta) string {
 	gvk := rootGVK(karta)
 	if gvk == nil {
@@ -156,7 +149,7 @@ func (r *Reconciler) gvkOwnerConflict(ctx context.Context, karta *kartav1alpha1.
 
 	kartas := &kartav1alpha1.KartaList{}
 	if err := r.List(ctx, kartas); err != nil {
-		return "" // transient; re-evaluated on the next reconcile
+		return ""
 	}
 
 	owner := karta
@@ -249,8 +242,6 @@ func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta
 	return nil
 }
 
-// desiredRootLabels returns the GVK index labels for a Karta, or nil when it has
-// no root kind. Shared by the reconciler and the webhook so both stamp the same labels.
 func desiredRootLabels(karta *kartav1alpha1.Karta) map[string]string {
 	gvk := rootGVK(karta)
 	if gvk == nil {

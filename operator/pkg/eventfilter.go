@@ -45,8 +45,6 @@ func (r *Reconciler) MapCRDToKartaEvent(ctx context.Context, obj client.Object) 
 	return requests
 }
 
-// MapKartaToSiblings enqueues the other Kartas that share the changed Karta's
-// root GVK, so GVK ownership is re-evaluated when a sibling changes.
 func (r *Reconciler) MapKartaToSiblings(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
@@ -70,7 +68,7 @@ func (r *Reconciler) MapKartaToSiblings(ctx context.Context, obj client.Object) 
 	for i := range kartas.Items {
 		other := &kartas.Items[i]
 		if other.Name == changed.Name {
-			continue // the changed Karta is enqueued by For()
+			continue
 		}
 		if og := rootGVK(other); og != nil && *og == *gvk {
 			requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKey{Name: other.Name}})

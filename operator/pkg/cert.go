@@ -17,16 +17,14 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
-// Webhook cert sources for --webhook-cert-source.
 const (
-	CertSourceSelfSigned     = "selfSigned"
-	CertSourceExistingSecret = "existingSecret"
-	CertSourceCertManager    = "certManager"
+	CertSourceSelfSigned  = "selfSigned"
+	CertSourceCertManager = "certManager"
 )
 
 func ValidCertSource(s string) bool {
 	switch s {
-	case CertSourceSelfSigned, CertSourceExistingSecret, CertSourceCertManager:
+	case CertSourceSelfSigned, CertSourceCertManager:
 		return true
 	default:
 		return false
@@ -75,10 +73,6 @@ func newCertRotator(opts CertOptions, namespace, controllerName string, ready ch
 	}
 }
 
-// BootstrapCerts generates the webhook serving cert and patches the caBundle,
-// blocking until it is ready before the main manager starts. healthAddr serves
-// /healthz during the wait, so a slow kubelet Secret projection cannot trip the
-// liveness probe and restart the pod mid-bootstrap.
 func BootstrapCerts(ctx context.Context, kubeConfig *rest.Config, opts CertOptions, healthAddr string) error {
 	namespace := OperatorNamespace()
 	bootstrapMgr, err := ctrl.NewManager(kubeConfig, ctrl.Options{

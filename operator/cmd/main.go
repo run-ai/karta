@@ -36,8 +36,6 @@ var scheme = runtime.NewScheme()
 func init() {
 	utilruntime.Must(kartav1alpha1.AddToScheme(scheme))
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
-	// The cert rotator reads Secrets and patches webhook configs, so both kinds
-	// must be in the scheme.
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(admissionregistrationv1.AddToScheme(scheme))
 }
@@ -85,7 +83,7 @@ func run() error {
 	flag.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs",
 		"Directory the webhook serving cert is read from.")
 	flag.StringVar(&webhookCertSource, "webhook-cert-source", pkg.CertSourceSelfSigned,
-		"Webhook cert source: selfSigned (operator self-signs and rotates) or existingSecret (bring your own).")
+		"Webhook cert source: selfSigned (operator self-signs and rotates) or certManager.")
 	flag.StringVar(&webhookCertSecret, "webhook-cert-secret", "karta-webhook-cert",
 		"Name of the Secret holding the webhook serving cert in selfSigned mode.")
 	flag.StringVar(&webhookServiceName, "webhook-service-name", "karta-operator-webhook",
@@ -122,7 +120,6 @@ func run() error {
 		ValidatingWebhookName: validatingWebhookName,
 	}
 
-	// selfSigned: generate the cert before the manager starts so the webhook can serve TLS.
 	if enableWebhook && webhookCertSource == pkg.CertSourceSelfSigned {
 		if err := pkg.BootstrapCerts(ctx, kubeConfig, certOpts, probeAddr); err != nil {
 			return fmt.Errorf("bootstrap webhook certs: %w", err)
@@ -177,17 +174,9 @@ func run() error {
 	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		return fmt.Errorf("register healthz: %w", err)
 	}
-	// With the webhook on, stay not-ready until the certs and webhook server are up.
 	readyzCheck := healthz.Ping
 	if enableWebhook {
-		readyzCheck = func(req *http.Request) error {
-			select {
-			case <-certsReady:
-				return mgr.GetWebhookServer().StartedChecker()(req)
-			default:
-				return errors.New("webhook certificates are not ready")
-			}
-		}
+		readyzCheck = webhookReadyz(mgr, certsReady)
 	}
 	if err = mgr.AddReadyzCheck("readyz", readyzCheck); err != nil {
 		return fmt.Errorf("register readyz: %w", err)
@@ -198,4 +187,15 @@ func run() error {
 		return fmt.Errorf("manager exited: %w", err)
 	}
 	return nil
+}
+
+func webhookReadyz(mgr ctrl.Manager, certsReady <-chan struct{}) healthz.Checker {
+	return func(req *http.Request) error {
+		select {
+		case <-certsReady:
+			return mgr.GetWebhookServer().StartedChecker()(req)
+		default:
+			return errors.New("webhook not ready")
+		}
+	}
 }
