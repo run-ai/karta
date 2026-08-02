@@ -41,3 +41,11 @@ Name of the ServiceAccount to use. When create=true the chart owns the name
 {{- required "serviceAccount.name is required when serviceAccount.create is false" .Values.serviceAccount.name -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Name for the CRD upgrader hook resources. Includes the release namespace and
+name so separate releases never share the cluster-scoped ClusterRole/Binding.
+*/}}
+{{- define "karta.crdUpgrader.name" -}}
+{{- printf "%s-crd-upgrader-%s-%s" (include "karta.fullname" .) .Release.Namespace .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}

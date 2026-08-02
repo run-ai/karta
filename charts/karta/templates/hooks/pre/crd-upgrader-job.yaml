@@ -4,7 +4,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "karta.fullname" . }}-crd-upgrader
+  name: {{ include "karta.crdUpgrader.name" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "karta.labels" . | nindent 4 }}
@@ -19,7 +19,7 @@ spec:
       labels:
         {{- include "karta.selectorLabels" . | nindent 8 }}
     spec:
-      serviceAccountName: {{ include "karta.fullname" . }}-crd-upgrader
+      serviceAccountName: {{ include "karta.crdUpgrader.name" . }}
       restartPolicy: OnFailure
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -54,7 +54,7 @@ spec:
       volumes:
         - name: crds
           configMap:
-            name: {{ include "karta.fullname" . }}-crd-upgrader
+            name: {{ include "karta.crdUpgrader.name" . }}
         - name: cache
           emptyDir: {}
       {{- with .Values.nodeSelector }}
