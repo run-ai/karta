@@ -71,57 +71,55 @@ func newCertRotator(opts CertOptions, namespace, controllerName string, ready ch
 	}
 }
 
+// BootstrapCerts blocks until the webhook serving cert exists on disk and its CA
+// is patched onto the webhook configs. It runs a throwaway manager whose only job
+// is the cert rotator, then stops it so the real manager can reuse the health
+// port. This guarantees the webhook server never starts before its cert is ready.
 func BootstrapCerts(ctx context.Context, kubeConfig *rest.Config, opts CertOptions, healthAddr string) error {
 	ctx, cancel := context.WithTimeout(ctx, bootstrapTimeout)
 	defer cancel()
 
-	bootstrapMgr, err := ctrl.NewManager(kubeConfig, ctrl.Options{
+	mgr, err := ctrl.NewManager(kubeConfig, ctrl.Options{
 		Metrics:                metricsserver.Options{BindAddress: "0"},
 		HealthProbeBindAddress: healthAddr,
 	})
 	if err != nil {
 		return fmt.Errorf("create bootstrap manager: %w", err)
 	}
+	// Answer the liveness probe while waiting for the first cert, so a slow
+	// Secret sync does not trip the probe and get the pod killed.
 	if healthAddr != "" {
-		if err := bootstrapMgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 			return fmt.Errorf("add bootstrap healthz: %w", err)
 		}
 	}
 
-	ready := make(chan struct{})
-	if err := rotator.AddRotator(bootstrapMgr, newCertRotator(opts, OperatorNamespace(), "karta-webhook-cert-bootstrap", ready)); err != nil {
+	certReady := make(chan struct{})
+	if err := rotator.AddRotator(mgr, newCertRotator(opts, OperatorNamespace(), "karta-webhook-cert-bootstrap", certReady)); err != nil {
 		return fmt.Errorf("add bootstrap cert rotator: %w", err)
 	}
 
-	runCtx, stopMgr := context.WithCancel(ctx)
+	mgrCtx, stopMgr := context.WithCancel(ctx)
 	defer stopMgr()
-
-	startErr := make(chan error, 1)
-	stopped := make(chan struct{})
-	go func() {
-		defer close(stopped)
-		if err := bootstrapMgr.Start(runCtx); err != nil {
-			startErr <- err
-		}
-	}()
+	mgrExited := make(chan error, 1)
+	go func() { mgrExited <- mgr.Start(mgrCtx) }()
 
 	select {
-	case <-ready:
-	case err := <-startErr:
-		return fmt.Errorf("start bootstrap manager: %w", err)
+	case <-certReady:
+	case err := <-mgrExited:
+		if err == nil {
+			err = ctx.Err()
+		}
+		return fmt.Errorf("bootstrap manager exited before cert was ready: %w", err)
 	case <-ctx.Done():
-		return fmt.Errorf("wait for webhook cert: %w", ctx.Err())
+		return fmt.Errorf("timed out waiting for webhook cert: %w", ctx.Err())
 	}
 
+	// Stop the throwaway manager and wait for it to release the health port
+	// before the real manager binds it.
 	stopMgr()
-	select {
-	case err := <-startErr:
-		if err != nil {
-			return fmt.Errorf("stop bootstrap manager: %w", err)
-		}
-	case <-stopped:
-	case <-ctx.Done():
-		return fmt.Errorf("wait for bootstrap shutdown: %w", ctx.Err())
+	if err := <-mgrExited; err != nil {
+		return fmt.Errorf("stop bootstrap manager: %w", err)
 	}
 	return nil
 }

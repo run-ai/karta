@@ -76,7 +76,7 @@ func run() error {
 		"Print the operator version and exit.")
 
 	flag.BoolVar(&enableWebhook, "enable-webhook", false,
-		"Enable the mutating webhook that stamps GVK index labels on Karta creation.")
+		"Enable the Karta admission webhook.")
 	flag.IntVar(&webhookPort, "webhook-port", 9443,
 		"The port the webhook server binds to.")
 	flag.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs",
@@ -108,7 +108,7 @@ func run() error {
 	ctx := ctrl.SetupSignalHandler()
 
 	if enableWebhook && !pkg.ValidCertSource(webhookCertSource) {
-		return fmt.Errorf("invalid --webhook-cert-source %q (want selfSigned, existingSecret, or certManager)", webhookCertSource)
+		return fmt.Errorf("invalid --webhook-cert-source %q (want selfSigned or certManager)", webhookCertSource)
 	}
 
 	certOpts := pkg.CertOptions{
