@@ -20,7 +20,7 @@ imagePullSecrets:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "karta.fullname" . }}-crd-upgrader
+  name: {{ include "karta.fullname" . }}-crd-upgrader-{{ .Release.Namespace }}
   labels:
     {{- include "karta.labels" . | nindent 4 }}
   annotations:
@@ -36,7 +36,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "karta.fullname" . }}-crd-upgrader
+  name: {{ include "karta.fullname" . }}-crd-upgrader-{{ .Release.Namespace }}
   labels:
     {{- include "karta.labels" . | nindent 4 }}
   annotations:
@@ -46,7 +46,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "karta.fullname" . }}-crd-upgrader
+  name: {{ include "karta.fullname" . }}-crd-upgrader-{{ .Release.Namespace }}
 subjects:
   - kind: ServiceAccount
     name: {{ include "karta.fullname" . }}-crd-upgrader
