@@ -42,6 +42,16 @@ spec:
             - --metrics-bind-address=:{{ .Values.ports.metrics }}
             - --health-probe-bind-address=:{{ .Values.ports.health }}
             - --zap-log-level={{ .Values.logLevel }}
+            {{- if .Values.webhook.enabled }}
+            - --enable-webhook
+            - --webhook-port={{ .Values.webhook.port }}
+            - --webhook-cert-dir=/tmp/k8s-webhook-server/serving-certs
+            - --webhook-cert-source={{ .Values.webhook.cert.source }}
+            - --webhook-cert-secret={{ include "karta.webhook.secretName" . }}
+            - --webhook-service-name={{ include "karta.webhook.serviceName" . }}
+            - --mutating-webhook-name={{ include "karta.webhook.configName" . }}
+            - --validating-webhook-name={{ include "karta.webhook.validatingConfigName" . }}
+            {{- end }}
             {{- with .Values.extraArgs }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -50,6 +60,11 @@ spec:
               containerPort: {{ .Values.ports.metrics }}
             - name: health
               containerPort: {{ .Values.ports.health }}
+            {{- if .Values.webhook.enabled }}
+            - name: webhook
+              containerPort: {{ .Values.webhook.port }}
+              protocol: TCP
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -66,6 +81,23 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- if .Values.webhook.enabled }}
+          volumeMounts:
+            - name: webhook-certs
+              mountPath: /tmp/k8s-webhook-server/serving-certs
+              readOnly: true
+          {{- end }}
+      {{- if .Values.webhook.enabled }}
+      volumes:
+        - name: webhook-certs
+          secret:
+            {{- if eq .Values.webhook.cert.source "existingSecret" }}
+            secretName: {{ required "webhook.cert.existingSecret.name is required when webhook.cert.source=existingSecret" .Values.webhook.cert.existingSecret.name }}
+            {{- else }}
+            secretName: {{ include "karta.webhook.secretName" . }}
+            {{- end }}
+            optional: true
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

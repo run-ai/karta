@@ -82,6 +82,12 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.MapCRDToKartaEvent),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
+		// Re-evaluate GVK ownership when a sibling Karta changes, so a duplicate
+		// recovers once the owner is removed.
+		Watches(
+			&kartav1alpha1.Karta{},
+			handler.EnqueueRequestsFromMapFunc(r.MapKartaToSiblings),
+		).
 		Complete(r)
 }
 
@@ -120,10 +126,55 @@ func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *k
 	if err := r.checkCRDExists(ctx, logger, karta); err != nil {
 		return err
 	}
+	if err := r.ensureLabels(ctx, logger, karta); err != nil {
+		return err
+	}
+
+	// Uniqueness backstop (issue #198): the always-on guarantee behind the webhook.
+	// A newer duplicate of a GVK is marked not ready rather than deleted.
+	if owner := r.gvkOwnerConflict(ctx, karta); owner != "" {
+		msg := fmt.Sprintf("another Karta already owns this GVK: %q", owner)
+		logger.Info("Karta duplicates an existing GVK owner", "owner", owner)
+		r.recorder.Eventf(karta, nil, corev1.EventTypeWarning, ReasonDuplicateGVK, "Reconciling", "%s", msg)
+		setReadyDuplicate(&karta.Status, karta.Generation, msg)
+		return nil
+	}
+
 	ready := setReady(&karta.Status, karta.Generation)
 	logger.V(1).Info("Derived Ready condition", "ready", ready)
-	err := r.ensureLabels(ctx, logger, karta)
-	return err
+	return nil
+}
+
+// gvkOwnerConflict returns the name of an older Karta that owns this Karta's root
+// GVK, or "" when this Karta is the owner. The owner is deterministic (oldest
+// CreationTimestamp, name as tiebreak) so every reconcile agrees without coordination.
+func (r *Reconciler) gvkOwnerConflict(ctx context.Context, karta *kartav1alpha1.Karta) string {
+	gvk := rootGVK(karta)
+	if gvk == nil {
+		return ""
+	}
+
+	kartas := &kartav1alpha1.KartaList{}
+	if err := r.List(ctx, kartas); err != nil {
+		return "" // transient; re-evaluated on the next reconcile
+	}
+
+	owner := karta
+	for i := range kartas.Items {
+		other := &kartas.Items[i]
+		og := rootGVK(other)
+		if og == nil || *og != *gvk {
+			continue
+		}
+		if other.CreationTimestamp.Before(&owner.CreationTimestamp) ||
+			(other.CreationTimestamp.Equal(&owner.CreationTimestamp) && other.Name < owner.Name) {
+			owner = other
+		}
+	}
+	if owner.Name == karta.Name {
+		return ""
+	}
+	return owner.Name
 }
 
 // validateKarta runs the Karta spec validator and writes the Validated condition.
@@ -170,15 +221,9 @@ func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, kar
 // run.ai/karta-version, run.ai/karta-kind) onto the Karta metadata so that
 // consumers can locate a Karta by GVK via a label-selector List.
 func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
-	gvk := rootGVK(karta)
-	if gvk == nil {
+	desired := desiredRootLabels(karta)
+	if desired == nil {
 		return nil
-	}
-
-	desired := map[string]string{
-		kartav1alpha1.LabelRootGroup:   gvk.Group,
-		kartav1alpha1.LabelRootVersion: gvk.Version,
-		kartav1alpha1.LabelRootKind:    gvk.Kind,
 	}
 
 	if labelsMatch(karta.Labels, desired) {
@@ -198,8 +243,24 @@ func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta
 	}
 
 	logger.V(1).Info("Stamped GVK index labels",
-		"group", gvk.Group, "version", gvk.Version, "kind", gvk.Kind)
+		"group", desired[kartav1alpha1.LabelRootGroup],
+		"version", desired[kartav1alpha1.LabelRootVersion],
+		"kind", desired[kartav1alpha1.LabelRootKind])
 	return nil
+}
+
+// desiredRootLabels returns the GVK index labels for a Karta, or nil when it has
+// no root kind. Shared by the reconciler and the webhook so both stamp the same labels.
+func desiredRootLabels(karta *kartav1alpha1.Karta) map[string]string {
+	gvk := rootGVK(karta)
+	if gvk == nil {
+		return nil
+	}
+	return map[string]string{
+		kartav1alpha1.LabelRootGroup:   gvk.Group,
+		kartav1alpha1.LabelRootVersion: gvk.Version,
+		kartav1alpha1.LabelRootKind:    gvk.Kind,
+	}
 }
 
 // labelsMatch returns true when current already contains all desired key/value pairs.

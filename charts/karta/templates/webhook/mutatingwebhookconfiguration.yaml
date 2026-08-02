@@ -1,0 +1,34 @@
+{{- if and .Values.operator.enabled .Values.webhook.enabled -}}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "karta.webhook.configName" . }}
+  {{- if eq .Values.webhook.cert.source "certManager" }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "karta.webhook.secretName" . }}
+  {{- end }}
+  labels:
+    {{- include "karta.labels" . | nindent 4 }}
+webhooks:
+  - name: mkarta.run.ai
+    admissionReviewVersions: ["v1"]
+    # Ignore so a disabled or broken webhook never blocks Karta creation.
+    failurePolicy: Ignore
+    sideEffects: None
+    matchPolicy: Equivalent
+    rules:
+      - apiGroups: ["run.ai"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE"]
+        resources: ["kartas"]
+        scope: "*"
+    clientConfig:
+      service:
+        name: {{ include "karta.webhook.serviceName" . }}
+        namespace: {{ .Release.Namespace }}
+        path: /mutate-run-ai-v1alpha1-karta
+        port: 443
+      {{- if eq .Values.webhook.cert.source "existingSecret" }}
+      caBundle: {{ required "webhook.cert.existingSecret.caBundle is required when webhook.cert.source=existingSecret" .Values.webhook.cert.existingSecret.caBundle }}
+      {{- end }}
+{{- end -}}

@@ -7,14 +7,18 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/run-ai/karta/operator/pkg"
 	"github.com/run-ai/karta/operator/pkg/version"
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -24,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 var scheme = runtime.NewScheme()
@@ -31,6 +36,10 @@ var scheme = runtime.NewScheme()
 func init() {
 	utilruntime.Must(kartav1alpha1.AddToScheme(scheme))
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
+	// The cert rotator reads Secrets and patches webhook configs, so both kinds
+	// must be in the scheme.
+	utilruntime.Must(corev1.AddToScheme(scheme))
+	utilruntime.Must(admissionregistrationv1.AddToScheme(scheme))
 }
 
 func main() {
@@ -47,6 +56,15 @@ func run() error {
 		enableLeaderElection bool
 		leaderElectionID     string
 		printVersion         bool
+
+		enableWebhook         bool
+		webhookPort           int
+		webhookCertDir        string
+		webhookCertSource     string
+		webhookCertSecret     string
+		webhookServiceName    string
+		mutatingWebhookName   string
+		validatingWebhookName string
 	)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080",
@@ -60,6 +78,23 @@ func run() error {
 	flag.BoolVar(&printVersion, "version", false,
 		"Print the operator version and exit.")
 
+	flag.BoolVar(&enableWebhook, "enable-webhook", false,
+		"Enable the mutating webhook that stamps GVK index labels on Karta creation.")
+	flag.IntVar(&webhookPort, "webhook-port", 9443,
+		"The port the webhook server binds to.")
+	flag.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs",
+		"Directory the webhook serving cert is read from.")
+	flag.StringVar(&webhookCertSource, "webhook-cert-source", pkg.CertSourceSelfSigned,
+		"Webhook cert source: selfSigned (operator self-signs and rotates) or existingSecret (bring your own).")
+	flag.StringVar(&webhookCertSecret, "webhook-cert-secret", "karta-webhook-cert",
+		"Name of the Secret holding the webhook serving cert in selfSigned mode.")
+	flag.StringVar(&webhookServiceName, "webhook-service-name", "karta-operator-webhook",
+		"Name of the webhook Service, used as the serving cert SAN.")
+	flag.StringVar(&mutatingWebhookName, "mutating-webhook-name", "karta-operator-mutating",
+		"Name of the MutatingWebhookConfiguration whose caBundle is patched in selfSigned mode.")
+	flag.StringVar(&validatingWebhookName, "validating-webhook-name", "karta-operator-validating",
+		"Name of the ValidatingWebhookConfiguration whose caBundle is patched in selfSigned mode.")
+
 	zapOpts := zap.Options{Development: false}
 	zapOpts.BindFlags(flag.CommandLine)
 	flag.Parse()
@@ -72,7 +107,29 @@ func run() error {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOpts)))
 	logger := ctrl.Log.WithName("setup")
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	kubeConfig := ctrl.GetConfigOrDie()
+	ctx := ctrl.SetupSignalHandler()
+
+	if enableWebhook && !pkg.ValidCertSource(webhookCertSource) {
+		return fmt.Errorf("invalid --webhook-cert-source %q (want selfSigned, existingSecret, or certManager)", webhookCertSource)
+	}
+
+	certOpts := pkg.CertOptions{
+		CertDir:               webhookCertDir,
+		SecretName:            webhookCertSecret,
+		ServiceName:           webhookServiceName,
+		MutatingWebhookName:   mutatingWebhookName,
+		ValidatingWebhookName: validatingWebhookName,
+	}
+
+	// selfSigned: generate the cert before the manager starts so the webhook can serve TLS.
+	if enableWebhook && webhookCertSource == pkg.CertSourceSelfSigned {
+		if err := pkg.BootstrapCerts(ctx, kubeConfig, certOpts, probeAddr); err != nil {
+			return fmt.Errorf("bootstrap webhook certs: %w", err)
+		}
+	}
+
+	options := ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: probeAddr,
@@ -85,24 +142,59 @@ func run() error {
 				},
 			},
 		},
-	})
+	}
+	if enableWebhook {
+		options.WebhookServer = webhook.NewServer(webhook.Options{
+			Port:    webhookPort,
+			CertDir: webhookCertDir,
+		})
+	}
+
+	mgr, err := ctrl.NewManager(kubeConfig, options)
 	if err != nil {
 		return fmt.Errorf("create manager: %w", err)
+	}
+
+	certsReady := make(chan struct{})
+	if enableWebhook && webhookCertSource == pkg.CertSourceSelfSigned {
+		if err := pkg.ManageCerts(mgr, certOpts, certsReady); err != nil {
+			return fmt.Errorf("setup webhook cert rotation: %w", err)
+		}
+	} else {
+		close(certsReady)
 	}
 
 	if err = pkg.NewReconciler(mgr.GetClient(), mgr.GetEventRecorder(pkg.ControllerName)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup karta reconciler: %w", err)
 	}
 
+	if enableWebhook {
+		if err = pkg.SetupWebhookWithManager(mgr); err != nil {
+			return fmt.Errorf("setup karta webhook: %w", err)
+		}
+	}
+
 	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		return fmt.Errorf("register healthz: %w", err)
 	}
-	if err = mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	// With the webhook on, stay not-ready until the certs and webhook server are up.
+	readyzCheck := healthz.Ping
+	if enableWebhook {
+		readyzCheck = func(req *http.Request) error {
+			select {
+			case <-certsReady:
+				return mgr.GetWebhookServer().StartedChecker()(req)
+			default:
+				return errors.New("webhook certificates are not ready")
+			}
+		}
+	}
+	if err = mgr.AddReadyzCheck("readyz", readyzCheck); err != nil {
 		return fmt.Errorf("register readyz: %w", err)
 	}
 
 	logger.Info("Starting Karta operator manager", "version", version.Version)
-	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err = mgr.Start(ctx); err != nil {
 		return fmt.Errorf("manager exited: %w", err)
 	}
 	return nil

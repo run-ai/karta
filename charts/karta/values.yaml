@@ -41,6 +41,20 @@ ports:
   metrics: 8080
   health: 8081
 
+# Admission webhook: stamps GVK labels (issue #99) and enforces one Karta per GVK
+# (issue #198). Safe to disable; the reconciler still stamps labels and flags dups.
+webhook:
+  enabled: true
+  port: 9443
+  cert:
+    # selfSigned (operator self-signs + rotates) | certManager | existingSecret (BYO).
+    source: selfSigned
+    existingSecret:
+      name: ""       # Secret with tls.crt/tls.key; required when source=existingSecret.
+      caBundle: ""   # base64 PEM CA bundle; required when source=existingSecret.
+    certManager:
+      issuerRef: {}  # your Issuer/ClusterIssuer; empty = chart makes a self-signed one.
+
 logLevel: info
 
 # Extra flags appended after the chart's default args. Use this to add flags
