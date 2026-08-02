@@ -71,6 +71,14 @@ var _ = Describe("KartaLabeler.Default", func() {
 	})
 })
 
+var _ = Describe("ResolveNamespace", func() {
+	It("prefers the explicit override and trims it", func() {
+		ns, err := ResolveNamespace("  team-x  ")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ns).To(Equal("team-x"))
+	})
+})
+
 var _ = Describe("KartaValidator", func() {
 	var validator *KartaValidator
 	ctx := context.Background()

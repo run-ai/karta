@@ -56,6 +56,7 @@ func run() error {
 
 		enableWebhook         bool
 		webhookPort           int
+		webhookNamespace      string
 		webhookCertDir        string
 		webhookCertSource     string
 		webhookCertSecret     string
@@ -79,6 +80,8 @@ func run() error {
 		"Enable the Karta admission webhook.")
 	flag.IntVar(&webhookPort, "webhook-port", 9443,
 		"The port the webhook server binds to.")
+	flag.StringVar(&webhookNamespace, "webhook-namespace", "",
+		"Namespace the operator runs in, used for the cert Secret and serving cert SAN. Defaults to the pod's service account namespace.")
 	flag.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs",
 		"Directory the webhook serving cert is read from.")
 	flag.StringVar(&webhookCertSource, "webhook-cert-source", pkg.CertSourceSelfSigned,
@@ -120,6 +123,11 @@ func run() error {
 	}
 
 	if enableWebhook && webhookCertSource == pkg.CertSourceSelfSigned {
+		ns, err := pkg.ResolveNamespace(webhookNamespace)
+		if err != nil {
+			return err
+		}
+		certOpts.Namespace = ns
 		if err := pkg.BootstrapCerts(ctx, kubeConfig, certOpts, probeAddr); err != nil {
 			return fmt.Errorf("bootstrap webhook certs: %w", err)
 		}

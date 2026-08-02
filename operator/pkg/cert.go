@@ -5,6 +5,7 @@ package pkg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -30,12 +31,12 @@ func ValidCertSource(s string) bool {
 }
 
 const (
-	defaultOperatorNamespace = "karta-system"
-	certCAName               = "karta-ca"
-	certCAOrganization       = "karta"
+	certCAName         = "karta-ca"
+	certCAOrganization = "karta"
 )
 
 type CertOptions struct {
+	Namespace             string
 	CertDir               string
 	SecretName            string
 	ServiceName           string
@@ -43,25 +44,32 @@ type CertOptions struct {
 	ValidatingWebhookName string
 }
 
-func OperatorNamespace() string {
+// ResolveNamespace returns the namespace the operator runs in. It prefers the
+// explicit override (the chart passes --webhook-namespace from .Release.Namespace)
+// and falls back to the projected service account namespace. It errors instead of
+// guessing, so a wrong namespace can never silently break the webhook serving cert.
+func ResolveNamespace(override string) (string, error) {
+	if ns := strings.TrimSpace(override); ns != "" {
+		return ns, nil
+	}
 	if data, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
 		if ns := strings.TrimSpace(string(data)); ns != "" {
-			return ns
+			return ns, nil
 		}
 	}
-	return defaultOperatorNamespace
+	return "", errors.New("cannot determine operator namespace; set --webhook-namespace")
 }
 
 // +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=mutatingwebhookconfigurations;validatingwebhookconfigurations,verbs=get;list;watch;update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update
 
-func newCertRotator(opts CertOptions, namespace, controllerName string, ready chan struct{}) *rotator.CertRotator {
+func newCertRotator(opts CertOptions, controllerName string, ready chan struct{}) *rotator.CertRotator {
 	return &rotator.CertRotator{
-		SecretKey:      types.NamespacedName{Namespace: namespace, Name: opts.SecretName},
+		SecretKey:      types.NamespacedName{Namespace: opts.Namespace, Name: opts.SecretName},
 		CertDir:        opts.CertDir,
 		CAName:         certCAName,
 		CAOrganization: certCAOrganization,
-		DNSName:        fmt.Sprintf("%s.%s.svc", opts.ServiceName, namespace),
+		DNSName:        fmt.Sprintf("%s.%s.svc", opts.ServiceName, opts.Namespace),
 		IsReady:        ready,
 		ControllerName: controllerName,
 		Webhooks: []rotator.WebhookInfo{
@@ -95,7 +103,7 @@ func BootstrapCerts(ctx context.Context, kubeConfig *rest.Config, opts CertOptio
 	}
 
 	certReady := make(chan struct{})
-	if err := rotator.AddRotator(mgr, newCertRotator(opts, OperatorNamespace(), "karta-webhook-cert-bootstrap", certReady)); err != nil {
+	if err := rotator.AddRotator(mgr, newCertRotator(opts, "karta-webhook-cert-bootstrap", certReady)); err != nil {
 		return fmt.Errorf("add bootstrap cert rotator: %w", err)
 	}
 
@@ -126,5 +134,5 @@ func BootstrapCerts(ctx context.Context, kubeConfig *rest.Config, opts CertOptio
 
 func ManageCerts(mgr ctrl.Manager, opts CertOptions) error {
 	ready := make(chan struct{})
-	return rotator.AddRotator(mgr, newCertRotator(opts, OperatorNamespace(), "karta-webhook-cert", ready))
+	return rotator.AddRotator(mgr, newCertRotator(opts, "karta-webhook-cert", ready))
 }
