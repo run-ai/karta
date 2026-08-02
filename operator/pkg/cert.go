@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	rotator "github.com/open-policy-agent/cert-controller/pkg/rotator"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,18 +18,15 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
+const bootstrapTimeout = 2 * time.Minute
+
 const (
 	CertSourceSelfSigned  = "selfSigned"
 	CertSourceCertManager = "certManager"
 )
 
 func ValidCertSource(s string) bool {
-	switch s {
-	case CertSourceSelfSigned, CertSourceCertManager:
-		return true
-	default:
-		return false
-	}
+	return s == CertSourceSelfSigned || s == CertSourceCertManager
 }
 
 const (
@@ -74,7 +72,9 @@ func newCertRotator(opts CertOptions, namespace, controllerName string, ready ch
 }
 
 func BootstrapCerts(ctx context.Context, kubeConfig *rest.Config, opts CertOptions, healthAddr string) error {
-	namespace := OperatorNamespace()
+	ctx, cancel := context.WithTimeout(ctx, bootstrapTimeout)
+	defer cancel()
+
 	bootstrapMgr, err := ctrl.NewManager(kubeConfig, ctrl.Options{
 		Metrics:                metricsserver.Options{BindAddress: "0"},
 		HealthProbeBindAddress: healthAddr,
@@ -89,18 +89,18 @@ func BootstrapCerts(ctx context.Context, kubeConfig *rest.Config, opts CertOptio
 	}
 
 	ready := make(chan struct{})
-	if err := rotator.AddRotator(bootstrapMgr, newCertRotator(opts, namespace, "karta-webhook-cert-bootstrap", ready)); err != nil {
+	if err := rotator.AddRotator(bootstrapMgr, newCertRotator(opts, OperatorNamespace(), "karta-webhook-cert-bootstrap", ready)); err != nil {
 		return fmt.Errorf("add bootstrap cert rotator: %w", err)
 	}
 
-	bootstrapCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	runCtx, stopMgr := context.WithCancel(ctx)
+	defer stopMgr()
 
 	startErr := make(chan error, 1)
 	stopped := make(chan struct{})
 	go func() {
 		defer close(stopped)
-		if err := bootstrapMgr.Start(bootstrapCtx); err != nil {
+		if err := bootstrapMgr.Start(runCtx); err != nil {
 			startErr <- err
 		}
 	}()
@@ -110,10 +110,10 @@ func BootstrapCerts(ctx context.Context, kubeConfig *rest.Config, opts CertOptio
 	case err := <-startErr:
 		return fmt.Errorf("start bootstrap manager: %w", err)
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("wait for webhook cert: %w", ctx.Err())
 	}
 
-	cancel()
+	stopMgr()
 	select {
 	case err := <-startErr:
 		if err != nil {
@@ -121,16 +121,12 @@ func BootstrapCerts(ctx context.Context, kubeConfig *rest.Config, opts CertOptio
 		}
 	case <-stopped:
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("wait for bootstrap shutdown: %w", ctx.Err())
 	}
 	return nil
 }
 
-func ManageCerts(mgr ctrl.Manager, opts CertOptions, setupFinish chan struct{}) error {
+func ManageCerts(mgr ctrl.Manager, opts CertOptions) error {
 	ready := make(chan struct{})
-	if err := rotator.AddRotator(mgr, newCertRotator(opts, OperatorNamespace(), "karta-webhook-cert", ready)); err != nil {
-		return err
-	}
-	close(setupFinish)
-	return nil
+	return rotator.AddRotator(mgr, newCertRotator(opts, OperatorNamespace(), "karta-webhook-cert", ready))
 }

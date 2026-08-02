@@ -7,7 +7,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -152,13 +151,10 @@ func run() error {
 		return fmt.Errorf("create manager: %w", err)
 	}
 
-	certsReady := make(chan struct{})
 	if enableWebhook && webhookCertSource == pkg.CertSourceSelfSigned {
-		if err := pkg.ManageCerts(mgr, certOpts, certsReady); err != nil {
+		if err := pkg.ManageCerts(mgr, certOpts); err != nil {
 			return fmt.Errorf("setup webhook cert rotation: %w", err)
 		}
-	} else {
-		close(certsReady)
 	}
 
 	if err = pkg.NewReconciler(mgr.GetClient(), mgr.GetEventRecorder(pkg.ControllerName)).SetupWithManager(mgr); err != nil {
@@ -176,7 +172,7 @@ func run() error {
 	}
 	readyzCheck := healthz.Ping
 	if enableWebhook {
-		readyzCheck = webhookReadyz(mgr, certsReady)
+		readyzCheck = webhookReadyz(mgr)
 	}
 	if err = mgr.AddReadyzCheck("readyz", readyzCheck); err != nil {
 		return fmt.Errorf("register readyz: %w", err)
@@ -189,13 +185,8 @@ func run() error {
 	return nil
 }
 
-func webhookReadyz(mgr ctrl.Manager, certsReady <-chan struct{}) healthz.Checker {
+func webhookReadyz(mgr ctrl.Manager) healthz.Checker {
 	return func(req *http.Request) error {
-		select {
-		case <-certsReady:
-			return mgr.GetWebhookServer().StartedChecker()(req)
-		default:
-			return errors.New("webhook not ready")
-		}
+		return mgr.GetWebhookServer().StartedChecker()(req)
 	}
 }
