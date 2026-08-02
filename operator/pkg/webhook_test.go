@@ -11,10 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func kartaWithRootKind(gvk *kartav1alpha1.GroupVersionKind) *kartav1alpha1.Karta {
@@ -36,13 +32,6 @@ func namedKarta(name string, gvk *kartav1alpha1.GroupVersionKind) *kartav1alpha1
 	k.Name = name
 	k.Spec.StructureDefinition.RootComponent.StatusDefinition = &kartav1alpha1.StatusDefinition{}
 	return k
-}
-
-// fakeReader returns a client.Reader seeded with the given Kartas.
-func fakeReader(objs ...client.Object) client.Reader {
-	s := runtime.NewScheme()
-	utilruntime.Must(kartav1alpha1.AddToScheme(s))
-	return fake.NewClientBuilder().WithScheme(s).WithObjects(objs...).Build()
 }
 
 var _ = Describe("KartaLabeler.Default", func() {
@@ -87,10 +76,9 @@ var _ = Describe("KartaValidator", func() {
 	ctx := context.Background()
 
 	rayGVK := &kartav1alpha1.GroupVersionKind{Group: "ray.io", Version: "v1", Kind: "RayCluster"}
-	pytorchGVK := &kartav1alpha1.GroupVersionKind{Group: "kubeflow.org", Version: "v1", Kind: "PyTorchJob"}
 
 	BeforeEach(func() {
-		validator = &KartaValidator{reader: fakeReader()}
+		validator = &KartaValidator{}
 	})
 
 	validKarta := func() *kartav1alpha1.Karta { return namedKarta("valid", rayGVK) }
@@ -112,25 +100,6 @@ var _ = Describe("KartaValidator", func() {
 
 	It("allows delete", func() {
 		_, err := validator.ValidateDelete(ctx, kartaWithRootKind(nil))
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	It("rejects a Karta whose root GVK already belongs to another Karta", func() {
-		validator = &KartaValidator{reader: fakeReader(namedKarta("first", rayGVK))}
-		_, err := validator.ValidateCreate(ctx, namedKarta("second", rayGVK))
-		Expect(err).To(MatchError(ContainSubstring(`a Karta already exists for GVK ray.io/v1 RayCluster: "first"`)))
-	})
-
-	It("accepts a Karta whose root GVK is not used by any other Karta", func() {
-		validator = &KartaValidator{reader: fakeReader(namedKarta("first", rayGVK))}
-		_, err := validator.ValidateCreate(ctx, namedKarta("second", pytorchGVK))
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	It("allows updating a Karta without treating itself as a conflict", func() {
-		existing := namedKarta("first", rayGVK)
-		validator = &KartaValidator{reader: fakeReader(existing)}
-		_, err := validator.ValidateUpdate(ctx, existing, namedKarta("first", rayGVK))
 		Expect(err).NotTo(HaveOccurred())
 	})
 })

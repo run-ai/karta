@@ -82,10 +82,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.MapCRDToKartaEvent),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
-		Watches(
-			&kartav1alpha1.Karta{},
-			handler.EnqueueRequestsFromMapFunc(r.MapKartaToSiblings),
-		).
 		Complete(r)
 }
 
@@ -128,46 +124,9 @@ func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *k
 		return err
 	}
 
-	if owner := r.gvkOwnerConflict(ctx, karta); owner != "" {
-		msg := fmt.Sprintf("another Karta already owns this GVK: %q", owner)
-		logger.Info("Karta duplicates an existing GVK owner", "owner", owner)
-		r.recorder.Eventf(karta, nil, corev1.EventTypeWarning, ReasonDuplicateGVK, "Reconciling", "%s", msg)
-		setReadyDuplicate(&karta.Status, karta.Generation, msg)
-		return nil
-	}
-
 	ready := setReady(&karta.Status, karta.Generation)
 	logger.V(1).Info("Derived Ready condition", "ready", ready)
 	return nil
-}
-
-func (r *Reconciler) gvkOwnerConflict(ctx context.Context, karta *kartav1alpha1.Karta) string {
-	gvk := rootGVK(karta)
-	if gvk == nil {
-		return ""
-	}
-
-	kartas := &kartav1alpha1.KartaList{}
-	if err := r.List(ctx, kartas); err != nil {
-		return ""
-	}
-
-	owner := karta
-	for i := range kartas.Items {
-		other := &kartas.Items[i]
-		og := rootGVK(other)
-		if og == nil || *og != *gvk {
-			continue
-		}
-		if other.CreationTimestamp.Before(&owner.CreationTimestamp) ||
-			(other.CreationTimestamp.Equal(&owner.CreationTimestamp) && other.Name < owner.Name) {
-			owner = other
-		}
-	}
-	if owner.Name == karta.Name {
-		return ""
-	}
-	return owner.Name
 }
 
 // validateKarta runs the Karta spec validator and writes the Validated condition.

@@ -18,7 +18,6 @@ const (
 	ReasonReady               = "Ready"
 	ReasonNotReady            = "NotReady"
 	ReasonPending             = "Pending"
-	ReasonDuplicateGVK        = "DuplicateGVK"
 )
 
 const (
@@ -79,16 +78,6 @@ func setReady(status *kartav1alpha1.KartaStatus, generation int64) metav1.Condit
 		ObservedGeneration: generation,
 	})
 	return readyStatus
-}
-
-func setReadyDuplicate(status *kartav1alpha1.KartaStatus, generation int64, msg string) {
-	apimeta.SetStatusCondition(&status.Conditions, metav1.Condition{
-		Type:               string(kartav1alpha1.ConditionReady),
-		Status:             metav1.ConditionFalse,
-		Reason:             ReasonDuplicateGVK,
-		Message:            msg,
-		ObservedGeneration: generation,
-	})
 }
 
 func setDefaultConditions(status *kartav1alpha1.KartaStatus, generation int64) {
