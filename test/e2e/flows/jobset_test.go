@@ -11,7 +11,7 @@ import (
 	"github.com/run-ai/karta/test/e2e/recorder"
 )
 
-var _ = Describe("JobSet", Label("jobset"), func() {
+var _ = Describe("JobSet", Ordered, Label("jobset"), func() {
 	var rec *recorder.Recorder
 
 	BeforeAll(func(ctx SpecContext) {

@@ -1,0 +1,336 @@
+flow: scaled
+kartaFile: docs/catalog/apps-deployment-v1.yaml
+kartaName: apps-deployment-v1
+operator: deployment
+schemaVersion: 1
+steps:
+- cr:
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      annotations:
+        deployment.kubernetes.io/revision: "1"
+      creationTimestamp: "2026-08-03T19:45:07Z"
+      generation: 1
+      name: karta-e2e-deploy
+      namespace: test-wmqms
+      uid: e192ab89-f3a5-4a05-afd7-6151e3cadac7
+    spec:
+      progressDeadlineSeconds: 600
+      replicas: 1
+      revisionHistoryLimit: 10
+      selector:
+        matchLabels:
+          app: karta-e2e-deploy
+      strategy:
+        rollingUpdate:
+          maxSurge: 25%
+          maxUnavailable: 25%
+        type: RollingUpdate
+      template:
+        metadata:
+          labels:
+            app: karta-e2e-deploy
+        spec:
+          containers:
+          - command:
+            - sh
+            - -c
+            - sleep infinity
+            image: busybox:1.36
+            imagePullPolicy: IfNotPresent
+            name: worker
+            resources:
+              requests:
+                cpu: 20m
+                memory: 32Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: Always
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+    status:
+      conditions:
+      - lastTransitionTime: "2026-08-03T19:45:07Z"
+        lastUpdateTime: "2026-08-03T19:45:07Z"
+        message: Created new replica set "karta-e2e-deploy-fd98c5489"
+        reason: NewReplicaSetCreated
+        status: "True"
+        type: Progressing
+  state: Initializing
+- patch:
+    status:
+      conditions:
+      - lastTransitionTime: "2026-08-03T19:45:07Z"
+        lastUpdateTime: "2026-08-03T19:45:07Z"
+        message: Created new replica set "karta-e2e-deploy-fd98c5489"
+        reason: NewReplicaSetCreated
+        status: "True"
+        type: Progressing
+      - lastTransitionTime: "2026-08-03T19:45:07Z"
+        lastUpdateTime: "2026-08-03T19:45:07Z"
+        message: Deployment does not have minimum availability.
+        reason: MinimumReplicasUnavailable
+        status: "False"
+        type: Available
+      observedGeneration: 1
+      unavailableReplicas: 1
+  state: Initializing
+- patch:
+    status:
+      conditions:
+      - lastTransitionTime: "2026-08-03T19:45:07Z"
+        lastUpdateTime: "2026-08-03T19:45:07Z"
+        message: Deployment does not have minimum availability.
+        reason: MinimumReplicasUnavailable
+        status: "False"
+        type: Available
+      - lastTransitionTime: "2026-08-03T19:45:07Z"
+        lastUpdateTime: "2026-08-03T19:45:07Z"
+        message: ReplicaSet "karta-e2e-deploy-fd98c5489" is progressing.
+        reason: ReplicaSetUpdated
+        status: "True"
+        type: Progressing
+      replicas: 1
+      updatedReplicas: 1
+  state: Initializing
+- action:
+    request:
+      spec:
+        replicas: 3
+    response:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        annotations:
+          deployment.kubernetes.io/revision: "1"
+        creationTimestamp: "2026-08-03T19:45:07Z"
+        generation: 2
+        name: karta-e2e-deploy
+        namespace: test-wmqms
+        uid: e192ab89-f3a5-4a05-afd7-6151e3cadac7
+      spec:
+        progressDeadlineSeconds: 600
+        replicas: 3
+        revisionHistoryLimit: 10
+        selector:
+          matchLabels:
+            app: karta-e2e-deploy
+        strategy:
+          rollingUpdate:
+            maxSurge: 25%
+            maxUnavailable: 25%
+          type: RollingUpdate
+        template:
+          metadata:
+            labels:
+              app: karta-e2e-deploy
+          spec:
+            containers:
+            - command:
+              - sh
+              - -c
+              - sleep infinity
+              image: busybox:1.36
+              imagePullPolicy: IfNotPresent
+              name: worker
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 32Mi
+              terminationMessagePath: /dev/termination-log
+              terminationMessagePolicy: File
+            dnsPolicy: ClusterFirst
+            restartPolicy: Always
+            schedulerName: default-scheduler
+            securityContext: {}
+            terminationGracePeriodSeconds: 30
+      status:
+        availableReplicas: 1
+        conditions:
+        - lastTransitionTime: "2026-08-03T19:45:08Z"
+          lastUpdateTime: "2026-08-03T19:45:08Z"
+          message: Deployment has minimum availability.
+          reason: MinimumReplicasAvailable
+          status: "True"
+          type: Available
+        - lastTransitionTime: "2026-08-03T19:45:07Z"
+          lastUpdateTime: "2026-08-03T19:45:08Z"
+          message: ReplicaSet "karta-e2e-deploy-fd98c5489" has successfully progressed.
+          reason: NewReplicaSetAvailable
+          status: "True"
+          type: Progressing
+        observedGeneration: 1
+        readyReplicas: 1
+        replicas: 1
+        updatedReplicas: 1
+    type: Scale
+  patch:
+    status:
+      availableReplicas: 1
+      conditions:
+      - lastTransitionTime: "2026-08-03T19:45:08Z"
+        lastUpdateTime: "2026-08-03T19:45:08Z"
+        message: Deployment has minimum availability.
+        reason: MinimumReplicasAvailable
+        status: "True"
+        type: Available
+      - lastTransitionTime: "2026-08-03T19:45:07Z"
+        lastUpdateTime: "2026-08-03T19:45:08Z"
+        message: ReplicaSet "karta-e2e-deploy-fd98c5489" has successfully progressed.
+        reason: NewReplicaSetAvailable
+        status: "True"
+        type: Progressing
+      readyReplicas: 1
+      unavailableReplicas: null
+  state: Running
+- patch:
+    metadata:
+      generation: 2
+    spec:
+      replicas: 3
+  state: Running
+- patch:
+    status:
+      conditions:
+      - lastTransitionTime: "2026-08-03T19:45:07Z"
+        lastUpdateTime: "2026-08-03T19:45:08Z"
+        message: ReplicaSet "karta-e2e-deploy-fd98c5489" has successfully progressed.
+        reason: NewReplicaSetAvailable
+        status: "True"
+        type: Progressing
+      - lastTransitionTime: "2026-08-03T19:45:08Z"
+        lastUpdateTime: "2026-08-03T19:45:08Z"
+        message: Deployment does not have minimum availability.
+        reason: MinimumReplicasUnavailable
+        status: "False"
+        type: Available
+      observedGeneration: 2
+  state: Running
+- patch:
+    status:
+      unavailableReplicas: 2
+  state: Running
+- patch:
+    status:
+      replicas: 3
+      updatedReplicas: 3
+  state: Running
+- patch:
+    status:
+      availableReplicas: 2
+      readyReplicas: 2
+      unavailableReplicas: 1
+  state: Running
+- action:
+    request:
+      spec:
+        replicas: 1
+    response:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        annotations:
+          deployment.kubernetes.io/revision: "1"
+        creationTimestamp: "2026-08-03T19:45:07Z"
+        generation: 3
+        name: karta-e2e-deploy
+        namespace: test-wmqms
+        uid: e192ab89-f3a5-4a05-afd7-6151e3cadac7
+      spec:
+        progressDeadlineSeconds: 600
+        replicas: 1
+        revisionHistoryLimit: 10
+        selector:
+          matchLabels:
+            app: karta-e2e-deploy
+        strategy:
+          rollingUpdate:
+            maxSurge: 25%
+            maxUnavailable: 25%
+          type: RollingUpdate
+        template:
+          metadata:
+            labels:
+              app: karta-e2e-deploy
+          spec:
+            containers:
+            - command:
+              - sh
+              - -c
+              - sleep infinity
+              image: busybox:1.36
+              imagePullPolicy: IfNotPresent
+              name: worker
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 32Mi
+              terminationMessagePath: /dev/termination-log
+              terminationMessagePolicy: File
+            dnsPolicy: ClusterFirst
+            restartPolicy: Always
+            schedulerName: default-scheduler
+            securityContext: {}
+            terminationGracePeriodSeconds: 30
+      status:
+        availableReplicas: 3
+        conditions:
+        - lastTransitionTime: "2026-08-03T19:45:07Z"
+          lastUpdateTime: "2026-08-03T19:45:08Z"
+          message: ReplicaSet "karta-e2e-deploy-fd98c5489" has successfully progressed.
+          reason: NewReplicaSetAvailable
+          status: "True"
+          type: Progressing
+        - lastTransitionTime: "2026-08-03T19:45:10Z"
+          lastUpdateTime: "2026-08-03T19:45:10Z"
+          message: Deployment has minimum availability.
+          reason: MinimumReplicasAvailable
+          status: "True"
+          type: Available
+        observedGeneration: 2
+        readyReplicas: 3
+        replicas: 3
+        updatedReplicas: 3
+    type: Scale
+  patch:
+    status:
+      availableReplicas: 3
+      conditions:
+      - lastTransitionTime: "2026-08-03T19:45:07Z"
+        lastUpdateTime: "2026-08-03T19:45:08Z"
+        message: ReplicaSet "karta-e2e-deploy-fd98c5489" has successfully progressed.
+        reason: NewReplicaSetAvailable
+        status: "True"
+        type: Progressing
+      - lastTransitionTime: "2026-08-03T19:45:10Z"
+        lastUpdateTime: "2026-08-03T19:45:10Z"
+        message: Deployment has minimum availability.
+        reason: MinimumReplicasAvailable
+        status: "True"
+        type: Available
+      readyReplicas: 3
+      unavailableReplicas: null
+  state: Running
+- patch:
+    metadata:
+      generation: 3
+    spec:
+      replicas: 1
+  state: Running
+- patch:
+    status:
+      observedGeneration: 3
+  state: Running
+- patch:
+    status:
+      availableReplicas: 1
+      readyReplicas: 1
+      replicas: 1
+      updatedReplicas: 1
+  state: Running
+succeeded: true
+version: v1.34.0
+want: Running

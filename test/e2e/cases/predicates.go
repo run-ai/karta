@@ -53,6 +53,20 @@ func CondFalse(condType string) StateCheck {
 	}
 }
 
+// CondNotTrue matches when no condition of condType is present with status True (absent or non-True). A
+// just-created Deployment is Progressing with no Available condition yet, still initializing.
+func CondNotTrue(condType string) StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		conds, _, _ := unstructured.NestedSlice(u.Object, "status", "conditions")
+		for _, c := range conds {
+			if m, ok := c.(map[string]any); ok && m["type"] == condType && m["status"] == "True" {
+				return false
+			}
+		}
+		return true
+	}
+}
+
 // CondReason matches when the condition of the given type is True with the given reason. A Deployment is
 // Running only when Progressing is True with reason NewReplicaSetAvailable, so status alone is not enough.
 func CondReason(condType, reason string) StateCheck {
@@ -181,8 +195,9 @@ func ReplicasDegraded() StateCheck {
 	}
 }
 
-// ReplicasInitializing matches a StatefulSet still coming up: spec.replicas > 0 and either nothing ready
-// (readyReplicas == 0) or not all created (updatedReplicas != spec.replicas).
+// ReplicasInitializing matches a StatefulSet still converging: spec.replicas > 0 and either nothing ready
+// (readyReplicas == 0), not all created (updatedReplicas != spec.replicas), or more ready than desired
+// (readyReplicas > spec.replicas, a scale-down still shedding pods).
 func ReplicasInitializing() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		desired, ok, _ := unstructured.NestedInt64(u.Object, "spec", "replicas")
@@ -191,7 +206,7 @@ func ReplicasInitializing() StateCheck {
 		}
 		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
 		updated, _, _ := unstructured.NestedInt64(u.Object, "status", "updatedReplicas")
-		return desired > 0 && (ready == 0 || updated != desired)
+		return desired > 0 && (ready == 0 || ready > desired || updated != desired)
 	}
 }
 
