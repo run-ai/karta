@@ -138,10 +138,8 @@ func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 
 	flowCtx, cancel := context.WithTimeout(ctx, f.rec.timeout)
 	defer cancel()
-	watcher := watchWorkload(flowCtx, obj)
-	defer watcher.Stop()
 
-	rec := f.observe(flowCtx, obj, watcher)
+	rec := f.observe(flowCtx, obj)
 	orderErr := observedOrderErr(f.journey, rec.order, f.want())
 	out := f.write(rec, rec.failure == "" && orderErr == nil)
 
@@ -157,21 +155,49 @@ func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 // stop's action then. It keeps every distinct CR, advancing only once the status settles; plain states
 // between checkpoints are recorded as they pass. On timeout or a closed watch it sets rec.failure, so the
 // run is still recorded.
-func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured, watcher watch.Interface) *recording {
+func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *recording {
 	rec := &recording{}
 	pending := checkpoints(f.journey)
 	done := func(state kartav1alpha1.ResourceStatus) bool {
 		return state == f.want() && len(pending) == 0
 	}
 
+	var lastSeen *unstructured.Unstructured
+	// handle records one observed object and reports whether the flow is complete. It keeps every distinct
+	// CR, advances only once the status settles, and pops the next checkpoint once its state and predicate
+	// hold, firing that checkpoint's action.
+	handle := func(u *unstructured.Unstructured) bool {
+		lastSeen = u
+		state := cases.Classify(u, f.rec.states)
+		if state == "" {
+			// A settled CR we cannot classify is a real gap (a state missing from both the case and
+			// Karta): record it as Undefined so the order check fails and the run is saved for triage,
+			// rather than skipping it silently.
+			state = kartav1alpha1.UndefinedStatus
+		}
+		rec.keep(u, state)
+		if !statusSettled(u) {
+			return false // do not advance a phase on a half-written status
+		}
+		if len(pending) > 0 && state == pending[0].State &&
+			(pending[0].ActionPredicate == nil || pending[0].ActionPredicate(u)) {
+			if pending[0].Action != nil {
+				rec.attachAction(fireAction(ctx, obj, pending[0].Action))
+			}
+			pending = pending[1:]
+		}
+		return done(state)
+	}
+
 	// A workload already at its terminal state when Create returns never fires a watch event (the watch
 	// replays only newer resourceVersions), so take that first snapshot from the create response.
-	if state := cases.Classify(obj, f.rec.states); statusSettled(obj) && done(state) {
-		rec.keep(obj, state)
+	if statusSettled(obj) && done(cases.Classify(obj, f.rec.states)) {
+		handle(obj)
 		return rec
 	}
 
-	var lastSeen *unstructured.Unstructured
+	watcher := watchWorkload(ctx, obj)
+	defer func() { watcher.Stop() }()
 	var lastErr error
 	for {
 		select {
@@ -181,9 +207,37 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured, watc
 			return rec
 		case event, open := <-watcher.ResultChan():
 			if !open {
-				rec.failure = fmt.Sprintf("watch closed before reaching %q; observed %v; last watch error: %v\nlast-seen status:\n%s",
-					f.want(), rec.order, lastErr, dumpStatus(lastSeen))
-				return rec
+				// The RetryWatcher gave up, typically "too old resource version" after the object sat
+				// idle while etcd compacted its history. Re-list for a fresh resourceVersion and resume
+				// rather than failing a slowly-provisioning workload.
+				if ctx.Err() != nil {
+					rec.failure = fmt.Sprintf("watch closed before reaching %q; observed %v; last watch error: %v\nlast-seen status:\n%s",
+						f.want(), rec.order, lastErr, dumpStatus(lastSeen))
+					return rec
+				}
+				watcher.Stop()
+				seed := GVKOnly(obj)
+				// Retry the re-list: a control-plane blip under a heavy operator can return a
+				// transient error (forbidden while the authorizer reloads, server timeout), which
+				// must not abort a multi-minute flow.
+				var gerr error
+				for {
+					if gerr = k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed); gerr == nil {
+						break
+					}
+					select {
+					case <-ctx.Done():
+						rec.failure = fmt.Sprintf("re-list after watch closed kept failing: %v; observed %v", gerr, rec.order)
+						return rec
+					case <-time.After(2 * time.Second):
+					}
+				}
+				obj.SetResourceVersion(seed.GetResourceVersion())
+				if handle(seed) {
+					return rec
+				}
+				watcher = watchWorkload(ctx, obj)
+				continue
 			}
 			if event.Type == watch.Error {
 				lastErr = apierrors.FromObject(event.Object)
@@ -193,27 +247,7 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured, watc
 			if !ok {
 				continue // a bookmark carries no workload object
 			}
-			lastSeen = u
-			state := cases.Classify(u, f.rec.states)
-			if state == "" {
-				// A settled CR we cannot classify is a real gap (a state missing from both the case and
-				// Karta): record it as Undefined so the order check fails and the run is saved for triage,
-				// rather than skipping it silently.
-				state = kartav1alpha1.UndefinedStatus
-			}
-			rec.keep(u, state)
-			if !statusSettled(u) {
-				continue // do not advance a phase on a half-written status
-			}
-			// Pop the next checkpoint once its state and predicate hold, firing its action.
-			if len(pending) > 0 && state == pending[0].State &&
-				(pending[0].ActionPredicate == nil || pending[0].ActionPredicate(u)) {
-				if pending[0].Action != nil {
-					rec.attachAction(fireAction(ctx, obj, pending[0].Action))
-				}
-				pending = pending[1:]
-			}
-			if done(state) {
+			if handle(u) {
 				return rec
 			}
 		}

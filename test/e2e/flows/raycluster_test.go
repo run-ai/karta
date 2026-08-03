@@ -20,12 +20,14 @@ var _ = Describe("RayCluster", Ordered, Label("kuberay", "raycluster"), func() {
 		installKarta(ctx, "../../docs/catalog/ray-io-raycluster-v1.yaml", "ray-io-raycluster-v1")
 		rec = recorder.New("kuberay", "ray-io-raycluster-v1", "../../docs/catalog/ray-io-raycluster-v1.yaml").
 			Timeout(8*time.Minute).
+			State(Initializing, RayInitializing()).
 			State(Running, PhaseEq("ready", "status", "state")).
 			State(Suspended, RaySuspended())
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "cases/testdata/raycluster/running.yaml").Reaches(Running).Run(ctx)
+		_, err := rec.Flow("running", "cases/testdata/raycluster/running.yaml").
+			Reaches(Initializing).Reaches(Running).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
@@ -36,7 +38,7 @@ var _ = Describe("RayCluster", Ordered, Label("kuberay", "raycluster"), func() {
 
 	It("resumed", func(ctx SpecContext) {
 		_, err := rec.Flow("resumed", "cases/testdata/raycluster/resumed.yaml").
-			At(Suspended).Do(Resume()).Reaches(Running).Run(ctx)
+			At(Suspended).Do(Resume()).Maybe(Initializing).Reaches(Running).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })

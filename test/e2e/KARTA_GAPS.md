@@ -216,3 +216,40 @@ Running: {ByConditions: [{Type: "Available", Status: "True"}]}, // + the replica
 
 Karta after: `[Running]`. Startup (`Available=False`) still reads `[Initializing]`
 because the Initializing byExpression requires no `Available=True` condition.
+
+## 8. ray.io/v1 RayCluster: no Initializing state
+
+The RayCluster definition mapped only Running (`.status.state == "ready"`), Failed
+(`"failed"`), and Suspended. It had no Initializing, so a provisioning cluster
+(state empty until the head and worker pods are ready) and the resume window
+(spec.suspend already false while status.state still lags at "suspended") both
+read Undefined.
+
+CR status (provisioning; the resume window is `state: "suspended"` with
+`suspend: false`):
+
+```json
+{"spec": {"suspend": false}, "status": {"conditions": [{"type": "RayClusterProvisioned", "status": "False"}]}}
+```
+
+Karta before: `[Undefined]`.
+
+Added an Initializing matcher for "converging toward ready": not suspended and
+state not yet "ready" or "failed".
+
+```jq
+(.spec.suspend != true) and (.status.state != "ready") and (.status.state != "failed")
+```
+
+Karta after: `[Initializing]`. A ready cluster still reads `[Running]`, a suspended
+one `[Suspended]`.
+
+## Recorder robustness note
+
+RayCluster provisioning takes minutes, and a slowly-changing object sitting idle
+while other operators churn lets etcd compact its resourceVersion. The recorder's
+RetryWatcher then closed with "too old resource version" and failed the flow. The
+watch loop now re-lists for a fresh resourceVersion (retrying transient control
+plane errors) and resumes, so a slow workload no longer fails to record. This is a
+recorder change, not a Karta gap, but it is what let the RayCluster flow observe
+the provisioning states above.
