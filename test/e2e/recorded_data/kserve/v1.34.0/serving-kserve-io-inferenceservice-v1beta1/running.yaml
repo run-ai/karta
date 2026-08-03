@@ -1,0 +1,205 @@
+flow: running
+kartaFile: docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml
+kartaName: serving-kserve-io-inferenceservice-v1beta1
+operator: kserve
+schemaVersion: 1
+steps:
+- cr:
+    apiVersion: serving.kserve.io/v1beta1
+    kind: InferenceService
+    metadata:
+      creationTimestamp: "2026-08-03T22:59:16Z"
+      finalizers:
+      - inferenceservice.finalizers
+      generation: 1
+      name: karta-e2e-kserve
+      namespace: test-rbwn4
+      uid: 7033b18b-542f-45bf-912d-d283170ce1f8
+    spec:
+      predictor:
+        model:
+          modelFormat:
+            name: sklearn
+          name: ""
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          storageUri: gs://kfserving-examples/models/sklearn/1.0/model
+  state: Initializing
+- patch:
+    status:
+      components:
+        predictor: {}
+      conditions:
+      - lastTransitionTime: "2026-08-03T22:59:16Z"
+        reason: PredictorConfigurationReady not ready
+        severity: Info
+        status: Unknown
+        type: LatestDeploymentReady
+      - lastTransitionTime: "2026-08-03T22:59:16Z"
+        reason: PredictorRouteReady not ready
+        severity: Info
+        status: Unknown
+        type: RoutesReady
+      modelStatus:
+        states:
+          activeModelState: ""
+          targetModelState: Pending
+        transitionStatus: InProgress
+  state: Initializing
+- patch:
+    status:
+      components:
+        predictor:
+          latestCreatedRevision: karta-e2e-kserve-predictor-00001
+      conditions:
+      - lastTransitionTime: "2026-08-03T22:59:16Z"
+        reason: PredictorConfigurationReady not ready
+        severity: Info
+        status: Unknown
+        type: LatestDeploymentReady
+      - lastTransitionTime: "2026-08-03T22:59:16Z"
+        severity: Info
+        status: Unknown
+        type: PredictorConfigurationReady
+      - lastTransitionTime: "2026-08-03T22:59:16Z"
+        message: Configuration "karta-e2e-kserve-predictor" is waiting for a Revision
+          to become ready.
+        reason: RevisionMissing
+        status: Unknown
+        type: PredictorReady
+      - lastTransitionTime: "2026-08-03T22:59:16Z"
+        message: Configuration "karta-e2e-kserve-predictor" is waiting for a Revision
+          to become ready.
+        reason: RevisionMissing
+        severity: Info
+        status: Unknown
+        type: PredictorRouteReady
+      - lastTransitionTime: "2026-08-03T22:59:16Z"
+        message: Configuration "karta-e2e-kserve-predictor" is waiting for a Revision
+          to become ready.
+        reason: RevisionMissing
+        status: Unknown
+        type: Ready
+      - lastTransitionTime: "2026-08-03T22:59:16Z"
+        reason: PredictorRouteReady not ready
+        severity: Info
+        status: Unknown
+        type: RoutesReady
+      observedGeneration: 1
+  state: Initializing
+- patch:
+    status:
+      components:
+        predictor:
+          latestReadyRevision: karta-e2e-kserve-predictor-00001
+          latestRolledoutRevision: karta-e2e-kserve-predictor-00001
+          traffic:
+          - latestRevision: true
+            percent: 100
+            revisionName: karta-e2e-kserve-predictor-00001
+      conditions:
+      - lastTransitionTime: "2026-08-03T22:59:40Z"
+        severity: Info
+        status: "True"
+        type: LatestDeploymentReady
+      - lastTransitionTime: "2026-08-03T22:59:40Z"
+        severity: Info
+        status: "True"
+        type: PredictorConfigurationReady
+      - lastTransitionTime: "2026-08-03T22:59:40Z"
+        message: Ingress has not yet been reconciled.
+        reason: IngressNotConfigured
+        status: Unknown
+        type: PredictorReady
+      - lastTransitionTime: "2026-08-03T22:59:40Z"
+        message: Ingress has not yet been reconciled.
+        reason: IngressNotConfigured
+        severity: Info
+        status: Unknown
+        type: PredictorRouteReady
+      - lastTransitionTime: "2026-08-03T22:59:40Z"
+        message: Ingress has not yet been reconciled.
+        reason: IngressNotConfigured
+        status: Unknown
+        type: Ready
+      - lastTransitionTime: "2026-08-03T22:59:16Z"
+        reason: PredictorRouteReady not ready
+        severity: Info
+        status: Unknown
+        type: RoutesReady
+  state: Initializing
+- patch:
+    status:
+      conditions:
+      - lastTransitionTime: "2026-08-03T22:59:40Z"
+        severity: Info
+        status: "True"
+        type: LatestDeploymentReady
+      - lastTransitionTime: "2026-08-03T22:59:40Z"
+        severity: Info
+        status: "True"
+        type: PredictorConfigurationReady
+      - lastTransitionTime: "2026-08-03T22:59:40Z"
+        message: Waiting for load balancer to be ready
+        reason: Uninitialized
+        status: Unknown
+        type: PredictorReady
+      - lastTransitionTime: "2026-08-03T22:59:40Z"
+        message: Waiting for load balancer to be ready
+        reason: Uninitialized
+        severity: Info
+        status: Unknown
+        type: PredictorRouteReady
+      - lastTransitionTime: "2026-08-03T22:59:40Z"
+        message: Waiting for load balancer to be ready
+        reason: Uninitialized
+        status: Unknown
+        type: Ready
+      - lastTransitionTime: "2026-08-03T22:59:16Z"
+        reason: PredictorRouteReady not ready
+        severity: Info
+        status: Unknown
+        type: RoutesReady
+  state: Initializing
+- patch:
+    status:
+      address:
+        url: http://karta-e2e-kserve-predictor.test-rbwn4.svc.cluster.local
+      components:
+        predictor:
+          address:
+            url: http://karta-e2e-kserve-predictor.test-rbwn4.svc.cluster.local
+          url: http://karta-e2e-kserve-predictor.test-rbwn4.127.0.0.1.sslip.io
+      conditions:
+      - lastTransitionTime: "2026-08-03T22:59:41Z"
+        status: "True"
+        type: IngressReady
+      - lastTransitionTime: "2026-08-03T22:59:40Z"
+        severity: Info
+        status: "True"
+        type: LatestDeploymentReady
+      - lastTransitionTime: "2026-08-03T22:59:40Z"
+        severity: Info
+        status: "True"
+        type: PredictorConfigurationReady
+      - lastTransitionTime: "2026-08-03T22:59:41Z"
+        status: "True"
+        type: PredictorReady
+      - lastTransitionTime: "2026-08-03T22:59:41Z"
+        severity: Info
+        status: "True"
+        type: PredictorRouteReady
+      - lastTransitionTime: "2026-08-03T22:59:41Z"
+        status: "True"
+        type: Ready
+      - lastTransitionTime: "2026-08-03T22:59:41Z"
+        severity: Info
+        status: "True"
+        type: RoutesReady
+      url: http://karta-e2e-kserve-predictor.test-rbwn4.127.0.0.1.sslip.io
+  state: Running
+succeeded: true
+version: v1.34.0
+want: Running

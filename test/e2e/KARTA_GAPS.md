@@ -307,3 +307,32 @@ Failed:       {ByConditions: [{Type: "Ready", Status: "False"}]},
 Karta after: deploying reads `[Initializing]`, ready `[Running]`, a failed Service
 `[Failed]`. The recorder exercises Initializing then Running; Failed is by the
 Knative Ready model.
+
+## 11. serving.kserve.io/v1beta1 InferenceService: deploy phase unmapped
+
+The InferenceService definition mapped Running (PredictorReady, RoutesReady,
+LatestDeploymentReady all True) and Failed (PredictorReady,
+PredictorConfigurationReady, RoutesReady all False) but nothing in between. While
+deploying, the controller writes conditions gradually - none at first, then a few
+Unknown, then Ready=Unknown - so the whole deploy read Undefined.
+
+CR status (an early step; the first step has no conditions at all):
+
+```json
+{"status": {"conditions": [{"type": "Ready", "status": "Unknown"}, {"type": "PredictorReady", "status": "Unknown"}]}}
+```
+
+Karta before: `[Undefined]`.
+
+Added Initializing for "Ready not yet decided" - no Ready=True and no Ready=False,
+which also covers the early window before Ready is written:
+
+```jq
+(([.status.conditions[]? | select(.type == "Ready" and .status == "True")] | length) == 0)
+and
+(([.status.conditions[]? | select(.type == "Ready" and .status == "False")] | length) == 0)
+```
+
+Karta after: the deploy reads `[Initializing]`, ready `[Running]`, and the
+all-False predictor failure `[Failed]` (Ready is False there, so it stays out of
+Initializing). Recorder side uses a matching CondPending predicate.
