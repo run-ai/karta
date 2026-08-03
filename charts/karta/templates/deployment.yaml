@@ -66,6 +66,16 @@ spec:
               containerPort: {{ .Values.webhook.port }}
               protocol: TCP
             {{- end }}
+          {{- if .Values.webhook.enabled }}
+          # Covers the webhook cert bootstrap so liveness does not kill a slow
+          # start. failureThreshold*periodSeconds must exceed the 2m bootstrap.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 5
+            failureThreshold: 30
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz

@@ -128,7 +128,7 @@ func run() error {
 			return err
 		}
 		certOpts.Namespace = ns
-		if err := pkg.BootstrapCerts(ctx, kubeConfig, certOpts, probeAddr); err != nil {
+		if err := pkg.BootstrapCerts(ctx, kubeConfig, certOpts); err != nil {
 			return fmt.Errorf("bootstrap webhook certs: %w", err)
 		}
 	}

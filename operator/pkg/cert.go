@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
@@ -89,26 +88,20 @@ func newCertRotator(opts CertOptions, controllerName string, ready chan struct{}
 }
 
 // BootstrapCerts blocks until the webhook serving cert exists on disk and its CA
-// is patched onto the webhook configs. It runs a throwaway manager whose only job
-// is the cert rotator, then stops it so the real manager can reuse the health
-// port. This guarantees the webhook server never starts before its cert is ready.
-func BootstrapCerts(ctx context.Context, kubeConfig *rest.Config, opts CertOptions, healthAddr string) error {
+// is patched onto the webhook configs, so the webhook server never starts before
+// its cert is ready. It runs a throwaway manager whose only job is the cert
+// rotator, then stops it. The manager binds no ports; the deployment's
+// startupProbe covers this window so the liveness probe does not kill the pod.
+func BootstrapCerts(ctx context.Context, kubeConfig *rest.Config, opts CertOptions) error {
 	ctx, cancel := context.WithTimeout(ctx, bootstrapTimeout)
 	defer cancel()
 
 	mgr, err := ctrl.NewManager(kubeConfig, ctrl.Options{
 		Metrics:                metricsserver.Options{BindAddress: "0"},
-		HealthProbeBindAddress: healthAddr,
+		HealthProbeBindAddress: "0",
 	})
 	if err != nil {
 		return fmt.Errorf("create bootstrap manager: %w", err)
-	}
-	// Answer the liveness probe while waiting for the first cert, so a slow
-	// Secret sync does not trip the probe and get the pod killed.
-	if healthAddr != "" {
-		if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-			return fmt.Errorf("add bootstrap healthz: %w", err)
-		}
 	}
 
 	certReady := make(chan struct{})
