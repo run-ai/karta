@@ -336,3 +336,20 @@ and
 Karta after: the deploy reads `[Initializing]`, ready `[Running]`, and the
 all-False predictor failure `[Failed]` (Ready is False there, so it stays out of
 Initializing). Recorder side uses a matching CondPending predicate.
+
+## Coverage and what remains
+
+Fixed and recorded clean: the built-ins (batch/v1 Job, apps/v1 Deployment and
+StatefulSet, CronJob, Pod), plus JobSet, LeaderWorkerSet, PyTorchJob, MPIJob,
+RayCluster, Knative Service, and KServe InferenceService.
+
+Fixed and kread-verified, fixtures partial (the operator is heavy enough to
+outlast a kind control plane under record load on this environment): RayCluster
+resumed, and all RayJob flows (provisioning and Suspending windows).
+
+Not yet recorded here: milvus, grove, dynamo, and nim. Their controllers run
+inference or database workloads whose smoke or reconcile load crashes a kind
+control plane during provisioning on this environment, so they could not be driven
+end to end. Their definitions already map Initializing, Running, Failed, and
+(where relevant) Degraded, so they are the lower-risk set; recording them needs a
+sturdier cluster than kind-on-Docker-Desktop.
