@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Package recorder runs the Karta end-to-end suite against a real cluster provisioned by hack/e2e/up.sh.
-// It drives each workload and records the CRs it moves through under ../recordings, which the offline
-// tests replay. It judges each state from the workload's own fields and never runs Karta, so the recorder
-// stays decoupled from the library it feeds.
+// Package recorder drives a workload through a declared flow and records the CRs it moves through, for the
+// offline tests to replay. It judges each state from the workload's own fields and never runs Karta, so it
+// stays decoupled from the library it feeds. It only records: installing the Karta definition and running
+// the suite belong to the caller.
 package recorder
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,78 +30,145 @@ import (
 	"k8s.io/client-go/tools/cache"
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/test/e2e/cases"
 )
 
-var (
-	ctx           = context.Background()
-	k8sClient     client.Client
-	dynClient     dynamic.Interface
-	serverVersion string // the cluster's Kubernetes version, set in BeforeSuite
-)
-
-// e2eRoot points from this package's dir (test/e2e/recorder, the go test working dir) to the module root
-// test/e2e, which the case KartaFile/WorkloadFile paths and the recordings dir are relative to.
+// e2eRoot points from a package dir under test/e2e (the go test working dir) to test/e2e, which manifest,
+// Karta, and recording paths are relative to.
 const e2eRoot = ".."
 
-// observeTransitions watches one workload and records every distinct CR until the flow finishes, walking
-// the journey's checkpoints (see record).
-func observeTransitions(wc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured) (*recording, bool) {
-	// One deadline for the whole flow, so a stuck RPC fails at the flow timeout, not the suite budget.
-	flowCtx, cancel := context.WithTimeout(ctx, wc.Timeout)
-	defer cancel()
+// Cluster access, bound once by the suite via Bind.
+var (
+	k8sClient     client.Client
+	dynClient     dynamic.Interface
+	serverVersion string
+	namespace     string
+)
 
+// Bind wires the recorder to the cluster clients, the Kubernetes version, and the throwaway namespace
+// workloads are created in. The suite calls it once in BeforeSuite.
+func Bind(c client.Client, d dynamic.Interface, version, ns string) {
+	k8sClient, dynClient, serverVersion, namespace = c, d, version, ns
+}
+
+// Recorder records the flows of one workload type. Bind it to the type's Karta definition and state
+// registry, then build and Run a Flow per case.
+type Recorder struct {
+	operator  string
+	kartaName string
+	kartaFile string
+	states    []cases.NamedState
+	timeout   time.Duration
+}
+
+// New starts a recorder for the given operator key, Karta definition name, and Karta YAML path. The path is
+// recording metadata (so the offline golden can load the definition); New does not touch the cluster.
+func New(operator, kartaName, kartaFile string) *Recorder {
+	return &Recorder{operator: operator, kartaName: kartaName, kartaFile: kartaFile, timeout: 3 * time.Minute}
+}
+
+// State registers how to recognise a state from the workload's own fields; declare them least to most
+// advanced (Classify keeps the furthest match).
+func (r *Recorder) State(name kartav1alpha1.ResourceStatus, match cases.StateCheck) *Recorder {
+	r.states = append(r.states, cases.NamedState{Name: name, Match: match})
+	return r
+}
+
+// Timeout overrides the per-flow deadline (default 3m).
+func (r *Recorder) Timeout(d time.Duration) *Recorder { r.timeout = d; return r }
+
+// Flow starts a flow named name, seeded from the workload manifest (a path relative to test/e2e).
+func (r *Recorder) Flow(name, manifest string) *Flow {
+	return &Flow{rec: r, name: name, manifest: manifest}
+}
+
+// Flow is a declared journey: a manifest to apply, then the ordered stops the workload must reach. A stop
+// carrying an action predicate and/or an action is a checkpoint the recorder drives to.
+type Flow struct {
+	rec      *Recorder
+	name     string
+	manifest string
+	journey  []cases.Step
+}
+
+// Reaches adds a plain stop: the workload must classify as state here.
+func (f *Flow) Reaches(state kartav1alpha1.ResourceStatus) *Flow {
+	f.journey = append(f.journey, cases.Step{State: state})
+	return f
+}
+
+// Maybe adds an optional stop the workload may skip (a transient dip); the order check tolerates it.
+func (f *Flow) Maybe(state kartav1alpha1.ResourceStatus) *Flow {
+	f.journey = append(f.journey, cases.Step{State: state, Optional: true})
+	return f
+}
+
+// At adds a stop to be gated with When/WaitUntil and/or fired with Do.
+func (f *Flow) At(state kartav1alpha1.ResourceStatus) *Flow {
+	f.journey = append(f.journey, cases.Step{State: state})
+	return f
+}
+
+// When gates the current stop: it is not reached until this predicate over the workload's own fields holds.
+func (f *Flow) When(gate cases.StateCheck) *Flow { f.last().ActionPredicate = gate; return f }
+
+// WaitUntil is When for the terminal stop - the flow finishes once it holds.
+func (f *Flow) WaitUntil(gate cases.StateCheck) *Flow { f.last().ActionPredicate = gate; return f }
+
+// Do fires an action when the current stop is reached.
+func (f *Flow) Do(action *cases.Action) *Flow { f.last().Action = action; return f }
+
+func (f *Flow) last() *cases.Step { return &f.journey[len(f.journey)-1] }
+
+// want is the flow's terminal state: the last stop's state.
+func (f *Flow) want() kartav1alpha1.ResourceStatus { return f.journey[len(f.journey)-1].State }
+
+// Run applies the manifest, drives the workload through the journey, writes the recording, and returns it.
+// It returns an error if the workload did not reach its terminal state in the declared order; the recording
+// is written either way (a failed run is saved with succeeded:false, for triage).
+func (f *Flow) Run(ctx context.Context) (*Recording, error) {
+	obj := &unstructured.Unstructured{}
+	Expect(yaml.Unmarshal(mustRead(f.manifest), obj)).To(Succeed())
+	obj.SetNamespace(namespace)
+	Expect(k8sClient.Create(ctx, obj)).To(Succeed(), "create workload for %s", f.name)
+	defer func() { _ = k8sClient.Delete(context.Background(), obj) }()
+
+	flowCtx, cancel := context.WithTimeout(ctx, f.rec.timeout)
+	defer cancel()
 	watcher := watchWorkload(flowCtx, obj)
 	defer watcher.Stop()
 
-	return record(flowCtx, wc, fl, obj, watcher)
-}
+	rec := f.observe(flowCtx, obj, watcher)
+	orderErr := observedOrderErr(f.journey, rec.order, f.want())
+	out := f.write(rec, rec.failure == "" && orderErr == nil)
 
-func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) watch.Interface {
-	gvk := obj.GroupVersionKind()
-	mapping, err := k8sClient.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
-	Expect(err).NotTo(HaveOccurred(), "rest mapping for %s", gvk)
-
-	namespace := obj.GetNamespace()
-	Expect(namespace).NotTo(BeEmpty(), "workload has no namespace")
-
-	initialRV := obj.GetResourceVersion()
-	if initialRV == "" { // Create was a no-op (object already existed); fetch a current RV to start from
-		seed := GVKOnly(obj)
-		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed)).To(Succeed())
-		initialRV = seed.GetResourceVersion()
+	if rec.failure != "" {
+		return out, errors.New(rec.failure)
 	}
-
-	watcher, err := watchtools.NewRetryWatcherWithContext(ctx, initialRV, &cache.ListWatch{
-		WatchFuncWithContext: func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-			opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", obj.GetName()).String()
-			return dynClient.Resource(mapping.Resource).Namespace(namespace).Watch(ctx, opts)
-		},
-	})
-	Expect(err).NotTo(HaveOccurred())
-	return watcher
+	return out, orderErr
 }
 
-// record watches the workload and returns the recording plus whether the flow reached its terminal. It
-// walks the journey's checkpoints - the steps that carry an action or an action predicate - popping the
-// next one once the workload reaches that step's state and its ActionPredicate holds (a nil predicate
-// matches on state alone), firing the step's action then. It keeps every distinct CR, advancing only once
-// the status settles; plain states between checkpoints are recorded as they pass. On timeout or a closed
-// watch it stashes the reason and returns false, so the run is still recorded.
-func record(ctx context.Context, wc cases.WorkloadCase, fl cases.Flow, obj *unstructured.Unstructured, watcher watch.Interface) (*recording, bool) {
+// observe watches the workload and records every distinct CR until the flow finishes. It walks the
+// journey's checkpoints - the stops carrying an action or an action predicate - popping the next once the
+// workload reaches its state and its predicate holds (a nil predicate matches on state alone), firing the
+// stop's action then. It keeps every distinct CR, advancing only once the status settles; plain states
+// between checkpoints are recorded as they pass. On timeout or a closed watch it sets rec.failure, so the
+// run is still recorded.
+func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured, watcher watch.Interface) *recording {
 	rec := &recording{}
-	pending := checkpoints(fl.Journey)
+	pending := checkpoints(f.journey)
 	done := func(state kartav1alpha1.ResourceStatus) bool {
-		return state == fl.DesiredFinalStatus() && len(pending) == 0
+		return state == f.want() && len(pending) == 0
 	}
 
 	// A workload already at its terminal state when Create returns never fires a watch event (the watch
 	// replays only newer resourceVersions), so take that first snapshot from the create response.
-	if state := cases.Classify(obj, wc.States); statusSettled(obj) && done(state) {
+	if state := cases.Classify(obj, f.rec.states); statusSettled(obj) && done(state) {
 		rec.keep(obj, state)
-		return rec, true
+		return rec
 	}
 
 	var lastSeen *unstructured.Unstructured
@@ -108,13 +177,13 @@ func record(ctx context.Context, wc cases.WorkloadCase, fl cases.Flow, obj *unst
 		select {
 		case <-ctx.Done():
 			rec.failure = fmt.Sprintf("did not reach %q within %s; observed %v\nlast-seen status:\n%s",
-				fl.DesiredFinalStatus(), wc.Timeout, rec.order, dumpStatus(lastSeen))
-			return rec, false
+				f.want(), f.rec.timeout, rec.order, dumpStatus(lastSeen))
+			return rec
 		case event, open := <-watcher.ResultChan():
 			if !open {
 				rec.failure = fmt.Sprintf("watch closed before reaching %q; observed %v; last watch error: %v\nlast-seen status:\n%s",
-					fl.DesiredFinalStatus(), rec.order, lastErr, dumpStatus(lastSeen))
-				return rec, false
+					f.want(), rec.order, lastErr, dumpStatus(lastSeen))
+				return rec
 			}
 			if event.Type == watch.Error {
 				lastErr = apierrors.FromObject(event.Object)
@@ -125,7 +194,7 @@ func record(ctx context.Context, wc cases.WorkloadCase, fl cases.Flow, obj *unst
 				continue // a bookmark carries no workload object
 			}
 			lastSeen = u
-			state := cases.Classify(u, wc.States)
+			state := cases.Classify(u, f.rec.states)
 			if state == "" && statusSettled(u) {
 				// A settled CR we cannot classify is a real gap (a state missing from both the case and
 				// Karta): record it as Undefined so the order check fails and the run is saved for triage,
@@ -148,10 +217,69 @@ func record(ctx context.Context, wc cases.WorkloadCase, fl cases.Flow, obj *unst
 				pending = pending[1:]
 			}
 			if done(state) {
-				return rec, true
+				return rec
 			}
 		}
 	}
+}
+
+// write persists the run as recorded_data/<operator>/<version>/<kartaName>/<flow>.yaml and returns it: its
+// success flag, and each step's own-fields state, its CR (full on the first step, a merge-patch after), and
+// any action fired.
+func (f *Flow) write(rec *recording, succeeded bool) *Recording {
+	version := operatorVersion(f.rec.operator)
+	rc := Recording{
+		SchemaVersion: SchemaVersion,
+		Operator:      f.rec.operator,
+		Version:       version,
+		KartaName:     f.rec.kartaName,
+		Flow:          f.name,
+		Want:          string(f.want()),
+		Succeeded:     succeeded,
+		KartaFile:     strings.TrimPrefix(f.rec.kartaFile, "../../"),
+	}
+	var prevCR map[string]any
+	for i, snap := range rec.snapshots {
+		cur := significantCR(snap.raw)
+		st := Step{State: string(snap.state), Action: snap.action}
+		if i == 0 {
+			st.CR = cur
+		} else {
+			st.Patch = MergePatch(prevCR, cur)
+		}
+		rc.Steps = append(rc.Steps, st)
+		prevCR = cur
+	}
+
+	rc.Path = RecordingPath(filepath.Join(e2eRoot, "recorded_data"), rc)
+	Expect(WriteRecording(rc.Path, rc)).To(Succeed())
+	GinkgoWriter.Printf("recorded %s/%s/%s/%s.yaml (%d steps %v)\n", f.rec.operator, version, f.rec.kartaName, f.name, len(rc.Steps), rec.order)
+	return &rc
+}
+
+func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) watch.Interface {
+	gvk := obj.GroupVersionKind()
+	mapping, err := k8sClient.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
+	Expect(err).NotTo(HaveOccurred(), "rest mapping for %s", gvk)
+
+	ns := obj.GetNamespace()
+	Expect(ns).NotTo(BeEmpty(), "workload has no namespace")
+
+	initialRV := obj.GetResourceVersion()
+	if initialRV == "" { // Create was a no-op (object already existed); fetch a current RV to start from
+		seed := GVKOnly(obj)
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed)).To(Succeed())
+		initialRV = seed.GetResourceVersion()
+	}
+
+	watcher, err := watchtools.NewRetryWatcherWithContext(ctx, initialRV, &cache.ListWatch{
+		WatchFuncWithContext: func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+			opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", obj.GetName()).String()
+			return dynClient.Resource(mapping.Resource).Namespace(ns).Watch(ctx, opts)
+		},
+	})
+	Expect(err).NotTo(HaveOccurred())
+	return watcher
 }
 
 // fireAction sends an action's merge-patch to the workload and returns the recorded request and response.
@@ -167,8 +295,8 @@ func fireAction(ctx context.Context, obj *unstructured.Unstructured, action *cas
 	return &Action{Type: action.Type, Request: request, Response: significantCR(target)}
 }
 
-// checkpoints are the steps the recorder must reach and fire in order: those carrying an action or an
-// action predicate. Plain states between them are recorded as they pass but are not stops.
+// checkpoints are the stops the recorder must reach and fire in order: those carrying an action or an action
+// predicate. Plain states between them are recorded as they pass but are not stops.
 func checkpoints(journey []cases.Step) []cases.Step {
 	var out []cases.Step
 	for _, st := range journey {
@@ -210,8 +338,8 @@ func (r *recording) attachAction(a *Action) {
 	}
 }
 
-// significantCR drops the fields the apiserver bumps on every event (resourceVersion, managedFields) so
-// keep dedups on real changes.
+// significantCR drops the fields the apiserver bumps on every event (resourceVersion, managedFields) so keep
+// dedups on real changes.
 func significantCR(u *unstructured.Unstructured) map[string]any {
 	c := u.DeepCopy().Object
 	unstructured.RemoveNestedField(c, "metadata", "resourceVersion")
@@ -219,8 +347,8 @@ func significantCR(u *unstructured.Unstructured) map[string]any {
 	return c
 }
 
-// statusSettled reports whether the controller has caught up (observedGeneration >= generation);
-// workloads without those fields count as settled.
+// statusSettled reports whether the controller has caught up (observedGeneration >= generation); workloads
+// without those fields count as settled.
 func statusSettled(u *unstructured.Unstructured) bool {
 	gen, hasGen, _ := unstructured.NestedInt64(u.Object, "metadata", "generation")
 	obs, hasObs, _ := unstructured.NestedInt64(u.Object, "status", "observedGeneration")
@@ -246,40 +374,8 @@ func journeySteps(steps []cases.Step) []JourneyStep {
 }
 
 // observedOrderErr runs the recorder's observed states through the same check the offline tests use.
-func observedOrderErr(fl cases.Flow, order []kartav1alpha1.ResourceStatus) error {
-	return ObservedOrderErr(journeySteps(fl.Journey), order, fl.DesiredFinalStatus())
-}
-
-// writeRecording writes the run as one <flow>.yaml under recorded_data/: whether it succeeded, and each
-// step's own-fields state, its CR (full on the first step, a merge-patch after), and any action fired.
-func writeRecording(wc cases.WorkloadCase, fl cases.Flow, rec *recording, succeeded bool) {
-	version := operatorVersion(wc.Operator)
-	rc := Recording{
-		SchemaVersion: SchemaVersion,
-		Operator:      wc.Operator,
-		Version:       version,
-		KartaName:     wc.KartaName,
-		Flow:          fl.Name,
-		Want:          string(fl.DesiredFinalStatus()),
-		Succeeded:     succeeded,
-		KartaFile:     strings.TrimPrefix(wc.KartaFile, "../../"),
-	}
-	var prevCR map[string]any
-	for i, snap := range rec.snapshots {
-		cur := significantCR(snap.raw)
-		st := Step{State: string(snap.state), Action: snap.action}
-		if i == 0 {
-			st.CR = cur
-		} else {
-			st.Patch = MergePatch(prevCR, cur)
-		}
-		rc.Steps = append(rc.Steps, st)
-		prevCR = cur
-	}
-
-	path := RecordingPath(filepath.Join(e2eRoot, "recorded_data"), rc)
-	Expect(WriteRecording(path, rc)).To(Succeed())
-	GinkgoWriter.Printf("recorded %s/%s/%s/%s.yaml (%d steps %v)\n", wc.Operator, version, wc.KartaName, fl.Name, len(rc.Steps), rec.order)
+func observedOrderErr(journey []cases.Step, order []kartav1alpha1.ResourceStatus, want kartav1alpha1.ResourceStatus) error {
+	return ObservedOrderErr(journeySteps(journey), order, want)
 }
 
 // operatorVersion is the installed version of op, or the cluster's Kubernetes version for built-in
@@ -306,4 +402,10 @@ func dumpStatus(u *unstructured.Unstructured) string {
 		return fmt.Sprintf("(status marshal error: %v)", err)
 	}
 	return "  " + string(b)
+}
+
+func mustRead(path string) []byte {
+	b, err := os.ReadFile(filepath.Join(e2eRoot, path))
+	Expect(err).NotTo(HaveOccurred(), "read %s", path)
+	return b
 }

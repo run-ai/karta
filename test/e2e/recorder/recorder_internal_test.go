@@ -19,6 +19,10 @@ func objWithStatus(status map[string]any) *unstructured.Unstructured {
 	return &unstructured.Unstructured{Object: map[string]any{"status": status}}
 }
 
+func terminal(journey []cases.Step) kartav1alpha1.ResourceStatus {
+	return journey[len(journey)-1].State
+}
+
 // TestRecorderCatchesBackwardsJump: a Running -> byte-identical Initializing dip survives dedup, and the
 // strict order check flags it unless the journey declares the dip.
 func TestRecorderCatchesBackwardsJump(t *testing.T) {
@@ -50,10 +54,10 @@ func TestRecorderCatchesBackwardsJump(t *testing.T) {
 	if !reflect.DeepEqual(rec.order, want) {
 		t.Fatalf("recorder dropped the return: got %v, want %v", rec.order, want)
 	}
-	if observedOrderErr(cases.Flow{Journey: cases.Steps(initializing, running, completed)}, rec.order) == nil {
+	if observedOrderErr(cases.Steps(initializing, running, completed), rec.order, completed) == nil {
 		t.Error("strict journey should reject the undeclared Running -> Initializing dip")
 	}
-	if err := observedOrderErr(cases.Flow{Journey: cases.Steps(initializing, running, initializing, completed)}, rec.order); err != nil {
+	if err := observedOrderErr(cases.Steps(initializing, running, initializing, completed), rec.order, completed); err != nil {
 		t.Errorf("declaring the Initializing revisit should accept the dip, got %v", err)
 	}
 }
@@ -66,35 +70,27 @@ func TestObservedOrder(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		fl       cases.Flow
+		journey  []cases.Step
 		observed []kartav1alpha1.ResourceStatus
 		ok       bool
 	}{
-		{"exact", cases.Flow{Journey: cases.Steps(initializing, running, completed)}, []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
-		{"skip a required step fails", cases.Flow{Journey: cases.Steps(initializing, running, completed)}, []kartav1alpha1.ResourceStatus{initializing, completed}, false},
-		{"skip an optional step is ok", cases.Flow{Journey: []cases.Step{{State: initializing}, {State: running, Optional: true}, {State: completed}}}, []kartav1alpha1.ResourceStatus{initializing, completed}, true},
-		{"undeclared state", cases.Flow{Journey: cases.Steps(initializing, running)}, []kartav1alpha1.ResourceStatus{initializing, failed}, false},
-		{"repeat dip missed is ok", cases.Flow{Journey: cases.Steps(initializing, running, initializing, completed)}, []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
-		{"optional dip missed is ok", cases.Flow{Journey: []cases.Step{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}}}, []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
-		{"optional dip caught is ok", cases.Flow{Journey: []cases.Step{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}}}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, true},
-		{"undeclared dip fails", cases.Flow{Journey: cases.Steps(initializing, running, completed)}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, false},
-		{"wrong terminal", cases.Flow{Journey: cases.Steps(initializing, running, completed)}, []kartav1alpha1.ResourceStatus{initializing, running}, false},
+		{"exact", cases.Steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
+		{"skip a required step fails", cases.Steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, completed}, false},
+		{"skip an optional step is ok", []cases.Step{{State: initializing}, {State: running, Optional: true}, {State: completed}}, []kartav1alpha1.ResourceStatus{initializing, completed}, true},
+		{"undeclared state", cases.Steps(initializing, running), []kartav1alpha1.ResourceStatus{initializing, failed}, false},
+		{"repeat dip missed is ok", cases.Steps(initializing, running, initializing, completed), []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
+		{"optional dip missed is ok", []cases.Step{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}}, []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
+		{"optional dip caught is ok", []cases.Step{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, true},
+		{"undeclared dip fails", cases.Steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, false},
+		{"wrong terminal", cases.Steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running}, false},
 	}
 	for _, c := range tests {
-		err := observedOrderErr(c.fl, c.observed)
+		err := observedOrderErr(c.journey, c.observed, terminal(c.journey))
 		if c.ok && err != nil {
 			t.Errorf("%s: want ok, got %v", c.name, err)
 		}
 		if !c.ok && err == nil {
 			t.Errorf("%s: want error, got nil", c.name)
-		}
-	}
-}
-
-func TestCasesValid(t *testing.T) {
-	for _, wc := range cases.All {
-		if err := wc.Validate(); err != nil {
-			t.Errorf("%s: %v", wc.Name, err)
 		}
 	}
 }

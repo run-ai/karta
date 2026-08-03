@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package recorder
+// Package flows is the Karta end-to-end recording suite: one Ginkgo file per workload type, each installing
+// the type's Karta definition and recording its flows through the recorder.
+package flows
 
 import (
 	"testing"
@@ -19,17 +21,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+	"github.com/run-ai/karta/test/e2e/recorder"
 )
 
-// testNamespace is the throwaway namespace the suite submits workloads into (test-<suffix>).
-var testNamespace string
+// k8sClient and testNamespace are set in BeforeSuite; the recorder gets them via recorder.Bind.
+var (
+	k8sClient     client.Client
+	testNamespace string
+)
 
-func TestE2E(t *testing.T) {
+func TestFlows(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Karta E2E Suite")
+	RunSpecs(t, "Karta E2E Flows")
 }
 
-var _ = BeforeSuite(func() {
+var _ = BeforeSuite(func(ctx SpecContext) {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(kartav1alpha1.AddToScheme(scheme))
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
@@ -40,17 +46,18 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	dynClient, err = dynamic.NewForConfig(cfg)
+	dynClient, err := dynamic.NewForConfig(cfg)
 	Expect(err).NotTo(HaveOccurred())
 
 	disco, err := discovery.NewDiscoveryClientForConfig(cfg)
 	Expect(err).NotTo(HaveOccurred())
 	info, err := disco.ServerVersion()
 	Expect(err).NotTo(HaveOccurred())
-	serverVersion = info.GitVersion
 
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{GenerateName: "test-"}}
 	Expect(k8sClient.Create(ctx, ns)).To(Succeed())
 	testNamespace = ns.Name
-	DeferCleanup(func() { _ = k8sClient.Delete(ctx, ns) })
+	DeferCleanup(func(ctx SpecContext) { _ = k8sClient.Delete(ctx, ns) })
+
+	recorder.Bind(k8sClient, dynClient, info.GitVersion, testNamespace)
 })

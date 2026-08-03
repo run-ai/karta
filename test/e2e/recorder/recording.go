@@ -30,6 +30,7 @@ type Recording struct {
 	Succeeded     bool   `json:"succeeded"`
 	KartaFile     string `json:"kartaFile"` // repo-relative path to the Karta definition
 	Steps         []Step `json:"steps"`
+	Path          string `json:"-"` // where the run was written; set by the recorder, not serialized
 }
 
 // Step is one observed state: the own-fields State (never from Karta), the CR (full on the first step,

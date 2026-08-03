@@ -5,11 +5,12 @@ package cases
 
 import kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
+// State aliases, exported so flow tests can name them without the kartav1alpha1 qualifier.
 const (
-	initializing = kartav1alpha1.InitializingStatus
-	running      = kartav1alpha1.RunningStatus
-	completed    = kartav1alpha1.CompletedStatus
-	failed       = kartav1alpha1.FailedStatus
-	suspended    = kartav1alpha1.SuspendedStatus
-	degraded     = kartav1alpha1.DegradedStatus
+	Initializing = kartav1alpha1.InitializingStatus
+	Running      = kartav1alpha1.RunningStatus
+	Completed    = kartav1alpha1.CompletedStatus
+	Failed       = kartav1alpha1.FailedStatus
+	Suspended    = kartav1alpha1.SuspendedStatus
+	Degraded     = kartav1alpha1.DegradedStatus
 )
