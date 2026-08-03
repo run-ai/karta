@@ -22,12 +22,15 @@ import (
 const bootstrapTimeout = 2 * time.Minute
 
 const (
-	CertSourceSelfSigned  = "selfSigned"
-	CertSourceCertManager = "certManager"
+	// CertModeAuto: the operator self-signs and rotates the webhook cert.
+	// CertModeManual: certs are provided externally (cert-manager, an admin, ...)
+	// and the operator only reads them from the mounted Secret.
+	CertModeAuto   = "auto"
+	CertModeManual = "manual"
 )
 
-func ValidCertSource(s string) bool {
-	return s == CertSourceSelfSigned || s == CertSourceCertManager
+func ValidCertMode(s string) bool {
+	return s == CertModeAuto || s == CertModeManual
 }
 
 const (

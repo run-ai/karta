@@ -47,7 +47,7 @@ spec:
             - --webhook-port={{ .Values.webhook.port }}
             - --webhook-namespace={{ .Release.Namespace }}
             - --webhook-cert-dir=/tmp/k8s-webhook-server/serving-certs
-            - --webhook-cert-source={{ .Values.webhook.cert.source }}
+            - --webhook-cert-mode={{ .Values.webhook.cert.provisionMode }}
             - --webhook-cert-secret={{ include "karta.webhook.secretName" . }}
             - --webhook-service-name={{ include "karta.webhook.serviceName" . }}
             - --mutating-webhook-name={{ include "karta.webhook.configName" . }}

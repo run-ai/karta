@@ -3,9 +3,9 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: {{ include "karta.webhook.validatingConfigName" . }}
-  {{- if eq .Values.webhook.cert.source "certManager" }}
+  {{- if and (eq .Values.webhook.cert.provisionMode "manual") .Values.webhook.cert.annotations }}
   annotations:
-    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "karta.webhook.secretName" . }}
+    {{- toYaml .Values.webhook.cert.annotations | nindent 4 }}
   {{- end }}
   labels:
     {{- include "karta.labels" . | nindent 4 }}
@@ -22,6 +22,9 @@ webhooks:
         resources: ["kartas"]
         scope: "*"
     clientConfig:
+      {{- if and (eq .Values.webhook.cert.provisionMode "manual") .Values.webhook.cert.caBundle }}
+      caBundle: {{ .Values.webhook.cert.caBundle }}
+      {{- end }}
       service:
         name: {{ include "karta.webhook.serviceName" . }}
         namespace: {{ .Release.Namespace }}

@@ -26,7 +26,7 @@ rules:
   - apiGroups: [ "events.k8s.io" ]
     resources: [ "events" ]
     verbs: [ "create", "patch", "update" ]
-  {{- if and .Values.webhook.enabled (eq .Values.webhook.cert.source "selfSigned") }}
+  {{- if and .Values.webhook.enabled (eq .Values.webhook.cert.provisionMode "auto") }}
 
   # The self-signed cert rotator patches the caBundle onto the webhook configs
   - apiGroups: ["admissionregistration.k8s.io"]

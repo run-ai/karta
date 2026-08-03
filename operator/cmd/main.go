@@ -58,7 +58,7 @@ func run() error {
 		webhookPort           int
 		webhookNamespace      string
 		webhookCertDir        string
-		webhookCertSource     string
+		webhookCertMode       string
 		webhookCertSecret     string
 		webhookServiceName    string
 		mutatingWebhookName   string
@@ -84,16 +84,16 @@ func run() error {
 		"Namespace the operator runs in, used for the cert Secret and serving cert SAN. Defaults to the pod's service account namespace.")
 	flag.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs",
 		"Directory the webhook serving cert is read from.")
-	flag.StringVar(&webhookCertSource, "webhook-cert-source", pkg.CertSourceSelfSigned,
-		"Webhook cert source: selfSigned (operator self-signs and rotates) or certManager.")
+	flag.StringVar(&webhookCertMode, "webhook-cert-mode", pkg.CertModeAuto,
+		"Webhook cert mode: auto (operator self-signs and rotates) or manual (certs provided externally).")
 	flag.StringVar(&webhookCertSecret, "webhook-cert-secret", "karta-webhook-cert",
-		"Name of the Secret holding the webhook serving cert in selfSigned mode.")
+		"Name of the Secret holding the webhook serving cert in auto mode.")
 	flag.StringVar(&webhookServiceName, "webhook-service-name", "karta-operator-webhook",
 		"Name of the webhook Service, used as the serving cert SAN.")
 	flag.StringVar(&mutatingWebhookName, "mutating-webhook-name", "karta-operator-mutating",
-		"Name of the MutatingWebhookConfiguration whose caBundle is patched in selfSigned mode.")
+		"Name of the MutatingWebhookConfiguration whose caBundle is patched in auto mode.")
 	flag.StringVar(&validatingWebhookName, "validating-webhook-name", "karta-operator-validating",
-		"Name of the ValidatingWebhookConfiguration whose caBundle is patched in selfSigned mode.")
+		"Name of the ValidatingWebhookConfiguration whose caBundle is patched in auto mode.")
 
 	zapOpts := zap.Options{Development: false}
 	zapOpts.BindFlags(flag.CommandLine)
@@ -110,8 +110,8 @@ func run() error {
 	kubeConfig := ctrl.GetConfigOrDie()
 	ctx := ctrl.SetupSignalHandler()
 
-	if enableWebhook && !pkg.ValidCertSource(webhookCertSource) {
-		return fmt.Errorf("invalid --webhook-cert-source %q (want selfSigned or certManager)", webhookCertSource)
+	if enableWebhook && !pkg.ValidCertMode(webhookCertMode) {
+		return fmt.Errorf("invalid --webhook-cert-mode %q (want auto or manual)", webhookCertMode)
 	}
 
 	certOpts := pkg.CertOptions{
@@ -122,7 +122,7 @@ func run() error {
 		ValidatingWebhookName: validatingWebhookName,
 	}
 
-	if enableWebhook && webhookCertSource == pkg.CertSourceSelfSigned {
+	if enableWebhook && webhookCertMode == pkg.CertModeAuto {
 		ns, err := pkg.ResolveNamespace(webhookNamespace)
 		if err != nil {
 			return err
@@ -159,7 +159,7 @@ func run() error {
 		return fmt.Errorf("create manager: %w", err)
 	}
 
-	if enableWebhook && webhookCertSource == pkg.CertSourceSelfSigned {
+	if enableWebhook && webhookCertMode == pkg.CertModeAuto {
 		if err := pkg.ManageCerts(mgr, certOpts); err != nil {
 			return fmt.Errorf("setup webhook cert rotation: %w", err)
 		}
