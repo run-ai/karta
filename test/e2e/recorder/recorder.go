@@ -195,14 +195,11 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured, watc
 			}
 			lastSeen = u
 			state := cases.Classify(u, f.rec.states)
-			if state == "" && statusSettled(u) {
+			if state == "" {
 				// A settled CR we cannot classify is a real gap (a state missing from both the case and
 				// Karta): record it as Undefined so the order check fails and the run is saved for triage,
 				// rather than skipping it silently.
 				state = kartav1alpha1.UndefinedStatus
-			}
-			if state == "" {
-				continue // half-written status not in any recognized state yet; wait for the next event
 			}
 			rec.keep(u, state)
 			if !statusSettled(u) {
