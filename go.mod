@@ -8,7 +8,7 @@ require (
 	github.com/onsi/gomega v1.42.1
 	github.com/samber/lo v1.53.0
 	go.uber.org/mock v0.6.0
-	go.yaml.in/yaml/v3 v3.0.4
+	go.yaml.in/yaml/v3 v3.0.5
 	k8s.io/api v0.36.3
 	k8s.io/apimachinery v0.36.3
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
