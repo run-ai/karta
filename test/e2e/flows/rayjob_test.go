@@ -24,7 +24,7 @@ var _ = Describe("RayJob", Ordered, Label("kuberay", "rayjob"), func() {
 			State(Running, PhaseEq("RUNNING", "status", "jobStatus")).
 			State(Completed, PhaseEq("SUCCEEDED", "status", "jobStatus")).
 			State(Failed, PhaseEq("FAILED", "status", "jobStatus")).
-			State(Suspended, PhaseEq("Suspended", "status", "jobDeploymentStatus"))
+			State(Suspended, PhaseAny([]string{"Suspended", "Suspending"}, "status", "jobDeploymentStatus"))
 	})
 
 	// jobStatus jumps between PENDING/RUNNING/SUCCEEDED/FAILED; a fast job can skip intermediates, so
@@ -48,13 +48,14 @@ var _ = Describe("RayJob", Ordered, Label("kuberay", "rayjob"), func() {
 	})
 
 	It("suspended", func(ctx SpecContext) {
-		_, err := rec.Flow("suspended", "cases/testdata/rayjob/suspended.yaml").Reaches(Suspended).Run(ctx)
+		_, err := rec.Flow("suspended", "cases/testdata/rayjob/suspended.yaml").
+			Maybe(Initializing).Reaches(Suspended).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("resumed", func(ctx SpecContext) {
 		_, err := rec.Flow("resumed", "cases/testdata/rayjob/resumed.yaml").
-			At(Suspended).Do(Resume()).Maybe(Initializing).Reaches(Running).Run(ctx)
+			Maybe(Initializing).At(Suspended).Do(Resume()).Maybe(Initializing).Reaches(Running).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })

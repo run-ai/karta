@@ -34,7 +34,7 @@ spec:
             - byPhase: FAILED
           suspended:
             - byExpression:
-                expression: .status.jobDeploymentStatus == "Suspended"
+                expression: .status.jobDeploymentStatus == "Suspended" or .status.jobDeploymentStatus == "Suspending"
                 expectedResult: "true"
       suspendDefinition:
         suspendActions:

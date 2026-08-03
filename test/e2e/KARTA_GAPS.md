@@ -269,6 +269,9 @@ suspended states:
 Karta after: `[Initializing]` for both the provisioning window and PENDING; RUNNING
 reads `[Running]`, SUCCEEDED `[Completed]`, and a suspended RayJob `[Suspended]`.
 
+While suspending, the operator reports `jobDeploymentStatus: Suspending` before
+`Suspended`; that transient read Undefined too, so Suspended now matches both.
+
 ## Recorder robustness note
 
 RayCluster provisioning takes minutes, and a slowly-changing object sitting idle
