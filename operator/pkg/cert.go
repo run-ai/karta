@@ -64,14 +64,20 @@ func ResolveNamespace(override string) (string, error) {
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update
 
 func newCertRotator(opts CertOptions, controllerName string, ready chan struct{}) *rotator.CertRotator {
+	svcDNS := fmt.Sprintf("%s.%s.svc", opts.ServiceName, opts.Namespace)
 	return &rotator.CertRotator{
 		SecretKey:      types.NamespacedName{Namespace: opts.Namespace, Name: opts.SecretName},
 		CertDir:        opts.CertDir,
 		CAName:         certCAName,
 		CAOrganization: certCAOrganization,
-		DNSName:        fmt.Sprintf("%s.%s.svc", opts.ServiceName, opts.Namespace),
+		DNSName:        svcDNS,
+		ExtraDNSNames:  []string{svcDNS + ".cluster.local"},
 		IsReady:        ready,
-		ControllerName: controllerName,
+		// Only the leader rotates the shared cert Secret; other replicas receive
+		// it through the mounted Secret. A manager without leader election is
+		// treated as elected, so this still runs in single-replica and bootstrap.
+		RequireLeaderElection: true,
+		ControllerName:        controllerName,
 		Webhooks: []rotator.WebhookInfo{
 			{Type: rotator.Mutating, Name: opts.MutatingWebhookName},
 			{Type: rotator.Validating, Name: opts.ValidatingWebhookName},
