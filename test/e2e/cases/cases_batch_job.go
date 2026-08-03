@@ -12,29 +12,29 @@ var batchJobCase = WorkloadCase{
 		{suspended, CondTrue("Suspended")},
 		{initializing, IntAtLeast(1, "status", "active")},
 		{running, IntAtLeast(1, "status", "ready")},
-		{completed, CondTrue("Complete")},
-		{failed, CondTrue("Failed")},
+		{completed, CondTrue("Complete", "SuccessCriteriaMet")},
+		{failed, CondTrue("Failed", "FailureTarget")},
 		{degraded, JobDegraded()},
 	},
 	Flows: []Flow{
-		{Name: "running", WorkloadFile: "testdata/batch-job/running.yaml", Journey: Steps(initializing, running)},
+		{Name: "running", WorkloadFile: "cases/testdata/batch-job/running.yaml", Journey: Steps(initializing, running)},
 		// the second Initializing is the active-not-ready dip as the pod terminates before Complete.
-		{Name: "completed", WorkloadFile: "testdata/batch-job/completed.yaml", Journey: Steps(initializing, running, initializing, completed)},
-		{Name: "failed", WorkloadFile: "testdata/batch-job/failed.yaml", Journey: Steps(initializing, failed)},
-		{Name: "resumed", WorkloadFile: "testdata/batch-job/resumed.yaml", Journey: []Step{
-			{State: suspended, Action: Unsuspend},
+		{Name: "completed", WorkloadFile: "cases/testdata/batch-job/completed.yaml", Journey: Steps(initializing, running, initializing, completed)},
+		{Name: "failed", WorkloadFile: "cases/testdata/batch-job/failed.yaml", Journey: Steps(initializing, failed)},
+		{Name: "resumed", WorkloadFile: "cases/testdata/batch-job/resumed.yaml", Journey: []Step{
+			{State: suspended, Action: Resume()},
 			{State: initializing},
 			{State: running},
 			{State: initializing},
 			{State: completed},
 		}},
-		{Name: "degraded", WorkloadFile: "testdata/batch-job/degraded.yaml", Journey: Steps(initializing, running, degraded)},
-		{Name: "suspended", WorkloadFile: "testdata/batch-job/suspended.yaml", Journey: Steps(suspended)},
-		{Name: "scaled", WorkloadFile: "testdata/batch-job/scaled.yaml", Journey: []Step{
+		{Name: "degraded", WorkloadFile: "cases/testdata/batch-job/degraded.yaml", Journey: Steps(initializing, running, degraded)},
+		{Name: "suspended", WorkloadFile: "cases/testdata/batch-job/suspended.yaml", Journey: Steps(suspended)},
+		{Name: "scaled", WorkloadFile: "cases/testdata/batch-job/scaled.yaml", Journey: []Step{
 			{State: initializing, Optional: true},
-			{State: running, Settle: IntEq(1, "status", "ready"), Action: ScaleParallelism(3)},
-			{State: running, Settle: IntEq(3, "status", "ready"), Action: ScaleParallelism(1)},
-			{State: running, Settle: IntEq(1, "status", "ready")},
+			{State: running, ActionPredicate: IntEq(1, "status", "ready"), Action: ScaleParallelism(3)},
+			{State: running, ActionPredicate: IntEq(3, "status", "ready"), Action: ScaleParallelism(1)},
+			{State: running, ActionPredicate: IntEq(1, "status", "ready")},
 		}},
 	},
 }

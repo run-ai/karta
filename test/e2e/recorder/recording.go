@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Package conformance is the recording format shared by the live recorder and the offline golden: for
-// each state a workload passes through it stores the own-fields state, the CR, and Karta's reading, each
-// as a first value plus a per-step merge-patch, so a recording holds only what changed between states.
-package conformance
+package recorder
 
 import (
 	"fmt"
@@ -15,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
+
+	"github.com/run-ai/karta/test/e2e/cases"
 )
 
 // SchemaVersion is bumped when the on-disk format changes incompatibly.
@@ -28,21 +27,28 @@ type Recording struct {
 	KartaName     string `json:"kartaName"`
 	Flow          string `json:"flow"`
 	Want          string `json:"want,omitempty"`
+	Succeeded     bool   `json:"succeeded"`
 	KartaFile     string `json:"kartaFile"` // repo-relative path to the Karta definition
 	Steps         []Step `json:"steps"`
 }
 
-// Step is one observed state: State (own-fields, never from Karta), the CR and Karta's reading (full on
-// the first step, RFC 7386 merge-patches after), and the Action fired here if any.
+// Step is one observed state: the own-fields State (never from Karta), the CR (full on the first step,
+// a merge-patch after), and the Action fired here if any.
 type Step struct {
-	State         string                 `json:"state"`
-	Action        string                 `json:"action,omitempty"`
-	CR            map[string]interface{} `json:"cr,omitempty"`
-	Patch         map[string]interface{} `json:"patch,omitempty"`
-	Expected      map[string]interface{} `json:"expected,omitempty"`
-	ExpectedPatch map[string]interface{} `json:"expectedPatch,omitempty"`
+	State  string                 `json:"state"`
+	CR     map[string]interface{} `json:"cr,omitempty"`
+	Patch  map[string]interface{} `json:"patch,omitempty"`
+	Action *Action                `json:"action,omitempty"`
 }
 
+// Action is a mutation fired at a step: the request sent to the apiserver and the object it returned.
+type Action struct {
+	Type     cases.ActionType       `json:"type"`
+	Request  map[string]interface{} `json:"request"`
+	Response map[string]interface{} `json:"response,omitempty"`
+}
+
+// States is the ordered own-fields states the recording passed through.
 func (r Recording) States() []string {
 	out := make([]string, len(r.Steps))
 	for i, s := range r.Steps {
@@ -51,44 +57,28 @@ func (r Recording) States() []string {
 	return out
 }
 
+// CRs rebuilds the full CR at each step from the merge-patches.
 func (r Recording) CRs() ([]*unstructured.Unstructured, error) {
-	series, err := reconstruct(r, func(s Step) (map[string]interface{}, map[string]interface{}) { return s.CR, s.Patch })
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*unstructured.Unstructured, len(series))
-	for i, m := range series {
-		out[i] = &unstructured.Unstructured{Object: m}
-	}
-	return out, nil
-}
-
-func (r Recording) Readings() ([]map[string]interface{}, error) {
-	return reconstruct(r, func(s Step) (map[string]interface{}, map[string]interface{}) { return s.Expected, s.ExpectedPatch })
-}
-
-// reconstruct rebuilds the full value at each step: the first step's value, then merge-patches in order.
-func reconstruct(r Recording, pick func(Step) (first, patch map[string]interface{})) ([]map[string]interface{}, error) {
 	if len(r.Steps) == 0 {
 		return nil, nil
 	}
-	first, _ := pick(r.Steps[0])
-	if first == nil {
-		return nil, fmt.Errorf("recording %s/%s: first step missing its full value", r.Operator, r.Flow)
+	if r.Steps[0].CR == nil {
+		return nil, fmt.Errorf("recording %s/%s: first step missing its full CR", r.Operator, r.Flow)
 	}
-	cur := runtime.DeepCopyJSON(first)
-	out := []map[string]interface{}{runtime.DeepCopyJSON(cur)}
+	cur := runtime.DeepCopyJSON(r.Steps[0].CR)
+	out := []*unstructured.Unstructured{{Object: runtime.DeepCopyJSON(cur)}}
 	for _, s := range r.Steps[1:] {
-		_, patch := pick(s)
+		patch := s.Patch
 		if patch == nil {
 			patch = map[string]interface{}{}
 		}
 		applyMergePatch(cur, patch)
-		out = append(out, runtime.DeepCopyJSON(cur))
+		out = append(out, &unstructured.Unstructured{Object: runtime.DeepCopyJSON(cur)})
 	}
 	return out, nil
 }
 
+// RecordingPath is the on-disk path of a flow's recording under fixturesRoot.
 func RecordingPath(fixturesRoot string, r Recording) string {
 	return filepath.Join(fixturesRoot, r.Operator, r.Version, r.KartaName, r.Flow+".yaml")
 }
@@ -97,13 +87,23 @@ func WriteRecording(path string, r Recording) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	return writeYAML(path, r)
+	b, err := yaml.Marshal(r)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, b, 0o644)
 }
 
 func LoadRecording(path string) (Recording, error) {
 	var r Recording
-	err := readYAML(path, &r)
-	return r, err
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return r, err
+	}
+	if err := yaml.Unmarshal(b, &r); err != nil {
+		return r, fmt.Errorf("%s: %w", path, err)
+	}
+	return r, nil
 }
 
 // MergePatch is the RFC 7386 merge-patch from prev to cur: removed keys nulled, objects recursed, arrays
@@ -154,23 +154,4 @@ func applyMergePatch(target, patch map[string]interface{}) {
 		applyMergePatch(tm, pm)
 		target[k] = tm
 	}
-}
-
-func writeYAML(path string, v interface{}) error {
-	b, err := yaml.Marshal(v)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, b, 0o644)
-}
-
-func readYAML(path string, v interface{}) error {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	if err := yaml.Unmarshal(b, v); err != nil {
-		return fmt.Errorf("%s: %w", path, err)
-	}
-	return nil
 }

@@ -6,7 +6,6 @@
 package cases
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -18,21 +17,21 @@ import (
 // StateCheck recognises a state from the workload's own fields, never from Karta.
 type StateCheck func(*unstructured.Unstructured) bool
 
-type StateAction func(ctx context.Context, obj *unstructured.Unstructured) error
-
 type NamedState struct {
 	Name  kartav1alpha1.ResourceStatus
 	Match StateCheck
 }
 
-// Step is one stop on a journey: a state to reach, an optional action, and an optional Settle gate that
-// lets a journey list the same state more than once (a scale flow is Running at 1, 3, then 1 replica).
+// Step is one stop on a journey: a state to reach, an optional action, and an optional ActionPredicate
+// that gates the step. ActionPredicate lets a journey list the same state more than once (a scale flow is
+// Running at 1, 3, then 1 replica): the step is not reached until the predicate over the workload's own
+// fields holds, and its action fires then.
 type Step struct {
-	State  kartav1alpha1.ResourceStatus
-	Action StateAction
-	Settle StateCheck
+	State           kartav1alpha1.ResourceStatus
+	Action          *Action
+	ActionPredicate StateCheck
 	// Optional marks a transient step the workload may miss (a scale dip): the order check tolerates it
-	// being absent, and driveByPosition does not stop at it.
+	// being absent. It is not a drive stop - only checkpoints (steps with an action or predicate) are.
 	Optional bool
 }
 
@@ -80,14 +79,26 @@ func (wc WorkloadCase) Validate() error {
 		if fl.WorkloadFile == "" {
 			return fmt.Errorf("case %q flow %q: empty WorkloadFile", wc.Name, fl.Name)
 		}
-		// A terminal Optional step would make DesiredFinalStatus() a dip that driveByPosition
-		// skips, so the run could finish without the last real settle firing.
-		if last := fl.Journey[len(fl.Journey)-1]; last.Optional {
+		// A terminal Optional step would make DesiredFinalStatus() a dip the driver skips, so the run
+		// could finish without reaching the last real step.
+		last := fl.Journey[len(fl.Journey)-1]
+		if last.Optional {
 			return fmt.Errorf("case %q flow %q: journey ends on an Optional step %q; the last step must be a real settle", wc.Name, fl.Name, last.State)
 		}
+		lastIsCheckpoint := last.Action != nil || last.ActionPredicate != nil
 		for _, st := range fl.Journey {
 			if !known[st.State] {
 				return fmt.Errorf("case %q flow %q: state %q not in registry", wc.Name, fl.Name, st.State)
+			}
+			// A checkpoint (action or predicate) on an Optional step would fire even though the step is a
+			// skippable dip.
+			if st.Optional && (st.Action != nil || st.ActionPredicate != nil) {
+				return fmt.Errorf("case %q flow %q: Optional step %q must not carry an action or predicate", wc.Name, fl.Name, st.State)
+			}
+			// If a checkpoint shares the final state, the last step must be that checkpoint; otherwise the
+			// run stops when the checkpoint pops and drops the final settle.
+			if !lastIsCheckpoint && st.State == last.State && (st.Action != nil || st.ActionPredicate != nil) {
+				return fmt.Errorf("case %q flow %q: a checkpoint has the final state %q but the last step is plain; make the last step a checkpoint", wc.Name, fl.Name, last.State)
 			}
 		}
 	}

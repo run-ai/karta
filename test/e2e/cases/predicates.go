@@ -5,13 +5,19 @@ package cases
 
 import "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-func CondTrue(condType string) StateCheck {
+// CondTrue matches when any of the given condition types is present with status True.
+func CondTrue(condTypes ...string) StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		conds, _, _ := unstructured.NestedSlice(u.Object, "status", "conditions")
 		for _, c := range conds {
 			m, ok := c.(map[string]any)
-			if ok && m["type"] == condType && m["status"] == "True" {
-				return true
+			if !ok || m["status"] != "True" {
+				continue
+			}
+			for _, t := range condTypes {
+				if m["type"] == t {
+					return true
+				}
 			}
 		}
 		return false
