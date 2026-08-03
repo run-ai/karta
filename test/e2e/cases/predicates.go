@@ -327,6 +327,22 @@ func RaySuspended() StateCheck {
 	}
 }
 
+// RayJobInitializing matches a RayJob before its job runs: jobStatus PENDING, or empty while the RayJob
+// brings up its cluster and it is not suspended (jobDeploymentStatus Initializing/Running, or empty).
+func RayJobInitializing() StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		js, _, _ := unstructured.NestedString(u.Object, "status", "jobStatus")
+		if js == "PENDING" {
+			return true
+		}
+		if js != "" {
+			return false
+		}
+		ds, _, _ := unstructured.NestedString(u.Object, "status", "jobDeploymentStatus")
+		return ds != "Suspended" && ds != "Suspending"
+	}
+}
+
 // RayInitializing matches a RayCluster converging toward ready: not suspended and status.state not yet
 // "ready" or "failed". Covers a fresh provision (state empty) and the resume window where suspend is
 // already false but state still lags at "suspended".

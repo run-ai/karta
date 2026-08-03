@@ -244,6 +244,31 @@ state not yet "ready" or "failed".
 Karta after: `[Initializing]`. A ready cluster still reads `[Running]`, a suspended
 one `[Suspended]`.
 
+## 9. ray.io/v1 RayJob: Initializing misses the provisioning window
+
+RayJob mapped Initializing only to jobStatus `PENDING`. Before that, the RayJob
+brings up its own cluster while `.status.jobStatus` is still empty (and
+`jobDeploymentStatus` is `Initializing`, then `Running` before the job is
+submitted), so the provisioning window read Undefined.
+
+CR status:
+
+```json
+{"status": {"jobDeploymentStatus": "Initializing"}}
+```
+
+Karta before: `[Undefined]`.
+
+Added a second Initializing matcher for the empty-jobStatus window, excluding the
+suspended states:
+
+```jq
+(.status.jobStatus // "") == "" and (.status.jobDeploymentStatus // "") != "Suspended" and (.status.jobDeploymentStatus // "") != "Suspending"
+```
+
+Karta after: `[Initializing]` for both the provisioning window and PENDING; RUNNING
+reads `[Running]`, SUCCEEDED `[Completed]`, and a suspended RayJob `[Suspended]`.
+
 ## Recorder robustness note
 
 RayCluster provisioning takes minutes, and a slowly-changing object sitting idle

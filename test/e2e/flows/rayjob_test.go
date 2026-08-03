@@ -20,7 +20,7 @@ var _ = Describe("RayJob", Ordered, Label("kuberay", "rayjob"), func() {
 		installKarta(ctx, "../../docs/catalog/ray-io-rayjob-v1.yaml", "ray-io-rayjob-v1")
 		rec = recorder.New("kuberay", "ray-io-rayjob-v1", "../../docs/catalog/ray-io-rayjob-v1.yaml").
 			Timeout(6*time.Minute).
-			State(Initializing, PhaseEq("PENDING", "status", "jobStatus")).
+			State(Initializing, RayJobInitializing()).
 			State(Running, PhaseEq("RUNNING", "status", "jobStatus")).
 			State(Completed, PhaseEq("SUCCEEDED", "status", "jobStatus")).
 			State(Failed, PhaseEq("FAILED", "status", "jobStatus")).
