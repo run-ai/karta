@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
+package flows
+
+import (
+	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	. "github.com/run-ai/karta/test/e2e/cases"
+	"github.com/run-ai/karta/test/e2e/recorder"
+)
+
+var _ = Describe("KServe InferenceService", Ordered, Label("kserve"), func() {
+	var rec *recorder.Recorder
+
+	BeforeAll(func(ctx SpecContext) {
+		installKarta(ctx, "../../docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml", "serving-kserve-io-inferenceservice-v1beta1")
+		rec = recorder.New("kserve", "serving-kserve-io-inferenceservice-v1beta1", "../../docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml").
+			Timeout(6*time.Minute).
+			State(Running, CondTrue("Ready")).
+			State(Failed, CondsFalse("PredictorReady", "PredictorConfigurationReady", "RoutesReady"))
+	})
+
+	It("running", func(ctx SpecContext) {
+		_, err := rec.Flow("running", "cases/testdata/kserve/running.yaml").Reaches(Running).Run(ctx)
+		Expect(err).To(Succeed())
+	})
+
+	// Custom predictor with a nonexistent-registry image: PredictorReady/PredictorConfigurationReady/
+	// RoutesReady all False -> Failed.
+	It("failed", func(ctx SpecContext) {
+		_, err := rec.Flow("failed", "cases/testdata/kserve/failed.yaml").Reaches(Failed).Run(ctx)
+		Expect(err).To(Succeed())
+	})
+})
