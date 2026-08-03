@@ -1,0 +1,103 @@
+flow: completed
+kartaFile: docs/catalog/kubeflow-org-mpijob-v2beta1.yaml
+kartaName: kubeflow-org-mpijob-v2beta1
+operator: kubeflow
+schemaVersion: 1
+steps:
+- cr:
+    apiVersion: kubeflow.org/v2beta1
+    kind: MPIJob
+    metadata:
+      creationTimestamp: "2026-08-03T21:04:33Z"
+      generation: 1
+      name: karta-e2e-mpi
+      namespace: test-sgm8j
+      uid: d3198129-221b-4067-b60f-bbc7b7f9a503
+    spec:
+      launcherCreationPolicy: AtStartup
+      mpiImplementation: OpenMPI
+      mpiReplicaSpecs:
+        Launcher:
+          replicas: 1
+          template:
+            spec:
+              containers:
+              - command:
+                - "true"
+                image: busybox:1.36
+                name: mpi-launcher
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 64Mi
+        Worker:
+          replicas: 1
+          template:
+            spec:
+              containers:
+              - command:
+                - sleep
+                - infinity
+                image: busybox:1.36
+                name: mpi-worker
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 64Mi
+      runLauncherAsWorker: false
+      runPolicy:
+        cleanPodPolicy: None
+        suspend: false
+      slotsPerWorker: 1
+      sshAuthMountPath: /root/.ssh
+    status:
+      conditions:
+      - lastTransitionTime: "2026-08-03T21:04:33Z"
+        lastUpdateTime: "2026-08-03T21:04:33Z"
+        message: MPIJob test-sgm8j/karta-e2e-mpi is created.
+        reason: MPIJobCreated
+        status: "True"
+        type: Created
+      replicaStatuses:
+        Launcher: {}
+        Worker: {}
+      startTime: "2026-08-03T21:04:33Z"
+  state: Initializing
+- patch:
+    status:
+      replicaStatuses:
+        Worker:
+          active: 1
+  state: Initializing
+- patch:
+    status:
+      completionTime: "2026-08-03T21:04:36Z"
+      conditions:
+      - lastTransitionTime: "2026-08-03T21:04:33Z"
+        lastUpdateTime: "2026-08-03T21:04:33Z"
+        message: MPIJob test-sgm8j/karta-e2e-mpi is created.
+        reason: MPIJobCreated
+        status: "True"
+        type: Created
+      - lastTransitionTime: "2026-08-03T21:04:36Z"
+        lastUpdateTime: "2026-08-03T21:04:36Z"
+        message: MPIJob test-sgm8j/karta-e2e-mpi successfully completed.
+        reason: MPIJobSucceeded
+        status: "True"
+        type: Succeeded
+      - lastTransitionTime: "2026-08-03T21:04:36Z"
+        lastUpdateTime: "2026-08-03T21:04:36Z"
+        message: MPIJob test-sgm8j/karta-e2e-mpi is finished but Running condition
+          was never set.
+        reason: MPIJobRunning
+        status: "False"
+        type: Running
+      replicaStatuses:
+        Launcher:
+          succeeded: 1
+        Worker:
+          active: null
+  state: Completed
+succeeded: true
+version: v1.34.0
+want: Completed
