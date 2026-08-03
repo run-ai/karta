@@ -53,16 +53,7 @@ func run() error {
 		enableLeaderElection bool
 		leaderElectionID     string
 		printVersion         bool
-
-		enableWebhook         bool
-		webhookPort           int
-		webhookNamespace      string
-		webhookCertDir        string
-		webhookCertMode       string
-		webhookCertSecret     string
-		webhookServiceName    string
-		mutatingWebhookName   string
-		validatingWebhookName string
+		webhookOpts          webhookOptions
 	)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080",
@@ -76,24 +67,7 @@ func run() error {
 	flag.BoolVar(&printVersion, "version", false,
 		"Print the operator version and exit.")
 
-	flag.BoolVar(&enableWebhook, "enable-webhook", false,
-		"Enable the Karta admission webhook.")
-	flag.IntVar(&webhookPort, "webhook-port", 9443,
-		"The port the webhook server binds to.")
-	flag.StringVar(&webhookNamespace, "webhook-namespace", "",
-		"Namespace the operator runs in, used for the cert Secret and serving cert SAN. Defaults to the pod's service account namespace.")
-	flag.StringVar(&webhookCertDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs",
-		"Directory the webhook serving cert is read from.")
-	flag.StringVar(&webhookCertMode, "webhook-cert-mode", pkg.CertModeAuto,
-		"Webhook cert mode: auto (operator self-signs and rotates) or manual (certs provided externally).")
-	flag.StringVar(&webhookCertSecret, "webhook-cert-secret", "karta-operator-webhook-cert",
-		"Name of the Secret holding the webhook serving cert in auto mode.")
-	flag.StringVar(&webhookServiceName, "webhook-service-name", "karta-operator-webhook",
-		"Name of the webhook Service, used as the serving cert SAN.")
-	flag.StringVar(&mutatingWebhookName, "mutating-webhook-name", "karta-operator-mutating",
-		"Name of the MutatingWebhookConfiguration whose caBundle is patched in auto mode.")
-	flag.StringVar(&validatingWebhookName, "validating-webhook-name", "karta-operator-validating",
-		"Name of the ValidatingWebhookConfiguration whose caBundle is patched in auto mode.")
+	webhookOpts.bindFlags(flag.CommandLine)
 
 	zapOpts := zap.Options{Development: false}
 	zapOpts.BindFlags(flag.CommandLine)
@@ -110,20 +84,14 @@ func run() error {
 	kubeConfig := ctrl.GetConfigOrDie()
 	ctx := ctrl.SetupSignalHandler()
 
-	if enableWebhook && !pkg.ValidCertMode(webhookCertMode) {
-		return fmt.Errorf("invalid --webhook-cert-mode %q (want auto or manual)", webhookCertMode)
+	if webhookOpts.enable && !pkg.ValidCertMode(webhookOpts.certMode) {
+		return fmt.Errorf("invalid --webhook-cert-mode %q (want auto or manual)", webhookOpts.certMode)
 	}
 
-	certOpts := pkg.CertOptions{
-		CertDir:               webhookCertDir,
-		SecretName:            webhookCertSecret,
-		ServiceName:           webhookServiceName,
-		MutatingWebhookName:   mutatingWebhookName,
-		ValidatingWebhookName: validatingWebhookName,
-	}
+	certOpts := webhookOpts.certOptions()
 
-	if enableWebhook && webhookCertMode == pkg.CertModeAuto {
-		ns, err := pkg.ResolveNamespace(webhookNamespace)
+	if webhookOpts.enable && webhookOpts.certMode == pkg.CertModeAuto {
+		ns, err := pkg.ResolveNamespace(webhookOpts.namespace)
 		if err != nil {
 			return err
 		}
@@ -147,10 +115,10 @@ func run() error {
 			},
 		},
 	}
-	if enableWebhook {
+	if webhookOpts.enable {
 		options.WebhookServer = webhook.NewServer(webhook.Options{
-			Port:    webhookPort,
-			CertDir: webhookCertDir,
+			Port:    webhookOpts.port,
+			CertDir: webhookOpts.certDir,
 		})
 	}
 
@@ -159,7 +127,7 @@ func run() error {
 		return fmt.Errorf("create manager: %w", err)
 	}
 
-	if enableWebhook && webhookCertMode == pkg.CertModeAuto {
+	if webhookOpts.enable && webhookOpts.certMode == pkg.CertModeAuto {
 		if err := pkg.ManageCerts(mgr, certOpts); err != nil {
 			return fmt.Errorf("setup webhook cert rotation: %w", err)
 		}
@@ -169,7 +137,7 @@ func run() error {
 		return fmt.Errorf("setup karta reconciler: %w", err)
 	}
 
-	if enableWebhook {
+	if webhookOpts.enable {
 		if err = pkg.SetupWebhookWithManager(mgr); err != nil {
 			return fmt.Errorf("setup karta webhook: %w", err)
 		}
@@ -179,7 +147,7 @@ func run() error {
 		return fmt.Errorf("register healthz: %w", err)
 	}
 	readyzCheck := healthz.Ping
-	if enableWebhook {
+	if webhookOpts.enable {
 		readyzCheck = webhookReadyz(mgr)
 	}
 	if err = mgr.AddReadyzCheck("readyz", readyzCheck); err != nil {
@@ -196,5 +164,49 @@ func run() error {
 func webhookReadyz(mgr ctrl.Manager) healthz.Checker {
 	return func(req *http.Request) error {
 		return mgr.GetWebhookServer().StartedChecker()(req)
+	}
+}
+
+// webhookOptions groups the admission webhook flags.
+type webhookOptions struct {
+	enable         bool
+	port           int
+	namespace      string
+	certDir        string
+	certMode       string
+	certSecret     string
+	serviceName    string
+	mutatingName   string
+	validatingName string
+}
+
+func (o *webhookOptions) bindFlags(fs *flag.FlagSet) {
+	fs.BoolVar(&o.enable, "enable-webhook", false,
+		"Enable the Karta admission webhook.")
+	fs.IntVar(&o.port, "webhook-port", 9443,
+		"The port the webhook server binds to.")
+	fs.StringVar(&o.namespace, "webhook-namespace", "",
+		"Namespace the operator runs in, used for the cert Secret and serving cert SAN. Defaults to the pod's service account namespace.")
+	fs.StringVar(&o.certDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs",
+		"Directory the webhook serving cert is read from.")
+	fs.StringVar(&o.certMode, "webhook-cert-mode", pkg.CertModeAuto,
+		"Webhook cert mode: auto (operator self-signs and rotates) or manual (certs provided externally).")
+	fs.StringVar(&o.certSecret, "webhook-cert-secret", "karta-operator-webhook-cert",
+		"Name of the Secret holding the webhook serving cert in auto mode.")
+	fs.StringVar(&o.serviceName, "webhook-service-name", "karta-operator-webhook",
+		"Name of the webhook Service, used as the serving cert SAN.")
+	fs.StringVar(&o.mutatingName, "mutating-webhook-name", "karta-operator-mutating",
+		"Name of the MutatingWebhookConfiguration whose caBundle is patched in auto mode.")
+	fs.StringVar(&o.validatingName, "validating-webhook-name", "karta-operator-validating",
+		"Name of the ValidatingWebhookConfiguration whose caBundle is patched in auto mode.")
+}
+
+func (o *webhookOptions) certOptions() pkg.CertOptions {
+	return pkg.CertOptions{
+		CertDir:               o.certDir,
+		SecretName:            o.certSecret,
+		ServiceName:           o.serviceName,
+		MutatingWebhookName:   o.mutatingName,
+		ValidatingWebhookName: o.validatingName,
 	}
 }
