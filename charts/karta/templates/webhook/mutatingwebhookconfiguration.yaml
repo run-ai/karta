@@ -14,7 +14,7 @@ metadata:
 webhooks:
   - name: mkarta.run.ai
     admissionReviewVersions: ["v1"]
-    failurePolicy: Ignore
+    failurePolicy: Fail
     sideEffects: None
     matchPolicy: Equivalent
     timeoutSeconds: 5

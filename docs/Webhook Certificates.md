@@ -118,6 +118,11 @@ The Secret named `karta-operator-webhook-cert` must exist and hold the serving
 | `webhook.cert.annotations` | `{}` | Manual mode. Annotations for the webhook configurations, for example `cert-manager.io/inject-ca-from`. |
 | `webhook.cert.caBundle` | `""` | Manual mode. Base64-encoded CA bundle stamped onto the webhook configurations. |
 
-The webhook uses `failurePolicy: Ignore`, so a missing or not-yet-ready
-certificate never blocks Karta creation. The reconciler stamps the same GVK index
-labels as a backstop, so the webhook is a pure accelerator.
+The webhook uses `failurePolicy: Fail`, so a create or update is rejected if the
+webhook cannot be reached. This makes labeling and validation authoritative, but
+it means the webhook must stay available: run the operator with more than one
+replica (`replicaCount > 1` with `leaderElection.enabled`) so admission keeps
+working during rolling updates, and make sure the serving certificate is ready
+(auto mode provisions it; in manual mode the external Secret must exist) before
+Kartas are created. The reconciler still stamps the same GVK index labels for
+Kartas created while the webhook was disabled.
