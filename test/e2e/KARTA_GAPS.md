@@ -128,3 +128,60 @@ Added a `readyReplicas > spec.replicas` term to the Initializing expression:
 Karta after: `[Initializing]`. The new term is disjoint from Running (`==`) and
 Degraded (`<`), so a steady Degraded StatefulSet still reads `[Degraded]` and a
 fully rolled-out one still reads `[Running]`.
+
+## 5. jobset.x-k8s.io/v1alpha2 JobSet: no state at the ends of the run
+
+Two windows had no state. A just-created JobSet writes `replicatedJobsStatus`
+with all counts zero before any pod is active. And after a job succeeds, there is
+a window where the replicatedJob shows `succeeded` but the JobSet-level `Completed`
+condition is not set yet. Initializing required `active > 0`, Running required
+`ready > 0 and active > 0`, and the terminal states are by condition, so both
+windows matched nothing. The controller also briefly flaps `ready` to 0 mid-run
+while `active` stays set, which made a `ready`-only Running oscillate.
+
+CR status (just-created; the succeeded window is the same with `succeeded: 1`):
+
+```json
+{"status": {"replicatedJobsStatus": [{"name": "workers", "active": 0, "ready": 0, "succeeded": 0, "failed": 0}]}}
+```
+
+Karta before: `[Undefined]`.
+
+Redefined the two non-terminal states so they are stable and total. Running is
+now "has working pods" (active or ready), which the stable `active` count keeps
+from flapping. Initializing is "in progress with no working pods and no terminal
+or suspended condition", which covers just-created and the succeeded-pending
+window:
+
+```jq
+# Running
+(.status.replicatedJobsStatus // []) | any((.active // 0) > 0 or (.ready // 0) > 0) and all((.failed // 0) == 0)
+
+# Initializing
+((.status.replicatedJobsStatus // []) | length) > 0
+and ((.status.replicatedJobsStatus // []) | all((.active // 0) == 0 and (.ready // 0) == 0))
+and (([.status.conditions[]? | select((.type == "Completed" or .type == "Failed" or .type == "Suspended") and .status == "True")] | length) == 0)
+```
+
+Karta after: just-created and succeeded-pending read `[Initializing]`, a working
+JobSet reads `[Running]`, and a completed one reads `[Completed]`.
+
+## 6. leaderworkerset.x-k8s.io/v1 LeaderWorkerSet: Initializing misses startup
+
+Same shape as the Deployment gap. A starting LeaderWorkerSet is
+`Progressing=True` before it writes an `Available` condition. The Initializing
+matcher required `Available=False` by condition, which cannot match an absent
+condition, so startup read Undefined.
+
+CR status:
+
+```json
+{"spec": {"replicas": 1},
+ "status": {"replicas": 1, "updatedReplicas": 1, "conditions": [{"type": "Progressing", "status": "True"}]}}
+```
+
+Karta before: `[Undefined]`.
+
+Replaced the Initializing matcher with the same `byExpression` used for the
+Deployment: `Progressing=True` and no `Available=True` condition. Karta after:
+`[Initializing]`, and a ready LeaderWorkerSet still reads `[Running]`.

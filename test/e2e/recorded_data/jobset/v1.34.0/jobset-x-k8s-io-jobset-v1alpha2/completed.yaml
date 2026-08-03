@@ -1,0 +1,125 @@
+flow: completed
+kartaFile: docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml
+kartaName: jobset-x-k8s-io-jobset-v1alpha2
+operator: jobset
+schemaVersion: 1
+steps:
+- cr:
+    apiVersion: jobset.x-k8s.io/v1alpha2
+    kind: JobSet
+    metadata:
+      creationTimestamp: "2026-08-03T20:36:08Z"
+      generation: 1
+      name: karta-e2e-jobset-completed
+      namespace: test-cq97h
+      uid: 670d2c81-81a4-4a02-90ec-447336644113
+    spec:
+      network:
+        enableDNSHostnames: true
+        publishNotReadyAddresses: true
+      replicatedJobs:
+      - groupName: default
+        name: workers
+        replicas: 1
+        template:
+          metadata: {}
+          spec:
+            backoffLimit: 0
+            completionMode: Indexed
+            completions: 1
+            parallelism: 1
+            template:
+              metadata: {}
+              spec:
+                containers:
+                - command:
+                  - sh
+                  - -c
+                  - sleep 20
+                  image: busybox:1.36
+                  name: worker
+                  readinessProbe:
+                    exec:
+                      command:
+                      - "true"
+                    initialDelaySeconds: 6
+                    periodSeconds: 2
+                  resources:
+                    requests:
+                      cpu: 50m
+                      memory: 32Mi
+                restartPolicy: Never
+      startupPolicy:
+        startupPolicyOrder: AnyOrder
+      successPolicy:
+        operator: All
+    status:
+      replicatedJobsStatus:
+      - active: 0
+        failed: 0
+        name: workers
+        ready: 0
+        succeeded: 0
+        suspended: 0
+      restarts: 0
+  state: Initializing
+- patch:
+    status:
+      replicatedJobsStatus:
+      - active: 1
+        failed: 0
+        name: workers
+        ready: 0
+        succeeded: 0
+        suspended: 0
+  state: Running
+- patch:
+    status:
+      replicatedJobsStatus:
+      - active: 1
+        failed: 0
+        name: workers
+        ready: 1
+        succeeded: 0
+        suspended: 0
+  state: Running
+- patch:
+    status:
+      replicatedJobsStatus:
+      - active: 1
+        failed: 0
+        name: workers
+        ready: 0
+        succeeded: 0
+        suspended: 0
+  state: Running
+- patch:
+    status:
+      replicatedJobsStatus:
+      - active: 0
+        failed: 0
+        name: workers
+        ready: 1
+        succeeded: 0
+        suspended: 0
+  state: Running
+- patch:
+    status:
+      conditions:
+      - lastTransitionTime: "2026-08-03T20:36:33Z"
+        message: jobset completed successfully
+        reason: AllJobsCompleted
+        status: "True"
+        type: Completed
+      replicatedJobsStatus:
+      - active: 0
+        failed: 0
+        name: workers
+        ready: 0
+        succeeded: 1
+        suspended: 0
+      terminalState: Completed
+  state: Completed
+succeeded: true
+version: v1.34.0
+want: Completed

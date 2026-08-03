@@ -262,12 +262,13 @@ func JobDegraded() StateCheck {
 	}
 }
 
-// JobsetRunning matches a JobSet with a running replicated job: some replicatedJob is ready and active with
-// no failures.
+// JobsetRunning matches a JobSet with working pods: at least one replicatedJob has active or ready pods and
+// none have failed. Reading either count (not both) keeps the state stable while the controller briefly
+// flaps ready to 0 mid-run.
 func JobsetRunning() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		rjs, _, _ := unstructured.NestedSlice(u.Object, "status", "replicatedJobsStatus")
-		anyReadyActive := false
+		anyWorking := false
 		for _, r := range rjs {
 			m, ok := r.(map[string]any)
 			if !ok {
@@ -278,35 +279,39 @@ func JobsetRunning() StateCheck {
 			}
 			ready, _, _ := unstructured.NestedInt64(m, "ready")
 			active, _, _ := unstructured.NestedInt64(m, "active")
-			if ready > 0 && active > 0 {
-				anyReadyActive = true
+			if ready > 0 || active > 0 {
+				anyWorking = true
 			}
 		}
-		return anyReadyActive
+		return anyWorking
 	}
 }
 
-// JobsetInitializing matches a JobSet whose pods are active but not yet ready: some replicatedJob has
-// active > 0 and ready == 0, none failed.
+// JobsetInitializing matches a JobSet in progress with no working pods: status exists, no replicatedJob
+// has active or ready pods, and no terminal or suspended condition is set. Covers a just-created JobSet
+// (all counts zero) and the window after a job succeeds but before the JobSet-level Completed condition is
+// set.
 func JobsetInitializing() StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		rjs, _, _ := unstructured.NestedSlice(u.Object, "status", "replicatedJobsStatus")
-		anyActiveNotReady := false
+		if len(rjs) == 0 {
+			return false
+		}
+		if CondTrue("Completed", "Failed", "Suspended")(u) {
+			return false
+		}
 		for _, r := range rjs {
 			m, ok := r.(map[string]any)
 			if !ok {
 				continue
 			}
-			if failed, _, _ := unstructured.NestedInt64(m, "failed"); failed > 0 {
-				return false
-			}
 			ready, _, _ := unstructured.NestedInt64(m, "ready")
 			active, _, _ := unstructured.NestedInt64(m, "active")
-			if active > 0 && ready == 0 {
-				anyActiveNotReady = true
+			if ready > 0 || active > 0 {
+				return false
 			}
 		}
-		return anyActiveNotReady
+		return true
 	}
 }
 

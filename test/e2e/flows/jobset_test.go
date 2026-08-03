@@ -33,26 +33,26 @@ var _ = Describe("JobSet", Ordered, Label("jobset"), func() {
 
 	It("completed", func(ctx SpecContext) {
 		_, err := rec.Flow("completed", "cases/testdata/jobset/completed.yaml").
-			Reaches(Initializing).Reaches(Running).Reaches(Initializing).Reaches(Completed).Run(ctx)
+			Reaches(Initializing).Reaches(Running).Maybe(Initializing).Reaches(Completed).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("failed", func(ctx SpecContext) {
 		_, err := rec.Flow("failed", "cases/testdata/jobset/failed.yaml").
-			Reaches(Initializing).Reaches(Failed).Run(ctx)
+			Reaches(Initializing).Maybe(Running).Maybe(Initializing).Reaches(Failed).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("resumed", func(ctx SpecContext) {
 		_, err := rec.Flow("resumed", "cases/testdata/jobset/resumed.yaml").
-			At(Suspended).Do(Resume()).
-			Reaches(Initializing).Reaches(Running).Reaches(Initializing).Reaches(Completed).Run(ctx)
+			Maybe(Initializing).At(Suspended).Do(Resume()).
+			Reaches(Initializing).Reaches(Running).Maybe(Initializing).Reaches(Completed).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("suspended", func(ctx SpecContext) {
 		_, err := rec.Flow("suspended", "cases/testdata/jobset/suspended.yaml").
-			Reaches(Suspended).Run(ctx)
+			Maybe(Initializing).Reaches(Suspended).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })
