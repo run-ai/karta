@@ -185,3 +185,34 @@ Karta before: `[Undefined]`.
 Replaced the Initializing matcher with the same `byExpression` used for the
 Deployment: `Progressing=True` and no `Available=True` condition. Karta after:
 `[Initializing]`, and a ready LeaderWorkerSet still reads `[Running]`.
+
+## 7. leaderworkerset.x-k8s.io/v1 LeaderWorkerSet: no state during scale-down
+
+While scaling down, `status.replicas` lags at the old count while the desired
+replica is already ready (`Available=True`). Running keyed off the replica counts
+(`readyReplicas == status.replicas`), which fails when `status.replicas` lags, so
+the transient read Undefined. A separate Running matcher tried to use the
+`Available=True` condition but required `reason=AllGroupsReady`, and the
+LeaderWorkerSet ConditionsDefinition does not extract `reason`, so that matcher
+never matched and the count-based one was the only live path.
+
+CR status:
+
+```json
+{"spec": {"replicas": 1},
+ "status": {"replicas": 2, "readyReplicas": 1, "updatedReplicas": 2,
+            "conditions": [{"type": "Progressing", "status": "False"}, {"type": "Available", "status": "True", "reason": "AllGroupsReady"}]}}
+```
+
+Karta before: `[Undefined]`.
+
+`Available=True` is the operator's authoritative "all groups ready" signal and
+stays True through the scale-down. Dropped the `reason` requirement (which the
+def cannot read) so the matcher keys on `Available=True` alone:
+
+```go
+Running: {ByConditions: [{Type: "Available", Status: "True"}]}, // + the replica-settled fallback
+```
+
+Karta after: `[Running]`. Startup (`Available=False`) still reads `[Initializing]`
+because the Initializing byExpression requires no `Available=True` condition.

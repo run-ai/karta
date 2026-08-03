@@ -35,11 +35,15 @@ func LWS() *v1alpha1.Karta {
 								Expression:     `(([.status.conditions[]? | select(.type == "Progressing" and .status == "True")] | length) > 0) and (([.status.conditions[]? | select(.type == "Available" and .status == "True")] | length) == 0)`,
 								ExpectedResult: "true",
 							}}},
+							// Available is the authoritative "all groups ready" signal and stays
+							// True while scaling down sheds an extra pod, so key on it alone rather
+							// than on the replica counts (which lag) or UpdateInProgress (which is
+							// absent mid-scale). This ConditionsDefinition does not extract reason,
+							// so match on status only. The replica-settled expression is a fallback
+							// for when the condition is not populated.
 							Running: []v1alpha1.StatusMatcher{
 								{ByConditions: []v1alpha1.ExpectedCondition{
-									{Type: "Available", Status: ptr.To("True"), Reason: ptr.To("AllGroupsReady")},
-									{Type: "Progressing", Status: ptr.To("False")},
-									{Type: "UpdateInProgress", Status: ptr.To("False")},
+									{Type: "Available", Status: ptr.To("True")},
 								}},
 								{ByExpression: &v1alpha1.ExpressionMatcher{
 									Expression:     "(.status.replicas // 0) > 0 and .status.readyReplicas == .status.replicas and .status.updatedReplicas == .status.replicas",
