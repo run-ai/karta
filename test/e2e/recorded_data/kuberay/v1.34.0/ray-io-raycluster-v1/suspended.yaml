@@ -1,0 +1,66 @@
+flow: suspended
+kartaFile: docs/catalog/ray-io-raycluster-v1.yaml
+kartaName: ray-io-raycluster-v1
+operator: kuberay
+schemaVersion: 1
+steps:
+- cr:
+    apiVersion: ray.io/v1
+    kind: RayCluster
+    metadata:
+      creationTimestamp: "2026-08-03T21:45:05Z"
+      generation: 1
+      name: karta-e2e-ray-suspended
+      namespace: test-gdzw8
+      uid: c926c129-fd5c-4a46-8236-dbbb1ea73ab1
+    spec:
+      headGroupSpec:
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              livenessProbe:
+                failureThreshold: 30
+                initialDelaySeconds: 30
+                periodSeconds: 10
+                tcpSocket:
+                  port: 6379
+              name: ray-head
+              readinessProbe:
+                failureThreshold: 30
+                initialDelaySeconds: 10
+                periodSeconds: 5
+                tcpSocket:
+                  port: 6379
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 2Gi
+                requests:
+                  cpu: 250m
+                  memory: 1Gi
+      rayVersion: 2.40.0
+      suspend: true
+      workerGroupSpecs:
+      - groupName: small
+        maxReplicas: 1
+        minReplicas: 0
+        numOfHosts: 1
+        rayStartParams: {}
+        replicas: 0
+        template:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              name: ray-worker
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
+  state: Suspended
+succeeded: true
+version: v1.34.0
+want: Suspended
