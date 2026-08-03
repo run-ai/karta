@@ -281,3 +281,29 @@ watch loop now re-lists for a fresh resourceVersion (retrying transient control
 plane errors) and resumes, so a slow workload no longer fails to record. This is a
 recorder change, not a Karta gap, but it is what let the RayCluster flow observe
 the provisioning states above.
+
+## 10. serving.knative.dev/v1 Service: only Running was mapped
+
+The Knative Service definition mapped only Running (Ready=True). While a revision,
+route, and ingress come up, Ready is Unknown (reasons OutOfDate, RevisionMissing,
+IngressNotConfigured, Uninitialized), so the whole deploy read Undefined; a broken
+Service (Ready=False) would too.
+
+CR status:
+
+```json
+{"status": {"conditions": [{"type": "Ready", "status": "Unknown", "reason": "RevisionMissing"}]}}
+```
+
+Karta before: `[Undefined]`.
+
+Added Initializing for Ready=Unknown and Failed for Ready=False:
+
+```go
+Initializing: {ByConditions: [{Type: "Ready", Status: "Unknown"}]},
+Failed:       {ByConditions: [{Type: "Ready", Status: "False"}]},
+```
+
+Karta after: deploying reads `[Initializing]`, ready `[Running]`, a failed Service
+`[Failed]`. The recorder exercises Initializing then Running; Failed is by the
+Knative Ready model.

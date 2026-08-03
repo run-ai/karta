@@ -20,11 +20,13 @@ var _ = Describe("KnativeService", Ordered, Label("knative"), func() {
 		installKarta(ctx, "../../docs/catalog/serving-knative-dev-service-v1.yaml", "serving-knative-dev-service-v1")
 		rec = recorder.New("knative", "serving-knative-dev-service-v1", "../../docs/catalog/serving-knative-dev-service-v1.yaml").
 			Timeout(5*time.Minute).
+			State(Initializing, CondStatus("Ready", "Unknown")).
 			State(Running, CondTrue("Ready"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "cases/testdata/knative/running.yaml").Reaches(Running).Run(ctx)
+		_, err := rec.Flow("running", "cases/testdata/knative/running.yaml").
+			Reaches(Initializing).Reaches(Running).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })
