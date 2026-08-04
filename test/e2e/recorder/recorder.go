@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -30,9 +29,6 @@ import (
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
-
-// e2eRoot points from a package dir under test/e2e (the test working dir) to test/e2e, which paths are relative to.
-const e2eRoot = ".."
 
 // Run applies the manifest, drives the workload through the journey, and writes the recording. On a
 // flow-level failure the recording is still written (succeeded:false) for triage.
@@ -180,11 +176,10 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 
 // write persists the run under recorded_data/<operator>/<version>/<kartaName>/<flow>.yaml.
 func (f *Flow) write(rec *recording, succeeded bool) (*Recording, error) {
-	version := operatorVersion(f.rec.operator, f.rec.cluster.Version)
 	rc := Recording{
 		SchemaVersion: SchemaVersion,
 		Operator:      f.rec.operator,
-		Version:       version,
+		Version:       f.rec.version,
 		KartaName:     f.rec.kartaName,
 		Flow:          f.name,
 		Want:          string(f.want()),
@@ -198,11 +193,11 @@ func (f *Flow) write(rec *recording, succeeded bool) (*Recording, error) {
 		}
 	}
 
-	rc.Path = RecordingPath(filepath.Join(e2eRoot, "recorded_data"), rc)
+	rc.Path = RecordingPath(f.rec.cluster.OutputDir, rc)
 	if err := WriteRecording(rc.Path, rc); err != nil {
 		return nil, fmt.Errorf("write recording %s: %w", rc.Path, err)
 	}
-	fmt.Fprintf(f.rec.cluster.Progress, "recorded %s/%s/%s/%s.yaml (%d events %v)\n", f.rec.operator, version, f.rec.kartaName, f.name, len(rc.Events), rec.order)
+	fmt.Fprintf(f.rec.cluster.Progress, "recorded %s/%s/%s/%s.yaml (%d events %v)\n", f.rec.operator, f.rec.version, f.rec.kartaName, f.name, len(rc.Events), rec.order)
 	return &rc, nil
 }
 
@@ -352,20 +347,6 @@ func observedOrderErr(journey []journeyStep, order []kartav1alpha1.ResourceStatu
 	return ObservedOrderErr(journeySteps(journey), order, want)
 }
 
-// operatorVersion is the installed version of op, or fallback (the cluster's Kubernetes version) for
-// built-ins no operator provides.
-func operatorVersion(op, fallback string) string {
-	b, err := os.ReadFile(filepath.Join(e2eRoot, "..", "..", "hack", "e2e", "operators", ".installed-versions"))
-	if err == nil {
-		for _, line := range strings.Split(string(b), "\n") {
-			if k, v, ok := strings.Cut(line, "="); ok && strings.TrimSpace(k) == op {
-				return strings.TrimSpace(v)
-			}
-		}
-	}
-	return fallback
-}
-
 func dumpStatus(u *unstructured.Unstructured) string {
 	if u == nil {
 		return "(no object observed)"
@@ -379,7 +360,7 @@ func dumpStatus(u *unstructured.Unstructured) string {
 }
 
 func readManifest(path string) ([]byte, error) {
-	b, err := os.ReadFile(filepath.Join(e2eRoot, path))
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", path, err)
 	}

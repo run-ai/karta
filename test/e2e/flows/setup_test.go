@@ -7,6 +7,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -56,4 +57,18 @@ func readE2E(path string) []byte {
 	b, err := os.ReadFile(filepath.Join("..", path))
 	Expect(err).NotTo(HaveOccurred(), "read %s", path)
 	return b
+}
+
+// operatorVersion returns op's installed version from hack/e2e's .installed-versions, or the cluster's
+// Kubernetes version for built-in types no operator provides. The recorder no longer reads this itself.
+func operatorVersion(op string) string {
+	b, err := os.ReadFile(filepath.Join("..", "..", "..", "hack", "e2e", "operators", ".installed-versions"))
+	if err == nil {
+		for _, line := range strings.Split(string(b), "\n") {
+			if k, v, ok := strings.Cut(line, "="); ok && strings.TrimSpace(k) == op {
+				return strings.TrimSpace(v)
+			}
+		}
+	}
+	return serverVersion
 }

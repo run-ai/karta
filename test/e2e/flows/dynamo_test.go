@@ -21,20 +21,20 @@ var _ = Describe("DynamoGraphDeployment", Ordered, Label("dynamo"), func() {
 		// The decode worker pulls env from hf-token-secret; the operator reads it from the workload's own
 		// namespace, so seed it here (up.sh only creates it in default).
 		ensureSecret(ctx, "hf-token-secret", map[string]string{"HF_TOKEN": "dummy"})
-		rec = recorder.New(cluster, "dynamo", "nvidia-com-dynamographdeployment-v1alpha1", "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml").
+		rec = recorder.New(cluster, "dynamo", operatorVersion("dynamo"), "nvidia-com-dynamographdeployment-v1alpha1", "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml").
 			SetTimeout(8*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, PhaseAny([]string{"initializing", "pending", ""}, "status", "state")).
 			AddState(kartav1alpha1.RunningStatus, PhaseEq("successful", "status", "state"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "running", "flows/testdata/dynamo/running.yaml").
+		_, err := recorder.NewFlow(rec, "running", "testdata/dynamo/running.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("initializing", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "initializing", "flows/testdata/dynamo/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
+		_, err := recorder.NewFlow(rec, "initializing", "testdata/dynamo/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })

@@ -18,25 +18,25 @@ var _ = Describe("Grove PodCliqueSet", Ordered, Label("grove"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/grove-io-podcliqueset-v1alpha1.yaml", "grove-io-podcliqueset-v1alpha1")
-		rec = recorder.New(cluster, "grove", "grove-io-podcliqueset-v1alpha1", "../../docs/catalog/grove-io-podcliqueset-v1alpha1.yaml").
+		rec = recorder.New(cluster, "grove", operatorVersion("grove"), "grove-io-podcliqueset-v1alpha1", "../../docs/catalog/grove-io-podcliqueset-v1alpha1.yaml").
 			SetTimeout(4*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, ReplicasComingUp()).
 			AddState(kartav1alpha1.RunningStatus, AllReplicasAvailable())
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "running", "flows/testdata/grove/running.yaml").
+		_, err := recorder.NewFlow(rec, "running", "testdata/grove/running.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("initializing", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "initializing", "flows/testdata/grove/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
+		_, err := recorder.NewFlow(rec, "initializing", "testdata/grove/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("scaled", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "scaled", "flows/testdata/grove/scaled.yaml").
+		_, err := recorder.NewFlow(rec, "scaled", "testdata/grove/scaled.yaml").
 			Maybe(kartav1alpha1.InitializingStatus).
 			At(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "availableReplicas")).Do(ScaleReplicas(2)).
 			Maybe(kartav1alpha1.InitializingStatus).

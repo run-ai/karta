@@ -16,7 +16,7 @@ var _ = Describe("MPIJob", Ordered, Label("kubeflow", "mpijob"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/kubeflow-org-mpijob-v2beta1.yaml", "kubeflow-org-mpijob-v2beta1")
-		rec = recorder.New(cluster, "kubeflow", "kubeflow-org-mpijob-v2beta1", "../../docs/catalog/kubeflow-org-mpijob-v2beta1.yaml").
+		rec = recorder.New(cluster, "kubeflow", operatorVersion("kubeflow"), "kubeflow-org-mpijob-v2beta1", "../../docs/catalog/kubeflow-org-mpijob-v2beta1.yaml").
 			AddState(kartav1alpha1.InitializingStatus, CondTrue("Created")).
 			AddState(kartav1alpha1.RunningStatus, CondTrue("Running")).
 			AddState(kartav1alpha1.CompletedStatus, CondTrue("Succeeded")).
@@ -25,7 +25,7 @@ var _ = Describe("MPIJob", Ordered, Label("kubeflow", "mpijob"), func() {
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "running", "flows/testdata/mpijob/running.yaml").
+		_, err := recorder.NewFlow(rec, "running", "testdata/mpijob/running.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
@@ -33,25 +33,25 @@ var _ = Describe("MPIJob", Ordered, Label("kubeflow", "mpijob"), func() {
 	// The launcher can finish before Running is observed (Optional), and Kubeflow keeps Created set so the
 	// CR reads Initializing again for a tick before the terminal.
 	It("completed", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "completed", "flows/testdata/mpijob/completed.yaml").
+		_, err := recorder.NewFlow(rec, "completed", "testdata/mpijob/completed.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Maybe(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("failed", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "failed", "flows/testdata/mpijob/failed.yaml").
+		_, err := recorder.NewFlow(rec, "failed", "testdata/mpijob/failed.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Maybe(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("suspended", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "suspended", "flows/testdata/mpijob/suspended.yaml").
+		_, err := recorder.NewFlow(rec, "suspended", "testdata/mpijob/suspended.yaml").
 			Reaches(kartav1alpha1.SuspendedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("resumed", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "resumed", "flows/testdata/mpijob/resumed.yaml").
+		_, err := recorder.NewFlow(rec, "resumed", "testdata/mpijob/resumed.yaml").
 			At(kartav1alpha1.SuspendedStatus).Do(ResumeRunPolicy()).
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
