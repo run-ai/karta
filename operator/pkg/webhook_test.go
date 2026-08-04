@@ -11,6 +11,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func kartaWithRootKind(gvk *kartav1alpha1.GroupVersionKind) *kartav1alpha1.Karta {
@@ -80,34 +83,65 @@ var _ = Describe("ResolveNamespace", func() {
 })
 
 var _ = Describe("KartaValidator", func() {
-	var validator *KartaValidator
 	ctx := context.Background()
 
 	rayGVK := &kartav1alpha1.GroupVersionKind{Group: "ray.io", Version: "v1", Kind: "RayCluster"}
 
-	BeforeEach(func() {
-		validator = &KartaValidator{}
-	})
+	// newValidator builds a validator backed by a fake client holding the given
+	// Kartas, with the same root GVK field index the manager registers.
+	newValidator := func(existing ...*kartav1alpha1.Karta) *KartaValidator {
+		scheme := runtime.NewScheme()
+		_ = kartav1alpha1.AddToScheme(scheme)
+		objs := make([]client.Object, 0, len(existing))
+		for _, k := range existing {
+			objs = append(objs, k)
+		}
+		c := fake.NewClientBuilder().WithScheme(scheme).
+			WithIndex(&kartav1alpha1.Karta{}, kartaGVKIndexKey, indexKartaByRootGVK).
+			WithObjects(objs...).Build()
+		return &KartaValidator{client: c}
+	}
 
 	validKarta := func() *kartav1alpha1.Karta { return namedKarta("valid", rayGVK) }
 
 	It("accepts a valid Karta on create", func() {
-		_, err := validator.ValidateCreate(ctx, validKarta())
+		_, err := newValidator().ValidateCreate(ctx, validKarta())
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("rejects a Karta with no root component kind on create", func() {
-		_, err := validator.ValidateCreate(ctx, kartaWithRootKind(nil))
+		_, err := newValidator().ValidateCreate(ctx, kartaWithRootKind(nil))
 		Expect(err).To(HaveOccurred())
 	})
 
+	It("rejects a second Karta for the same root GVK", func() {
+		v := newValidator(namedKarta("first", rayGVK))
+		_, err := v.ValidateCreate(ctx, namedKarta("second", rayGVK))
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("already exists"))
+	})
+
+	It("allows a Karta for the same group/kind but a different version", func() {
+		v := newValidator(namedKarta("ray-v1", rayGVK))
+		rayV1alpha1 := &kartav1alpha1.GroupVersionKind{Group: "ray.io", Version: "v1alpha1", Kind: "RayCluster"}
+		_, err := v.ValidateCreate(ctx, namedKarta("ray-v1alpha1", rayV1alpha1))
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("allows a Karta for a group/kind that has none yet", func() {
+		v := newValidator(namedKarta("first", rayGVK))
+		jobGVK := &kartav1alpha1.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
+		_, err := v.ValidateCreate(ctx, namedKarta("second", jobGVK))
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("rejects an invalid Karta on update", func() {
-		_, err := validator.ValidateUpdate(ctx, validKarta(), kartaWithRootKind(nil))
+		_, err := newValidator().ValidateUpdate(ctx, validKarta(), kartaWithRootKind(nil))
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("allows delete", func() {
-		_, err := validator.ValidateDelete(ctx, kartaWithRootKind(nil))
+		_, err := newValidator().ValidateDelete(ctx, kartaWithRootKind(nil))
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
