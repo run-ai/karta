@@ -46,12 +46,21 @@ func New(cluster Cluster, operator, kartaName, kartaFile string) *Recorder {
 
 // AddState registers a state predicate; declare states least- to most-advanced (Classify keeps the furthest match).
 func (r *Recorder) AddState(name kartav1alpha1.ResourceStatus, match StateCheck) *Recorder {
+	if name == "" {
+		panic("recorder: AddState needs a non-empty state name")
+	}
 	r.states = append(r.states, NamedState{Name: name, Match: match})
 	return r
 }
 
 // SetTimeout overrides the per-flow deadline (default 3m).
-func (r *Recorder) SetTimeout(d time.Duration) *Recorder { r.timeout = d; return r }
+func (r *Recorder) SetTimeout(d time.Duration) *Recorder {
+	if d <= 0 {
+		panic("recorder: SetTimeout needs a positive duration")
+	}
+	r.timeout = d
+	return r
+}
 
 // NewFlow starts a flow seeded from a manifest (path relative to test/e2e).
 func NewFlow(r *Recorder, name, manifest string) *Flow {
