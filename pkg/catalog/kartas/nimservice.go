@@ -48,6 +48,11 @@ func NIMService() *v1alpha1.Karta {
 							Initializing: []v1alpha1.StatusMatcher{
 								{ByPhase: "NotReady"},
 								{ByPhase: "Pending"},
+								// Just created: the operator has not written status.state yet.
+								{ByExpression: &v1alpha1.ExpressionMatcher{
+									Expression:     `(.status.state // "") == ""`,
+									ExpectedResult: "true",
+								}},
 							},
 							Running: []v1alpha1.StatusMatcher{
 								{ByPhase: "Ready"},

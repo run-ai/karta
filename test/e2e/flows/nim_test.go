@@ -20,7 +20,7 @@ var _ = Describe("NIMService", Ordered, Label("nim"), func() {
 		installKarta(ctx, "../../docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml", "apps-nvidia-com-nimservice-v1alpha1")
 		rec = recorder.New("nim", "apps-nvidia-com-nimservice-v1alpha1", "../../docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml").
 			Timeout(5*time.Minute).
-			State(Initializing, PhaseAny([]string{"NotReady", "Pending"}, "status", "state")).
+			State(Initializing, PhaseAny([]string{"NotReady", "Pending", ""}, "status", "state")).
 			State(Running, PhaseEq("Ready", "status", "state"))
 	})
 

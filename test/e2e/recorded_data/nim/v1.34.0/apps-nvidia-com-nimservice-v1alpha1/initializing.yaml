@@ -1,0 +1,39 @@
+flow: initializing
+kartaFile: docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml
+kartaName: apps-nvidia-com-nimservice-v1alpha1
+operator: nim
+schemaVersion: 1
+steps:
+- cr:
+    apiVersion: apps.nvidia.com/v1alpha1
+    kind: NIMService
+    metadata:
+      creationTimestamp: "2026-08-04T04:47:08Z"
+      generation: 1
+      name: karta-e2e-nim-initializing
+      namespace: test-q7mmx
+      uid: 09379dc1-15b4-4476-a874-ed8d9d0e549f
+    spec:
+      authSecret: ngc-secret
+      env:
+      - name: NIM_REQUEST_LATENCY
+        value: "2"
+      expose:
+        service:
+          port: 8000
+          type: ClusterIP
+      image:
+        pullPolicy: IfNotPresent
+        repository: nonexistent-nim
+        tag: bad
+      inferencePlatform: standalone
+      replicas: 1
+      storage:
+        pvc:
+          create: true
+          size: 1Gi
+          volumeAccessMode: ReadWriteOnce
+  state: Initializing
+succeeded: true
+version: v1.34.0
+want: Initializing

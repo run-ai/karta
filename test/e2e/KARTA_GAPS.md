@@ -386,9 +386,33 @@ matchers:
 Karta after: just-created, initializing, and pending read `[Initializing]`;
 successful `[Running]`; failed `[Failed]`.
 
+## 14. apps.nvidia.com/v1alpha1 NIMService: Initializing misses the just-created state
+
+The NIMService definition mapped Initializing to the "NotReady" and "Pending"
+phases (.status.state), Running to "Ready", Failed to "Failed". A just-created
+NIMService has no status.state yet, so the first steps read Undefined before the
+operator writes "NotReady".
+
+CR status:
+
+```json
+{"status": {}}
+```
+
+Karta before: `[Undefined]`.
+
+Added a byExpression for the empty phase alongside the NotReady/Pending matchers:
+
+```jq
+(.status.state // "") == ""
+```
+
+Karta after: just-created, NotReady, and Pending read `[Initializing]`; Ready
+`[Running]`; Failed `[Failed]`.
+
 ## Coverage and what remains
 
-Fixed and recorded clean: milvus, grove, dynamo (initializing), the built-ins (batch/v1 Job, apps/v1 Deployment and
+Fixed and recorded clean: milvus, grove, dynamo (initializing), nim (initializing), the built-ins (batch/v1 Job, apps/v1 Deployment and
 StatefulSet, CronJob, Pod), plus JobSet, LeaderWorkerSet, PyTorchJob, MPIJob,
 RayCluster, Knative Service, and KServe InferenceService.
 
@@ -396,7 +420,7 @@ Fixed and kread-verified, fixtures partial (the operator is heavy enough to
 outlast a kind control plane under record load on this environment): RayCluster
 resumed, and all RayJob flows (provisioning and Suspending windows).
 
-Not yet recorded here: nim, and the dynamo running flow (its mocker decode worker needs Dynamo's distributed runtime, which the e2e install keeps off, so it stays in Initializing). Their controllers run
+Not yet recorded here: the dynamo and nim running flows (its mocker decode worker needs Dynamo's distributed runtime, which the e2e install keeps off; and nim's fictive CPU image never serves, so both stay in Initializing). Their controllers run
 inference or database workloads whose smoke or reconcile load crashes a kind
 control plane during provisioning on this environment, so they could not be driven
 end to end. Their definitions already map Initializing, Running, Failed, and
