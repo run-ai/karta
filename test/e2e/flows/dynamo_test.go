@@ -20,7 +20,7 @@ var _ = Describe("DynamoGraphDeployment", Ordered, Label("dynamo"), func() {
 		installKarta(ctx, "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml", "nvidia-com-dynamographdeployment-v1alpha1")
 		rec = recorder.New("dynamo", "nvidia-com-dynamographdeployment-v1alpha1", "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml").
 			Timeout(5*time.Minute).
-			State(Initializing, PhaseAny([]string{"initializing", "pending"}, "status", "state")).
+			State(Initializing, PhaseAny([]string{"initializing", "pending", ""}, "status", "state")).
 			State(Running, PhaseEq("successful", "status", "state"))
 	})
 

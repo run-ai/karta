@@ -1,0 +1,53 @@
+flow: initializing
+kartaFile: docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml
+kartaName: nvidia-com-dynamographdeployment-v1alpha1
+operator: dynamo
+schemaVersion: 1
+steps:
+- cr:
+    apiVersion: nvidia.com/v1alpha1
+    kind: DynamoGraphDeployment
+    metadata:
+      annotations:
+        nvidia.com/dynamo-operator-origin-version: 1.2.1
+      creationTimestamp: "2026-08-04T04:36:01Z"
+      generation: 1
+      name: karta-e2e-dynamo-initializing
+      namespace: test-z66xs
+      uid: e4539bed-fd29-46cc-8a78-f744da3100dc
+    spec:
+      services:
+        Frontend:
+          componentType: frontend
+          extraPodSpec:
+            mainContainer:
+              image: busybox:99.99.99
+              imagePullPolicy: IfNotPresent
+              name: ""
+              resources: {}
+          replicas: 1
+        decode:
+          componentType: worker
+          envFromSecret: hf-token-secret
+          extraPodSpec:
+            mainContainer:
+              args:
+              - --model-path
+              - nvidia/Llama-3.1-8B-Instruct-FP8
+              - --model-name
+              - nvidia/Llama-3.1-8B-Instruct-FP8
+              command:
+              - python3
+              - -m
+              - dynamo.mocker
+              image: busybox:99.99.99
+              imagePullPolicy: IfNotPresent
+              name: ""
+              resources: {}
+              workingDir: /workspace
+          replicas: 1
+          subComponentType: decode
+  state: Initializing
+succeeded: true
+version: v1.34.0
+want: Initializing

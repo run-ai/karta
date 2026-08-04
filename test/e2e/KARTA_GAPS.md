@@ -361,9 +361,34 @@ Added a byExpression for the empty phase alongside the Pending matcher:
 Karta after: just-created and Pending read `[Initializing]`, Healthy `[Running]`,
 Unhealthy `[Degraded]`.
 
+## 13. nvidia.com/v1alpha1 DynamoGraphDeployment: Initializing misses the just-created state
+
+The Dynamo definition mapped Initializing to the "initializing" and "pending"
+phases (.status.state), Running to "successful", and Failed to "failed". A
+just-created DynamoGraphDeployment has no status.state yet, so the first steps
+read Undefined before the operator writes "pending".
+
+CR status:
+
+```json
+{"status": {}}
+```
+
+Karta before: `[Undefined]`.
+
+Added a byExpression for the empty phase alongside the initializing/pending
+matchers:
+
+```jq
+(.status.state // "") == ""
+```
+
+Karta after: just-created, initializing, and pending read `[Initializing]`;
+successful `[Running]`; failed `[Failed]`.
+
 ## Coverage and what remains
 
-Fixed and recorded clean: milvus, grove, the built-ins (batch/v1 Job, apps/v1 Deployment and
+Fixed and recorded clean: milvus, grove, dynamo (initializing), the built-ins (batch/v1 Job, apps/v1 Deployment and
 StatefulSet, CronJob, Pod), plus JobSet, LeaderWorkerSet, PyTorchJob, MPIJob,
 RayCluster, Knative Service, and KServe InferenceService.
 
@@ -371,7 +396,7 @@ Fixed and kread-verified, fixtures partial (the operator is heavy enough to
 outlast a kind control plane under record load on this environment): RayCluster
 resumed, and all RayJob flows (provisioning and Suspending windows).
 
-Not yet recorded here: dynamo and nim. Their controllers run
+Not yet recorded here: nim, and the dynamo running flow (its mocker decode worker needs Dynamo's distributed runtime, which the e2e install keeps off, so it stays in Initializing). Their controllers run
 inference or database workloads whose smoke or reconcile load crashes a kind
 control plane during provisioning on this environment, so they could not be driven
 end to end. Their definitions already map Initializing, Running, Failed, and
