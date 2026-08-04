@@ -4,15 +4,30 @@
 package recorder
 
 import (
+	"io"
 	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/dynamic"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
+// Cluster is the access a recorder needs: the clients, the Kubernetes/server version (recorded as the
+// version for built-in workloads no operator provides), the throwaway namespace workloads are created in,
+// and a writer for progress lines (nil discards). The suite builds one and passes it to New.
+type Cluster struct {
+	Client    client.Client
+	Dynamic   dynamic.Interface
+	Version   string
+	Namespace string
+	Progress  io.Writer
+}
+
 // Recorder records the flows of one workload type: build and Run a Flow per case.
 type Recorder struct {
+	cluster   Cluster
 	operator  string
 	kartaName string
 	kartaFile string
@@ -20,9 +35,13 @@ type Recorder struct {
 	timeout   time.Duration
 }
 
-// New starts a recorder; kartaFile is recorded as metadata for the replay golden, not read here.
-func New(operator, kartaName, kartaFile string) *Recorder {
-	return &Recorder{operator: operator, kartaName: kartaName, kartaFile: kartaFile, timeout: 3 * time.Minute}
+// New starts a recorder bound to cluster; kartaFile is recorded as metadata for the replay golden, not read
+// here.
+func New(cluster Cluster, operator, kartaName, kartaFile string) *Recorder {
+	if cluster.Progress == nil {
+		cluster.Progress = io.Discard
+	}
+	return &Recorder{cluster: cluster, operator: operator, kartaName: kartaName, kartaFile: kartaFile, timeout: 3 * time.Minute}
 }
 
 // AddState registers a state predicate; declare states least- to most-advanced (Classify keeps the furthest match).
