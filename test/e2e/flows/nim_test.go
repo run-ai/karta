@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "github.com/run-ai/karta/test/e2e/cases"
+	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/test/e2e/recorder"
 )
 
@@ -23,18 +23,18 @@ var _ = Describe("NIMService", Ordered, Label("nim"), func() {
 		ensureSecret(ctx, "ngc-secret", map[string]string{"NGC_API_KEY": "dummy-not-a-real-token"})
 		rec = recorder.New("nim", "apps-nvidia-com-nimservice-v1alpha1", "../../docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml").
 			Timeout(5*time.Minute).
-			State(Initializing, PhaseNot([]string{"Ready", "Failed"}, "status", "state")).
-			State(Running, PhaseEq("Ready", "status", "state"))
+			State(kartav1alpha1.InitializingStatus, PhaseNot([]string{"Ready", "Failed"}, "status", "state")).
+			State(kartav1alpha1.RunningStatus, PhaseEq("Ready", "status", "state"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "cases/testdata/nim/running.yaml").
-			Reaches(Initializing).Reaches(Running).Run(ctx)
+		_, err := rec.Flow("running", "flows/testdata/nim/running.yaml").
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("initializing", func(ctx SpecContext) {
-		_, err := rec.Flow("initializing", "cases/testdata/nim/initializing.yaml").Reaches(Initializing).Run(ctx)
+		_, err := rec.Flow("initializing", "flows/testdata/nim/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })

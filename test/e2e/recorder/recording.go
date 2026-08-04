@@ -12,8 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
-
-	"github.com/run-ai/karta/test/e2e/cases"
 )
 
 // SchemaVersion is bumped when the on-disk format changes incompatibly.
@@ -34,17 +32,18 @@ type Recording struct {
 }
 
 // Step is one observed state: the own-fields State (never from Karta), the CR (full on the first step,
-// a merge-patch after), and the Action fired here if any.
+// a merge-patch after), and the action fired here if any.
 type Step struct {
 	State  string                 `json:"state"`
 	CR     map[string]interface{} `json:"cr,omitempty"`
 	Patch  map[string]interface{} `json:"patch,omitempty"`
-	Action *Action                `json:"action,omitempty"`
+	Action *ActionRecord          `json:"action,omitempty"`
 }
 
-// Action is a mutation fired at a step: the request sent to the apiserver and the object it returned.
-type Action struct {
-	Type     cases.ActionType       `json:"type"`
+// ActionRecord is a mutation fired at a step: the request sent to the apiserver and the object it returned.
+// (Distinct from Action in action.go, which is the patch the flow declares.)
+type ActionRecord struct {
+	Type     ActionType             `json:"type"`
 	Request  map[string]interface{} `json:"request"`
 	Response map[string]interface{} `json:"response,omitempty"`
 }

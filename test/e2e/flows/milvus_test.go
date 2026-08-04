@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "github.com/run-ai/karta/test/e2e/cases"
+	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/test/e2e/recorder"
 )
 
@@ -20,18 +20,18 @@ var _ = Describe("Milvus", Ordered, Label("milvus"), func() {
 		installKarta(ctx, "../../docs/catalog/milvus-io-milvus-v1beta1.yaml", "milvus-io-milvus-v1beta1")
 		rec = recorder.New("milvus", "milvus-io-milvus-v1beta1", "../../docs/catalog/milvus-io-milvus-v1beta1.yaml").
 			Timeout(8*time.Minute).
-			State(Initializing, PhaseAny([]string{"Pending", ""}, "status", "status")).
-			State(Running, CondTrue("MilvusReady"))
+			State(kartav1alpha1.InitializingStatus, PhaseAny([]string{"Pending", ""}, "status", "status")).
+			State(kartav1alpha1.RunningStatus, CondTrue("MilvusReady"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "cases/testdata/milvus/running.yaml").
-			Reaches(Initializing).Reaches(Running).Run(ctx)
+		_, err := rec.Flow("running", "flows/testdata/milvus/running.yaml").
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("initializing", func(ctx SpecContext) {
-		_, err := rec.Flow("initializing", "cases/testdata/milvus/initializing.yaml").Reaches(Initializing).Run(ctx)
+		_, err := rec.Flow("initializing", "flows/testdata/milvus/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })

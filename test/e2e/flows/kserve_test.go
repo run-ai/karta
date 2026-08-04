@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "github.com/run-ai/karta/test/e2e/cases"
+	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/test/e2e/recorder"
 )
 
@@ -20,22 +20,22 @@ var _ = Describe("KServe InferenceService", Ordered, Label("kserve"), func() {
 		installKarta(ctx, "../../docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml", "serving-kserve-io-inferenceservice-v1beta1")
 		rec = recorder.New("kserve", "serving-kserve-io-inferenceservice-v1beta1", "../../docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml").
 			Timeout(6*time.Minute).
-			State(Initializing, CondPending("Ready")).
-			State(Running, CondTrue("Ready")).
-			State(Failed, CondsFalse("PredictorReady", "PredictorConfigurationReady", "RoutesReady"))
+			State(kartav1alpha1.InitializingStatus, CondPending("Ready")).
+			State(kartav1alpha1.RunningStatus, CondTrue("Ready")).
+			State(kartav1alpha1.FailedStatus, CondsFalse("PredictorReady", "PredictorConfigurationReady", "RoutesReady"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "cases/testdata/kserve/running.yaml").
-			Reaches(Initializing).Reaches(Running).Run(ctx)
+		_, err := rec.Flow("running", "flows/testdata/kserve/running.yaml").
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	// Custom predictor with a nonexistent-registry image: PredictorReady/PredictorConfigurationReady/
 	// RoutesReady all False -> Failed.
 	It("failed", func(ctx SpecContext) {
-		_, err := rec.Flow("failed", "cases/testdata/kserve/failed.yaml").
-			Maybe(Initializing).Reaches(Failed).Run(ctx)
+		_, err := rec.Flow("failed", "flows/testdata/kserve/failed.yaml").
+			Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })

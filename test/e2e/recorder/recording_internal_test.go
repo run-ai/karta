@@ -64,7 +64,7 @@ func TestRecordingReconstructsAndRoundTrips(t *testing.T) {
 			{
 				State: "Suspended",
 				CR:    map[string]interface{}{"kind": "Job", "metadata": map[string]interface{}{"name": "j"}, "status": map[string]interface{}{"active": float64(0)}},
-				Action: &Action{
+				Action: &ActionRecord{
 					Type:    "Unsuspend",
 					Request: map[string]interface{}{"spec": map[string]interface{}{"suspend": false}},
 				},

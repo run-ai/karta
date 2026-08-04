@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package offline
+package replay
 
 import (
 	"os"
@@ -14,7 +14,7 @@ import (
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/resource"
-	reader "github.com/run-ai/karta/test/e2e/recording_reader"
+	"github.com/run-ai/karta/test/e2e/recorder"
 )
 
 const (
@@ -37,7 +37,7 @@ var _ = Describe("Karta reads the recorded state", func() {
 	for _, path := range recordings {
 		path := path
 		It(strings.TrimPrefix(path, "../recorded_data/"), func(ctx SpecContext) {
-			r, err := reader.Open(path)
+			r, err := recorder.OpenRecording(path)
 			Expect(err).NotTo(HaveOccurred())
 
 			kartaYAML, err := os.ReadFile(filepath.Join(repoRoot, r.Recording().KartaFile))

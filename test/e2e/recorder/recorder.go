@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
-	"github.com/run-ai/karta/test/e2e/cases"
 )
 
 // e2eRoot points from a package dir under test/e2e (the go test working dir) to test/e2e, which manifest,
@@ -60,7 +59,7 @@ type Recorder struct {
 	operator  string
 	kartaName string
 	kartaFile string
-	states    []cases.NamedState
+	states    []NamedState
 	timeout   time.Duration
 }
 
@@ -72,8 +71,8 @@ func New(operator, kartaName, kartaFile string) *Recorder {
 
 // State registers how to recognise a state from the workload's own fields; declare them least to most
 // advanced (Classify keeps the furthest match).
-func (r *Recorder) State(name kartav1alpha1.ResourceStatus, match cases.StateCheck) *Recorder {
-	r.states = append(r.states, cases.NamedState{Name: name, Match: match})
+func (r *Recorder) State(name kartav1alpha1.ResourceStatus, match StateCheck) *Recorder {
+	r.states = append(r.states, NamedState{Name: name, Match: match})
 	return r
 }
 
@@ -91,37 +90,37 @@ type Flow struct {
 	rec      *Recorder
 	name     string
 	manifest string
-	journey  []cases.Step
+	journey  []journeyStep
 }
 
 // Reaches adds a plain stop: the workload must classify as state here.
 func (f *Flow) Reaches(state kartav1alpha1.ResourceStatus) *Flow {
-	f.journey = append(f.journey, cases.Step{State: state})
+	f.journey = append(f.journey, journeyStep{State: state})
 	return f
 }
 
 // Maybe adds an optional stop the workload may skip (a transient dip); the order check tolerates it.
 func (f *Flow) Maybe(state kartav1alpha1.ResourceStatus) *Flow {
-	f.journey = append(f.journey, cases.Step{State: state, Optional: true})
+	f.journey = append(f.journey, journeyStep{State: state, Optional: true})
 	return f
 }
 
 // At adds a stop to be gated with When/WaitUntil and/or fired with Do.
 func (f *Flow) At(state kartav1alpha1.ResourceStatus) *Flow {
-	f.journey = append(f.journey, cases.Step{State: state})
+	f.journey = append(f.journey, journeyStep{State: state})
 	return f
 }
 
 // When gates the current stop: it is not reached until this predicate over the workload's own fields holds.
-func (f *Flow) When(gate cases.StateCheck) *Flow { f.last().ActionPredicate = gate; return f }
+func (f *Flow) When(gate StateCheck) *Flow { f.last().ActionPredicate = gate; return f }
 
 // WaitUntil is When for the terminal stop - the flow finishes once it holds.
-func (f *Flow) WaitUntil(gate cases.StateCheck) *Flow { f.last().ActionPredicate = gate; return f }
+func (f *Flow) WaitUntil(gate StateCheck) *Flow { f.last().ActionPredicate = gate; return f }
 
 // Do fires an action when the current stop is reached.
-func (f *Flow) Do(action *cases.Action) *Flow { f.last().Action = action; return f }
+func (f *Flow) Do(action *Action) *Flow { f.last().Action = action; return f }
 
-func (f *Flow) last() *cases.Step { return &f.journey[len(f.journey)-1] }
+func (f *Flow) last() *journeyStep { return &f.journey[len(f.journey)-1] }
 
 // want is the flow's terminal state: the last stop's state.
 func (f *Flow) want() kartav1alpha1.ResourceStatus { return f.journey[len(f.journey)-1].State }
@@ -168,7 +167,7 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 	// hold, firing that checkpoint's action.
 	handle := func(u *unstructured.Unstructured) bool {
 		lastSeen = u
-		state := cases.Classify(u, f.rec.states)
+		state := Classify(u, f.rec.states)
 		if state == "" {
 			// A settled CR we cannot classify is a real gap (a state missing from both the case and
 			// Karta): record it as Undefined so the order check fails and the run is saved for triage,
@@ -191,7 +190,7 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 
 	// A workload already at its terminal state when Create returns never fires a watch event (the watch
 	// replays only newer resourceVersions), so take that first snapshot from the create response.
-	if statusSettled(obj) && done(cases.Classify(obj, f.rec.states)) {
+	if statusSettled(obj) && done(Classify(obj, f.rec.states)) {
 		handle(obj)
 		return rec
 	}
@@ -314,7 +313,7 @@ func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) watch.In
 }
 
 // fireAction sends an action's merge-patch to the workload and returns the recorded request and response.
-func fireAction(ctx context.Context, obj *unstructured.Unstructured, action *cases.Action) *Action {
+func fireAction(ctx context.Context, obj *unstructured.Unstructured, action *Action) *ActionRecord {
 	target := GVKOnly(obj)
 	target.SetName(obj.GetName())
 	target.SetNamespace(obj.GetNamespace())
@@ -323,13 +322,13 @@ func fireAction(ctx context.Context, obj *unstructured.Unstructured, action *cas
 
 	var request map[string]interface{}
 	Expect(json.Unmarshal(action.Patch, &request)).To(Succeed())
-	return &Action{Type: action.Type, Request: request, Response: significantCR(target)}
+	return &ActionRecord{Type: action.Type, Request: request, Response: significantCR(target)}
 }
 
 // checkpoints are the stops the recorder must reach and fire in order: those carrying an action or an action
 // predicate. Plain states between them are recorded as they pass but are not stops.
-func checkpoints(journey []cases.Step) []cases.Step {
-	var out []cases.Step
+func checkpoints(journey []journeyStep) []journeyStep {
+	var out []journeyStep
 	for _, st := range journey {
 		if st.Action != nil || st.ActionPredicate != nil {
 			out = append(out, st)
@@ -349,7 +348,7 @@ type recording struct {
 type capture struct {
 	state  kartav1alpha1.ResourceStatus
 	raw    *unstructured.Unstructured
-	action *Action
+	action *ActionRecord
 }
 
 func (r *recording) keep(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) {
@@ -363,7 +362,7 @@ func (r *recording) keep(u *unstructured.Unstructured, state kartav1alpha1.Resou
 }
 
 // attachAction records the action fired at the current step (the last CR kept).
-func (r *recording) attachAction(a *Action) {
+func (r *recording) attachAction(a *ActionRecord) {
 	if len(r.snapshots) > 0 {
 		r.snapshots[len(r.snapshots)-1].action = a
 	}
@@ -396,7 +395,7 @@ func GVKOnly(src *unstructured.Unstructured) *unstructured.Unstructured {
 	return u
 }
 
-func journeySteps(steps []cases.Step) []JourneyStep {
+func journeySteps(steps []journeyStep) []JourneyStep {
 	out := make([]JourneyStep, len(steps))
 	for i, st := range steps {
 		out[i] = JourneyStep{State: st.State, Optional: st.Optional}
@@ -405,7 +404,7 @@ func journeySteps(steps []cases.Step) []JourneyStep {
 }
 
 // observedOrderErr runs the recorder's observed states through the same check the offline tests use.
-func observedOrderErr(journey []cases.Step, order []kartav1alpha1.ResourceStatus, want kartav1alpha1.ResourceStatus) error {
+func observedOrderErr(journey []journeyStep, order []kartav1alpha1.ResourceStatus, want kartav1alpha1.ResourceStatus) error {
 	return ObservedOrderErr(journeySteps(journey), order, want)
 }
 

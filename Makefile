@@ -236,7 +236,7 @@ e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)
 
 .PHONY: record-e2e
 record-e2e: ## Drive the e2e suite against a live cluster and record the fixtures (run e2e-up first; WORKLOADS="batch-job" a subset, FLOW="scaled" one flow, CLUSTER_NAME to match)
-	cd test/e2e && go test -count=1 ./cases ./recorder
+	cd test/e2e && go test -count=1 ./recorder
 	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) ./flows $(if $(E2E_FOCUS)$(E2E_LABELS),-args $(if $(E2E_FOCUS),-ginkgo.focus="$(E2E_FOCUS)") $(if $(E2E_LABELS),-ginkgo.label-filter="$(E2E_LABELS)"))
 
 # The e2e shell scripts to shellcheck: the provisioner, teardown, the shared

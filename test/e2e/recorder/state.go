@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Package cases holds the vocabulary for the Karta end-to-end flow tests: the state-registry primitives,
-// the predicates and actions flows use, and the exported state constants.
-package cases
+package recorder
 
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -11,7 +9,8 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// StateCheck recognises a state from the workload's own fields, never from Karta.
+// StateCheck recognises a state from the workload's own fields, never from Karta. Flows build these with
+// the predicate helpers in the flows package.
 type StateCheck func(*unstructured.Unstructured) bool
 
 // NamedState pairs a state with the predicate that recognises it.
@@ -20,11 +19,11 @@ type NamedState struct {
 	Match StateCheck
 }
 
-// Step is one stop on a flow's journey: a state to reach, an optional action, and an optional
+// journeyStep is one stop on a flow's journey: a state to reach, an optional action, and an optional
 // ActionPredicate that gates the step. ActionPredicate lets a journey list the same state more than once
 // (a scale flow is Running at 1, 3, then 1 replica): the step is not reached until the predicate over the
-// workload's own fields holds, and its action fires then.
-type Step struct {
+// workload's own fields holds, and its action fires then. (Distinct from the on-disk Step in recording.go.)
+type journeyStep struct {
 	State           kartav1alpha1.ResourceStatus
 	Action          *Action
 	ActionPredicate StateCheck
@@ -33,11 +32,11 @@ type Step struct {
 	Optional bool
 }
 
-// Steps builds a plain journey (states only), used to declare an expected order.
-func Steps(states ...kartav1alpha1.ResourceStatus) []Step {
-	j := make([]Step, len(states))
+// steps builds a plain journey (states only), used to declare an expected order.
+func steps(states ...kartav1alpha1.ResourceStatus) []journeyStep {
+	j := make([]journeyStep, len(states))
 	for i, s := range states {
-		j[i] = Step{State: s}
+		j[i] = journeyStep{State: s}
 	}
 	return j
 }

@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
-	"github.com/run-ai/karta/test/e2e/cases"
 )
 
 // Plain unit tests for the pure recorder helpers; no cluster (RunSpecs is not invoked).
@@ -19,7 +18,48 @@ func objWithStatus(status map[string]any) *unstructured.Unstructured {
 	return &unstructured.Unstructured{Object: map[string]any{"status": status}}
 }
 
-func terminal(journey []cases.Step) kartav1alpha1.ResourceStatus {
+// intAtLeast and condTrue are minimal StateCheck helpers for these unit tests; the flows package holds the
+// full predicate vocabulary.
+func intAtLeast(n int64, path ...string) StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		v, _, _ := unstructured.NestedInt64(u.Object, path...)
+		return v >= n
+	}
+}
+
+func condTrue(condType string) StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		conds, _, _ := unstructured.NestedSlice(u.Object, "status", "conditions")
+		for _, c := range conds {
+			if m, ok := c.(map[string]any); ok && m["type"] == condType && m["status"] == "True" {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+// TestClassifyPicksMostAdvancedState: Classify keeps the furthest state a workload matches.
+func TestClassifyPicksMostAdvancedState(t *testing.T) {
+	running := kartav1alpha1.RunningStatus
+	completed := kartav1alpha1.CompletedStatus
+	states := []NamedState{
+		{Name: running, Match: intAtLeast(1, "status", "active")},
+		{Name: completed, Match: condTrue("Complete")},
+	}
+	if got := Classify(objWithStatus(map[string]any{"active": int64(1)}), states); got != running {
+		t.Errorf("active=1 -> %q, want %q", got, running)
+	}
+	both := objWithStatus(map[string]any{"active": int64(1), "conditions": []any{map[string]any{"type": "Complete", "status": "True"}}})
+	if got := Classify(both, states); got != completed {
+		t.Errorf("Complete=True -> %q, want %q", got, completed)
+	}
+	if got := Classify(objWithStatus(map[string]any{}), states); got != "" {
+		t.Errorf("no match -> %q, want empty", got)
+	}
+}
+
+func terminal(journey []journeyStep) kartav1alpha1.ResourceStatus {
 	return journey[len(journey)-1].State
 }
 
@@ -30,10 +70,10 @@ func TestRecorderCatchesBackwardsJump(t *testing.T) {
 	running := kartav1alpha1.RunningStatus
 	completed := kartav1alpha1.CompletedStatus
 
-	states := []cases.NamedState{
-		{Name: initializing, Match: cases.IntAtLeast(1, "status", "active")},
-		{Name: running, Match: cases.IntAtLeast(1, "status", "ready")},
-		{Name: completed, Match: cases.CondTrue("Complete")},
+	states := []NamedState{
+		{Name: initializing, Match: intAtLeast(1, "status", "active")},
+		{Name: running, Match: intAtLeast(1, "status", "ready")},
+		{Name: completed, Match: condTrue("Complete")},
 	}
 	initCR := func() *unstructured.Unstructured {
 		return objWithStatus(map[string]any{"active": int64(1), "ready": int64(0)})
@@ -47,17 +87,17 @@ func TestRecorderCatchesBackwardsJump(t *testing.T) {
 
 	rec := &recording{}
 	for _, u := range seq {
-		rec.keep(u, cases.Classify(u, states))
+		rec.keep(u, Classify(u, states))
 	}
 
 	want := []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}
 	if !reflect.DeepEqual(rec.order, want) {
 		t.Fatalf("recorder dropped the return: got %v, want %v", rec.order, want)
 	}
-	if observedOrderErr(cases.Steps(initializing, running, completed), rec.order, completed) == nil {
+	if observedOrderErr(steps(initializing, running, completed), rec.order, completed) == nil {
 		t.Error("strict journey should reject the undeclared Running -> Initializing dip")
 	}
-	if err := observedOrderErr(cases.Steps(initializing, running, initializing, completed), rec.order, completed); err != nil {
+	if err := observedOrderErr(steps(initializing, running, initializing, completed), rec.order, completed); err != nil {
 		t.Errorf("declaring the Initializing revisit should accept the dip, got %v", err)
 	}
 }
@@ -70,19 +110,19 @@ func TestObservedOrder(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		journey  []cases.Step
+		journey  []journeyStep
 		observed []kartav1alpha1.ResourceStatus
 		ok       bool
 	}{
-		{"exact", cases.Steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
-		{"skip a required step fails", cases.Steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, completed}, false},
-		{"skip an optional step is ok", []cases.Step{{State: initializing}, {State: running, Optional: true}, {State: completed}}, []kartav1alpha1.ResourceStatus{initializing, completed}, true},
-		{"undeclared state", cases.Steps(initializing, running), []kartav1alpha1.ResourceStatus{initializing, failed}, false},
-		{"repeat dip missed is ok", cases.Steps(initializing, running, initializing, completed), []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
-		{"optional dip missed is ok", []cases.Step{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}}, []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
-		{"optional dip caught is ok", []cases.Step{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, true},
-		{"undeclared dip fails", cases.Steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, false},
-		{"wrong terminal", cases.Steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running}, false},
+		{"exact", steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
+		{"skip a required step fails", steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, completed}, false},
+		{"skip an optional step is ok", []journeyStep{{State: initializing}, {State: running, Optional: true}, {State: completed}}, []kartav1alpha1.ResourceStatus{initializing, completed}, true},
+		{"undeclared state", steps(initializing, running), []kartav1alpha1.ResourceStatus{initializing, failed}, false},
+		{"repeat dip missed is ok", steps(initializing, running, initializing, completed), []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
+		{"optional dip missed is ok", []journeyStep{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}}, []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
+		{"optional dip caught is ok", []journeyStep{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, true},
+		{"undeclared dip fails", steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, false},
+		{"wrong terminal", steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running}, false},
 	}
 	for _, c := range tests {
 		err := observedOrderErr(c.journey, c.observed, terminal(c.journey))

@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "github.com/run-ai/karta/test/e2e/cases"
+	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/test/e2e/recorder"
 )
 
@@ -17,59 +17,59 @@ var _ = Describe("BatchJob (built-in)", Ordered, Label("batch-job", "builtin"), 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/batch-job-v1.yaml", "batch-job-v1")
 		rec = recorder.New("batch-job", "batch-job-v1", "../../docs/catalog/batch-job-v1.yaml").
-			State(Suspended, CondTrue("Suspended")).
-			State(Initializing, IntAtLeast(1, "status", "active")).
-			State(Running, IntAtLeast(1, "status", "ready")).
-			State(Completed, CondTrue("Complete", "SuccessCriteriaMet")).
-			State(Failed, CondTrue("Failed", "FailureTarget")).
-			State(Degraded, JobDegraded())
+			State(kartav1alpha1.SuspendedStatus, CondTrue("Suspended")).
+			State(kartav1alpha1.InitializingStatus, IntAtLeast(1, "status", "active")).
+			State(kartav1alpha1.RunningStatus, IntAtLeast(1, "status", "ready")).
+			State(kartav1alpha1.CompletedStatus, CondTrue("Complete", "SuccessCriteriaMet")).
+			State(kartav1alpha1.FailedStatus, CondTrue("Failed", "FailureTarget")).
+			State(kartav1alpha1.DegradedStatus, JobDegraded())
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "cases/testdata/batch-job/running.yaml").
-			Reaches(Initializing).Reaches(Running).Run(ctx)
+		_, err := rec.Flow("running", "flows/testdata/batch-job/running.yaml").
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("completed", func(ctx SpecContext) {
-		_, err := rec.Flow("completed", "cases/testdata/batch-job/completed.yaml").
-			Reaches(Initializing).Reaches(Running).
-			Reaches(Initializing). // active-not-ready dip as the pod terminates
-			Reaches(Completed).Run(ctx)
+		_, err := rec.Flow("completed", "flows/testdata/batch-job/completed.yaml").
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).
+			Reaches(kartav1alpha1.InitializingStatus). // active-not-ready dip as the pod terminates
+			Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("failed", func(ctx SpecContext) {
-		_, err := rec.Flow("failed", "cases/testdata/batch-job/failed.yaml").
-			Reaches(Initializing).Reaches(Failed).Run(ctx)
+		_, err := rec.Flow("failed", "flows/testdata/batch-job/failed.yaml").
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("resumed", func(ctx SpecContext) {
-		_, err := rec.Flow("resumed", "cases/testdata/batch-job/resumed.yaml").
-			At(Suspended).Do(Resume()).
-			Reaches(Initializing).Reaches(Running).Reaches(Initializing).Reaches(Completed).Run(ctx)
+		_, err := rec.Flow("resumed", "flows/testdata/batch-job/resumed.yaml").
+			At(kartav1alpha1.SuspendedStatus).Do(Resume()).
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("degraded", func(ctx SpecContext) {
-		_, err := rec.Flow("degraded", "cases/testdata/batch-job/degraded.yaml").
-			Reaches(Initializing).Reaches(Running).Reaches(Degraded).Run(ctx)
+		_, err := rec.Flow("degraded", "flows/testdata/batch-job/degraded.yaml").
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.DegradedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("suspended", func(ctx SpecContext) {
-		_, err := rec.Flow("suspended", "cases/testdata/batch-job/suspended.yaml").
-			Reaches(Suspended).Run(ctx)
+		_, err := rec.Flow("suspended", "flows/testdata/batch-job/suspended.yaml").
+			Reaches(kartav1alpha1.SuspendedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("scaled", func(ctx SpecContext) {
-		_, err := rec.Flow("scaled", "cases/testdata/batch-job/scaled.yaml").
-			Maybe(Initializing).
-			At(Running).When(IntEq(1, "status", "ready")).Do(ScaleParallelism(3)).
-			At(Running).When(IntEq(3, "status", "ready")).Do(ScaleParallelism(1)).
-			At(Running).WaitUntil(IntEq(1, "status", "ready")).Run(ctx)
+		_, err := rec.Flow("scaled", "flows/testdata/batch-job/scaled.yaml").
+			Maybe(kartav1alpha1.InitializingStatus).
+			At(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "ready")).Do(ScaleParallelism(3)).
+			At(kartav1alpha1.RunningStatus).When(IntEq(3, "status", "ready")).Do(ScaleParallelism(1)).
+			At(kartav1alpha1.RunningStatus).WaitUntil(IntEq(1, "status", "ready")).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })

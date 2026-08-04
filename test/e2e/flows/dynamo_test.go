@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "github.com/run-ai/karta/test/e2e/cases"
+	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/test/e2e/recorder"
 )
 
@@ -23,18 +23,18 @@ var _ = Describe("DynamoGraphDeployment", Ordered, Label("dynamo"), func() {
 		ensureSecret(ctx, "hf-token-secret", map[string]string{"HF_TOKEN": "dummy"})
 		rec = recorder.New("dynamo", "nvidia-com-dynamographdeployment-v1alpha1", "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml").
 			Timeout(8*time.Minute).
-			State(Initializing, PhaseAny([]string{"initializing", "pending", ""}, "status", "state")).
-			State(Running, PhaseEq("successful", "status", "state"))
+			State(kartav1alpha1.InitializingStatus, PhaseAny([]string{"initializing", "pending", ""}, "status", "state")).
+			State(kartav1alpha1.RunningStatus, PhaseEq("successful", "status", "state"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "cases/testdata/dynamo/running.yaml").
-			Reaches(Initializing).Reaches(Running).Run(ctx)
+		_, err := rec.Flow("running", "flows/testdata/dynamo/running.yaml").
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("initializing", func(ctx SpecContext) {
-		_, err := rec.Flow("initializing", "cases/testdata/dynamo/initializing.yaml").Reaches(Initializing).Run(ctx)
+		_, err := rec.Flow("initializing", "flows/testdata/dynamo/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })

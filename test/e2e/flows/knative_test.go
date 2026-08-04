@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "github.com/run-ai/karta/test/e2e/cases"
+	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/test/e2e/recorder"
 )
 
@@ -20,13 +20,13 @@ var _ = Describe("KnativeService", Ordered, Label("knative"), func() {
 		installKarta(ctx, "../../docs/catalog/serving-knative-dev-service-v1.yaml", "serving-knative-dev-service-v1")
 		rec = recorder.New("knative", "serving-knative-dev-service-v1", "../../docs/catalog/serving-knative-dev-service-v1.yaml").
 			Timeout(5*time.Minute).
-			State(Initializing, CondStatus("Ready", "Unknown")).
-			State(Running, CondTrue("Ready"))
+			State(kartav1alpha1.InitializingStatus, CondStatus("Ready", "Unknown")).
+			State(kartav1alpha1.RunningStatus, CondTrue("Ready"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "cases/testdata/knative/running.yaml").
-			Reaches(Initializing).Reaches(Running).Run(ctx)
+		_, err := rec.Flow("running", "flows/testdata/knative/running.yaml").
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })

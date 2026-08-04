@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	. "github.com/run-ai/karta/test/e2e/cases"
+	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/test/e2e/recorder"
 )
 
@@ -18,41 +18,41 @@ var _ = Describe("JobSet", Ordered, Label("jobset"), func() {
 		installKarta(ctx, "../../docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml", "jobset-x-k8s-io-jobset-v1alpha2")
 		// Suspended first so a lingering Suspended condition never masks real progress after a resume.
 		rec = recorder.New("jobset", "jobset-x-k8s-io-jobset-v1alpha2", "../../docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml").
-			State(Suspended, CondTrue("Suspended")).
-			State(Initializing, JobsetInitializing()).
-			State(Running, JobsetRunning()).
-			State(Completed, CondTrue("Completed")).
-			State(Failed, CondTrue("Failed"))
+			State(kartav1alpha1.SuspendedStatus, CondTrue("Suspended")).
+			State(kartav1alpha1.InitializingStatus, JobsetInitializing()).
+			State(kartav1alpha1.RunningStatus, JobsetRunning()).
+			State(kartav1alpha1.CompletedStatus, CondTrue("Completed")).
+			State(kartav1alpha1.FailedStatus, CondTrue("Failed"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "cases/testdata/jobset/running.yaml").
-			Reaches(Initializing).Reaches(Running).Run(ctx)
+		_, err := rec.Flow("running", "flows/testdata/jobset/running.yaml").
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("completed", func(ctx SpecContext) {
-		_, err := rec.Flow("completed", "cases/testdata/jobset/completed.yaml").
-			Reaches(Initializing).Reaches(Running).Maybe(Initializing).Reaches(Completed).Run(ctx)
+		_, err := rec.Flow("completed", "flows/testdata/jobset/completed.yaml").
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("failed", func(ctx SpecContext) {
-		_, err := rec.Flow("failed", "cases/testdata/jobset/failed.yaml").
-			Reaches(Initializing).Maybe(Running).Maybe(Initializing).Reaches(Failed).Run(ctx)
+		_, err := rec.Flow("failed", "flows/testdata/jobset/failed.yaml").
+			Reaches(kartav1alpha1.InitializingStatus).Maybe(kartav1alpha1.RunningStatus).Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("resumed", func(ctx SpecContext) {
-		_, err := rec.Flow("resumed", "cases/testdata/jobset/resumed.yaml").
-			Maybe(Initializing).At(Suspended).Do(Resume()).
-			Reaches(Initializing).Reaches(Running).Maybe(Initializing).Reaches(Completed).Run(ctx)
+		_, err := rec.Flow("resumed", "flows/testdata/jobset/resumed.yaml").
+			Maybe(kartav1alpha1.InitializingStatus).At(kartav1alpha1.SuspendedStatus).Do(Resume()).
+			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("suspended", func(ctx SpecContext) {
-		_, err := rec.Flow("suspended", "cases/testdata/jobset/suspended.yaml").
-			Maybe(Initializing).Reaches(Suspended).Run(ctx)
+		_, err := rec.Flow("suspended", "flows/testdata/jobset/suspended.yaml").
+			Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.SuspendedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })
