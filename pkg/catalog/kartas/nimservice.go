@@ -45,15 +45,13 @@ func NIMService() *v1alpha1.Karta {
 							MessageFieldName: ptr.To("message"),
 						},
 						StatusMappings: v1alpha1.StatusMappings{
-							Initializing: []v1alpha1.StatusMatcher{
-								{ByPhase: "NotReady"},
-								{ByPhase: "Pending"},
-								// Just created: the operator has not written status.state yet.
-								{ByExpression: &v1alpha1.ExpressionMatcher{
-									Expression:     `(.status.state // "") == ""`,
-									ExpectedResult: "true",
-								}},
-							},
+							// In progress: any state that is not the terminal Ready or Failed. Covers
+							// the empty just-created state and every intermediate the operator writes
+							// (PVC-Created, NotReady, Pending, ...).
+							Initializing: []v1alpha1.StatusMatcher{{ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression:     `(.status.state // "") != "Ready" and (.status.state // "") != "Failed"`,
+								ExpectedResult: "true",
+							}}},
 							Running: []v1alpha1.StatusMatcher{
 								{ByPhase: "Ready"},
 							},

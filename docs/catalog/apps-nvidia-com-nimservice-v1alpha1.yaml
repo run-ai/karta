@@ -32,10 +32,8 @@ spec:
           messageFieldName: message
         statusMappings:
           initializing:
-            - byPhase: NotReady
-            - byPhase: Pending
             - byExpression:
-                expression: (.status.state // "") == ""
+                expression: (.status.state // "") != "Ready" and (.status.state // "") != "Failed"
                 expectedResult: "true"
           running:
             - byPhase: Ready

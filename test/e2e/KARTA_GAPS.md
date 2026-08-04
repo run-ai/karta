@@ -386,33 +386,41 @@ matchers:
 Karta after: just-created, initializing, and pending read `[Initializing]`;
 successful `[Running]`; failed `[Failed]`.
 
-## 14. apps.nvidia.com/v1alpha1 NIMService: Initializing misses the just-created state
+## 14. apps.nvidia.com/v1alpha1 NIMService: Initializing missed every non-terminal phase
 
-The NIMService definition mapped Initializing to the "NotReady" and "Pending"
-phases (.status.state), Running to "Ready", Failed to "Failed". A just-created
-NIMService has no status.state yet, so the first steps read Undefined before the
-operator writes "NotReady".
+The NIMService definition mapped Initializing to "NotReady" and "Pending", Running
+to "Ready", Failed to "Failed" (.status.state). But the operator walks several
+other phases on the way up - empty (just created), then "PVC-Created" once the NIM
+cache PVC exists - and none of those matched, so the deploy read Undefined.
 
-CR status:
+CR status (one of the intermediates):
 
 ```json
-{"status": {}}
+{"status": {"state": "PVC-Created"}}
 ```
 
 Karta before: `[Undefined]`.
 
-Added a byExpression for the empty phase alongside the NotReady/Pending matchers:
+Replaced the enumerated phases with a catch-all: Initializing is any state that is
+not the terminal Ready or Failed.
 
 ```jq
-(.status.state // "") == ""
+(.status.state // "") != "Ready" and (.status.state // "") != "Failed"
 ```
 
-Karta after: just-created, NotReady, and Pending read `[Initializing]`; Ready
-`[Running]`; Failed `[Failed]`.
+Karta after: empty, PVC-Created, NotReady, and Pending all read `[Initializing]`;
+Ready `[Running]`; Failed `[Failed]`. The recorder uses a matching PhaseNot
+predicate.
+
+An e2e-harness fix was needed alongside this to record the running flow at all:
+the NIMService references authSecret ngc-secret, which the operator reads from the
+workload's own namespace, but up.sh only creates it in default. The flow now seeds
+the secret in its throwaway namespace, so the fake CPU NIM image reaches Ready and
+the flow records through to Running.
 
 ## Coverage and what remains
 
-Fixed and recorded clean: milvus, grove, dynamo (initializing), nim (initializing), the built-ins (batch/v1 Job, apps/v1 Deployment and
+Fixed and recorded clean: milvus, grove, dynamo (initializing), nim, the built-ins (batch/v1 Job, apps/v1 Deployment and
 StatefulSet, CronJob, Pod), plus JobSet, LeaderWorkerSet, PyTorchJob, MPIJob,
 RayCluster, Knative Service, and KServe InferenceService.
 
@@ -421,7 +429,7 @@ at a time. RayCluster (all flows including resumed) and RayJob (all flows) also
 record clean this way - a shared cluster crashed under ray's load, but an isolated
 one stays healthy.
 
-Not yet recorded here: the dynamo and nim running flows (its mocker decode worker needs Dynamo's distributed runtime, which the e2e install keeps off; and nim's fictive CPU image never serves, so both stay in Initializing). Their controllers run
+Not yet recorded end to end: the dynamo running flow (its mocker decode worker needs Dynamo's distributed runtime, which the e2e install keeps off, so it stays in Initializing). Their controllers run
 inference or database workloads whose smoke or reconcile load crashes a kind
 control plane during provisioning on this environment, so they could not be driven
 end to end. Their definitions already map Initializing, Running, Failed, and
