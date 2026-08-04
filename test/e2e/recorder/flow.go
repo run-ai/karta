@@ -14,20 +14,26 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// Cluster is the environment a recorder works in: the clients, the throwaway namespace workloads are created
-// in, a writer for progress lines (nil discards), and OutputDir where recordings are written. The suite
-// builds one and passes it to New.
+// Cluster is how the recorder reaches Kubernetes.
 type Cluster struct {
 	Client    client.Client
 	Dynamic   dynamic.Interface
 	Namespace string
-	Progress  io.Writer
+}
+
+// Config is the suite-wide setup a recorder needs: cluster access, where recordings are written, and where
+// progress lines go. The suite builds one and passes it to New.
+type Config struct {
+	Cluster   Cluster
 	OutputDir string
+	Log       io.Writer // progress and warnings; nil discards
 }
 
 // Recorder records the flows of one workload type: build and Run a Flow per case.
 type Recorder struct {
 	cluster   Cluster
+	outputDir string
+	log       io.Writer
 	operator  string
 	version   string
 	kartaName string
@@ -36,13 +42,22 @@ type Recorder struct {
 	timeout   time.Duration
 }
 
-// New starts a recorder bound to cluster; version is stamped on the recording and kartaFile is recorded as
-// metadata for the replay golden (neither path is read here).
-func New(cluster Cluster, operator, version, kartaName, kartaFile string) *Recorder {
-	if cluster.Progress == nil {
-		cluster.Progress = io.Discard
+// New starts a recorder from cfg; version is stamped on the recording and kartaFile is recorded as metadata
+// for the replay golden (neither path is read here).
+func New(cfg Config, operator, version, kartaName, kartaFile string) *Recorder {
+	if cfg.Log == nil {
+		cfg.Log = io.Discard
 	}
-	return &Recorder{cluster: cluster, operator: operator, version: version, kartaName: kartaName, kartaFile: kartaFile, timeout: 3 * time.Minute}
+	return &Recorder{
+		cluster:   cfg.Cluster,
+		outputDir: cfg.OutputDir,
+		log:       cfg.Log,
+		operator:  operator,
+		version:   version,
+		kartaName: kartaName,
+		kartaFile: kartaFile,
+		timeout:   3 * time.Minute,
+	}
 }
 
 // AddState registers a state predicate; declare states least- to most-advanced (Classify keeps the furthest match).

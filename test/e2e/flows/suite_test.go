@@ -24,12 +24,12 @@ import (
 	"github.com/run-ai/karta/test/e2e/recorder"
 )
 
-// Set in BeforeSuite; the recorder gets its access through the cluster we pass to New.
+// Set in BeforeSuite; the recorder gets its setup through the cfg we pass to New.
 var (
 	k8sClient     client.Client
 	testNamespace string
 	serverVersion string
-	cluster       recorder.Cluster
+	cfg           recorder.Config
 )
 
 // recordedData is where recordings are written, relative to the flows package dir (test/e2e/flows).
@@ -46,15 +46,15 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	utilruntime.Must(apiextensionsv1.AddToScheme(scheme))
 	utilruntime.Must(corev1.AddToScheme(scheme))
 
-	cfg := ctrl.GetConfigOrDie()
+	restCfg := ctrl.GetConfigOrDie()
 	var err error
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
+	k8sClient, err = client.New(restCfg, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 
-	dynClient, err := dynamic.NewForConfig(cfg)
+	dynClient, err := dynamic.NewForConfig(restCfg)
 	Expect(err).NotTo(HaveOccurred())
 
-	disco, err := discovery.NewDiscoveryClientForConfig(cfg)
+	disco, err := discovery.NewDiscoveryClientForConfig(restCfg)
 	Expect(err).NotTo(HaveOccurred())
 	info, err := disco.ServerVersion()
 	Expect(err).NotTo(HaveOccurred())
@@ -65,11 +65,9 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	DeferCleanup(func(ctx SpecContext) { _ = k8sClient.Delete(ctx, ns) })
 
 	serverVersion = info.GitVersion
-	cluster = recorder.Cluster{
-		Client:    k8sClient,
-		Dynamic:   dynClient,
-		Namespace: testNamespace,
-		Progress:  GinkgoWriter,
+	cfg = recorder.Config{
+		Cluster:   recorder.Cluster{Client: k8sClient, Dynamic: dynClient, Namespace: testNamespace},
 		OutputDir: recordedData,
+		Log:       GinkgoWriter,
 	}
 })

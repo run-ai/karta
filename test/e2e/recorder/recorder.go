@@ -52,7 +52,7 @@ func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 		delCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 		defer cancel()
 		if err := f.rec.cluster.Client.Delete(delCtx, obj); err != nil && !apierrors.IsNotFound(err) {
-			fmt.Fprintf(f.rec.cluster.Progress, "cleanup: delete %s/%s failed: %v\n", obj.GetNamespace(), obj.GetName(), err)
+			fmt.Fprintf(f.rec.log, "cleanup: delete %s/%s failed: %v\n", obj.GetNamespace(), obj.GetName(), err)
 		}
 	}()
 
@@ -193,11 +193,11 @@ func (f *Flow) write(rec *recording, succeeded bool) (*Recording, error) {
 		}
 	}
 
-	rc.Path = RecordingPath(f.rec.cluster.OutputDir, rc)
+	rc.Path = RecordingPath(f.rec.outputDir, rc)
 	if err := WriteRecording(rc.Path, rc); err != nil {
 		return nil, fmt.Errorf("write recording %s: %w", rc.Path, err)
 	}
-	fmt.Fprintf(f.rec.cluster.Progress, "recorded %s/%s/%s/%s.yaml (%d events %v)\n", f.rec.operator, f.rec.version, f.rec.kartaName, f.name, len(rc.Events), rec.order)
+	fmt.Fprintf(f.rec.log, "recorded %s/%s/%s/%s.yaml (%d events %v)\n", f.rec.operator, f.rec.version, f.rec.kartaName, f.name, len(rc.Events), rec.order)
 	return &rc, nil
 }
 

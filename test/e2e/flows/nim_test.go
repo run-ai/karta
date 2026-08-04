@@ -21,7 +21,7 @@ var _ = Describe("NIMService", Ordered, Label("nim"), func() {
 		// The NIMService references authSecret ngc-secret; the operator reads it from the workload's own
 		// namespace, so seed it here (up.sh only creates it in default).
 		ensureSecret(ctx, "ngc-secret", map[string]string{"NGC_API_KEY": "dummy-not-a-real-token"})
-		rec = recorder.New(cluster, "nim", operatorVersion("nim"), "apps-nvidia-com-nimservice-v1alpha1", "../../docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml").
+		rec = recorder.New(cfg, "nim", operatorVersion("nim"), "apps-nvidia-com-nimservice-v1alpha1", "../../docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml").
 			SetTimeout(5*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, PhaseNot([]string{"Ready", "Failed"}, "status", "state")).
 			AddState(kartav1alpha1.RunningStatus, PhaseEq("Ready", "status", "state"))

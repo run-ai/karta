@@ -16,7 +16,7 @@ var _ = Describe("LeaderWorkerSet", Ordered, Label("lws"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml", "leaderworkerset-x-k8s-io-leaderworkerset-v1")
-		rec = recorder.New(cluster, "lws", operatorVersion("lws"), "leaderworkerset-x-k8s-io-leaderworkerset-v1", "../../docs/catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml").
+		rec = recorder.New(cfg, "lws", operatorVersion("lws"), "leaderworkerset-x-k8s-io-leaderworkerset-v1", "../../docs/catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml").
 			AddState(kartav1alpha1.InitializingStatus, AllOf(CondTrue("Progressing"), CondNotTrue("Available"))).
 			AddState(kartav1alpha1.RunningStatus, CondTrue("Available"))
 	})

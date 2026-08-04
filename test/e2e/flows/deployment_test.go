@@ -16,7 +16,7 @@ var _ = Describe("Deployment (built-in)", Ordered, Label("deployment", "builtin"
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/apps-deployment-v1.yaml", "apps-deployment-v1")
-		rec = recorder.New(cluster, "deployment", operatorVersion("deployment"), "apps-deployment-v1", "../../docs/catalog/apps-deployment-v1.yaml").
+		rec = recorder.New(cfg, "deployment", operatorVersion("deployment"), "apps-deployment-v1", "../../docs/catalog/apps-deployment-v1.yaml").
 			AddState(kartav1alpha1.InitializingStatus, AllOf(CondTrue("Progressing"), CondNotTrue("Available"))).
 			AddState(kartav1alpha1.RunningStatus, CondReason("Progressing", "NewReplicaSetAvailable")).
 			AddState(kartav1alpha1.FailedStatus, CondFalse("Progressing"))

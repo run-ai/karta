@@ -16,7 +16,7 @@ var _ = Describe("BatchJob (built-in)", Ordered, Label("batch-job", "builtin"), 
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/batch-job-v1.yaml", "batch-job-v1")
-		rec = recorder.New(cluster, "batch-job", operatorVersion("batch-job"), "batch-job-v1", "../../docs/catalog/batch-job-v1.yaml").
+		rec = recorder.New(cfg, "batch-job", operatorVersion("batch-job"), "batch-job-v1", "../../docs/catalog/batch-job-v1.yaml").
 			AddState(kartav1alpha1.SuspendedStatus, CondTrue("Suspended")).
 			AddState(kartav1alpha1.InitializingStatus, IntAtLeast(1, "status", "active")).
 			AddState(kartav1alpha1.RunningStatus, IntAtLeast(1, "status", "ready")).
