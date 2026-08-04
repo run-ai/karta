@@ -16,7 +16,7 @@ var _ = Describe("MPIJob", Ordered, Label("kubeflow", "mpijob"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/kubeflow-org-mpijob-v2beta1.yaml", "kubeflow-org-mpijob-v2beta1")
-		rec = recorder.New("kubeflow", "kubeflow-org-mpijob-v2beta1", "../../docs/catalog/kubeflow-org-mpijob-v2beta1.yaml").
+		rec = recorder.New(cluster, "kubeflow", "kubeflow-org-mpijob-v2beta1", "../../docs/catalog/kubeflow-org-mpijob-v2beta1.yaml").
 			AddState(kartav1alpha1.InitializingStatus, CondTrue("Created")).
 			AddState(kartav1alpha1.RunningStatus, CondTrue("Running")).
 			AddState(kartav1alpha1.CompletedStatus, CondTrue("Succeeded")).

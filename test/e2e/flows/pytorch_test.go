@@ -18,7 +18,7 @@ var _ = Describe("PyTorchJob", Ordered, Label("kubeflow", "pytorch"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/kubeflow-org-pytorchjob-v1.yaml", "kubeflow-org-pytorchjob-v1")
-		rec = recorder.New("kubeflow", "kubeflow-org-pytorchjob-v1", "../../docs/catalog/kubeflow-org-pytorchjob-v1.yaml").
+		rec = recorder.New(cluster, "kubeflow", "kubeflow-org-pytorchjob-v1", "../../docs/catalog/kubeflow-org-pytorchjob-v1.yaml").
 			SetTimeout(4*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, CondTrue("Created")).
 			AddState(kartav1alpha1.RunningStatus, CondTrue("Running")).

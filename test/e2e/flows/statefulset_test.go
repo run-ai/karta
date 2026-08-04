@@ -16,7 +16,7 @@ var _ = Describe("StatefulSet (built-in)", Ordered, Label("statefulset", "builti
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/apps-statefulset-v1.yaml", "apps-statefulset-v1")
-		rec = recorder.New("statefulset", "apps-statefulset-v1", "../../docs/catalog/apps-statefulset-v1.yaml").
+		rec = recorder.New(cluster, "statefulset", "apps-statefulset-v1", "../../docs/catalog/apps-statefulset-v1.yaml").
 			AddState(kartav1alpha1.InitializingStatus, ReplicasInitializing()).
 			AddState(kartav1alpha1.RunningStatus, FullyAvailable()).
 			AddState(kartav1alpha1.DegradedStatus, ReplicasDegraded())

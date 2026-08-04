@@ -18,7 +18,7 @@ var _ = Describe("Milvus", Ordered, Label("milvus"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/milvus-io-milvus-v1beta1.yaml", "milvus-io-milvus-v1beta1")
-		rec = recorder.New("milvus", "milvus-io-milvus-v1beta1", "../../docs/catalog/milvus-io-milvus-v1beta1.yaml").
+		rec = recorder.New(cluster, "milvus", "milvus-io-milvus-v1beta1", "../../docs/catalog/milvus-io-milvus-v1beta1.yaml").
 			SetTimeout(8*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, PhaseAny([]string{"Pending", ""}, "status", "status")).
 			AddState(kartav1alpha1.RunningStatus, CondTrue("MilvusReady"))

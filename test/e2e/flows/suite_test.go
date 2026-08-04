@@ -24,10 +24,11 @@ import (
 	"github.com/run-ai/karta/test/e2e/recorder"
 )
 
-// k8sClient and testNamespace are set in BeforeSuite; the recorder gets them via recorder.Bind.
+// k8sClient and testNamespace are set in BeforeSuite; cluster is the recorder's bound access, passed to New.
 var (
 	k8sClient     client.Client
 	testNamespace string
+	cluster       recorder.Cluster
 )
 
 func TestFlows(t *testing.T) {
@@ -59,5 +60,11 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	testNamespace = ns.Name
 	DeferCleanup(func(ctx SpecContext) { _ = k8sClient.Delete(ctx, ns) })
 
-	recorder.Bind(k8sClient, dynClient, info.GitVersion, testNamespace, GinkgoWriter)
+	cluster = recorder.Cluster{
+		Client:    k8sClient,
+		Dynamic:   dynClient,
+		Version:   info.GitVersion,
+		Namespace: testNamespace,
+		Progress:  GinkgoWriter,
+	}
 })

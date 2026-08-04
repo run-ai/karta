@@ -18,7 +18,7 @@ var _ = Describe("RayCluster", Ordered, Label("kuberay", "raycluster"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/ray-io-raycluster-v1.yaml", "ray-io-raycluster-v1")
-		rec = recorder.New("kuberay", "ray-io-raycluster-v1", "../../docs/catalog/ray-io-raycluster-v1.yaml").
+		rec = recorder.New(cluster, "kuberay", "ray-io-raycluster-v1", "../../docs/catalog/ray-io-raycluster-v1.yaml").
 			SetTimeout(8*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, RayInitializing()).
 			AddState(kartav1alpha1.RunningStatus, PhaseEq("ready", "status", "state")).

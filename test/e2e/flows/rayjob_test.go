@@ -18,7 +18,7 @@ var _ = Describe("RayJob", Ordered, Label("kuberay", "rayjob"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/ray-io-rayjob-v1.yaml", "ray-io-rayjob-v1")
-		rec = recorder.New("kuberay", "ray-io-rayjob-v1", "../../docs/catalog/ray-io-rayjob-v1.yaml").
+		rec = recorder.New(cluster, "kuberay", "ray-io-rayjob-v1", "../../docs/catalog/ray-io-rayjob-v1.yaml").
 			SetTimeout(6*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, RayJobInitializing()).
 			AddState(kartav1alpha1.RunningStatus, PhaseEq("RUNNING", "status", "jobStatus")).

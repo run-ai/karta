@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -24,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/cache"
 	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,23 +33,6 @@ import (
 
 // e2eRoot points from a package dir under test/e2e (the test working dir) to test/e2e, which paths are relative to.
 const e2eRoot = ".."
-
-var (
-	k8sClient     client.Client
-	dynClient     dynamic.Interface
-	serverVersion string
-	namespace     string
-	progress      io.Writer = io.Discard
-)
-
-// Bind wires the recorder to the cluster clients, Kubernetes version, namespace, and a progress writer (nil
-// discards). The suite calls it once in BeforeSuite.
-func Bind(c client.Client, d dynamic.Interface, version, ns string, log io.Writer) {
-	k8sClient, dynClient, serverVersion, namespace = c, d, version, ns
-	if log != nil {
-		progress = log
-	}
-}
 
 // Run applies the manifest, drives the workload through the journey, and writes the recording. On a
 // flow-level failure the recording is still written (succeeded:false) for triage.
@@ -67,15 +48,15 @@ func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 	if err := yaml.Unmarshal(manifest, obj); err != nil {
 		return nil, fmt.Errorf("parse manifest %s: %w", f.manifest, err)
 	}
-	obj.SetNamespace(namespace)
-	if err := k8sClient.Create(ctx, obj); err != nil {
+	obj.SetNamespace(f.rec.cluster.Namespace)
+	if err := f.rec.cluster.Client.Create(ctx, obj); err != nil {
 		return nil, fmt.Errorf("create workload for %s: %w", f.name, err)
 	}
 	defer func() {
 		delCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 		defer cancel()
-		if err := k8sClient.Delete(delCtx, obj); err != nil && !apierrors.IsNotFound(err) {
-			fmt.Fprintf(progress, "cleanup: delete %s/%s failed: %v\n", obj.GetNamespace(), obj.GetName(), err)
+		if err := f.rec.cluster.Client.Delete(delCtx, obj); err != nil && !apierrors.IsNotFound(err) {
+			fmt.Fprintf(f.rec.cluster.Progress, "cleanup: delete %s/%s failed: %v\n", obj.GetNamespace(), obj.GetName(), err)
 		}
 	}()
 
@@ -117,7 +98,7 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 		}
 		rec.keep(u, state)
 		var stop bool
-		if pending, stop = fireReachedCheckpoint(ctx, obj, u, state, pending, rec); stop {
+		if pending, stop = f.fireReachedCheckpoint(ctx, obj, u, state, pending, rec); stop {
 			return true
 		}
 		return done(state)
@@ -130,7 +111,7 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 		return rec
 	}
 
-	watcher, err := watchWorkload(ctx, obj)
+	watcher, err := f.watch(ctx, obj)
 	if err != nil {
 		rec.failure = err.Error()
 		return rec
@@ -158,7 +139,7 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 				// error that must not abort a multi-minute flow.
 				var gerr error
 				for {
-					if gerr = k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed); gerr == nil {
+					if gerr = f.rec.cluster.Client.Get(ctx, client.ObjectKeyFromObject(obj), seed); gerr == nil {
 						break
 					}
 					if apierrors.IsNotFound(gerr) {
@@ -176,7 +157,7 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 				if handle(seed) {
 					return rec
 				}
-				if watcher, err = watchWorkload(ctx, obj); err != nil {
+				if watcher, err = f.watch(ctx, obj); err != nil {
 					rec.failure = err.Error()
 					return rec
 				}
@@ -199,7 +180,7 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 
 // write persists the run under recorded_data/<operator>/<version>/<kartaName>/<flow>.yaml.
 func (f *Flow) write(rec *recording, succeeded bool) (*Recording, error) {
-	version := operatorVersion(f.rec.operator)
+	version := operatorVersion(f.rec.operator, f.rec.cluster.Version)
 	rc := Recording{
 		SchemaVersion: SchemaVersion,
 		Operator:      f.rec.operator,
@@ -221,13 +202,13 @@ func (f *Flow) write(rec *recording, succeeded bool) (*Recording, error) {
 	if err := WriteRecording(rc.Path, rc); err != nil {
 		return nil, fmt.Errorf("write recording %s: %w", rc.Path, err)
 	}
-	fmt.Fprintf(progress, "recorded %s/%s/%s/%s.yaml (%d events %v)\n", f.rec.operator, version, f.rec.kartaName, f.name, len(rc.Events), rec.order)
+	fmt.Fprintf(f.rec.cluster.Progress, "recorded %s/%s/%s/%s.yaml (%d events %v)\n", f.rec.operator, version, f.rec.kartaName, f.name, len(rc.Events), rec.order)
 	return &rc, nil
 }
 
-func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) (watch.Interface, error) {
+func (f *Flow) watch(ctx context.Context, obj *unstructured.Unstructured) (watch.Interface, error) {
 	gvk := obj.GroupVersionKind()
-	mapping, err := k8sClient.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
+	mapping, err := f.rec.cluster.Client.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
 		return nil, fmt.Errorf("rest mapping for %s: %w", gvk, err)
 	}
@@ -240,7 +221,7 @@ func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) (watch.I
 	initialRV := obj.GetResourceVersion()
 	if initialRV == "" { // Create was a no-op (object already existed); fetch a current RV to start from
 		seed := GVKOnly(obj)
-		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed); err != nil {
+		if err := f.rec.cluster.Client.Get(ctx, client.ObjectKeyFromObject(obj), seed); err != nil {
 			return nil, fmt.Errorf("get %s for watch resource version: %w", obj.GetName(), err)
 		}
 		initialRV = seed.GetResourceVersion()
@@ -249,18 +230,18 @@ func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) (watch.I
 	return watchtools.NewRetryWatcherWithContext(ctx, initialRV, &cache.ListWatch{
 		WatchFuncWithContext: func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 			opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", obj.GetName()).String()
-			return dynClient.Resource(mapping.Resource).Namespace(ns).Watch(ctx, opts)
+			return f.rec.cluster.Dynamic.Resource(mapping.Resource).Namespace(ns).Watch(ctx, opts)
 		},
 	})
 }
 
 // fireAction sends an action's merge-patch and returns the recorded operation; the result object is not
 // captured, since the STATE events that follow already show where the operator drives it.
-func fireAction(ctx context.Context, obj *unstructured.Unstructured, action *Action) (*RecordedAction, error) {
+func (f *Flow) fireAction(ctx context.Context, obj *unstructured.Unstructured, action *Action) (*RecordedAction, error) {
 	target := GVKOnly(obj)
 	target.SetName(obj.GetName())
 	target.SetNamespace(obj.GetNamespace())
-	if err := k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, action.Patch)); err != nil {
+	if err := f.rec.cluster.Client.Patch(ctx, target, client.RawPatch(types.MergePatchType, action.Patch)); err != nil {
 		return nil, fmt.Errorf("action %s on %s/%s: %w", action.Type, obj.GetNamespace(), obj.GetName(), err)
 	}
 
@@ -287,13 +268,13 @@ func checkpoints(journey []journeyStep) []journeyStep {
 // fireReachedCheckpoint fires the next checkpoint's action once the workload reaches its state and its gate
 // holds, then drops it from pending. It returns the remaining checkpoints and whether to stop the run (a
 // failed action stops it).
-func fireReachedCheckpoint(ctx context.Context, obj, u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus, pending []journeyStep, rec *recording) ([]journeyStep, bool) {
+func (f *Flow) fireReachedCheckpoint(ctx context.Context, obj, u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus, pending []journeyStep, rec *recording) ([]journeyStep, bool) {
 	if len(pending) == 0 || state != pending[0].State ||
 		(pending[0].ActionPredicate != nil && !pending[0].ActionPredicate(u)) {
 		return pending, false
 	}
 	if pending[0].Action != nil {
-		ra, err := fireAction(ctx, obj, pending[0].Action)
+		ra, err := f.fireAction(ctx, obj, pending[0].Action)
 		if err != nil {
 			rec.failure = err.Error()
 			return pending, true
@@ -371,8 +352,9 @@ func observedOrderErr(journey []journeyStep, order []kartav1alpha1.ResourceStatu
 	return ObservedOrderErr(journeySteps(journey), order, want)
 }
 
-// operatorVersion is the installed version of op, or the cluster's Kubernetes version for built-ins.
-func operatorVersion(op string) string {
+// operatorVersion is the installed version of op, or fallback (the cluster's Kubernetes version) for
+// built-ins no operator provides.
+func operatorVersion(op, fallback string) string {
 	b, err := os.ReadFile(filepath.Join(e2eRoot, "..", "..", "hack", "e2e", "operators", ".installed-versions"))
 	if err == nil {
 		for _, line := range strings.Split(string(b), "\n") {
@@ -381,7 +363,7 @@ func operatorVersion(op string) string {
 			}
 		}
 	}
-	return serverVersion
+	return fallback
 }
 
 func dumpStatus(u *unstructured.Unstructured) string {

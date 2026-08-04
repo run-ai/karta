@@ -17,7 +17,7 @@ var _ = Describe("JobSet", Ordered, Label("jobset"), func() {
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml", "jobset-x-k8s-io-jobset-v1alpha2")
 		// Suspended first so a lingering Suspended condition never masks real progress after a resume.
-		rec = recorder.New("jobset", "jobset-x-k8s-io-jobset-v1alpha2", "../../docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml").
+		rec = recorder.New(cluster, "jobset", "jobset-x-k8s-io-jobset-v1alpha2", "../../docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml").
 			AddState(kartav1alpha1.SuspendedStatus, CondTrue("Suspended")).
 			AddState(kartav1alpha1.InitializingStatus, JobsetInitializing()).
 			AddState(kartav1alpha1.RunningStatus, JobsetRunning()).

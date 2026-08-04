@@ -18,7 +18,7 @@ var _ = Describe("Grove PodCliqueSet", Ordered, Label("grove"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/grove-io-podcliqueset-v1alpha1.yaml", "grove-io-podcliqueset-v1alpha1")
-		rec = recorder.New("grove", "grove-io-podcliqueset-v1alpha1", "../../docs/catalog/grove-io-podcliqueset-v1alpha1.yaml").
+		rec = recorder.New(cluster, "grove", "grove-io-podcliqueset-v1alpha1", "../../docs/catalog/grove-io-podcliqueset-v1alpha1.yaml").
 			SetTimeout(4*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, ReplicasComingUp()).
 			AddState(kartav1alpha1.RunningStatus, AllReplicasAvailable())

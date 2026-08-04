@@ -21,7 +21,7 @@ var _ = Describe("DynamoGraphDeployment", Ordered, Label("dynamo"), func() {
 		// The decode worker pulls env from hf-token-secret; the operator reads it from the workload's own
 		// namespace, so seed it here (up.sh only creates it in default).
 		ensureSecret(ctx, "hf-token-secret", map[string]string{"HF_TOKEN": "dummy"})
-		rec = recorder.New("dynamo", "nvidia-com-dynamographdeployment-v1alpha1", "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml").
+		rec = recorder.New(cluster, "dynamo", "nvidia-com-dynamographdeployment-v1alpha1", "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml").
 			SetTimeout(8*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, PhaseAny([]string{"initializing", "pending", ""}, "status", "state")).
 			AddState(kartav1alpha1.RunningStatus, PhaseEq("successful", "status", "state"))
