@@ -337,9 +337,33 @@ Karta after: the deploy reads `[Initializing]`, ready `[Running]`, and the
 all-False predictor failure `[Failed]` (Ready is False there, so it stays out of
 Initializing). Recorder side uses a matching CondPending predicate.
 
+## 12. milvus.io/v1beta1 Milvus: Initializing misses the just-created state
+
+The Milvus definition mapped Initializing to the "Pending" phase, Running to
+"Healthy", and Degraded to "Unhealthy" (status.status). But a just-created Milvus
+has no status.status yet, so the first steps read Undefined before the operator
+writes "Pending".
+
+CR status:
+
+```json
+{"status": {}}
+```
+
+Karta before: `[Undefined]`.
+
+Added a byExpression for the empty phase alongside the Pending matcher:
+
+```jq
+(.status.status // "") == ""
+```
+
+Karta after: just-created and Pending read `[Initializing]`, Healthy `[Running]`,
+Unhealthy `[Degraded]`.
+
 ## Coverage and what remains
 
-Fixed and recorded clean: the built-ins (batch/v1 Job, apps/v1 Deployment and
+Fixed and recorded clean: milvus, the built-ins (batch/v1 Job, apps/v1 Deployment and
 StatefulSet, CronJob, Pod), plus JobSet, LeaderWorkerSet, PyTorchJob, MPIJob,
 RayCluster, Knative Service, and KServe InferenceService.
 
@@ -347,7 +371,7 @@ Fixed and kread-verified, fixtures partial (the operator is heavy enough to
 outlast a kind control plane under record load on this environment): RayCluster
 resumed, and all RayJob flows (provisioning and Suspending windows).
 
-Not yet recorded here: milvus, grove, dynamo, and nim. Their controllers run
+Not yet recorded here: grove, dynamo, and nim. Their controllers run
 inference or database workloads whose smoke or reconcile load crashes a kind
 control plane during provisioning on this environment, so they could not be driven
 end to end. Their definitions already map Initializing, Running, Failed, and

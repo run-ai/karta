@@ -20,7 +20,7 @@ var _ = Describe("Milvus", Ordered, Label("milvus"), func() {
 		installKarta(ctx, "../../docs/catalog/milvus-io-milvus-v1beta1.yaml", "milvus-io-milvus-v1beta1")
 		rec = recorder.New("milvus", "milvus-io-milvus-v1beta1", "../../docs/catalog/milvus-io-milvus-v1beta1.yaml").
 			Timeout(8*time.Minute).
-			State(Initializing, PhaseEq("Pending", "status", "status")).
+			State(Initializing, PhaseAny([]string{"Pending", ""}, "status", "status")).
 			State(Running, CondTrue("MilvusReady"))
 	})
 
