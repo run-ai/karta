@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+{{- if and .Values.operator.enabled .Values.webhook.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "karta.webhook.serviceName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "karta.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "karta.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: webhook
+      port: 443
+      targetPort: webhook
+      protocol: TCP
+{{- end -}}
