@@ -363,7 +363,7 @@ Unhealthy `[Degraded]`.
 
 ## Coverage and what remains
 
-Fixed and recorded clean: milvus, the built-ins (batch/v1 Job, apps/v1 Deployment and
+Fixed and recorded clean: milvus, grove, the built-ins (batch/v1 Job, apps/v1 Deployment and
 StatefulSet, CronJob, Pod), plus JobSet, LeaderWorkerSet, PyTorchJob, MPIJob,
 RayCluster, Knative Service, and KServe InferenceService.
 
@@ -371,7 +371,7 @@ Fixed and kread-verified, fixtures partial (the operator is heavy enough to
 outlast a kind control plane under record load on this environment): RayCluster
 resumed, and all RayJob flows (provisioning and Suspending windows).
 
-Not yet recorded here: grove, dynamo, and nim. Their controllers run
+Not yet recorded here: dynamo and nim. Their controllers run
 inference or database workloads whose smoke or reconcile load crashes a kind
 control plane during provisioning on this environment, so they could not be driven
 end to end. Their definitions already map Initializing, Running, Failed, and
