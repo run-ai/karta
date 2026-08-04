@@ -2,9 +2,11 @@
 // Copyright (c) 2026 NVIDIA Corporation
 
 // Package recorder drives a workload through a declared flow and records the CRs it moves through, for the
-// offline tests to replay. It judges each state from the workload's own fields and never runs Karta, so it
-// stays decoupled from the library it feeds. It only records: installing the Karta definition and running
-// the suite belong to the caller.
+// replay tests to check against Karta. It judges each state from the workload's own fields and never runs
+// Karta, so it stays decoupled from the library it feeds - and it depends on no test framework: infra
+// failures come back as errors and progress goes to an injected writer, so it runs under Ginkgo, go test,
+// or a plain program alike. It only records: installing the Karta definition and running the suite belong
+// to the caller.
 package recorder
 
 import (
@@ -12,14 +14,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -39,18 +40,23 @@ import (
 // Karta, and recording paths are relative to.
 const e2eRoot = ".."
 
-// Cluster access, bound once by the suite via Bind.
+// Cluster access and progress log, bound once by the suite via Bind.
 var (
 	k8sClient     client.Client
 	dynClient     dynamic.Interface
 	serverVersion string
 	namespace     string
+	progress      io.Writer = io.Discard
 )
 
-// Bind wires the recorder to the cluster clients, the Kubernetes version, and the throwaway namespace
-// workloads are created in. The suite calls it once in BeforeSuite.
-func Bind(c client.Client, d dynamic.Interface, version, ns string) {
+// Bind wires the recorder to the cluster clients, the Kubernetes version, the throwaway namespace workloads
+// are created in, and a writer for progress lines (pass nil or io.Discard for none). The suite calls it once
+// in BeforeSuite; a Ginkgo suite passes GinkgoWriter, a plain program passes os.Stderr.
+func Bind(c client.Client, d dynamic.Interface, version, ns string, log io.Writer) {
 	k8sClient, dynClient, serverVersion, namespace = c, d, version, ns
+	if log != nil {
+		progress = log
+	}
 }
 
 // Recorder records the flows of one workload type. Bind it to the type's Karta definition and state
@@ -64,7 +70,7 @@ type Recorder struct {
 }
 
 // New starts a recorder for the given operator key, Karta definition name, and Karta YAML path. The path is
-// recording metadata (so the offline golden can load the definition); New does not touch the cluster.
+// recording metadata (so the replay golden can load the definition); New does not touch the cluster.
 func New(operator, kartaName, kartaFile string) *Recorder {
 	return &Recorder{operator: operator, kartaName: kartaName, kartaFile: kartaFile, timeout: 3 * time.Minute}
 }
@@ -126,13 +132,22 @@ func (f *Flow) last() *journeyStep { return &f.journey[len(f.journey)-1] }
 func (f *Flow) want() kartav1alpha1.ResourceStatus { return f.journey[len(f.journey)-1].State }
 
 // Run applies the manifest, drives the workload through the journey, writes the recording, and returns it.
-// It returns an error if the workload did not reach its terminal state in the declared order; the recording
-// is written either way (a failed run is saved with succeeded:false, for triage).
+// It returns an error on an infra failure (bad manifest, apiserver error) or if the workload did not reach
+// its terminal state in the declared order; on a flow-level failure the recording is still written
+// (succeeded:false, for triage).
 func (f *Flow) Run(ctx context.Context) (*Recording, error) {
+	manifest, err := readManifest(f.manifest)
+	if err != nil {
+		return nil, err
+	}
 	obj := &unstructured.Unstructured{}
-	Expect(yaml.Unmarshal(mustRead(f.manifest), obj)).To(Succeed())
+	if err := yaml.Unmarshal(manifest, obj); err != nil {
+		return nil, fmt.Errorf("parse manifest %s: %w", f.manifest, err)
+	}
 	obj.SetNamespace(namespace)
-	Expect(k8sClient.Create(ctx, obj)).To(Succeed(), "create workload for %s", f.name)
+	if err := k8sClient.Create(ctx, obj); err != nil {
+		return nil, fmt.Errorf("create workload for %s: %w", f.name, err)
+	}
 	defer func() { _ = k8sClient.Delete(context.Background(), obj) }()
 
 	flowCtx, cancel := context.WithTimeout(ctx, f.rec.timeout)
@@ -140,8 +155,10 @@ func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 
 	rec := f.observe(flowCtx, obj)
 	orderErr := observedOrderErr(f.journey, rec.order, f.want())
-	out := f.write(rec, rec.failure == "" && orderErr == nil)
-
+	out, err := f.write(rec, rec.failure == "" && orderErr == nil)
+	if err != nil {
+		return nil, err
+	}
 	if rec.failure != "" {
 		return out, errors.New(rec.failure)
 	}
@@ -152,8 +169,8 @@ func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 // journey's checkpoints - the stops carrying an action or an action predicate - popping the next once the
 // workload reaches its state and its predicate holds (a nil predicate matches on state alone), firing the
 // stop's action then. It keeps every distinct CR, advancing only once the status settles; plain states
-// between checkpoints are recorded as they pass. On timeout or a closed watch it sets rec.failure, so the
-// run is still recorded.
+// between checkpoints are recorded as they pass. On any failure (timeout, closed watch, a failed action) it
+// sets rec.failure, so the run is still recorded.
 func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *recording {
 	rec := &recording{}
 	pending := checkpoints(f.journey)
@@ -162,15 +179,14 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 	}
 
 	var lastSeen *unstructured.Unstructured
-	// handle records one observed object and reports whether the flow is complete. It keeps every distinct
-	// CR, advances only once the status settles, and pops the next checkpoint once its state and predicate
-	// hold, firing that checkpoint's action.
+	// handle records one observed object and reports whether the walk should stop - because the flow is
+	// complete or because firing a checkpoint's action failed (which sets rec.failure).
 	handle := func(u *unstructured.Unstructured) bool {
 		lastSeen = u
 		state := Classify(u, f.rec.states)
 		if state == "" {
-			// A settled CR we cannot classify is a real gap (a state missing from both the case and
-			// Karta): record it as Undefined so the order check fails and the run is saved for triage,
+			// A settled CR we cannot classify is a real gap (a state missing from both the predicate set
+			// and Karta): record it as Undefined so the order check fails and the run is saved for triage,
 			// rather than skipping it silently.
 			state = kartav1alpha1.UndefinedStatus
 		}
@@ -181,7 +197,12 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 		if len(pending) > 0 && state == pending[0].State &&
 			(pending[0].ActionPredicate == nil || pending[0].ActionPredicate(u)) {
 			if pending[0].Action != nil {
-				rec.attachAction(fireAction(ctx, obj, pending[0].Action))
+				ra, err := fireAction(ctx, obj, pending[0].Action)
+				if err != nil {
+					rec.failure = err.Error()
+					return true // stop; Run surfaces rec.failure
+				}
+				rec.attachAction(ra)
 			}
 			pending = pending[1:]
 		}
@@ -195,7 +216,11 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 		return rec
 	}
 
-	watcher := watchWorkload(ctx, obj)
+	watcher, err := watchWorkload(ctx, obj)
+	if err != nil {
+		rec.failure = err.Error()
+		return rec
+	}
 	defer func() { watcher.Stop() }()
 	var lastErr error
 	for {
@@ -235,7 +260,10 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 				if handle(seed) {
 					return rec
 				}
-				watcher = watchWorkload(ctx, obj)
+				if watcher, err = watchWorkload(ctx, obj); err != nil {
+					rec.failure = err.Error()
+					return rec
+				}
 				continue
 			}
 			if event.Type == watch.Error {
@@ -256,7 +284,7 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 // write persists the run as recorded_data/<operator>/<version>/<kartaName>/<flow>.yaml and returns it: its
 // success flag and the event stream - a STATE event per distinct CR (its own-fields state and the full
 // object), and an ACTION event after a state where the flow fired one.
-func (f *Flow) write(rec *recording, succeeded bool) *Recording {
+func (f *Flow) write(rec *recording, succeeded bool) (*Recording, error) {
 	version := operatorVersion(f.rec.operator)
 	rc := Recording{
 		SchemaVersion: SchemaVersion,
@@ -276,51 +304,60 @@ func (f *Flow) write(rec *recording, succeeded bool) *Recording {
 	}
 
 	rc.Path = RecordingPath(filepath.Join(e2eRoot, "recorded_data"), rc)
-	Expect(WriteRecording(rc.Path, rc)).To(Succeed())
-	GinkgoWriter.Printf("recorded %s/%s/%s/%s.yaml (%d events %v)\n", f.rec.operator, version, f.rec.kartaName, f.name, len(rc.Events), rec.order)
-	return &rc
+	if err := WriteRecording(rc.Path, rc); err != nil {
+		return nil, fmt.Errorf("write recording %s: %w", rc.Path, err)
+	}
+	fmt.Fprintf(progress, "recorded %s/%s/%s/%s.yaml (%d events %v)\n", f.rec.operator, version, f.rec.kartaName, f.name, len(rc.Events), rec.order)
+	return &rc, nil
 }
 
-func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) watch.Interface {
+func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) (watch.Interface, error) {
 	gvk := obj.GroupVersionKind()
 	mapping, err := k8sClient.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
-	Expect(err).NotTo(HaveOccurred(), "rest mapping for %s", gvk)
+	if err != nil {
+		return nil, fmt.Errorf("rest mapping for %s: %w", gvk, err)
+	}
 
 	ns := obj.GetNamespace()
-	Expect(ns).NotTo(BeEmpty(), "workload has no namespace")
+	if ns == "" {
+		return nil, fmt.Errorf("workload %s has no namespace", obj.GetName())
+	}
 
 	initialRV := obj.GetResourceVersion()
 	if initialRV == "" { // Create was a no-op (object already existed); fetch a current RV to start from
 		seed := GVKOnly(obj)
-		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed)).To(Succeed())
+		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed); err != nil {
+			return nil, err
+		}
 		initialRV = seed.GetResourceVersion()
 	}
 
-	watcher, err := watchtools.NewRetryWatcherWithContext(ctx, initialRV, &cache.ListWatch{
+	return watchtools.NewRetryWatcherWithContext(ctx, initialRV, &cache.ListWatch{
 		WatchFuncWithContext: func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 			opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", obj.GetName()).String()
 			return dynClient.Resource(mapping.Resource).Namespace(ns).Watch(ctx, opts)
 		},
 	})
-	Expect(err).NotTo(HaveOccurred())
-	return watcher
 }
 
 // fireAction sends an action's merge-patch to the workload and returns the recorded operation. The result
 // is not captured: the STATE events that follow already show the object the operator drives it to.
-func fireAction(ctx context.Context, obj *unstructured.Unstructured, action *Action) *RecordedAction {
+func fireAction(ctx context.Context, obj *unstructured.Unstructured, action *Action) (*RecordedAction, error) {
 	target := GVKOnly(obj)
 	target.SetName(obj.GetName())
 	target.SetNamespace(obj.GetNamespace())
-	Expect(k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, action.Patch))).
-		To(Succeed(), "action %s on %s/%s", action.Type, obj.GetNamespace(), obj.GetName())
+	if err := k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, action.Patch)); err != nil {
+		return nil, fmt.Errorf("action %s on %s/%s: %w", action.Type, obj.GetNamespace(), obj.GetName(), err)
+	}
 
 	var payload map[string]interface{}
-	Expect(json.Unmarshal(action.Patch, &payload)).To(Succeed())
+	if err := json.Unmarshal(action.Patch, &payload); err != nil {
+		return nil, fmt.Errorf("action %s payload: %w", action.Type, err)
+	}
 	return &RecordedAction{
 		Name:      string(action.Type),
 		Operation: Operation{Verb: "PATCH", PatchType: "application/merge-patch+json", Payload: payload},
-	}
+	}, nil
 }
 
 // checkpoints are the stops the recorder must reach and fire in order: those carrying an action or an action
@@ -401,7 +438,7 @@ func journeySteps(steps []journeyStep) []JourneyStep {
 	return out
 }
 
-// observedOrderErr runs the recorder's observed states through the same check the offline tests use.
+// observedOrderErr runs the recorder's observed states through the same check the replay tests use.
 func observedOrderErr(journey []journeyStep, order []kartav1alpha1.ResourceStatus, want kartav1alpha1.ResourceStatus) error {
 	return ObservedOrderErr(journeySteps(journey), order, want)
 }
@@ -432,8 +469,10 @@ func dumpStatus(u *unstructured.Unstructured) string {
 	return "  " + string(b)
 }
 
-func mustRead(path string) []byte {
+func readManifest(path string) ([]byte, error) {
 	b, err := os.ReadFile(filepath.Join(e2eRoot, path))
-	Expect(err).NotTo(HaveOccurred(), "read %s", path)
-	return b
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	return b, nil
 }

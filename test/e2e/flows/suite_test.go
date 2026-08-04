@@ -59,5 +59,5 @@ var _ = BeforeSuite(func(ctx SpecContext) {
 	testNamespace = ns.Name
 	DeferCleanup(func(ctx SpecContext) { _ = k8sClient.Delete(ctx, ns) })
 
-	recorder.Bind(k8sClient, dynClient, info.GitVersion, testNamespace)
+	recorder.Bind(k8sClient, dynClient, info.GitVersion, testNamespace, GinkgoWriter)
 })
