@@ -416,9 +416,10 @@ Fixed and recorded clean: milvus, grove, dynamo (initializing), nim (initializin
 StatefulSet, CronJob, Pod), plus JobSet, LeaderWorkerSet, PyTorchJob, MPIJob,
 RayCluster, Knative Service, and KServe InferenceService.
 
-Fixed and kread-verified, fixtures partial (the operator is heavy enough to
-outlast a kind control plane under record load on this environment): RayCluster
-resumed, and all RayJob flows (provisioning and Suspending windows).
+All of these were recorded on their own fresh single-operator kind cluster, one
+at a time. RayCluster (all flows including resumed) and RayJob (all flows) also
+record clean this way - a shared cluster crashed under ray's load, but an isolated
+one stays healthy.
 
 Not yet recorded here: the dynamo and nim running flows (its mocker decode worker needs Dynamo's distributed runtime, which the e2e install keeps off; and nim's fictive CPU image never serves, so both stay in Initializing). Their controllers run
 inference or database workloads whose smoke or reconcile load crashes a kind
