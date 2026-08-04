@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Package recorder drives a workload through a declared flow and records the CRs it moves through, for the
+// Package recorder drives a workload through a declared flow and records the CRs it passes through, for the
 // replay tests to check against Karta. It judges each state from the workload's own fields and never runs
-// Karta, so it stays decoupled from the library it feeds - and it depends on no test framework: infra
-// failures come back as errors and progress goes to an injected writer, so it runs under Ginkgo, go test,
-// or a plain program alike. It only records: installing the Karta definition and running the suite belong
-// to the caller.
+// Karta, and depends on no test framework: failures come back as errors, progress goes to an injected writer.
 package recorder
 
 import (
@@ -36,11 +33,9 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// e2eRoot points from a package dir under test/e2e (the go test working dir) to test/e2e, which manifest,
-// Karta, and recording paths are relative to.
+// e2eRoot points from a package dir under test/e2e (the test working dir) to test/e2e, which paths are relative to.
 const e2eRoot = ".."
 
-// Cluster access and progress log, bound once by the suite via Bind.
 var (
 	k8sClient     client.Client
 	dynClient     dynamic.Interface
@@ -49,9 +44,8 @@ var (
 	progress      io.Writer = io.Discard
 )
 
-// Bind wires the recorder to the cluster clients, the Kubernetes version, the throwaway namespace workloads
-// are created in, and a writer for progress lines (pass nil or io.Discard for none). The suite calls it once
-// in BeforeSuite; a Ginkgo suite passes GinkgoWriter, a plain program passes os.Stderr.
+// Bind wires the recorder to the cluster clients, Kubernetes version, namespace, and a progress writer (nil
+// discards). The suite calls it once in BeforeSuite.
 func Bind(c client.Client, d dynamic.Interface, version, ns string, log io.Writer) {
 	k8sClient, dynClient, serverVersion, namespace = c, d, version, ns
 	if log != nil {
@@ -59,10 +53,8 @@ func Bind(c client.Client, d dynamic.Interface, version, ns string, log io.Write
 	}
 }
 
-// Run applies the manifest, drives the workload through the journey, writes the recording, and returns it.
-// It returns an error on an infra failure (bad manifest, apiserver error) or if the workload did not reach
-// its terminal state in the declared order; on a flow-level failure the recording is still written
-// (succeeded:false, for triage).
+// Run applies the manifest, drives the workload through the journey, and writes the recording. On a
+// flow-level failure the recording is still written (succeeded:false) for triage.
 func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 	manifest, err := readManifest(f.manifest)
 	if err != nil {
@@ -93,12 +85,8 @@ func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 	return out, orderErr
 }
 
-// observe watches the workload and records every distinct CR until the flow finishes. It walks the
-// journey's checkpoints - the stops carrying an action or an action predicate - popping the next once the
-// workload reaches its state and its predicate holds (a nil predicate matches on state alone), firing the
-// stop's action then. It keeps every distinct CR, advancing only once the status settles; plain states
-// between checkpoints are recorded as they pass. On any failure (timeout, closed watch, a failed action) it
-// sets rec.failure, so the run is still recorded.
+// observe watches the workload and records every distinct settled CR, driving the journey's checkpoints
+// (stops with an action or predicate) in order and firing their actions. Any failure sets rec.failure.
 func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *recording {
 	rec := &recording{}
 	pending := checkpoints(f.journey)
@@ -107,20 +95,17 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 	}
 
 	var lastSeen *unstructured.Unstructured
-	// handle records one observed object and reports whether the walk should stop - because the flow is
-	// complete or because firing a checkpoint's action failed (which sets rec.failure).
 	handle := func(u *unstructured.Unstructured) bool {
 		lastSeen = u
 		state := Classify(u, f.rec.states)
 		if state == "" {
-			// A settled CR we cannot classify is a real gap (a state missing from both the predicate set
-			// and Karta): record it as Undefined so the order check fails and the run is saved for triage,
-			// rather than skipping it silently.
+			// A settled CR we cannot classify is a real gap: record it as Undefined so the order check
+			// fails and the run is saved for triage, rather than skipping it silently.
 			state = kartav1alpha1.UndefinedStatus
 		}
 		rec.keep(u, state)
 		if !statusSettled(u) {
-			return false // do not advance a phase on a half-written status
+			return false // do not advance on a half-written status
 		}
 		if len(pending) > 0 && state == pending[0].State &&
 			(pending[0].ActionPredicate == nil || pending[0].ActionPredicate(u)) {
@@ -128,7 +113,7 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 				ra, err := fireAction(ctx, obj, pending[0].Action)
 				if err != nil {
 					rec.failure = err.Error()
-					return true // stop; Run surfaces rec.failure
+					return true
 				}
 				rec.attachAction(ra)
 			}
@@ -138,7 +123,7 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 	}
 
 	// A workload already at its terminal state when Create returns never fires a watch event (the watch
-	// replays only newer resourceVersions), so take that first snapshot from the create response.
+	// replays only newer resourceVersions), so snapshot it from the create response.
 	if statusSettled(obj) && done(Classify(obj, f.rec.states)) {
 		handle(obj)
 		return rec
@@ -159,9 +144,8 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 			return rec
 		case event, open := <-watcher.ResultChan():
 			if !open {
-				// The RetryWatcher gave up, typically "too old resource version" after the object sat
-				// idle while etcd compacted its history. Re-list for a fresh resourceVersion and resume
-				// rather than failing a slowly-provisioning workload.
+				// The RetryWatcher gave up (typically "too old resource version" after idle compaction).
+				// Re-list for a fresh resourceVersion and resume rather than failing a slow workload.
 				if ctx.Err() != nil {
 					rec.failure = fmt.Sprintf("watch closed before reaching %q; observed %v; last watch error: %v\nlast-seen status:\n%s",
 						f.want(), rec.order, lastErr, dumpStatus(lastSeen))
@@ -169,9 +153,8 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 				}
 				watcher.Stop()
 				seed := GVKOnly(obj)
-				// Retry the re-list: a control-plane blip under a heavy operator can return a
-				// transient error (forbidden while the authorizer reloads, server timeout), which
-				// must not abort a multi-minute flow.
+				// Retry the re-list: a control-plane blip under a heavy operator can return a transient
+				// error that must not abort a multi-minute flow.
 				var gerr error
 				for {
 					if gerr = k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed); gerr == nil {
@@ -209,9 +192,7 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 	}
 }
 
-// write persists the run as recorded_data/<operator>/<version>/<kartaName>/<flow>.yaml and returns it: its
-// success flag and the event stream - a STATE event per distinct CR (its own-fields state and the full
-// object), and an ACTION event after a state where the flow fired one.
+// write persists the run under recorded_data/<operator>/<version>/<kartaName>/<flow>.yaml.
 func (f *Flow) write(rec *recording, succeeded bool) (*Recording, error) {
 	version := operatorVersion(f.rec.operator)
 	rc := Recording{
@@ -268,8 +249,8 @@ func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) (watch.I
 	})
 }
 
-// fireAction sends an action's merge-patch to the workload and returns the recorded operation. The result
-// is not captured: the STATE events that follow already show the object the operator drives it to.
+// fireAction sends an action's merge-patch and returns the recorded operation; the result object is not
+// captured, since the STATE events that follow already show where the operator drives it.
 func fireAction(ctx context.Context, obj *unstructured.Unstructured, action *Action) (*RecordedAction, error) {
 	target := GVKOnly(obj)
 	target.SetName(obj.GetName())
@@ -288,8 +269,6 @@ func fireAction(ctx context.Context, obj *unstructured.Unstructured, action *Act
 	}, nil
 }
 
-// checkpoints are the stops the recorder must reach and fire in order: those carrying an action or an action
-// predicate. Plain states between them are recorded as they pass but are not stops.
 func checkpoints(journey []journeyStep) []journeyStep {
 	var out []journeyStep
 	for _, st := range journey {
@@ -300,7 +279,6 @@ func checkpoints(journey []journeyStep) []journeyStep {
 	return out
 }
 
-// recording is one watched run: the distinct CRs a workload moved through, their states, and any actions.
 type recording struct {
 	order     []kartav1alpha1.ResourceStatus
 	snapshots []capture
@@ -324,14 +302,13 @@ func (r *recording) keep(u *unstructured.Unstructured, state kartav1alpha1.Resou
 	r.order = append(r.order, state)
 }
 
-// attachAction records the action fired at the current step (the last CR kept).
 func (r *recording) attachAction(a *RecordedAction) {
 	if len(r.snapshots) > 0 {
 		r.snapshots[len(r.snapshots)-1].action = a
 	}
 }
 
-// significantCR drops the fields the apiserver bumps on every event (resourceVersion, managedFields) so keep
+// significantCR drops the fields the apiserver bumps every event (resourceVersion, managedFields) so keep
 // dedups on real changes.
 func significantCR(u *unstructured.Unstructured) map[string]any {
 	c := u.DeepCopy().Object
@@ -366,13 +343,11 @@ func journeySteps(steps []journeyStep) []JourneyStep {
 	return out
 }
 
-// observedOrderErr runs the recorder's observed states through the same check the replay tests use.
 func observedOrderErr(journey []journeyStep, order []kartav1alpha1.ResourceStatus, want kartav1alpha1.ResourceStatus) error {
 	return ObservedOrderErr(journeySteps(journey), order, want)
 }
 
-// operatorVersion is the installed version of op, or the cluster's Kubernetes version for built-in
-// workloads no operator provides (batch-job, deployment, ...).
+// operatorVersion is the installed version of op, or the cluster's Kubernetes version for built-ins.
 func operatorVersion(op string) string {
 	b, err := os.ReadFile(filepath.Join(e2eRoot, "..", "..", "hack", "e2e", "operators", ".installed-versions"))
 	if err == nil {
