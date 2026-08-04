@@ -56,6 +56,9 @@ func Bind(c client.Client, d dynamic.Interface, version, ns string, log io.Write
 // Run applies the manifest, drives the workload through the journey, and writes the recording. On a
 // flow-level failure the recording is still written (succeeded:false) for triage.
 func (f *Flow) Run(ctx context.Context) (*Recording, error) {
+	if len(f.journey) == 0 {
+		return nil, fmt.Errorf("flow %s declares no stops", f.name)
+	}
 	manifest, err := readManifest(f.manifest)
 	if err != nil {
 		return nil, err
@@ -68,7 +71,13 @@ func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 	if err := k8sClient.Create(ctx, obj); err != nil {
 		return nil, fmt.Errorf("create workload for %s: %w", f.name, err)
 	}
-	defer func() { _ = k8sClient.Delete(context.Background(), obj) }()
+	defer func() {
+		delCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+		defer cancel()
+		if err := k8sClient.Delete(delCtx, obj); err != nil && !apierrors.IsNotFound(err) {
+			fmt.Fprintf(progress, "cleanup: delete %s/%s failed: %v\n", obj.GetNamespace(), obj.GetName(), err)
+		}
+	}()
 
 	flowCtx, cancel := context.WithTimeout(ctx, f.rec.timeout)
 	defer cancel()
@@ -97,6 +106,9 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 	var lastSeen *unstructured.Unstructured
 	handle := func(u *unstructured.Unstructured) bool {
 		lastSeen = u
+		if !statusSettled(u) {
+			return false // do not advance on a half-written status
+		}
 		state := Classify(u, f.rec.states)
 		if state == "" {
 			// A settled CR we cannot classify is a real gap: record it as Undefined so the order check
@@ -104,20 +116,9 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 			state = kartav1alpha1.UndefinedStatus
 		}
 		rec.keep(u, state)
-		if !statusSettled(u) {
-			return false // do not advance on a half-written status
-		}
-		if len(pending) > 0 && state == pending[0].State &&
-			(pending[0].ActionPredicate == nil || pending[0].ActionPredicate(u)) {
-			if pending[0].Action != nil {
-				ra, err := fireAction(ctx, obj, pending[0].Action)
-				if err != nil {
-					rec.failure = err.Error()
-					return true
-				}
-				rec.attachAction(ra)
-			}
-			pending = pending[1:]
+		var stop bool
+		if pending, stop = fireReachedCheckpoint(ctx, obj, u, state, pending, rec); stop {
+			return true
 		}
 		return done(state)
 	}
@@ -159,6 +160,10 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 				for {
 					if gerr = k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed); gerr == nil {
 						break
+					}
+					if apierrors.IsNotFound(gerr) {
+						rec.failure = fmt.Sprintf("workload gone during flow (re-list 404); observed %v", rec.order)
+						return rec
 					}
 					select {
 					case <-ctx.Done():
@@ -236,7 +241,7 @@ func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) (watch.I
 	if initialRV == "" { // Create was a no-op (object already existed); fetch a current RV to start from
 		seed := GVKOnly(obj)
 		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), seed); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get %s for watch resource version: %w", obj.GetName(), err)
 		}
 		initialRV = seed.GetResourceVersion()
 	}
@@ -277,6 +282,25 @@ func checkpoints(journey []journeyStep) []journeyStep {
 		}
 	}
 	return out
+}
+
+// fireReachedCheckpoint fires the next checkpoint's action once the workload reaches its state and its gate
+// holds, then drops it from pending. It returns the remaining checkpoints and whether to stop the run (a
+// failed action stops it).
+func fireReachedCheckpoint(ctx context.Context, obj, u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus, pending []journeyStep, rec *recording) ([]journeyStep, bool) {
+	if len(pending) == 0 || state != pending[0].State ||
+		(pending[0].ActionPredicate != nil && !pending[0].ActionPredicate(u)) {
+		return pending, false
+	}
+	if pending[0].Action != nil {
+		ra, err := fireAction(ctx, obj, pending[0].Action)
+		if err != nil {
+			rec.failure = err.Error()
+			return pending, true
+		}
+		rec.attachAction(ra)
+	}
+	return pending[1:], false
 }
 
 type recording struct {

@@ -57,7 +57,7 @@ func TestRecordingRoundTrips(t *testing.T) {
 	}
 	act := got.Events[1].Action
 	if act == nil || act.Name != "Resume" || act.Operation.Verb != "PATCH" {
-		t.Errorf("action did not round-trip: %+v", act)
+		t.Fatalf("action did not round-trip: %+v", act)
 	}
 	if v, ok := act.Operation.Payload["spec"].(map[string]interface{})["suspend"]; !ok || v != false {
 		t.Errorf("action payload did not round-trip: %+v", act.Operation.Payload)
