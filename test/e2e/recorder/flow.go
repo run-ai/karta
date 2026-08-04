@@ -14,34 +14,35 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// Cluster is the access a recorder needs: the clients, the Kubernetes/server version (recorded as the
-// version for built-in workloads no operator provides), the throwaway namespace workloads are created in,
-// and a writer for progress lines (nil discards). The suite builds one and passes it to New.
+// Cluster is the environment a recorder works in: the clients, the throwaway namespace workloads are created
+// in, a writer for progress lines (nil discards), and OutputDir where recordings are written. The suite
+// builds one and passes it to New.
 type Cluster struct {
 	Client    client.Client
 	Dynamic   dynamic.Interface
-	Version   string
 	Namespace string
 	Progress  io.Writer
+	OutputDir string
 }
 
 // Recorder records the flows of one workload type: build and Run a Flow per case.
 type Recorder struct {
 	cluster   Cluster
 	operator  string
+	version   string
 	kartaName string
 	kartaFile string
 	states    []NamedState
 	timeout   time.Duration
 }
 
-// New starts a recorder bound to cluster; kartaFile is recorded as metadata for the replay golden, not read
-// here.
-func New(cluster Cluster, operator, kartaName, kartaFile string) *Recorder {
+// New starts a recorder bound to cluster; version is stamped on the recording and kartaFile is recorded as
+// metadata for the replay golden (neither path is read here).
+func New(cluster Cluster, operator, version, kartaName, kartaFile string) *Recorder {
 	if cluster.Progress == nil {
 		cluster.Progress = io.Discard
 	}
-	return &Recorder{cluster: cluster, operator: operator, kartaName: kartaName, kartaFile: kartaFile, timeout: 3 * time.Minute}
+	return &Recorder{cluster: cluster, operator: operator, version: version, kartaName: kartaName, kartaFile: kartaFile, timeout: 3 * time.Minute}
 }
 
 // AddState registers a state predicate; declare states least- to most-advanced (Classify keeps the furthest match).
