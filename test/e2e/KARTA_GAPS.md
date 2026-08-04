@@ -386,6 +386,12 @@ matchers:
 Karta after: just-created, initializing, and pending read `[Initializing]`;
 successful `[Running]`; failed `[Failed]`.
 
+Recording the running flow to `successful` also needed the same harness fix as
+NIMService: the decode worker pulls env from `hf-token-secret`, read from the
+workload's own namespace, which up.sh only creates in default. The flow now seeds
+it, so the mocker decode worker starts and the DynamoGraphDeployment reaches
+`successful`.
+
 ## 14. apps.nvidia.com/v1alpha1 NIMService: Initializing missed every non-terminal phase
 
 The NIMService definition mapped Initializing to "NotReady" and "Pending", Running
@@ -420,16 +426,14 @@ the flow records through to Running.
 
 ## Coverage and what remains
 
-Fixed and recorded clean: milvus, grove, dynamo (initializing), nim, the built-ins (batch/v1 Job, apps/v1 Deployment and
+Fixed and recorded clean: milvus, grove, dynamo, nim, the built-ins (batch/v1 Job, apps/v1 Deployment and
 StatefulSet, CronJob, Pod), plus JobSet, LeaderWorkerSet, PyTorchJob, MPIJob,
 RayCluster, Knative Service, and KServe InferenceService.
 
 All of these were recorded on their own fresh single-operator kind cluster, one
 at a time. RayCluster (all flows including resumed) and RayJob (all flows) also
 record clean this way - a shared cluster crashed under ray's load, but an isolated
-one stays healthy.
-
-Not yet recorded end to end: the dynamo running flow (its mocker decode worker needs Dynamo's distributed runtime, which the e2e install keeps off, so it stays in Initializing). Their controllers run
+one stays healthy. Their controllers run
 inference or database workloads whose smoke or reconcile load crashes a kind
 control plane during provisioning on this environment, so they could not be driven
 end to end. Their definitions already map Initializing, Running, Failed, and

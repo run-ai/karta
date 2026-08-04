@@ -10,11 +10,11 @@ steps:
     metadata:
       annotations:
         nvidia.com/dynamo-operator-origin-version: 1.2.1
-      creationTimestamp: "2026-08-04T04:36:01Z"
+      creationTimestamp: "2026-08-04T05:11:36Z"
       generation: 1
       name: karta-e2e-dynamo-initializing
-      namespace: test-z66xs
-      uid: e4539bed-fd29-46cc-8a78-f744da3100dc
+      namespace: test-nzr8d
+      uid: bc083cf7-3e61-44a7-91e1-e3fbf39d270f
     spec:
       services:
         Frontend:

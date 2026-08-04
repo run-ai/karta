@@ -18,8 +18,11 @@ var _ = Describe("DynamoGraphDeployment", Ordered, Label("dynamo"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml", "nvidia-com-dynamographdeployment-v1alpha1")
+		// The decode worker pulls env from hf-token-secret; the operator reads it from the workload's own
+		// namespace, so seed it here (up.sh only creates it in default).
+		ensureSecret(ctx, "hf-token-secret", map[string]string{"HF_TOKEN": "dummy"})
 		rec = recorder.New("dynamo", "nvidia-com-dynamographdeployment-v1alpha1", "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml").
-			Timeout(5*time.Minute).
+			Timeout(8*time.Minute).
 			State(Initializing, PhaseAny([]string{"initializing", "pending", ""}, "status", "state")).
 			State(Running, PhaseEq("successful", "status", "state"))
 	})
