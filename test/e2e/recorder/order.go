@@ -22,20 +22,9 @@ func ObservedOrderErr(declared []JourneyStep, observed []v1alpha1.ResourceStatus
 	if len(obs) == 0 {
 		return fmt.Errorf("no states observed")
 	}
+	skippable := skippableSteps(declared)
 
-	// A step is skippable if Optional, or if its state recurs earlier: compaction collapses a repeated
-	// Running (scale) or an Initializing dip into one, so the later occurrences can never be observed.
-	skippable := make([]bool, len(declared))
-	for i, s := range declared {
-		skippable[i] = s.Optional
-		for j := 0; j < i; j++ {
-			if declared[j].State == s.State {
-				skippable[i] = true
-				break
-			}
-		}
-	}
-
+	// walk the observed states through the declared journey, skipping steps that may be absent
 	di := 0
 	for _, state := range obs {
 		for di < len(declared) && declared[di].State != state {
@@ -54,6 +43,7 @@ func ObservedOrderErr(declared []JourneyStep, observed []v1alpha1.ResourceStatus
 		di++
 	}
 
+	// any required steps left after the walk were never observed
 	for ; di < len(declared); di++ {
 		if !skippable[di] {
 			return fmt.Errorf("required state %q not observed; journey %v, observed %v",
@@ -65,6 +55,23 @@ func ObservedOrderErr(declared []JourneyStep, observed []v1alpha1.ResourceStatus
 		return fmt.Errorf("terminal must be %q, observed %q; sequence %v", want, last, obs)
 	}
 	return nil
+}
+
+// skippableSteps marks each declared step that may be absent from the observed run: an Optional step, or one
+// whose state recurs earlier (compaction collapses a repeated Running from a scale, or an Initializing dip,
+// into one, so the later occurrences can never be observed on their own).
+func skippableSteps(declared []JourneyStep) []bool {
+	skippable := make([]bool, len(declared))
+	for i, s := range declared {
+		skippable[i] = s.Optional
+		for j := 0; j < i; j++ {
+			if declared[j].State == s.State {
+				skippable[i] = true
+				break
+			}
+		}
+	}
+	return skippable
 }
 
 func journeyStates(steps []JourneyStep) []v1alpha1.ResourceStatus {

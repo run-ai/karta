@@ -19,40 +19,40 @@ var _ = Describe("PyTorchJob", Ordered, Label("kubeflow", "pytorch"), func() {
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/kubeflow-org-pytorchjob-v1.yaml", "kubeflow-org-pytorchjob-v1")
 		rec = recorder.New("kubeflow", "kubeflow-org-pytorchjob-v1", "../../docs/catalog/kubeflow-org-pytorchjob-v1.yaml").
-			Timeout(4*time.Minute).
-			State(kartav1alpha1.InitializingStatus, CondTrue("Created")).
-			State(kartav1alpha1.RunningStatus, CondTrue("Running")).
-			State(kartav1alpha1.CompletedStatus, CondTrue("Succeeded")).
-			State(kartav1alpha1.FailedStatus, CondTrue("Failed")).
-			State(kartav1alpha1.SuspendedStatus, CondTrue("Suspended"))
+			SetTimeout(4*time.Minute).
+			AddState(kartav1alpha1.InitializingStatus, CondTrue("Created")).
+			AddState(kartav1alpha1.RunningStatus, CondTrue("Running")).
+			AddState(kartav1alpha1.CompletedStatus, CondTrue("Succeeded")).
+			AddState(kartav1alpha1.FailedStatus, CondTrue("Failed")).
+			AddState(kartav1alpha1.SuspendedStatus, CondTrue("Suspended"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "flows/testdata/pytorch/running.yaml").
+		_, err := recorder.NewFlow(rec, "running", "flows/testdata/pytorch/running.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("completed", func(ctx SpecContext) {
-		_, err := rec.Flow("completed", "flows/testdata/pytorch/completed.yaml").
+		_, err := recorder.NewFlow(rec, "completed", "flows/testdata/pytorch/completed.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Maybe(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("failed", func(ctx SpecContext) {
-		_, err := rec.Flow("failed", "flows/testdata/pytorch/failed.yaml").
+		_, err := recorder.NewFlow(rec, "failed", "flows/testdata/pytorch/failed.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Maybe(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("suspended", func(ctx SpecContext) {
-		_, err := rec.Flow("suspended", "flows/testdata/pytorch/suspended.yaml").
+		_, err := recorder.NewFlow(rec, "suspended", "flows/testdata/pytorch/suspended.yaml").
 			Reaches(kartav1alpha1.SuspendedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("resumed", func(ctx SpecContext) {
-		_, err := rec.Flow("resumed", "flows/testdata/pytorch/resumed.yaml").
+		_, err := recorder.NewFlow(rec, "resumed", "flows/testdata/pytorch/resumed.yaml").
 			At(kartav1alpha1.SuspendedStatus).Do(ResumeRunPolicy()).
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())

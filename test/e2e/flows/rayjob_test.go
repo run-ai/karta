@@ -19,42 +19,42 @@ var _ = Describe("RayJob", Ordered, Label("kuberay", "rayjob"), func() {
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/ray-io-rayjob-v1.yaml", "ray-io-rayjob-v1")
 		rec = recorder.New("kuberay", "ray-io-rayjob-v1", "../../docs/catalog/ray-io-rayjob-v1.yaml").
-			Timeout(6*time.Minute).
-			State(kartav1alpha1.InitializingStatus, RayJobInitializing()).
-			State(kartav1alpha1.RunningStatus, PhaseEq("RUNNING", "status", "jobStatus")).
-			State(kartav1alpha1.CompletedStatus, PhaseEq("SUCCEEDED", "status", "jobStatus")).
-			State(kartav1alpha1.FailedStatus, PhaseEq("FAILED", "status", "jobStatus")).
-			State(kartav1alpha1.SuspendedStatus, PhaseAny([]string{"Suspended", "Suspending"}, "status", "jobDeploymentStatus"))
+			SetTimeout(6*time.Minute).
+			AddState(kartav1alpha1.InitializingStatus, RayJobInitializing()).
+			AddState(kartav1alpha1.RunningStatus, PhaseEq("RUNNING", "status", "jobStatus")).
+			AddState(kartav1alpha1.CompletedStatus, PhaseEq("SUCCEEDED", "status", "jobStatus")).
+			AddState(kartav1alpha1.FailedStatus, PhaseEq("FAILED", "status", "jobStatus")).
+			AddState(kartav1alpha1.SuspendedStatus, PhaseAny([]string{"Suspended", "Suspending"}, "status", "jobDeploymentStatus"))
 	})
 
 	// jobStatus jumps between PENDING/RUNNING/SUCCEEDED/FAILED; a fast job can skip intermediates, so
 	// Initializing and (for terminal flows) Running are Optional.
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "flows/testdata/rayjob/running.yaml").
+		_, err := recorder.NewFlow(rec, "running", "flows/testdata/rayjob/running.yaml").
 			Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("completed", func(ctx SpecContext) {
-		_, err := rec.Flow("completed", "flows/testdata/rayjob/completed.yaml").
+		_, err := recorder.NewFlow(rec, "completed", "flows/testdata/rayjob/completed.yaml").
 			Maybe(kartav1alpha1.InitializingStatus).Maybe(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("failed", func(ctx SpecContext) {
-		_, err := rec.Flow("failed", "flows/testdata/rayjob/failed.yaml").
+		_, err := recorder.NewFlow(rec, "failed", "flows/testdata/rayjob/failed.yaml").
 			Maybe(kartav1alpha1.InitializingStatus).Maybe(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("suspended", func(ctx SpecContext) {
-		_, err := rec.Flow("suspended", "flows/testdata/rayjob/suspended.yaml").
+		_, err := recorder.NewFlow(rec, "suspended", "flows/testdata/rayjob/suspended.yaml").
 			Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.SuspendedStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("resumed", func(ctx SpecContext) {
-		_, err := rec.Flow("resumed", "flows/testdata/rayjob/resumed.yaml").
+		_, err := recorder.NewFlow(rec, "resumed", "flows/testdata/rayjob/resumed.yaml").
 			Maybe(kartav1alpha1.InitializingStatus).At(kartav1alpha1.SuspendedStatus).Do(Resume()).Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})

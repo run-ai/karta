@@ -19,19 +19,19 @@ var _ = Describe("Milvus", Ordered, Label("milvus"), func() {
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/milvus-io-milvus-v1beta1.yaml", "milvus-io-milvus-v1beta1")
 		rec = recorder.New("milvus", "milvus-io-milvus-v1beta1", "../../docs/catalog/milvus-io-milvus-v1beta1.yaml").
-			Timeout(8*time.Minute).
-			State(kartav1alpha1.InitializingStatus, PhaseAny([]string{"Pending", ""}, "status", "status")).
-			State(kartav1alpha1.RunningStatus, CondTrue("MilvusReady"))
+			SetTimeout(8*time.Minute).
+			AddState(kartav1alpha1.InitializingStatus, PhaseAny([]string{"Pending", ""}, "status", "status")).
+			AddState(kartav1alpha1.RunningStatus, CondTrue("MilvusReady"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "flows/testdata/milvus/running.yaml").
+		_, err := recorder.NewFlow(rec, "running", "flows/testdata/milvus/running.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("initializing", func(ctx SpecContext) {
-		_, err := rec.Flow("initializing", "flows/testdata/milvus/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
+		_, err := recorder.NewFlow(rec, "initializing", "flows/testdata/milvus/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })

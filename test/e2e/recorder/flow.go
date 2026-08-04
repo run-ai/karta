@@ -25,17 +25,17 @@ func New(operator, kartaName, kartaFile string) *Recorder {
 	return &Recorder{operator: operator, kartaName: kartaName, kartaFile: kartaFile, timeout: 3 * time.Minute}
 }
 
-// State registers a state predicate; declare states least- to most-advanced (Classify keeps the furthest match).
-func (r *Recorder) State(name kartav1alpha1.ResourceStatus, match StateCheck) *Recorder {
+// AddState registers a state predicate; declare states least- to most-advanced (Classify keeps the furthest match).
+func (r *Recorder) AddState(name kartav1alpha1.ResourceStatus, match StateCheck) *Recorder {
 	r.states = append(r.states, NamedState{Name: name, Match: match})
 	return r
 }
 
-// Timeout overrides the per-flow deadline (default 3m).
-func (r *Recorder) Timeout(d time.Duration) *Recorder { r.timeout = d; return r }
+// SetTimeout overrides the per-flow deadline (default 3m).
+func (r *Recorder) SetTimeout(d time.Duration) *Recorder { r.timeout = d; return r }
 
-// Flow starts a flow seeded from a manifest (path relative to test/e2e).
-func (r *Recorder) Flow(name, manifest string) *Flow {
+// NewFlow starts a flow seeded from a manifest (path relative to test/e2e).
+func NewFlow(r *Recorder, name, manifest string) *Flow {
 	return &Flow{rec: r, name: name, manifest: manifest}
 }
 

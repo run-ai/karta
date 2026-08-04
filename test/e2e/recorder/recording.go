@@ -72,20 +72,23 @@ func RecordingPath(fixturesRoot string, r Recording) string {
 
 func WriteRecording(path string, r Recording) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+		return fmt.Errorf("create dir for %s: %w", path, err)
 	}
 	b, err := yaml.Marshal(r)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal recording %s: %w", path, err)
 	}
-	return os.WriteFile(path, b, 0o644)
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", path, err)
+	}
+	return nil
 }
 
 func LoadRecording(path string) (Recording, error) {
 	var r Recording
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return r, err
+		return r, fmt.Errorf("read %s: %w", path, err)
 	}
 	if err := yaml.Unmarshal(b, &r); err != nil {
 		return r, fmt.Errorf("%s: %w", path, err)

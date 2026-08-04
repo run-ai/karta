@@ -22,19 +22,19 @@ var _ = Describe("DynamoGraphDeployment", Ordered, Label("dynamo"), func() {
 		// namespace, so seed it here (up.sh only creates it in default).
 		ensureSecret(ctx, "hf-token-secret", map[string]string{"HF_TOKEN": "dummy"})
 		rec = recorder.New("dynamo", "nvidia-com-dynamographdeployment-v1alpha1", "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml").
-			Timeout(8*time.Minute).
-			State(kartav1alpha1.InitializingStatus, PhaseAny([]string{"initializing", "pending", ""}, "status", "state")).
-			State(kartav1alpha1.RunningStatus, PhaseEq("successful", "status", "state"))
+			SetTimeout(8*time.Minute).
+			AddState(kartav1alpha1.InitializingStatus, PhaseAny([]string{"initializing", "pending", ""}, "status", "state")).
+			AddState(kartav1alpha1.RunningStatus, PhaseEq("successful", "status", "state"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := rec.Flow("running", "flows/testdata/dynamo/running.yaml").
+		_, err := recorder.NewFlow(rec, "running", "flows/testdata/dynamo/running.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 
 	It("initializing", func(ctx SpecContext) {
-		_, err := rec.Flow("initializing", "flows/testdata/dynamo/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
+		_, err := recorder.NewFlow(rec, "initializing", "flows/testdata/dynamo/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
 		Expect(err).To(Succeed())
 	})
 })
