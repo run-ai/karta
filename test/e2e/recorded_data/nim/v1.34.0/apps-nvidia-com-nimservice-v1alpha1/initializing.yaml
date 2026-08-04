@@ -1,10 +1,6 @@
-flow: initializing
-kartaFile: docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml
-kartaName: apps-nvidia-com-nimservice-v1alpha1
-operator: nim
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: apps.nvidia.com/v1alpha1
     kind: NIMService
     metadata:
@@ -34,6 +30,11 @@ steps:
           size: 1Gi
           volumeAccessMode: ReadWriteOnce
   state: Initializing
+flow: initializing
+kartaFile: docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml
+kartaName: apps-nvidia-com-nimservice-v1alpha1
+operator: nim
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Initializing

@@ -1,10 +1,6 @@
-flow: running
-kartaFile: docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml
-kartaName: apps-nvidia-com-nimservice-v1alpha1
-operator: nim
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: apps.nvidia.com/v1alpha1
     kind: NIMService
     metadata:
@@ -48,7 +44,50 @@ steps:
           size: 1Gi
           volumeAccessMode: ReadWriteOnce
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: apps.nvidia.com/v1alpha1
+    kind: NIMService
+    metadata:
+      creationTimestamp: "2026-08-04T05:03:55Z"
+      finalizers:
+      - finalizer.nimservice.apps.nvidia.com
+      generation: 2
+      name: karta-e2e-nim
+      namespace: test-hs5c4
+      uid: a73774b5-98f2-4110-ba5d-8e4cb2c00d56
+    spec:
+      authSecret: ngc-secret
+      env:
+      - name: NIM_REQUEST_LATENCY
+        value: "2"
+      expose:
+        ingress:
+          spec: {}
+        service:
+          port: 8000
+          type: ClusterIP
+      image:
+        pullPolicy: IfNotPresent
+        repository: nim-cpu
+        tag: e2e
+      inferencePlatform: standalone
+      livenessProbe: {}
+      metrics:
+        serviceMonitor: {}
+      readinessProbe: {}
+      replicas: 1
+      scale:
+        hpa:
+          maxReplicas: 0
+          minReplicas: 1
+      startupProbe: {}
+      storage:
+        nimCache: {}
+        pvc:
+          create: true
+          size: 1Gi
+          volumeAccessMode: ReadWriteOnce
     status:
       conditions:
       - lastTransitionTime: "2026-08-04T05:03:55Z"
@@ -58,7 +97,50 @@ steps:
         type: NIM_CACHE_PVC_CREATED
       state: PVC-Created
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: apps.nvidia.com/v1alpha1
+    kind: NIMService
+    metadata:
+      creationTimestamp: "2026-08-04T05:03:55Z"
+      finalizers:
+      - finalizer.nimservice.apps.nvidia.com
+      generation: 2
+      name: karta-e2e-nim
+      namespace: test-hs5c4
+      uid: a73774b5-98f2-4110-ba5d-8e4cb2c00d56
+    spec:
+      authSecret: ngc-secret
+      env:
+      - name: NIM_REQUEST_LATENCY
+        value: "2"
+      expose:
+        ingress:
+          spec: {}
+        service:
+          port: 8000
+          type: ClusterIP
+      image:
+        pullPolicy: IfNotPresent
+        repository: nim-cpu
+        tag: e2e
+      inferencePlatform: standalone
+      livenessProbe: {}
+      metrics:
+        serviceMonitor: {}
+      readinessProbe: {}
+      replicas: 1
+      scale:
+        hpa:
+          maxReplicas: 0
+          minReplicas: 1
+      startupProbe: {}
+      storage:
+        nimCache: {}
+        pvc:
+          create: true
+          size: 1Gi
+          volumeAccessMode: ReadWriteOnce
     status:
       conditions:
       - lastTransitionTime: "2026-08-04T05:03:55Z"
@@ -75,7 +157,50 @@ steps:
         type: Failed
       state: NotReady
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: apps.nvidia.com/v1alpha1
+    kind: NIMService
+    metadata:
+      creationTimestamp: "2026-08-04T05:03:55Z"
+      finalizers:
+      - finalizer.nimservice.apps.nvidia.com
+      generation: 2
+      name: karta-e2e-nim
+      namespace: test-hs5c4
+      uid: a73774b5-98f2-4110-ba5d-8e4cb2c00d56
+    spec:
+      authSecret: ngc-secret
+      env:
+      - name: NIM_REQUEST_LATENCY
+        value: "2"
+      expose:
+        ingress:
+          spec: {}
+        service:
+          port: 8000
+          type: ClusterIP
+      image:
+        pullPolicy: IfNotPresent
+        repository: nim-cpu
+        tag: e2e
+      inferencePlatform: standalone
+      livenessProbe: {}
+      metrics:
+        serviceMonitor: {}
+      readinessProbe: {}
+      replicas: 1
+      scale:
+        hpa:
+          maxReplicas: 0
+          minReplicas: 1
+      startupProbe: {}
+      storage:
+        nimCache: {}
+        pvc:
+          create: true
+          size: 1Gi
+          volumeAccessMode: ReadWriteOnce
     status:
       conditions:
       - lastTransitionTime: "2026-08-04T05:03:55Z"
@@ -95,8 +220,52 @@ steps:
         reason: Ready
         status: "False"
         type: Failed
+      state: NotReady
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: apps.nvidia.com/v1alpha1
+    kind: NIMService
+    metadata:
+      creationTimestamp: "2026-08-04T05:03:55Z"
+      finalizers:
+      - finalizer.nimservice.apps.nvidia.com
+      generation: 2
+      name: karta-e2e-nim
+      namespace: test-hs5c4
+      uid: a73774b5-98f2-4110-ba5d-8e4cb2c00d56
+    spec:
+      authSecret: ngc-secret
+      env:
+      - name: NIM_REQUEST_LATENCY
+        value: "2"
+      expose:
+        ingress:
+          spec: {}
+        service:
+          port: 8000
+          type: ClusterIP
+      image:
+        pullPolicy: IfNotPresent
+        repository: nim-cpu
+        tag: e2e
+      inferencePlatform: standalone
+      livenessProbe: {}
+      metrics:
+        serviceMonitor: {}
+      readinessProbe: {}
+      replicas: 1
+      scale:
+        hpa:
+          maxReplicas: 0
+          minReplicas: 1
+      startupProbe: {}
+      storage:
+        nimCache: {}
+        pvc:
+          create: true
+          size: 1Gi
+          volumeAccessMode: ReadWriteOnce
     status:
       conditions:
       - lastTransitionTime: "2026-08-04T05:03:55Z"
@@ -116,8 +285,52 @@ steps:
         reason: Ready
         status: "False"
         type: Failed
+      state: NotReady
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: apps.nvidia.com/v1alpha1
+    kind: NIMService
+    metadata:
+      creationTimestamp: "2026-08-04T05:03:55Z"
+      finalizers:
+      - finalizer.nimservice.apps.nvidia.com
+      generation: 2
+      name: karta-e2e-nim
+      namespace: test-hs5c4
+      uid: a73774b5-98f2-4110-ba5d-8e4cb2c00d56
+    spec:
+      authSecret: ngc-secret
+      env:
+      - name: NIM_REQUEST_LATENCY
+        value: "2"
+      expose:
+        ingress:
+          spec: {}
+        service:
+          port: 8000
+          type: ClusterIP
+      image:
+        pullPolicy: IfNotPresent
+        repository: nim-cpu
+        tag: e2e
+      inferencePlatform: standalone
+      livenessProbe: {}
+      metrics:
+        serviceMonitor: {}
+      readinessProbe: {}
+      replicas: 1
+      scale:
+        hpa:
+          maxReplicas: 0
+          minReplicas: 1
+      startupProbe: {}
+      storage:
+        nimCache: {}
+        pvc:
+          create: true
+          size: 1Gi
+          volumeAccessMode: ReadWriteOnce
     status:
       conditions:
       - lastTransitionTime: "2026-08-04T05:03:55Z"
@@ -142,6 +355,11 @@ steps:
         name: meta/llama-3.2-1b-instruct
       state: Ready
   state: Running
+flow: running
+kartaFile: docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml
+kartaName: apps-nvidia-com-nimservice-v1alpha1
+operator: nim
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Running

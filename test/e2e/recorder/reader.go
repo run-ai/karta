@@ -1,50 +1,53 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Reader replays a recording written by the recorder: given a recording file it hands back each
-// step (state and action) and the fully reconstructed CR, one Next() at a time.
 package recorder
 
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// Reader replays a recording step by step: call Next to advance, then Step and CR for the current step.
+// Reader replays a recording's STATE events one at a time: call Next to advance, then State and Object for
+// the current state. ACTION events are metadata for the flow and are skipped by the walk.
 type Reader struct {
-	rec Recording
-	crs []*unstructured.Unstructured
-	pos int
+	rec    Recording
+	states []Event
+	pos    int
 }
 
-// OpenRecording loads a recording file and reconstructs every step's CR.
+// OpenRecording loads a recording file and prepares to walk its states.
 func OpenRecording(path string) (*Reader, error) {
 	rec, err := LoadRecording(path)
 	if err != nil {
 		return nil, err
 	}
-	return NewReader(rec)
+	return NewReader(rec), nil
 }
 
-// NewReader builds a Reader over an in-memory recording.
-func NewReader(rec Recording) (*Reader, error) {
-	crs, err := rec.CRs()
-	if err != nil {
-		return nil, err
+// NewReader walks an in-memory recording's STATE events.
+func NewReader(rec Recording) *Reader {
+	var states []Event
+	for _, e := range rec.Events {
+		if e.Kind == EventState {
+			states = append(states, e)
+		}
 	}
-	return &Reader{rec: rec, crs: crs, pos: -1}, nil
+	return &Reader{rec: rec, states: states, pos: -1}
 }
 
-// Next advances to the next step and reports whether one is available.
+// Next advances to the next STATE event and reports whether one is available.
 func (r *Reader) Next() bool {
 	r.pos++
-	return r.pos < len(r.rec.Steps)
+	return r.pos < len(r.states)
 }
 
-// Step is the current step: its state and the action fired there, if any.
-func (r *Reader) Step() Step { return r.rec.Steps[r.pos] }
+// State is the current STATE event's own-fields state (never from Karta).
+func (r *Reader) State() string { return r.states[r.pos].State }
 
-// CR is the current step's fully reconstructed CR.
-func (r *Reader) CR() *unstructured.Unstructured { return r.crs[r.pos] }
+// Object is the current STATE event's full CR.
+func (r *Reader) Object() *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: r.states[r.pos].Object}
+}
 
-// Recording is the underlying recording (metadata and all steps).
+// Recording is the underlying recording (metadata and all events).
 func (r *Reader) Recording() Recording { return r.rec }

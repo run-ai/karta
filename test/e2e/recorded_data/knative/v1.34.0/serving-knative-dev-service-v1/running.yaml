@@ -1,10 +1,6 @@
-flow: running
-kartaFile: docs/catalog/serving-knative-dev-service-v1.yaml
-kartaName: serving-knative-dev-service-v1
-operator: knative
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: serving.knative.dev/v1
     kind: Service
     metadata:
@@ -64,7 +60,47 @@ steps:
         type: RoutesReady
       observedGeneration: 1
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    metadata:
+      annotations:
+        serving.knative.dev/creator: kubernetes-admin
+        serving.knative.dev/lastModifier: kubernetes-admin
+      creationTimestamp: "2026-08-03T22:36:44Z"
+      generation: 1
+      name: karta-e2e-knative
+      namespace: test-79prc
+      uid: 620c2835-d8ed-4219-b13c-a6f1e7378a2a
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containerConcurrency: 0
+          containers:
+          - env:
+            - name: TARGET
+              value: karta-e2e
+            image: ghcr.io/knative/helloworld-go:latest
+            name: user-container
+            ports:
+            - containerPort: 8080
+              protocol: TCP
+            readinessProbe:
+              successThreshold: 1
+              tcpSocket:
+                port: 0
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+          enableServiceLinks: false
+          timeoutSeconds: 300
+      traffic:
+      - latestRevision: true
+        percent: 100
     status:
       conditions:
       - lastTransitionTime: "2026-08-03T22:36:44Z"
@@ -81,8 +117,49 @@ steps:
         status: Unknown
         type: RoutesReady
       latestCreatedRevisionName: karta-e2e-knative-00001
+      observedGeneration: 1
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    metadata:
+      annotations:
+        serving.knative.dev/creator: kubernetes-admin
+        serving.knative.dev/lastModifier: kubernetes-admin
+      creationTimestamp: "2026-08-03T22:36:44Z"
+      generation: 1
+      name: karta-e2e-knative
+      namespace: test-79prc
+      uid: 620c2835-d8ed-4219-b13c-a6f1e7378a2a
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containerConcurrency: 0
+          containers:
+          - env:
+            - name: TARGET
+              value: karta-e2e
+            image: ghcr.io/knative/helloworld-go:latest
+            name: user-container
+            ports:
+            - containerPort: 8080
+              protocol: TCP
+            readinessProbe:
+              successThreshold: 1
+              tcpSocket:
+                port: 0
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+          enableServiceLinks: false
+          timeoutSeconds: 300
+      traffic:
+      - latestRevision: true
+        percent: 100
     status:
       conditions:
       - lastTransitionTime: "2026-08-03T22:36:44Z"
@@ -100,9 +177,51 @@ steps:
         reason: RevisionMissing
         status: Unknown
         type: RoutesReady
+      latestCreatedRevisionName: karta-e2e-knative-00001
+      observedGeneration: 1
       url: http://karta-e2e-knative.test-79prc.127.0.0.1.sslip.io
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    metadata:
+      annotations:
+        serving.knative.dev/creator: kubernetes-admin
+        serving.knative.dev/lastModifier: kubernetes-admin
+      creationTimestamp: "2026-08-03T22:36:44Z"
+      generation: 1
+      name: karta-e2e-knative
+      namespace: test-79prc
+      uid: 620c2835-d8ed-4219-b13c-a6f1e7378a2a
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containerConcurrency: 0
+          containers:
+          - env:
+            - name: TARGET
+              value: karta-e2e
+            image: ghcr.io/knative/helloworld-go:latest
+            name: user-container
+            ports:
+            - containerPort: 8080
+              protocol: TCP
+            readinessProbe:
+              successThreshold: 1
+              tcpSocket:
+                port: 0
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+          enableServiceLinks: false
+          timeoutSeconds: 300
+      traffic:
+      - latestRevision: true
+        percent: 100
     status:
       conditions:
       - lastTransitionTime: "2026-08-03T22:36:47Z"
@@ -120,9 +239,52 @@ steps:
         reason: RevisionMissing
         status: Unknown
         type: RoutesReady
+      latestCreatedRevisionName: karta-e2e-knative-00001
       latestReadyRevisionName: karta-e2e-knative-00001
+      observedGeneration: 1
+      url: http://karta-e2e-knative.test-79prc.127.0.0.1.sslip.io
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    metadata:
+      annotations:
+        serving.knative.dev/creator: kubernetes-admin
+        serving.knative.dev/lastModifier: kubernetes-admin
+      creationTimestamp: "2026-08-03T22:36:44Z"
+      generation: 1
+      name: karta-e2e-knative
+      namespace: test-79prc
+      uid: 620c2835-d8ed-4219-b13c-a6f1e7378a2a
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containerConcurrency: 0
+          containers:
+          - env:
+            - name: TARGET
+              value: karta-e2e
+            image: ghcr.io/knative/helloworld-go:latest
+            name: user-container
+            ports:
+            - containerPort: 8080
+              protocol: TCP
+            readinessProbe:
+              successThreshold: 1
+              tcpSocket:
+                port: 0
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+          enableServiceLinks: false
+          timeoutSeconds: 300
+      traffic:
+      - latestRevision: true
+        percent: 100
     status:
       address:
         url: http://karta-e2e-knative.test-79prc.svc.cluster.local
@@ -140,13 +302,59 @@ steps:
         reason: IngressNotConfigured
         status: Unknown
         type: RoutesReady
+      latestCreatedRevisionName: karta-e2e-knative-00001
+      latestReadyRevisionName: karta-e2e-knative-00001
+      observedGeneration: 1
       traffic:
       - latestRevision: true
         percent: 100
         revisionName: karta-e2e-knative-00001
+      url: http://karta-e2e-knative.test-79prc.127.0.0.1.sslip.io
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    metadata:
+      annotations:
+        serving.knative.dev/creator: kubernetes-admin
+        serving.knative.dev/lastModifier: kubernetes-admin
+      creationTimestamp: "2026-08-03T22:36:44Z"
+      generation: 1
+      name: karta-e2e-knative
+      namespace: test-79prc
+      uid: 620c2835-d8ed-4219-b13c-a6f1e7378a2a
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containerConcurrency: 0
+          containers:
+          - env:
+            - name: TARGET
+              value: karta-e2e
+            image: ghcr.io/knative/helloworld-go:latest
+            name: user-container
+            ports:
+            - containerPort: 8080
+              protocol: TCP
+            readinessProbe:
+              successThreshold: 1
+              tcpSocket:
+                port: 0
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+          enableServiceLinks: false
+          timeoutSeconds: 300
+      traffic:
+      - latestRevision: true
+        percent: 100
     status:
+      address:
+        url: http://karta-e2e-knative.test-79prc.svc.cluster.local
       conditions:
       - lastTransitionTime: "2026-08-03T22:36:47Z"
         status: "True"
@@ -161,9 +369,59 @@ steps:
         reason: Uninitialized
         status: Unknown
         type: RoutesReady
+      latestCreatedRevisionName: karta-e2e-knative-00001
+      latestReadyRevisionName: karta-e2e-knative-00001
+      observedGeneration: 1
+      traffic:
+      - latestRevision: true
+        percent: 100
+        revisionName: karta-e2e-knative-00001
+      url: http://karta-e2e-knative.test-79prc.127.0.0.1.sslip.io
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    metadata:
+      annotations:
+        serving.knative.dev/creator: kubernetes-admin
+        serving.knative.dev/lastModifier: kubernetes-admin
+      creationTimestamp: "2026-08-03T22:36:44Z"
+      generation: 1
+      name: karta-e2e-knative
+      namespace: test-79prc
+      uid: 620c2835-d8ed-4219-b13c-a6f1e7378a2a
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containerConcurrency: 0
+          containers:
+          - env:
+            - name: TARGET
+              value: karta-e2e
+            image: ghcr.io/knative/helloworld-go:latest
+            name: user-container
+            ports:
+            - containerPort: 8080
+              protocol: TCP
+            readinessProbe:
+              successThreshold: 1
+              tcpSocket:
+                port: 0
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+          enableServiceLinks: false
+          timeoutSeconds: 300
+      traffic:
+      - latestRevision: true
+        percent: 100
     status:
+      address:
+        url: http://karta-e2e-knative.test-79prc.svc.cluster.local
       conditions:
       - lastTransitionTime: "2026-08-03T22:36:47Z"
         status: "True"
@@ -174,7 +432,20 @@ steps:
       - lastTransitionTime: "2026-08-03T22:36:47Z"
         status: "True"
         type: RoutesReady
+      latestCreatedRevisionName: karta-e2e-knative-00001
+      latestReadyRevisionName: karta-e2e-knative-00001
+      observedGeneration: 1
+      traffic:
+      - latestRevision: true
+        percent: 100
+        revisionName: karta-e2e-knative-00001
+      url: http://karta-e2e-knative.test-79prc.127.0.0.1.sslip.io
   state: Running
+flow: running
+kartaFile: docs/catalog/serving-knative-dev-service-v1.yaml
+kartaName: serving-knative-dev-service-v1
+operator: knative
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Running

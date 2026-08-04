@@ -1,10 +1,6 @@
-flow: initializing
-kartaFile: docs/catalog/core-pod-v1.yaml
-kartaName: core-pod-v1
-operator: pod
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: v1
     kind: Pod
     metadata:
@@ -54,6 +50,11 @@ steps:
       phase: Pending
       qosClass: Burstable
   state: Initializing
+flow: initializing
+kartaFile: docs/catalog/core-pod-v1.yaml
+kartaName: core-pod-v1
+operator: pod
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Initializing

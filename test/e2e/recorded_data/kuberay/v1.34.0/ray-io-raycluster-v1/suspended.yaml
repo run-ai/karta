@@ -1,10 +1,6 @@
-flow: suspended
-kartaFile: docs/catalog/ray-io-raycluster-v1.yaml
-kartaName: ray-io-raycluster-v1
-operator: kuberay
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
@@ -61,6 +57,11 @@ steps:
                   cpu: 250m
                   memory: 512Mi
   state: Suspended
+flow: suspended
+kartaFile: docs/catalog/ray-io-raycluster-v1.yaml
+kartaName: ray-io-raycluster-v1
+operator: kuberay
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Suspended

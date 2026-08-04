@@ -1,10 +1,6 @@
-flow: initializing
-kartaFile: docs/catalog/batch-cronjob-v1.yaml
-kartaName: batch-cronjob-v1
-operator: cronjob
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: batch/v1
     kind: CronJob
     metadata:
@@ -44,6 +40,11 @@ steps:
       suspend: false
     status: {}
   state: Initializing
+flow: initializing
+kartaFile: docs/catalog/batch-cronjob-v1.yaml
+kartaName: batch-cronjob-v1
+operator: cronjob
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Initializing

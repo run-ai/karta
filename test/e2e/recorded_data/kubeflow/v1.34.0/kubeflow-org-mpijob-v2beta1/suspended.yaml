@@ -1,10 +1,6 @@
-flow: suspended
-kartaFile: docs/catalog/kubeflow-org-mpijob-v2beta1.yaml
-kartaName: kubeflow-org-mpijob-v2beta1
-operator: kubeflow
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: kubeflow.org/v2beta1
     kind: MPIJob
     metadata:
@@ -74,6 +70,11 @@ steps:
         Launcher: {}
         Worker: {}
   state: Suspended
+flow: suspended
+kartaFile: docs/catalog/kubeflow-org-mpijob-v2beta1.yaml
+kartaName: kubeflow-org-mpijob-v2beta1
+operator: kubeflow
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Suspended

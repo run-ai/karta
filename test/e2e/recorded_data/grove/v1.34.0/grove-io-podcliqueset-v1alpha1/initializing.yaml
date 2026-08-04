@@ -1,10 +1,6 @@
-flow: initializing
-kartaFile: docs/catalog/grove-io-podcliqueset-v1alpha1.yaml
-kartaName: grove-io-podcliqueset-v1alpha1
-operator: grove
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: grove.io/v1alpha1
     kind: PodCliqueSet
     metadata:
@@ -41,6 +37,11 @@ steps:
           publishNotReadyAddresses: true
         terminationDelay: 4h0m0s
   state: Initializing
+flow: initializing
+kartaFile: docs/catalog/grove-io-podcliqueset-v1alpha1.yaml
+kartaName: grove-io-podcliqueset-v1alpha1
+operator: grove
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Initializing

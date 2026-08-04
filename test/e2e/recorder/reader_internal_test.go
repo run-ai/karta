@@ -10,29 +10,27 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// TestReaderIterates walks a recording step by step and reconstructs the CR at each step.
-func TestReaderIterates(t *testing.T) {
-	rec := Recording{Steps: []Step{
-		{State: "Initializing", CR: map[string]interface{}{"status": map[string]interface{}{"active": float64(1)}}},
-		{State: "Running", Patch: map[string]interface{}{"status": map[string]interface{}{"ready": float64(1)}}},
+// TestReaderWalksStates walks a recording's STATE events, skipping the ACTION event between them.
+func TestReaderWalksStates(t *testing.T) {
+	rec := Recording{Events: []Event{
+		{Kind: EventState, State: "Initializing", Object: map[string]interface{}{"status": map[string]interface{}{"active": float64(1)}}},
+		{Kind: EventAction, Action: &RecordedAction{Name: "Scale"}},
+		{Kind: EventState, State: "Running", Object: map[string]interface{}{"status": map[string]interface{}{"ready": float64(1)}}},
 	}}
 
-	r, err := NewReader(rec)
-	if err != nil {
-		t.Fatal(err)
-	}
+	r := NewReader(rec)
 	var states []string
 	for r.Next() {
-		states = append(states, r.Step().State)
+		states = append(states, r.State())
 	}
 	if !reflect.DeepEqual(states, []string{"Initializing", "Running"}) {
-		t.Errorf("reader states = %v", states)
+		t.Errorf("reader states = %v, want [Initializing Running]", states)
 	}
 
-	r2, _ := NewReader(rec)
+	r2 := NewReader(rec)
 	r2.Next()
 	r2.Next()
-	if v, _, _ := unstructured.NestedFloat64(r2.CR().Object, "status", "ready"); v != 1 {
-		t.Errorf("reader CR[1] status.ready = %v, want 1", v)
+	if v, _, _ := unstructured.NestedFloat64(r2.Object().Object, "status", "ready"); v != 1 {
+		t.Errorf("reader object[1] status.ready = %v, want 1", v)
 	}
 }

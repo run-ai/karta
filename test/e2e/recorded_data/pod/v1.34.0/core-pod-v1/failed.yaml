@@ -1,10 +1,6 @@
-flow: failed
-kartaFile: docs/catalog/core-pod-v1.yaml
-kartaName: core-pod-v1
-operator: pod
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: v1
     kind: Pod
     metadata:
@@ -72,7 +68,66 @@ steps:
       phase: Pending
       qosClass: Burstable
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      creationTimestamp: "2026-08-03T18:48:38Z"
+      generation: 1
+      name: karta-e2e-pod-failed
+      namespace: test-nsxnd
+      uid: 41cd3f8b-1920-496d-af7b-fc949d35f2f1
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - sh
+        - -c
+        - sleep 10; exit 1
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: worker
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - sleep 8
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: init-wait
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      nodeName: karta-play-worker
+      preemptionPolicy: PreemptLowerPriority
+      priority: 0
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: default
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoExecute
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+        tolerationSeconds: 300
+      - effect: NoExecute
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+        tolerationSeconds: 300
     status:
       conditions:
       - lastProbeTime: null
@@ -132,9 +187,70 @@ steps:
           waiting:
             reason: PodInitializing
       observedGeneration: 1
+      phase: Pending
+      qosClass: Burstable
       startTime: "2026-08-03T18:48:38Z"
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      creationTimestamp: "2026-08-03T18:48:38Z"
+      generation: 1
+      name: karta-e2e-pod-failed
+      namespace: test-nsxnd
+      uid: 41cd3f8b-1920-496d-af7b-fc949d35f2f1
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - sh
+        - -c
+        - sleep 10; exit 1
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: worker
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - sleep 8
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: init-wait
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      nodeName: karta-play-worker
+      preemptionPolicy: PreemptLowerPriority
+      priority: 0
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: default
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoExecute
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+        tolerationSeconds: 300
+      - effect: NoExecute
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+        tolerationSeconds: 300
     status:
       conditions:
       - lastProbeTime: null
@@ -168,6 +284,20 @@ steps:
         observedGeneration: 1
         status: "True"
         type: PodScheduled
+      containerStatuses:
+      - image: busybox:1.36
+        imageID: ""
+        lastState: {}
+        name: worker
+        ready: false
+        restartCount: 0
+        started: false
+        state:
+          waiting:
+            reason: PodInitializing
+      hostIP: 172.18.0.5
+      hostIPs:
+      - ip: 172.18.0.5
       initContainerStatuses:
       - allocatedResources:
           cpu: 10m
@@ -194,11 +324,74 @@ steps:
             - 0
             - 10
             uid: 0
+      observedGeneration: 1
+      phase: Pending
       podIP: 10.244.1.92
       podIPs:
       - ip: 10.244.1.92
+      qosClass: Burstable
+      startTime: "2026-08-03T18:48:38Z"
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      creationTimestamp: "2026-08-03T18:48:38Z"
+      generation: 1
+      name: karta-e2e-pod-failed
+      namespace: test-nsxnd
+      uid: 41cd3f8b-1920-496d-af7b-fc949d35f2f1
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - sh
+        - -c
+        - sleep 10; exit 1
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: worker
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - sleep 8
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: init-wait
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      nodeName: karta-play-worker
+      preemptionPolicy: PreemptLowerPriority
+      priority: 0
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: default
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoExecute
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+        tolerationSeconds: 300
+      - effect: NoExecute
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+        tolerationSeconds: 300
     status:
       conditions:
       - lastProbeTime: null
@@ -230,6 +423,20 @@ steps:
         observedGeneration: 1
         status: "True"
         type: PodScheduled
+      containerStatuses:
+      - image: busybox:1.36
+        imageID: ""
+        lastState: {}
+        name: worker
+        ready: false
+        restartCount: 0
+        started: false
+        state:
+          waiting:
+            reason: PodInitializing
+      hostIP: 172.18.0.5
+      hostIPs:
+      - ip: 172.18.0.5
       initContainerStatuses:
       - allocatedResources:
           cpu: 10m
@@ -260,8 +467,74 @@ steps:
             - 0
             - 10
             uid: 0
+      observedGeneration: 1
+      phase: Pending
+      podIP: 10.244.1.92
+      podIPs:
+      - ip: 10.244.1.92
+      qosClass: Burstable
+      startTime: "2026-08-03T18:48:38Z"
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      creationTimestamp: "2026-08-03T18:48:38Z"
+      generation: 1
+      name: karta-e2e-pod-failed
+      namespace: test-nsxnd
+      uid: 41cd3f8b-1920-496d-af7b-fc949d35f2f1
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - sh
+        - -c
+        - sleep 10; exit 1
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: worker
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - sleep 8
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: init-wait
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      nodeName: karta-play-worker
+      preemptionPolicy: PreemptLowerPriority
+      priority: 0
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: default
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoExecute
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+        tolerationSeconds: 300
+      - effect: NoExecute
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+        tolerationSeconds: 300
     status:
       conditions:
       - lastProbeTime: null
@@ -315,9 +588,107 @@ steps:
             - 0
             - 10
             uid: 0
+      hostIP: 172.18.0.5
+      hostIPs:
+      - ip: 172.18.0.5
+      initContainerStatuses:
+      - allocatedResources:
+          cpu: 10m
+          memory: 16Mi
+        containerID: containerd://64a8860a73e3473018687ae7f2dfcbac39f47036e10f0186299093ed01acb817
+        image: docker.io/library/busybox:1.36
+        imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+        lastState: {}
+        name: init-wait
+        ready: true
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+        restartCount: 0
+        started: false
+        state:
+          terminated:
+            containerID: containerd://64a8860a73e3473018687ae7f2dfcbac39f47036e10f0186299093ed01acb817
+            exitCode: 0
+            finishedAt: "2026-08-03T18:48:47Z"
+            reason: Completed
+            startedAt: "2026-08-03T18:48:39Z"
+        user:
+          linux:
+            gid: 0
+            supplementalGroups:
+            - 0
+            - 10
+            uid: 0
+      observedGeneration: 1
       phase: Running
+      podIP: 10.244.1.92
+      podIPs:
+      - ip: 10.244.1.92
+      qosClass: Burstable
+      startTime: "2026-08-03T18:48:38Z"
   state: Running
-- patch:
+- kind: STATE
+  object:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      creationTimestamp: "2026-08-03T18:48:38Z"
+      generation: 1
+      name: karta-e2e-pod-failed
+      namespace: test-nsxnd
+      uid: 41cd3f8b-1920-496d-af7b-fc949d35f2f1
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - sh
+        - -c
+        - sleep 10; exit 1
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: worker
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - sleep 8
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: init-wait
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      nodeName: karta-play-worker
+      preemptionPolicy: PreemptLowerPriority
+      priority: 0
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: default
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoExecute
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+        tolerationSeconds: 300
+      - effect: NoExecute
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+        tolerationSeconds: 300
     status:
       conditions:
       - lastProbeTime: null
@@ -377,8 +748,107 @@ steps:
             - 0
             - 10
             uid: 0
+      hostIP: 172.18.0.5
+      hostIPs:
+      - ip: 172.18.0.5
+      initContainerStatuses:
+      - allocatedResources:
+          cpu: 10m
+          memory: 16Mi
+        containerID: containerd://64a8860a73e3473018687ae7f2dfcbac39f47036e10f0186299093ed01acb817
+        image: docker.io/library/busybox:1.36
+        imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+        lastState: {}
+        name: init-wait
+        ready: true
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+        restartCount: 0
+        started: false
+        state:
+          terminated:
+            containerID: containerd://64a8860a73e3473018687ae7f2dfcbac39f47036e10f0186299093ed01acb817
+            exitCode: 0
+            finishedAt: "2026-08-03T18:48:47Z"
+            reason: Completed
+            startedAt: "2026-08-03T18:48:39Z"
+        user:
+          linux:
+            gid: 0
+            supplementalGroups:
+            - 0
+            - 10
+            uid: 0
+      observedGeneration: 1
+      phase: Running
+      podIP: 10.244.1.92
+      podIPs:
+      - ip: 10.244.1.92
+      qosClass: Burstable
+      startTime: "2026-08-03T18:48:38Z"
   state: Running
-- patch:
+- kind: STATE
+  object:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      creationTimestamp: "2026-08-03T18:48:38Z"
+      generation: 1
+      name: karta-e2e-pod-failed
+      namespace: test-nsxnd
+      uid: 41cd3f8b-1920-496d-af7b-fc949d35f2f1
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - sh
+        - -c
+        - sleep 10; exit 1
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: worker
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - sleep 8
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        name: init-wait
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      nodeName: karta-play-worker
+      preemptionPolicy: PreemptLowerPriority
+      priority: 0
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: default
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoExecute
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+        tolerationSeconds: 300
+      - effect: NoExecute
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+        tolerationSeconds: 300
     status:
       conditions:
       - lastProbeTime: null
@@ -408,8 +878,82 @@ steps:
         observedGeneration: 1
         status: "True"
         type: PodScheduled
+      containerStatuses:
+      - allocatedResources:
+          cpu: 50m
+          memory: 32Mi
+        containerID: containerd://6529a2ed7a458b807e8d46d091d9490352a2eb2e56be28e50edbf122bde5bd52
+        image: docker.io/library/busybox:1.36
+        imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+        lastState: {}
+        name: worker
+        ready: false
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+        restartCount: 0
+        started: false
+        state:
+          terminated:
+            containerID: containerd://6529a2ed7a458b807e8d46d091d9490352a2eb2e56be28e50edbf122bde5bd52
+            exitCode: 1
+            finishedAt: "2026-08-03T18:48:57Z"
+            reason: Error
+            startedAt: "2026-08-03T18:48:47Z"
+        user:
+          linux:
+            gid: 0
+            supplementalGroups:
+            - 0
+            - 10
+            uid: 0
+      hostIP: 172.18.0.5
+      hostIPs:
+      - ip: 172.18.0.5
+      initContainerStatuses:
+      - allocatedResources:
+          cpu: 10m
+          memory: 16Mi
+        containerID: containerd://64a8860a73e3473018687ae7f2dfcbac39f47036e10f0186299093ed01acb817
+        image: docker.io/library/busybox:1.36
+        imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
+        lastState: {}
+        name: init-wait
+        ready: true
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+        restartCount: 0
+        started: false
+        state:
+          terminated:
+            containerID: containerd://64a8860a73e3473018687ae7f2dfcbac39f47036e10f0186299093ed01acb817
+            exitCode: 0
+            finishedAt: "2026-08-03T18:48:47Z"
+            reason: Completed
+            startedAt: "2026-08-03T18:48:39Z"
+        user:
+          linux:
+            gid: 0
+            supplementalGroups:
+            - 0
+            - 10
+            uid: 0
+      observedGeneration: 1
       phase: Failed
+      podIP: 10.244.1.92
+      podIPs:
+      - ip: 10.244.1.92
+      qosClass: Burstable
+      startTime: "2026-08-03T18:48:38Z"
   state: Failed
+flow: failed
+kartaFile: docs/catalog/core-pod-v1.yaml
+kartaName: core-pod-v1
+operator: pod
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Failed

@@ -1,10 +1,6 @@
-flow: running
-kartaFile: docs/catalog/ray-io-raycluster-v1.yaml
-kartaName: ray-io-raycluster-v1
-operator: kuberay
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
@@ -98,7 +94,62 @@ steps:
       maxWorkerReplicas: 1
       observedGeneration: 1
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: ray.io/v1
+    kind: RayCluster
+    metadata:
+      creationTimestamp: "2026-08-03T21:39:27Z"
+      generation: 1
+      name: karta-e2e-ray
+      namespace: test-gdzw8
+      uid: 04832fc3-cd0d-4b5f-bcb8-95fb261a84ad
+    spec:
+      headGroupSpec:
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              livenessProbe:
+                failureThreshold: 30
+                initialDelaySeconds: 30
+                periodSeconds: 10
+                tcpSocket:
+                  port: 6379
+              name: ray-head
+              readinessProbe:
+                failureThreshold: 30
+                initialDelaySeconds: 10
+                periodSeconds: 5
+                tcpSocket:
+                  port: 6379
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 2Gi
+                requests:
+                  cpu: 250m
+                  memory: 1Gi
+      rayVersion: 2.40.0
+      workerGroupSpecs:
+      - groupName: small
+        maxReplicas: 1
+        minReplicas: 0
+        numOfHosts: 1
+        rayStartParams: {}
+        replicas: 0
+        template:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              name: ray-worker
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
     status:
       conditions:
       - lastTransitionTime: "2026-08-03T21:39:27Z"
@@ -121,8 +172,79 @@ steps:
         reason: RayClusterSuspending
         status: "False"
         type: RayClusterSuspending
+      desiredCPU: 250m
+      desiredGPU: "0"
+      desiredMemory: 1Gi
+      desiredTPU: "0"
+      endpoints:
+        client: "10001"
+        dashboard: "8265"
+        gcs-server: "6379"
+        metrics: "8080"
+        serve: "8000"
+      head:
+        podName: karta-e2e-ray-head-5cdsd
+        serviceName: karta-e2e-ray-head-svc
+      lastUpdateTime: "2026-08-03T21:39:27Z"
+      maxWorkerReplicas: 1
+      observedGeneration: 1
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: ray.io/v1
+    kind: RayCluster
+    metadata:
+      creationTimestamp: "2026-08-03T21:39:27Z"
+      generation: 1
+      name: karta-e2e-ray
+      namespace: test-gdzw8
+      uid: 04832fc3-cd0d-4b5f-bcb8-95fb261a84ad
+    spec:
+      headGroupSpec:
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              livenessProbe:
+                failureThreshold: 30
+                initialDelaySeconds: 30
+                periodSeconds: 10
+                tcpSocket:
+                  port: 6379
+              name: ray-head
+              readinessProbe:
+                failureThreshold: 30
+                initialDelaySeconds: 10
+                periodSeconds: 5
+                tcpSocket:
+                  port: 6379
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 2Gi
+                requests:
+                  cpu: 250m
+                  memory: 1Gi
+      rayVersion: 2.40.0
+      workerGroupSpecs:
+      - groupName: small
+        maxReplicas: 1
+        minReplicas: 0
+        numOfHosts: 1
+        rayStartParams: {}
+        replicas: 0
+        template:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              name: ray-worker
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
     status:
       conditions:
       - lastTransitionTime: "2026-08-03T21:39:27Z"
@@ -145,12 +267,81 @@ steps:
         reason: RayClusterSuspending
         status: "False"
         type: RayClusterSuspending
+      desiredCPU: 250m
+      desiredGPU: "0"
+      desiredMemory: 1Gi
+      desiredTPU: "0"
+      endpoints:
+        client: "10001"
+        dashboard: "8265"
+        gcs-server: "6379"
+        metrics: "8080"
+        serve: "8000"
       head:
         podIP: 10.244.2.37
+        podName: karta-e2e-ray-head-5cdsd
         serviceIP: 10.244.2.37
+        serviceName: karta-e2e-ray-head-svc
       lastUpdateTime: "2026-08-03T21:39:28Z"
+      maxWorkerReplicas: 1
+      observedGeneration: 1
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: ray.io/v1
+    kind: RayCluster
+    metadata:
+      creationTimestamp: "2026-08-03T21:39:27Z"
+      generation: 1
+      name: karta-e2e-ray
+      namespace: test-gdzw8
+      uid: 04832fc3-cd0d-4b5f-bcb8-95fb261a84ad
+    spec:
+      headGroupSpec:
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              livenessProbe:
+                failureThreshold: 30
+                initialDelaySeconds: 30
+                periodSeconds: 10
+                tcpSocket:
+                  port: 6379
+              name: ray-head
+              readinessProbe:
+                failureThreshold: 30
+                initialDelaySeconds: 10
+                periodSeconds: 5
+                tcpSocket:
+                  port: 6379
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 2Gi
+                requests:
+                  cpu: 250m
+                  memory: 1Gi
+      rayVersion: 2.40.0
+      workerGroupSpecs:
+      - groupName: small
+        maxReplicas: 1
+        minReplicas: 0
+        numOfHosts: 1
+        rayStartParams: {}
+        replicas: 0
+        template:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              name: ray-worker
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
     status:
       conditions:
       - lastTransitionTime: "2026-08-03T21:45:05Z"
@@ -173,11 +364,33 @@ steps:
         reason: RayClusterSuspending
         status: "False"
         type: RayClusterSuspending
+      desiredCPU: 250m
+      desiredGPU: "0"
+      desiredMemory: 1Gi
+      desiredTPU: "0"
+      endpoints:
+        client: "10001"
+        dashboard: "8265"
+        gcs-server: "6379"
+        metrics: "8080"
+        serve: "8000"
+      head:
+        podIP: 10.244.2.37
+        podName: karta-e2e-ray-head-5cdsd
+        serviceIP: 10.244.2.37
+        serviceName: karta-e2e-ray-head-svc
       lastUpdateTime: "2026-08-03T21:45:05Z"
+      maxWorkerReplicas: 1
+      observedGeneration: 1
       state: ready
       stateTransitionTimes:
         ready: "2026-08-03T21:45:05Z"
   state: Running
+flow: running
+kartaFile: docs/catalog/ray-io-raycluster-v1.yaml
+kartaName: ray-io-raycluster-v1
+operator: kuberay
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Running

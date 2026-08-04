@@ -1,10 +1,6 @@
-flow: initializing
-kartaFile: docs/catalog/milvus-io-milvus-v1beta1.yaml
-kartaName: milvus-io-milvus-v1beta1
-operator: milvus
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: milvus.io/v1beta1
     kind: Milvus
     metadata:
@@ -33,6 +29,11 @@ steps:
           type: MinIO
       mode: standalone
   state: Initializing
+flow: initializing
+kartaFile: docs/catalog/milvus-io-milvus-v1beta1.yaml
+kartaName: milvus-io-milvus-v1beta1
+operator: milvus
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Initializing

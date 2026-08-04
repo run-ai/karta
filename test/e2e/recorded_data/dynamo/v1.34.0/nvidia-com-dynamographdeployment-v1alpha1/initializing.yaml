@@ -1,10 +1,6 @@
-flow: initializing
-kartaFile: docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml
-kartaName: nvidia-com-dynamographdeployment-v1alpha1
-operator: dynamo
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: nvidia.com/v1alpha1
     kind: DynamoGraphDeployment
     metadata:
@@ -48,6 +44,11 @@ steps:
           replicas: 1
           subComponentType: decode
   state: Initializing
+flow: initializing
+kartaFile: docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml
+kartaName: nvidia-com-dynamographdeployment-v1alpha1
+operator: dynamo
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Initializing

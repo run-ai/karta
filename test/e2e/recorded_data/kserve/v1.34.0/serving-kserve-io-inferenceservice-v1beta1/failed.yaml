@@ -1,10 +1,6 @@
-flow: failed
-kartaFile: docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml
-kartaName: serving-kserve-io-inferenceservice-v1beta1
-operator: kserve
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: serving.kserve.io/v1beta1
     kind: InferenceService
     metadata:
@@ -28,7 +24,30 @@ steps:
               cpu: 100m
               memory: 128Mi
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: serving.kserve.io/v1beta1
+    kind: InferenceService
+    metadata:
+      creationTimestamp: "2026-08-03T22:59:41Z"
+      finalizers:
+      - inferenceservice.finalizers
+      generation: 1
+      name: karta-e2e-kserve-failed
+      namespace: test-rbwn4
+      uid: 96e38171-b547-4f90-a36c-06e57cb8341c
+    spec:
+      predictor:
+        containers:
+        - image: karta-e2e-no-such-registry.invalid/nope:latest
+          name: kserve-container
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi
     status:
       components:
         predictor: {}
@@ -49,7 +68,30 @@ steps:
           targetModelState: Pending
         transitionStatus: InProgress
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: serving.kserve.io/v1beta1
+    kind: InferenceService
+    metadata:
+      creationTimestamp: "2026-08-03T22:59:41Z"
+      finalizers:
+      - inferenceservice.finalizers
+      generation: 1
+      name: karta-e2e-kserve-failed
+      namespace: test-rbwn4
+      uid: 96e38171-b547-4f90-a36c-06e57cb8341c
+    spec:
+      predictor:
+        containers:
+        - image: karta-e2e-no-such-registry.invalid/nope:latest
+          name: kserve-container
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: 100m
+              memory: 128Mi
     status:
       components:
         predictor:
@@ -94,8 +136,18 @@ steps:
         severity: Info
         status: "False"
         type: RoutesReady
+      modelStatus:
+        states:
+          activeModelState: ""
+          targetModelState: Pending
+        transitionStatus: InProgress
       observedGeneration: 1
   state: Failed
+flow: failed
+kartaFile: docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml
+kartaName: serving-kserve-io-inferenceservice-v1beta1
+operator: kserve
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Failed

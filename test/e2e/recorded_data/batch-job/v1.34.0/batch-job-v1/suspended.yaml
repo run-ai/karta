@@ -1,10 +1,6 @@
-flow: suspended
-kartaFile: docs/catalog/batch-job-v1.yaml
-kartaName: batch-job-v1
-operator: batch-job
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: batch/v1
     kind: Job
     metadata:
@@ -66,6 +62,11 @@ steps:
       terminating: 0
       uncountedTerminatedPods: {}
   state: Suspended
+flow: suspended
+kartaFile: docs/catalog/batch-job-v1.yaml
+kartaName: batch-job-v1
+operator: batch-job
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Suspended

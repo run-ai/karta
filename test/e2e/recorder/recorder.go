@@ -254,8 +254,8 @@ func (f *Flow) observe(ctx context.Context, obj *unstructured.Unstructured) *rec
 }
 
 // write persists the run as recorded_data/<operator>/<version>/<kartaName>/<flow>.yaml and returns it: its
-// success flag, and each step's own-fields state, its CR (full on the first step, a merge-patch after), and
-// any action fired.
+// success flag and the event stream - a STATE event per distinct CR (its own-fields state and the full
+// object), and an ACTION event after a state where the flow fired one.
 func (f *Flow) write(rec *recording, succeeded bool) *Recording {
 	version := operatorVersion(f.rec.operator)
 	rc := Recording{
@@ -268,22 +268,16 @@ func (f *Flow) write(rec *recording, succeeded bool) *Recording {
 		Succeeded:     succeeded,
 		KartaFile:     strings.TrimPrefix(f.rec.kartaFile, "../../"),
 	}
-	var prevCR map[string]any
-	for i, snap := range rec.snapshots {
-		cur := significantCR(snap.raw)
-		st := Step{State: string(snap.state), Action: snap.action}
-		if i == 0 {
-			st.CR = cur
-		} else {
-			st.Patch = MergePatch(prevCR, cur)
+	for _, snap := range rec.snapshots {
+		rc.Events = append(rc.Events, Event{Kind: EventState, State: string(snap.state), Object: significantCR(snap.raw)})
+		if snap.action != nil {
+			rc.Events = append(rc.Events, Event{Kind: EventAction, Action: snap.action})
 		}
-		rc.Steps = append(rc.Steps, st)
-		prevCR = cur
 	}
 
 	rc.Path = RecordingPath(filepath.Join(e2eRoot, "recorded_data"), rc)
 	Expect(WriteRecording(rc.Path, rc)).To(Succeed())
-	GinkgoWriter.Printf("recorded %s/%s/%s/%s.yaml (%d steps %v)\n", f.rec.operator, version, f.rec.kartaName, f.name, len(rc.Steps), rec.order)
+	GinkgoWriter.Printf("recorded %s/%s/%s/%s.yaml (%d events %v)\n", f.rec.operator, version, f.rec.kartaName, f.name, len(rc.Events), rec.order)
 	return &rc
 }
 
@@ -312,17 +306,21 @@ func watchWorkload(ctx context.Context, obj *unstructured.Unstructured) watch.In
 	return watcher
 }
 
-// fireAction sends an action's merge-patch to the workload and returns the recorded request and response.
-func fireAction(ctx context.Context, obj *unstructured.Unstructured, action *Action) *ActionRecord {
+// fireAction sends an action's merge-patch to the workload and returns the recorded operation. The result
+// is not captured: the STATE events that follow already show the object the operator drives it to.
+func fireAction(ctx context.Context, obj *unstructured.Unstructured, action *Action) *RecordedAction {
 	target := GVKOnly(obj)
 	target.SetName(obj.GetName())
 	target.SetNamespace(obj.GetNamespace())
 	Expect(k8sClient.Patch(ctx, target, client.RawPatch(types.MergePatchType, action.Patch))).
 		To(Succeed(), "action %s on %s/%s", action.Type, obj.GetNamespace(), obj.GetName())
 
-	var request map[string]interface{}
-	Expect(json.Unmarshal(action.Patch, &request)).To(Succeed())
-	return &ActionRecord{Type: action.Type, Request: request, Response: significantCR(target)}
+	var payload map[string]interface{}
+	Expect(json.Unmarshal(action.Patch, &payload)).To(Succeed())
+	return &RecordedAction{
+		Name:      string(action.Type),
+		Operation: Operation{Verb: "PATCH", PatchType: "application/merge-patch+json", Payload: payload},
+	}
 }
 
 // checkpoints are the stops the recorder must reach and fire in order: those carrying an action or an action
@@ -348,7 +346,7 @@ type recording struct {
 type capture struct {
 	state  kartav1alpha1.ResourceStatus
 	raw    *unstructured.Unstructured
-	action *ActionRecord
+	action *RecordedAction
 }
 
 func (r *recording) keep(u *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) {
@@ -362,7 +360,7 @@ func (r *recording) keep(u *unstructured.Unstructured, state kartav1alpha1.Resou
 }
 
 // attachAction records the action fired at the current step (the last CR kept).
-func (r *recording) attachAction(a *ActionRecord) {
+func (r *recording) attachAction(a *RecordedAction) {
 	if len(r.snapshots) > 0 {
 		r.snapshots[len(r.snapshots)-1].action = a
 	}

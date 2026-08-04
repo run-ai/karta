@@ -1,10 +1,6 @@
-flow: completed
-kartaFile: docs/catalog/kubeflow-org-pytorchjob-v1.yaml
-kartaName: kubeflow-org-pytorchjob-v1
-operator: kubeflow
-schemaVersion: 1
-steps:
-- cr:
+events:
+- kind: STATE
+  object:
     apiVersion: kubeflow.org/v1
     kind: PyTorchJob
     metadata:
@@ -44,7 +40,34 @@ steps:
           selector: training.kubeflow.org/job-name=karta-e2e-pytorch-completed,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=master
       startTime: "2026-08-03T21:03:43Z"
   state: Initializing
-- patch:
+- kind: STATE
+  object:
+    apiVersion: kubeflow.org/v1
+    kind: PyTorchJob
+    metadata:
+      creationTimestamp: "2026-08-03T21:03:43Z"
+      generation: 1
+      name: karta-e2e-pytorch-completed
+      namespace: test-mbwpr
+      uid: 64c51da6-7add-4aef-b484-73c72df506d9
+    spec:
+      pytorchReplicaSpecs:
+        Master:
+          replicas: 1
+          restartPolicy: Never
+          template:
+            spec:
+              containers:
+              - command:
+                - sh
+                - -c
+                - sleep 15
+                image: busybox:1.36
+                name: pytorch
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 64Mi
     status:
       conditions:
       - lastTransitionTime: "2026-08-03T21:03:43Z"
@@ -62,8 +85,37 @@ steps:
       replicaStatuses:
         Master:
           active: 1
+          selector: training.kubeflow.org/job-name=karta-e2e-pytorch-completed,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=master
+      startTime: "2026-08-03T21:03:43Z"
   state: Running
-- patch:
+- kind: STATE
+  object:
+    apiVersion: kubeflow.org/v1
+    kind: PyTorchJob
+    metadata:
+      creationTimestamp: "2026-08-03T21:03:43Z"
+      generation: 1
+      name: karta-e2e-pytorch-completed
+      namespace: test-mbwpr
+      uid: 64c51da6-7add-4aef-b484-73c72df506d9
+    spec:
+      pytorchReplicaSpecs:
+        Master:
+          replicas: 1
+          restartPolicy: Never
+          template:
+            spec:
+              containers:
+              - command:
+                - sh
+                - -c
+                - sleep 15
+                image: busybox:1.36
+                name: pytorch
+                resources:
+                  requests:
+                    cpu: 50m
+                    memory: 64Mi
     status:
       completionTime: "2026-08-03T21:04:00Z"
       conditions:
@@ -87,9 +139,15 @@ steps:
         type: Succeeded
       replicaStatuses:
         Master:
-          active: null
+          selector: training.kubeflow.org/job-name=karta-e2e-pytorch-completed,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=master
           succeeded: 1
+      startTime: "2026-08-03T21:03:43Z"
   state: Completed
+flow: completed
+kartaFile: docs/catalog/kubeflow-org-pytorchjob-v1.yaml
+kartaName: kubeflow-org-pytorchjob-v1
+operator: kubeflow
+schemaVersion: 2
 succeeded: true
 version: v1.34.0
 want: Completed

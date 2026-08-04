@@ -46,14 +46,14 @@ var _ = Describe("Karta reads the recorded state", func() {
 			Expect(yaml.Unmarshal(kartaYAML, karta)).To(Succeed())
 
 			for r.Next() {
-				step, cr := r.Step(), r.CR()
+				state, cr := r.State(), r.Object()
 				root, err := resource.NewComponentFactoryFromObject(karta, cr).GetRootComponent()
-				Expect(err).NotTo(HaveOccurred(), "Karta could not parse the %q CR", step.State)
+				Expect(err).NotTo(HaveOccurred(), "Karta could not parse the %q CR", state)
 				status, err := root.GetStatus(ctx)
-				Expect(err).NotTo(HaveOccurred(), "Karta could not read the %q CR", step.State)
-				Expect(status).NotTo(BeNil(), "Karta read no status from the %q CR", step.State)
-				Expect(status.MatchedStatuses).To(ContainElement(kartav1alpha1.ResourceStatus(step.State)),
-					"Karta read %v, recorded state was %q", status.MatchedStatuses, step.State)
+				Expect(err).NotTo(HaveOccurred(), "Karta could not read the %q CR", state)
+				Expect(status).NotTo(BeNil(), "Karta read no status from the %q CR", state)
+				Expect(status.MatchedStatuses).To(ContainElement(kartav1alpha1.ResourceStatus(state)),
+					"Karta read %v, recorded state was %q", status.MatchedStatuses, state)
 			}
 		})
 	}
