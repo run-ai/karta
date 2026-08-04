@@ -6,6 +6,7 @@ package recorder
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -13,6 +14,28 @@ import (
 )
 
 // Plain unit tests for the pure recorder helpers; no cluster (RunSpecs is not invoked).
+
+func TestAddStateRejectsEmptyName(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("AddState with an empty name did not panic")
+		}
+	}()
+	(&Recorder{}).AddState("", nil)
+}
+
+func TestSetTimeoutRejectsNonPositive(t *testing.T) {
+	for _, d := range []time.Duration{0, -time.Second} {
+		func(d time.Duration) {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("SetTimeout(%s) did not panic", d)
+				}
+			}()
+			(&Recorder{}).SetTimeout(d)
+		}(d)
+	}
+}
 
 func objWithStatus(status map[string]any) *unstructured.Unstructured {
 	return &unstructured.Unstructured{Object: map[string]any{"status": status}}
