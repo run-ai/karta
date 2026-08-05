@@ -88,11 +88,9 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
-	@[ -f "$(GOLANGCI_LINT)" ] || { \
-	set -e; \
+	@set -e; \
 	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)" ;\
-	curl -sSfL https://golangci-lint.run/install.sh  | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
-	}
+	curl -sSfL https://golangci-lint.run/install.sh  | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION)
 
 .PHONY: go-licence-detector
 go-licence-detector: $(GO_LICENCE_DETECTOR) ## Download go-licence-detector locally if necessary.
