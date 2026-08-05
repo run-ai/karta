@@ -55,6 +55,11 @@ generate-mocks: ## Generate mocks using go generate
 test: generate-mocks ## Run tests with mock generation
 	go test ./...
 
+.PHONY: test-e2e
+test-e2e: ## Offline e2e tests: recorder unit tests + replay golden (the cluster-driven flows are compile-checked only)
+	go -C test/e2e build ./...
+	go -C test/e2e test $$(cd test/e2e && go list ./... | grep -v '/flows$$')
+
 lint-go: golangci-lint
 	echo "Running golangci linter"
 	$(GOLANGCI_LINT) run -v -c .golangci.yml
@@ -157,7 +162,7 @@ cli-lint: golangci-lint ## Lint the CLI module.
 	cd cli && $(GOLANGCI_LINT) run -c $(PROJECT_DIR)/.golangci.yml
 
 .PHONY: check
-check: download-dependencies validate test cli-test cli-lint cli-verify-version
+check: download-dependencies validate test test-e2e cli-test cli-lint cli-verify-version
 
 ##@ Helm
 
