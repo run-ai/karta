@@ -45,6 +45,12 @@ type Recorder struct {
 // New starts a recorder from cfg; version is stamped on the recording and kartaFile is recorded as metadata
 // for the replay golden (neither path is read here).
 func New(cfg Config, operator, version, kartaName, kartaFile string) *Recorder {
+	if operator == "" || version == "" || kartaName == "" || kartaFile == "" {
+		panic("recorder: New needs a non-empty operator, version, kartaName, and kartaFile")
+	}
+	if cfg.OutputDir == "" {
+		panic("recorder: New needs a non-empty Config.OutputDir")
+	}
 	if cfg.Log == nil {
 		cfg.Log = io.Discard
 	}
@@ -64,6 +70,9 @@ func New(cfg Config, operator, version, kartaName, kartaFile string) *Recorder {
 func (r *Recorder) AddState(name kartav1alpha1.ResourceStatus, match StateCheck) *Recorder {
 	if name == "" {
 		panic("recorder: AddState needs a non-empty state name")
+	}
+	if match == nil {
+		panic("recorder: AddState needs a non-nil predicate")
 	}
 	r.states = append(r.states, NamedState{Name: name, Match: match})
 	return r

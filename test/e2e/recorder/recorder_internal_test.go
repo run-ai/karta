@@ -37,6 +37,40 @@ func TestSetTimeoutRejectsNonPositive(t *testing.T) {
 	}
 }
 
+func TestAddStateRejectsNilMatch(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("AddState with a nil predicate did not panic")
+		}
+	}()
+	(&Recorder{}).AddState("Running", nil)
+}
+
+func TestNewValidatesRequiredInput(t *testing.T) {
+	valid := Config{OutputDir: "out"}
+	cases := []struct {
+		name                                    string
+		cfg                                     Config
+		operator, version, kartaName, kartaFile string
+	}{
+		{"empty operator", valid, "", "v", "n", "f"},
+		{"empty version", valid, "op", "", "n", "f"},
+		{"empty kartaName", valid, "op", "v", "", "f"},
+		{"empty kartaFile", valid, "op", "v", "n", ""},
+		{"empty outputDir", Config{}, "op", "v", "n", "f"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Error("New did not panic")
+				}
+			}()
+			New(c.cfg, c.operator, c.version, c.kartaName, c.kartaFile)
+		})
+	}
+}
+
 func objWithStatus(status map[string]any) *unstructured.Unstructured {
 	return &unstructured.Unstructured{Object: map[string]any{"status": status}}
 }
