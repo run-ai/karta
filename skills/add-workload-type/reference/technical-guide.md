@@ -35,6 +35,27 @@ A component is one node in the workload tree.
 - `kind` is the full GVK. All of group, version, and kind are required. The core
   `Pod` kind is the only kind allowed to omit the group (use `group: ""`).
 
+Virtual components. A component may omit `kind` and `specDefinition` entirely and
+exist only to model a level of the tree. Use one when the workload has a grouping
+level that owns other components but is not itself a Kubernetes object, and give
+it a `scaleDefinition` for the level's count and a `replicaSelector` for the label
+that identifies which group a pod belongs to. LeaderWorkerSet is the canonical
+case: a `group` component sits between the root and the `leader` and `worker`
+components, carries `replicasPath: .spec.replicas // 1` and a `replicaSelector` on
+`leaderworkerset.sigs.k8s.io/group-index`, and owns both roles. Without it,
+`leader` and `worker` have no shared grouping level and per-group identity is
+lost.
+
+```yaml
+- name: group
+  ownerRef: leaderworkerset
+  scaleDefinition:
+    replicasPath: .spec.replicas // 1
+  podSelector:
+    replicaSelector:
+      keyPath: .metadata.labels["leaderworkerset.sigs.k8s.io/group-index"]
+```
+
 Fields available on a component (`ComponentDefinition`):
 
 | Field | Purpose |
@@ -60,6 +81,14 @@ validation with `has multiple pod spec definitions`.
 | `podSpecPath` (+ `metadataPath`) | CRD embeds a bare PodSpec, metadata separate | `.spec.jobTemplate.spec`, `.spec.jobTemplate.metadata` |
 | `fragmentedPodSpecDefinition` | Pod fields scattered across the spec | see below |
 
+Choosing `fragmentedPodSpecDefinition` is not only about a missing pod template.
+A CRD can embed a real `podSpec` and still need fragmented paths, because the
+fields Karta treats as part of the pod live at different levels. Grove
+PodCliqueSet is the example: containers and scheduler name are inside
+`.spec.template.cliques[].spec.podSpec`, but labels and annotations sit one level
+up on the clique itself. `podSpecPath` would read the spec and silently drop the
+labels and annotations. Check where every field lives, not just the containers.
+
 `fragmentedPodSpecDefinition` fields (all optional; set only those that exist):
 `schedulerNamePath`, `labelsPath`, `annotationsPath`, `resourcesPath`,
 `resourceClaimsPath`, `podAffinityPath`, `nodeAffinityPath`, `containersPath`,
@@ -84,6 +113,20 @@ overridden (for example a workflow-level default plus a per-template override),
 target one layer with an assignable path rather than a fallback expression, and
 model per-item variation with a multi-instance component (`instanceIdPath`) so
 each item's field stays index-aligned and assignable.
+
+Read-only projections. Some shapes have no assignable path at all. A path that
+needs a variable binding to filter one array by another (`. as $t | $t.items[] |
+select(...)`) or that constructs an object rather than navigating to one reads
+correctly but cannot be assigned through. Prefer an assignable path whenever one
+exists. When none does, the fragmented path is still usable for reading, and the
+consequence is explicit: mutating that component's pod spec fails. Say so in a
+comment next to the path so the limitation is not rediscovered later. The catalog
+does this for the Grove standalone-clique paths and the NIMCache resources path.
+
+Variable bindings are allowed. `as $name` is not on the rejected-construct list,
+and the corrected Grove definition relies on it to exclude cliques that belong to
+a scaling group. Bindings keep a path readable when a filter has to reference a
+sibling field, at the cost of assignability.
 
 ## Status definition
 
@@ -157,6 +200,37 @@ scaleDefinition:
 ```
 
 All three paths are optional. Keep them null-safe.
+
+A component's replica count is the number of units at that component's level of
+the tree, counted across the whole workload. It is not the number of API objects
+of the component's `kind`. The distinction matters because a component's `kind`
+often names the controller object that produces the pods rather than the pods
+themselves. In LeaderWorkerSet the `leader` component has kind `StatefulSet` and
+`replicasPath: .spec.replicas // 1`, which for three groups resolves to 3, even
+though the operator creates a single leader StatefulSet. The count describes the
+level, not the object.
+
+Two numbers, two levels. A grouped or replicated workload usually holds both a
+group count and a members-per-group count, and picking the wrong one is a valid
+jq path that returns the wrong number, so the validator cannot catch it.
+LeaderWorkerSet is the trap: `.spec.replicas` is the number of groups and
+`.spec.leaderWorkerTemplate.size` is pods per group. The `group` component scales
+on `.spec.replicas // 1`, `leader` on `.spec.replicas // 1` (one leader per
+group), and `worker` on the derived
+`(.spec.replicas // 1) * ((.spec.leaderWorkerTemplate.size // 1) - 1)`. A nested
+level multiplies by its parent's count the same way: JobSet's `replicatedjob`
+uses `.spec.replicatedJobs[] | .replicas * .template.spec.parallelism`.
+
+Two self-checks. Sibling components that model the same level should resolve to
+the same count (`group` and `leader` above both give 3). And the numbers should
+add up against a real manifest: if the CR declares 3 groups of 4, the components
+should report 3, 3, and 9, not 4.
+
+Look for autoscaling bounds explicitly. `minReplicasPath` and `maxReplicasPath`
+are easy to miss because they usually live somewhere other than the replica field
+itself, for example PyTorchJob's `.spec.elasticPolicy.minReplicas` or Grove's
+`.spec.template.cliques[].spec.autoScalingConfig.minReplicas`. Search the CRD for
+an autoscaling or elastic policy block before deciding the workload has none.
 
 ## Suspend definition
 
@@ -240,6 +314,15 @@ Used for RBAC. Avoid duplicating a kind already declared as a component, unless
 the kind must also be listed here for RBAC or owner traversal (the validator does
 not reject it).
 
+Component or additional kind. Model a kind as a component when something needs to
+be read from it or written to it: a pod template, a replica count, a status, or a
+selector that maps pods to it. Otherwise list it here. A component is also the
+right choice when it is only a placeholder in the ownership chain that another
+component must hang off, in which case it carries a `kind` and an `ownerRef` and
+nothing else. The CronJob definition does exactly that for the `batch/v1` Job it
+creates. Do not list a kind here merely because the workload creates it, if a
+component already covers it.
+
 ```yaml
 additionalChildKinds:
 - group: apps
@@ -249,11 +332,13 @@ additionalChildKinds:
 
 ## Optimization instructions (paths run against pod manifests)
 
-Optional, used by schedulers. Prefer the `podGroup` mapping; the `podGroups`
-list format is deprecated but still appears in samples. Every member or subgroup
-`componentName` must name a defined component.
+Optional, used by schedulers. Two formats exist. `podGroup` is current;
+`podGroups` is marked deprecated in the API but is what every catalog definition
+still uses, so expect to read it. Every member or subgroup `componentName` must
+name a defined component.
 
 ```yaml
+# current format
 optimizationInstructions:
   gangScheduling:
     podGroup:
@@ -261,6 +346,37 @@ optimizationInstructions:
       subGroups:
       - componentName: worker
 ```
+
+The deprecated `podGroups` format carries two fields the current one has no
+equivalent for, which is why the catalog still uses it:
+
+```yaml
+optimizationInstructions:
+  gangScheduling:
+    podGroups:
+    - name: job
+      members:
+      - componentName: worker
+        groupByKeyPaths:
+        - .metadata.labels["training.kubeflow.org/job-name"]
+        filters:
+        - (.spec.containers[0].resources.limits["nvidia.com/gpu"] // 0) > 0
+```
+
+- `groupByKeyPaths`: jq paths evaluated against individual pod manifests, whose
+  values decide which pods share a gang. Use them when pods of one component must
+  be split into several gangs, typically by owner name plus a replica index. When
+  omitted, grouping falls back to owner reference traversal. Each path must return
+  a single non-empty value for every pod, or grouping fails at runtime, so keep
+  them null-safe (the LeaderWorkerSet definition uses
+  `.metadata.labels["leaderworkerset.sigs.k8s.io/group-index"] // "0"`).
+- `filters`: jq expressions, ANDed, also evaluated against pod manifests, to
+  restrict a member to a subset of its pods.
+
+Both are pod-level paths, not workload paths. When copying a catalog definition
+as a skeleton, copy the format it uses rather than converting it, and check the
+`groupByKeyPaths` label keys against the target controller's real pod labels the
+same way as `podSelector` keys.
 
 ## jq safety rules
 
@@ -287,5 +403,9 @@ Rules for correct paths:
 - `instanceIdPath` and `componentInstanceSelector` are both present or both absent.
 - Pod selectors reference pod fields; selectors of the same kind are mutually exclusive across components.
 - Status conditions and phases match the workload's real API.
+- Every declared `conditionsDefinition` or `phaseDefinition` is referenced by at least one matcher, and every matcher has the definition it needs.
+- Replica counts describe the component's level, siblings at the same level agree, and nested levels multiply by the parent count.
+- Autoscaling bounds were looked for, not assumed absent.
+- Every `fragmentedPodSpecDefinition` path is assignable, or is documented as read-only.
 - No redundant duplicate kinds in `additionalChildKinds` (duplicates are allowed only when needed for RBAC or owner traversal).
-- Every gang-scheduling member names a defined component.
+- Every gang-scheduling member names a defined component, and `groupByKeyPaths` and `filters` reference pod fields.
