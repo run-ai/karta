@@ -158,6 +158,21 @@ scaleDefinition:
 
 All three paths are optional. Keep them null-safe.
 
+A component's replica count is the number of that component's own instances, not
+the pod count beneath it. This matters for grouped or replicated workloads, where
+a spec often has two different numbers: how many groups or replicas exist, and
+how many members each contains. For a component that models the group or replica
+level, `replicasPath` is the group or replica count, not the members-per-group.
+LeaderWorkerSet is the canonical trap: `.spec.replicas` is the number of groups
+and `.spec.leaderWorkerTemplate.size` is pods per group, so the `group`
+component scales on `.spec.replicas // 1`, its `leader` scales on
+`.spec.replicas // 1` (one leader per group), and its `worker` count is derived,
+`(.spec.replicas // 1) * ((.spec.leaderWorkerTemplate.size // 1) - 1)`. Using
+`size` for the group is a valid jq path that returns the wrong number, so the
+validator will not catch it: check the field's real meaning in the workload API.
+A quick self-check is internal consistency: sibling components that model the
+same level (here `group` and `leader`) should resolve to the same count.
+
 ## Suspend definition
 
 For workloads with native suspend support (for example `.spec.suspend` on a

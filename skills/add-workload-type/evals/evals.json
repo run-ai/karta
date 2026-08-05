@@ -35,6 +35,19 @@
         "The answer points at docs/examples/quickstart/ and describes its output",
         "The add-workload-type skill does not drive the response"
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "Add support for the LeaderWorkerSet workload (leaderworkerset.x-k8s.io/v1) to Karta. Model the group, leader, and worker levels and their scale.",
+      "expected_output": "A valid Karta with a group component owning leader and worker, where each component's replica count reflects the real LWS API: .spec.replicas is the number of groups and .spec.leaderWorkerTemplate.size is pods per group. Scale is checked by the actual extracted numbers against a concrete manifest, not by matching an existing definition.",
+      "expectations": [
+        "For a LeaderWorkerSet with .spec.replicas = 3 and .spec.leaderWorkerTemplate.size = 4, the group component's replicasPath resolves to 3 (the number of groups), not 4 (pods per group)",
+        "The group component scales on .spec.replicas, not .spec.leaderWorkerTemplate.size",
+        "The leader component resolves to 3, one leader per group, matching the group count",
+        "The worker component resolves to 9, that is (.spec.replicas) * (size - 1)",
+        "Sibling components that model the same level (group and leader) resolve to the same replica count",
+        "Expected scale values are grounded in the real LeaderWorkerSet API, not read back from an existing catalog definition"
+      ]
     }
   ]
 }

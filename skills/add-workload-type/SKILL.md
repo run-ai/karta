@@ -55,7 +55,12 @@ source or documentation to get them right.
   definition that validates but never resolves a status.
 - Where the pod template lives in the spec, and whether the workload has one
   role or several (for example master and worker, or head and worker groups).
-- How replicas are expressed, if at all.
+- How replicas are expressed, if at all. For grouped or replicated workloads,
+  note that the spec usually holds two different numbers (how many groups or
+  replicas, and how many members each has). A component's `replicasPath` is the
+  count of that component's own instances, not the pods beneath it, so a
+  group-level component scales on the group count, not members-per-group. See the
+  scale section of `reference/technical-guide.md`.
 
 ### 2. Start from the closest sample
 
