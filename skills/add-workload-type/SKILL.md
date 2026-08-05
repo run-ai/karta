@@ -44,8 +44,21 @@ Load these as needed. Do not guess field names or rules; confirm them here.
 
 ### 1. Gather the target facts first
 
-Do not write anything until these four facts are known. Read the target CRD
-source or documentation to get them right.
+Do not write anything until these facts are known. Read the target CRD source or
+documentation to get them right.
+
+Ask the user for two inputs up front:
+
+- The CRD schema (`kubectl get crd <name> -o yaml`, or the operator's API types).
+- At least one real example CR (`kubectl get <kind> <name> -o yaml`), ideally one
+  that is running and one that has finished. Step 7 runs the definition against
+  it. A definition written from the schema alone is unverified, because a jq path
+  can be structurally valid and still point at a field no real object carries.
+
+If the user cannot supply a real CR, continue, but say plainly at the end that
+the definition was never exercised and which parts are unverified.
+
+From those inputs, establish:
 
 - The full GVK: group, version, and kind. All three are required (the core
   `Pod` kind is the only one allowed to omit the group).
@@ -121,6 +134,10 @@ workload's own conditions or phases into Karta's normalized statuses:
 
 ### 6. Self-check against the validator
 
+This checklist is structural only. It confirms the definition is well formed. It
+does not prove that any path resolves against a real object, so it cannot replace
+step 7.
+
 Before finishing, confirm each item:
 
 - All kinds use a full GVK (only `Pod` may omit the group).
@@ -144,11 +161,36 @@ Before finishing, confirm each item:
 If a check fails or a later error appears, look it up in
 `reference/troubleshooting.md` by the message text.
 
-## Exercise the definition without a cluster
+### 7. Run the definition against the real CR
 
-The offline quickstart at `docs/examples/quickstart/` loads a Karta definition
-with a sample workload and exercises the uniform API: it reads status, scale, and
-pod template, mutates pods, and writes them back, all without a cluster. It runs
-the validator on load, so it is the fastest way to confirm a new definition is
-structurally valid. Use it as the pattern for loading and testing the definition
-just written.
+Reading the YAML back is not verification. A path can pass every check in step 6,
+resolve to null against the real object, and produce a definition that reports
+nothing. Run it and read the output.
+
+The offline quickstart at `docs/examples/quickstart/` is the harness. It loads a
+Karta definition together with a workload object and exercises the uniform API:
+status, replica counts, per-container resources, a pod template mutation, and a
+read-back, with no cluster involved. `tree.Build` runs `KartaValidator` on load,
+so structural errors surface there too.
+
+Copy `docs/examples/quickstart/` to a scratch directory, point the embedded
+workload and the definition path at the new definition and the user's example CR,
+and run `go run .`. Keep the copy out of the repository; it is a test fixture, not
+a deliverable.
+
+The definition is done only when the run shows all of the following:
+
+- Status resolves to a real Karta status, not `Undefined`. `Undefined` means no
+  rule in `statusDefinition` matched the CR.
+- Every component that declares a spec pattern yields at least one pod template.
+  An empty result means the spec path missed.
+- Every component with an `instanceIdPath` yields the instance keys the CR
+  actually contains, with no missing or extra keys.
+- Replica counts match the numbers in the CR by inspection.
+- Container resources match the CR's containers.
+
+Show the user this output alongside the definition. When something comes back
+empty or wrong, do not adjust the checklist; go to
+`reference/troubleshooting.md`, fix the path, and run again. If a second example
+CR in a different state is available (completed or failed), run against it too to
+confirm the other status rules fire.
