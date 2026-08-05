@@ -44,6 +44,17 @@ Third-party Dependencies:
 - sigs.k8s.io/json (Apache-2.0)
 - sigs.k8s.io/randfill (Apache-2.0)
 - sigs.k8s.io/structured-merge-diff/v6 (Apache-2.0)
+- github.com/spf13/cobra (Apache-2.0)
+- github.com/spf13/viper (MIT)
+- github.com/fsnotify/fsnotify (BSD-3-Clause)
+- github.com/go-viper/mapstructure/v2 (MIT)
+- github.com/inconshreveable/mousetrap (Apache-2.0)
+- github.com/pelletier/go-toml/v2 (MIT)
+- github.com/sagikazarmark/locafero (MIT)
+- github.com/sourcegraph/conc (MIT)
+- github.com/spf13/afero (Apache-2.0)
+- github.com/spf13/cast (MIT)
+- github.com/subosito/gotenv (MIT)
 
 
 Full license texts for these dependencies are available in the THIRD_PARTY_LICENSES file.

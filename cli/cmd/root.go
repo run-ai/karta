@@ -18,13 +18,30 @@ func NewRootCommand() *cobra.Command {
 			"built on the Karta abstraction layer. Inspect workloads running in a " +
 			"namespace and the definitions Karta understands.",
 		SilenceUsage: true,
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			if cmd.Name() == cobra.ShellCompRequestCmd {
+				return nil
+			}
+			var err error
+			config, err = buildConfig(cmd)
+			return err
+		},
 	}
 
 	withKubeconfig(cmd)
 	withOutput(cmd)
+	withConfig(cmd)
 
 	cmd.AddCommand(newWorkloadCommand())
 	cmd.AddCommand(newDefinitionCommand())
+
+	cmd.InitDefaultCompletionCmd()
+	for _, sub := range cmd.Commands() {
+		if sub.Name() == "completion" {
+			sub.PersistentPreRunE = func(*cobra.Command, []string) error { return nil }
+			break
+		}
+	}
 
 	return cmd
 }

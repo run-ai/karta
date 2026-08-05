@@ -104,10 +104,12 @@ $(GO_LICENCE_DETECTOR): $(LOCALBIN)
 	}
 
 .PHONY: generate-licenses
-generate-licenses: go-licence-detector download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
+generate-licenses: go-licence-detector ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
 	@set -eu; \
 	echo "Generating NOTICE and THIRD_PARTY_LICENSES files from current dependencies using go-licence-detector"; \
-	go mod download -json > $(LOCALBIN)/deps.json; \
+	go mod download -json > $(LOCALBIN)/root-deps.json; \
+	(cd cli && go mod download -json) > $(LOCALBIN)/cli-deps.json; \
+	python3 hack/merge-go-deps.py $(LOCALBIN)/root-deps.json $(LOCALBIN)/cli-deps.json > $(LOCALBIN)/deps.json; \
 	$(GO_LICENCE_DETECTOR) -in $(LOCALBIN)/deps.json \
 		-noticeTemplate=hack/licenses/notice.tpl \
 		-noticeOut=NOTICE \
@@ -119,8 +121,22 @@ generate-licenses: go-licence-detector download-dependencies ## Regenerate NOTIC
 download-dependencies:
 	go mod download
 
+##@ CLI
+
+.PHONY: cli-build
+cli-build: $(LOCALBIN) ## Build the karta CLI binary.
+	cd cli && go build -o $(LOCALBIN)/karta .
+
+.PHONY: cli-test
+cli-test: ## Run the CLI unit tests.
+	cd cli && go test ./...
+
+.PHONY: cli-lint
+cli-lint: golangci-lint ## Lint the CLI module.
+	cd cli && $(GOLANGCI_LINT) run -c $(PROJECT_DIR)/.golangci.yml
+
 .PHONY: check
-check: download-dependencies validate test
+check: download-dependencies validate test cli-test cli-lint
 
 ##@ Helm
 
