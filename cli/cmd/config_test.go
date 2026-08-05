@@ -17,9 +17,11 @@ var _ = Describe("config loading", func() {
 
 	BeforeEach(func() {
 		dir = GinkgoT().TempDir()
+		DeferCleanup(os.Setenv, "HOME", os.Getenv("HOME"))
+		Expect(os.Setenv("HOME", GinkgoT().TempDir())).To(Succeed())
 		for _, key := range []string{"KARTA_CONFIG", "KARTA_OUTPUT", "KARTA_NAMESPACE", "KARTA_KUBECONFIG"} {
 			DeferCleanup(os.Setenv, key, os.Getenv(key))
-			os.Unsetenv(key)
+			Expect(os.Unsetenv(key)).To(Succeed())
 		}
 	})
 
@@ -28,8 +30,8 @@ var _ = Describe("config loading", func() {
 			home := GinkgoT().TempDir()
 			DeferCleanup(os.Setenv, "HOME", os.Getenv("HOME"))
 			DeferCleanup(os.Setenv, "KARTA_CONFIG", os.Getenv("KARTA_CONFIG"))
-			os.Setenv("HOME", home)
-			os.Setenv("KARTA_CONFIG", "")
+			Expect(os.Setenv("HOME", home)).To(Succeed())
+			Expect(os.Setenv("KARTA_CONFIG", "")).To(Succeed())
 			Expect(os.MkdirAll(filepath.Join(home, ".karta"), 0755)).To(Succeed())
 			writeFile(filepath.Join(home, ".karta", "config.yaml"), "output: yaml\n")
 
@@ -42,7 +44,7 @@ var _ = Describe("config loading", func() {
 			cfg := filepath.Join(dir, "env.yaml")
 			writeFile(cfg, "output: wide\n")
 			DeferCleanup(os.Setenv, "KARTA_CONFIG", os.Getenv("KARTA_CONFIG"))
-			os.Setenv("KARTA_CONFIG", cfg)
+			Expect(os.Setenv("KARTA_CONFIG", cfg)).To(Succeed())
 
 			c, err := runWithConfig("noop")
 			Expect(err).NotTo(HaveOccurred())
@@ -55,7 +57,7 @@ var _ = Describe("config loading", func() {
 			flagCfg := filepath.Join(dir, "flag.yaml")
 			writeFile(flagCfg, "output: json\n")
 			DeferCleanup(os.Setenv, "KARTA_CONFIG", os.Getenv("KARTA_CONFIG"))
-			os.Setenv("KARTA_CONFIG", envCfg)
+			Expect(os.Setenv("KARTA_CONFIG", envCfg)).To(Succeed())
 
 			c, err := runWithConfig("--config", flagCfg, "noop")
 			Expect(err).NotTo(HaveOccurred())
@@ -65,8 +67,8 @@ var _ = Describe("config loading", func() {
 		It("ignores a missing default config", func() {
 			DeferCleanup(os.Setenv, "HOME", os.Getenv("HOME"))
 			DeferCleanup(os.Setenv, "KARTA_CONFIG", os.Getenv("KARTA_CONFIG"))
-			os.Setenv("HOME", GinkgoT().TempDir())
-			os.Setenv("KARTA_CONFIG", "")
+			Expect(os.Setenv("HOME", GinkgoT().TempDir())).To(Succeed())
+			Expect(os.Setenv("KARTA_CONFIG", "")).To(Succeed())
 
 			_, err := runWithConfig("noop")
 			Expect(err).NotTo(HaveOccurred())
@@ -112,7 +114,7 @@ var _ = Describe("config loading", func() {
 
 		It("env var overrides the config file", func() {
 			writeFile(cfg, "output: wide\n")
-			os.Setenv("KARTA_OUTPUT", "json")
+			Expect(os.Setenv("KARTA_OUTPUT", "json")).To(Succeed())
 			DeferCleanup(os.Unsetenv, "KARTA_OUTPUT")
 
 			c, err := runWithConfig("--config", cfg, "noop")
@@ -122,7 +124,7 @@ var _ = Describe("config loading", func() {
 
 		It("explicit flag overrides the env var", func() {
 			writeFile(cfg, "output: wide\n")
-			os.Setenv("KARTA_OUTPUT", "json")
+			Expect(os.Setenv("KARTA_OUTPUT", "json")).To(Succeed())
 			DeferCleanup(os.Unsetenv, "KARTA_OUTPUT")
 
 			c, err := runWithConfig("--config", cfg, "-o", "yaml", "noop")
@@ -157,7 +159,7 @@ var _ = Describe("config loading", func() {
 		})
 
 		It("env var overrides the config file", func() {
-			os.Setenv("KARTA_NAMESPACE", "env-team")
+			Expect(os.Setenv("KARTA_NAMESPACE", "env-team")).To(Succeed())
 			DeferCleanup(os.Unsetenv, "KARTA_NAMESPACE")
 
 			Expect(runOnWorkload([]string{"--config", cfg, "workload", "noop"})).To(Succeed())
@@ -165,7 +167,7 @@ var _ = Describe("config loading", func() {
 		})
 
 		It("explicit flag overrides the env var", func() {
-			os.Setenv("KARTA_NAMESPACE", "env-team")
+			Expect(os.Setenv("KARTA_NAMESPACE", "env-team")).To(Succeed())
 			DeferCleanup(os.Unsetenv, "KARTA_NAMESPACE")
 
 			Expect(runOnWorkload([]string{"--config", cfg, "workload", "-n", "flag-team", "noop"})).To(Succeed())

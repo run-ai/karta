@@ -2,7 +2,7 @@
 # Copyright (c) 2026 NVIDIA Corporation
 #
 # Deduplicate go mod download -json output by module Path.
-# Usage: python3 hack/dedup-deps.py root-deps.json cli-deps.json > deps.json
+# Usage: python3 hack/merge-go-deps.py root-deps.json cli-deps.json > deps.json
 
 import sys
 import json
