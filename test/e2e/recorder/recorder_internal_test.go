@@ -142,19 +142,19 @@ func TestRecorderCatchesBackwardsJump(t *testing.T) {
 		objWithStatus(map[string]any{"conditions": []any{map[string]any{"type": "Complete", "status": "True"}}}),
 	}
 
-	rec := &recording{}
-	for _, u := range seq {
-		rec.keep(u, Classify(u, states))
+	o := &observation{}
+	for _, cr := range seq {
+		o.keep(cr, Classify(cr, states))
 	}
 
 	want := []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}
-	if !reflect.DeepEqual(rec.order, want) {
-		t.Fatalf("recorder dropped the return: got %v, want %v", rec.order, want)
+	if !reflect.DeepEqual(o.states(), want) {
+		t.Fatalf("recorder dropped the return: got %v, want %v", o.states(), want)
 	}
-	if observedOrderErr(steps(initializing, running, completed), rec.order, completed) == nil {
+	if observedOrderErr(steps(initializing, running, completed), o.states(), completed) == nil {
 		t.Error("strict journey should reject the undeclared Running -> Initializing dip")
 	}
-	if err := observedOrderErr(steps(initializing, running, initializing, completed), rec.order, completed); err != nil {
+	if err := observedOrderErr(steps(initializing, running, initializing, completed), o.states(), completed); err != nil {
 		t.Errorf("declaring the Initializing revisit should accept the dip, got %v", err)
 	}
 }
