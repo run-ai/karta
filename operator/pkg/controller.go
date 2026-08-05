@@ -120,10 +120,13 @@ func (r *Reconciler) reconcile(ctx context.Context, logger logr.Logger, karta *k
 	if err := r.checkCRDExists(ctx, logger, karta); err != nil {
 		return err
 	}
+	if err := r.ensureLabels(ctx, logger, karta); err != nil {
+		return err
+	}
+
 	ready := setReady(&karta.Status, karta.Generation)
 	logger.V(1).Info("Derived Ready condition", "ready", ready)
-	err := r.ensureLabels(ctx, logger, karta)
-	return err
+	return nil
 }
 
 // validateKarta runs the Karta spec validator and writes the Validated condition.
@@ -170,15 +173,9 @@ func (r *Reconciler) checkCRDExists(ctx context.Context, logger logr.Logger, kar
 // run.ai/karta-version, run.ai/karta-kind) onto the Karta metadata so that
 // consumers can locate a Karta by GVK via a label-selector List.
 func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta *kartav1alpha1.Karta) error {
-	gvk := rootGVK(karta)
-	if gvk == nil {
+	desired := desiredRootLabels(karta)
+	if desired == nil {
 		return nil
-	}
-
-	desired := map[string]string{
-		kartav1alpha1.LabelRootGroup:   gvk.Group,
-		kartav1alpha1.LabelRootVersion: gvk.Version,
-		kartav1alpha1.LabelRootKind:    gvk.Kind,
 	}
 
 	if labelsMatch(karta.Labels, desired) {
@@ -198,8 +195,22 @@ func (r *Reconciler) ensureLabels(ctx context.Context, logger logr.Logger, karta
 	}
 
 	logger.V(1).Info("Stamped GVK index labels",
-		"group", gvk.Group, "version", gvk.Version, "kind", gvk.Kind)
+		"group", desired[kartav1alpha1.LabelRootGroup],
+		"version", desired[kartav1alpha1.LabelRootVersion],
+		"kind", desired[kartav1alpha1.LabelRootKind])
 	return nil
+}
+
+func desiredRootLabels(karta *kartav1alpha1.Karta) map[string]string {
+	gvk := rootGVK(karta)
+	if gvk == nil {
+		return nil
+	}
+	return map[string]string{
+		kartav1alpha1.LabelRootGroup:   gvk.Group,
+		kartav1alpha1.LabelRootVersion: gvk.Version,
+		kartav1alpha1.LabelRootKind:    gvk.Kind,
+	}
 }
 
 // labelsMatch returns true when current already contains all desired key/value pairs.

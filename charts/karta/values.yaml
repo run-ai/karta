@@ -41,6 +41,20 @@ ports:
   metrics: 8080
   health: 8081
 
+webhook:
+  enabled: true
+  port: 9443
+  cert:
+    # auto: the operator self-signs and rotates the serving cert (no cert-manager).
+    # manual: certs are supplied externally (cert-manager, an admin, ...); the
+    #   operator only reads the mounted Secret and never touches the cert.
+    provisionMode: auto
+    # manual mode only: a static CA bundle to stamp on the webhook configs.
+    caBundle: ""
+    # manual mode only: annotations for the webhook configs. Wire cert-manager
+    # here, e.g. cert-manager.io/inject-ca-from: <namespace>/<certificate-name>
+    annotations: {}
+
 logLevel: info
 
 # Extra flags appended after the chart's default args. Use this to add flags
@@ -72,3 +86,32 @@ resources:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# A pre-install/pre-upgrade Job server-side-applies the bundled CRD, so
+# `helm upgrade` rolls the schema forward (Helm never upgrades crds/ itself).
+crdUpgrader:
+  enabled: true
+  image:
+    repository: registry.k8s.io/kubectl
+    tag: v1.34.0
+    pullPolicy: IfNotPresent
+  backoffLimit: 3
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 0
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi

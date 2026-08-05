@@ -1,0 +1,72 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+kind: Karta
+apiVersion: run.ai/v1alpha1
+metadata:
+  name: jobset-x-k8s-io-jobset-v1alpha2
+spec:
+  structureDefinition:
+    rootComponent:
+      name: jobset
+      kind:
+        group: jobset.x-k8s.io
+        version: v1alpha2
+        kind: JobSet
+      statusDefinition:
+        conditionsDefinition:
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
+          reasonFieldName: reason
+        statusMappings:
+          initializing:
+            - byExpression:
+                expression: (.status.replicatedJobsStatus // []) | any(.active > 0 and (.ready // 0) == 0) and all(.failed == 0)
+                expectedResult: "true"
+          running:
+            - byExpression:
+                expression: (.status.replicatedJobsStatus // []) | any(.ready > 0 and .active > 0) and all(.failed == 0)
+                expectedResult: "true"
+          completed:
+            - byConditions:
+                - type: Completed
+                  status: "True"
+          failed:
+            - byConditions:
+                - type: Failed
+                  status: "True"
+          suspended:
+            - byConditions:
+                - type: Suspended
+                  status: "True"
+      suspendDefinition:
+        suspendActions:
+          - path: .spec.suspend
+            value: "true"
+        resumeActions:
+          - path: .spec.suspend
+            value: "false"
+    childComponents:
+      - name: replicatedjob
+        kind:
+          group: batch
+          version: v1
+          kind: Job
+        ownerRef: jobset
+        specDefinition:
+          podTemplateSpecPath: .spec.replicatedJobs[].template.spec.template
+        scaleDefinition:
+          replicasPath: .spec.replicatedJobs[] | .replicas * .template.spec.parallelism
+        instanceIdPath: .spec.replicatedJobs[].name
+        podSelector:
+          componentInstanceSelector:
+            idPath: .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]
+  optimizationInstructions:
+    gangScheduling:
+      podGroups:
+        - name: job
+          members:
+            - componentName: replicatedjob
+              groupByKeyPaths:
+                - .metadata.labels["jobset.sigs.k8s.io/replicatedjob-name"]

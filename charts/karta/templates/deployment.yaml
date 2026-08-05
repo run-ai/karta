@@ -42,6 +42,17 @@ spec:
             - --metrics-bind-address=:{{ .Values.ports.metrics }}
             - --health-probe-bind-address=:{{ .Values.ports.health }}
             - --zap-log-level={{ .Values.logLevel }}
+            {{- if .Values.webhook.enabled }}
+            - --enable-webhook
+            - --webhook-port={{ .Values.webhook.port }}
+            - --webhook-namespace={{ .Release.Namespace }}
+            - --webhook-cert-dir=/tmp/k8s-webhook-server/serving-certs
+            - --webhook-cert-mode={{ .Values.webhook.cert.provisionMode }}
+            - --webhook-cert-secret={{ include "karta.webhook.secretName" . }}
+            - --webhook-service-name={{ include "karta.webhook.serviceName" . }}
+            - --mutating-webhook-name={{ include "karta.webhook.configName" . }}
+            - --validating-webhook-name={{ include "karta.webhook.validatingConfigName" . }}
+            {{- end }}
             {{- with .Values.extraArgs }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -50,6 +61,22 @@ spec:
               containerPort: {{ .Values.ports.metrics }}
             - name: health
               containerPort: {{ .Values.ports.health }}
+            {{- if .Values.webhook.enabled }}
+            - name: webhook
+              containerPort: {{ .Values.webhook.port }}
+              protocol: TCP
+            {{- end }}
+          {{- if .Values.webhook.enabled }}
+          # Covers the webhook cert bootstrap plus manager startup (cache sync and
+          # leader election) so liveness does not kill a slow start.
+          # failureThreshold*periodSeconds (200s) exceeds the 2m bootstrap timeout.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 5
+            failureThreshold: 40
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -66,6 +93,19 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- if .Values.webhook.enabled }}
+          volumeMounts:
+            - name: webhook-certs
+              mountPath: /tmp/k8s-webhook-server/serving-certs
+              readOnly: true
+          {{- end }}
+      {{- if .Values.webhook.enabled }}
+      volumes:
+        - name: webhook-certs
+          secret:
+            secretName: {{ include "karta.webhook.secretName" . }}
+            optional: true
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

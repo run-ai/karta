@@ -41,3 +41,31 @@ Name of the ServiceAccount to use. When create=true the chart owns the name
 {{- required "serviceAccount.name is required when serviceAccount.create is false" .Values.serviceAccount.name -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Name for the CRD upgrader hook resources. Includes the release namespace and
+name so separate releases never share the cluster-scoped ClusterRole/Binding.
+*/}}
+{{- define "karta.crdUpgrader.name" -}}
+{{- printf "%s-crd-upgrader-%s-%s" (include "karta.fullname" .) .Release.Namespace .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Webhook resource names. The service name doubles as the serving cert SAN, so it
+must match the --webhook-service-name flag passed to the operator.
+*/}}
+{{- define "karta.webhook.serviceName" -}}
+{{- printf "%s-webhook" (include "karta.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "karta.webhook.secretName" -}}
+{{- printf "%s-webhook-cert" (include "karta.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "karta.webhook.configName" -}}
+{{- printf "%s-mutating" (include "karta.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "karta.webhook.validatingConfigName" -}}
+{{- printf "%s-validating" (include "karta.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}

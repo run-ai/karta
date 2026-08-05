@@ -55,7 +55,7 @@ there is no immutable window to work around: the controller injects the managed-
 label directly into the leader and worker templates, and Karta routes each update
 to the right path in the workload.
 
-The bundled [lws Karta definition](../../samples/lws.yaml) maps the leader and
+The bundled [lws Karta definition](../../catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml) maps the leader and
 worker templates and the computed worker replica count, so the controller reads
 and writes them with plain `GetPodTemplateSpec` / `UpdatePodTemplateSpec` calls.
 
@@ -88,7 +88,7 @@ matters: the CRD must exist before the object that uses it.
 
 ```bash
 kubectl apply -f charts/karta/crds/run.ai_kartas.yaml
-kubectl apply -f docs/samples/lws.yaml
+kubectl apply -f docs/catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml
 ```
 
 Build the controller image and side-load it into the cluster:
@@ -173,7 +173,7 @@ kubectl edit karta leaderworkerset-x-k8s-io-leaderworkerset-v1
 ```
 
 This is the deeper layer of the example: the workload structure is cluster data,
-not code. See [docs/samples/](../../samples/) for ready-made definitions covering
+not code. See [docs/catalog/](../../catalog/) for ready-made definitions covering
 PyTorchJob, RayCluster, JobSet, and more.
 
 ## Manage another workload type (no code change)
@@ -189,7 +189,7 @@ adding one never touches the Go code. To also manage, say, JobSet:
    ```
 2. Apply its Karta definition:
    ```bash
-   kubectl apply -f docs/samples/jobset.yaml
+   kubectl apply -f docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml
    ```
 3. Add the GVK to the flag in `manifests/01-deployment.yaml` (format
    `group/version/kind`, core group empty):

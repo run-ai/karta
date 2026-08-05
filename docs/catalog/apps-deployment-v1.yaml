@@ -1,51 +1,50 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
-apiVersion: run.ai/v1alpha1
 kind: Karta
+apiVersion: run.ai/v1alpha1
 metadata:
   name: apps-deployment-v1
 spec:
-  optimizationInstructions: {}
   structureDefinition:
-    childComponents:
-    - kind:
-        group: apps
-        kind: ReplicaSet
-        version: v1
-      name: replicaset
-      ownerRef: deployment
     rootComponent:
+      name: deployment
       kind:
         group: apps
-        kind: Deployment
         version: v1
-      name: deployment
-      scaleDefinition:
-        replicasPath: .spec.replicas // 1
+        kind: Deployment
       specDefinition:
         podTemplateSpecPath: .spec.template
+      scaleDefinition:
+        replicasPath: .spec.replicas // 1
       statusDefinition:
         conditionsDefinition:
-          messageFieldName: message
           path: .status.conditions
-          reasonFieldName: reason
-          statusFieldName: status
           typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
+          reasonFieldName: reason
         statusMappings:
-          failed:
-          - byConditions:
-            - reason: ProgressDeadlineExceeded
-              status: "False"
-              type: Progressing
           initializing:
-          - byConditions:
-            - status: "True"
-              type: Progressing
-            - status: "False"
-              type: Available
+            - byConditions:
+                - type: Progressing
+                  status: "True"
+                - type: Available
+                  status: "False"
           running:
-          - byConditions:
-            - reason: NewReplicaSetAvailable
-              status: "True"
-              type: Progressing
-status: {}
+            - byConditions:
+                - type: Progressing
+                  status: "True"
+                  reason: NewReplicaSetAvailable
+          failed:
+            - byConditions:
+                - type: Progressing
+                  status: "False"
+                  reason: ProgressDeadlineExceeded
+    childComponents:
+      - name: replicaset
+        kind:
+          group: apps
+          version: v1
+          kind: ReplicaSet
+        ownerRef: deployment
+  optimizationInstructions: {}

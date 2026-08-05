@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+{{- if and .Values.operator.enabled .Values.webhook.enabled }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "karta.webhook.configName" . }}
+  {{- if and (eq .Values.webhook.cert.provisionMode "manual") .Values.webhook.cert.annotations }}
+  annotations:
+    {{- toYaml .Values.webhook.cert.annotations | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "karta.labels" . | nindent 4 }}
+webhooks:
+  - name: mkarta.run.ai
+    admissionReviewVersions: ["v1"]
+    failurePolicy: Fail
+    sideEffects: None
+    matchPolicy: Equivalent
+    timeoutSeconds: 5
+    rules:
+      - apiGroups: ["run.ai"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE"]
+        resources: ["kartas"]
+        scope: "*"
+    clientConfig:
+      {{- if and (eq .Values.webhook.cert.provisionMode "manual") .Values.webhook.cert.caBundle }}
+      caBundle: {{ .Values.webhook.cert.caBundle }}
+      {{- end }}
+      service:
+        name: {{ include "karta.webhook.serviceName" . }}
+        namespace: {{ .Release.Namespace }}
+        path: /mutate-run-ai-v1alpha1-karta
+        port: 443
+{{- end -}}

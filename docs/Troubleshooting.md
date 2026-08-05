@@ -111,8 +111,8 @@ are worth checking first when a definition "works" but behaves incorrectly.
 
 - Re-run the [validation checklist](./Technical%20Guide.md#validation-checklist)
   in the Technical Guide.
-- Compare your definition against the closest sample in
-  [`docs/samples/`](./samples/).
+- Compare your definition against the closest one in
+  [`docs/catalog/`](./catalog/).
 - Exercise the definition with the offline quickstart at
   [`docs/examples/quickstart/`](./examples/quickstart/) to see what the uniform
   API reads back.

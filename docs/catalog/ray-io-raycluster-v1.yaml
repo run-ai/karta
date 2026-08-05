@@ -1,15 +1,29 @@
-apiVersion: run.ai/v1alpha1
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
 kind: Karta
+apiVersion: run.ai/v1alpha1
 metadata:
-  name: ray-io-rayjob-v1
+  name: ray-io-raycluster-v1
 spec:
   structureDefinition:
     rootComponent:
-      name: rayjob
+      name: raycluster
       kind:
         group: ray.io
         version: v1
-        kind: RayJob
+        kind: RayCluster
+      statusDefinition:
+        phaseDefinition:
+          path: .status.state
+        statusMappings:
+          running:
+            - byPhase: ready
+          failed:
+            - byPhase: failed
+          suspended:
+            - byExpression:
+                expression: .spec.suspend == true and (.status.state == "suspended" or (.status.state | not))
+                expectedResult: "true"
       suspendDefinition:
         suspendActions:
           - path: .spec.suspend
@@ -17,37 +31,15 @@ spec:
         resumeActions:
           - path: .spec.suspend
             value: "false"
-      statusDefinition:
-        phaseDefinition:
-          path: .status.jobStatus
-        conditionsDefinition:
-          path: .status.conditions
-          typeFieldName: type
-          statusFieldName: status
-          messageFieldName: message
-          reasonFieldName: null
-        statusMappings:
-          initializing:
-          - byPhase: PENDING
-          running:
-          - byPhase: RUNNING
-          completed:
-          - byPhase: SUCCEEDED
-          failed:
-          - byPhase: FAILED
-          suspended:
-          - byExpression:
-              expression: .status.jobDeploymentStatus == "Suspended"
-              expectedResult: "true"
     childComponents:
       - name: head
         kind:
           group: ""
           version: v1
           kind: Pod
-        ownerRef: rayjob
+        ownerRef: raycluster
         specDefinition:
-          podTemplateSpecPath: .spec.rayClusterSpec.headGroupSpec.template
+          podTemplateSpecPath: .spec.headGroupSpec.template
         scaleDefinition:
           replicasPath: "1"
         podSelector:
@@ -59,12 +51,14 @@ spec:
           group: ""
           version: v1
           kind: Pod
-        ownerRef: rayjob
+        ownerRef: raycluster
         specDefinition:
-          podTemplateSpecPath: .spec.rayClusterSpec.workerGroupSpecs[].template
+          podTemplateSpecPath: .spec.workerGroupSpecs[].template
         scaleDefinition:
-          replicasPath: .spec.rayClusterSpec.workerGroupSpecs[].replicas // 1
-        instanceIdPath: .spec.rayClusterSpec.workerGroupSpecs[].groupName
+          replicasPath: .spec.workerGroupSpecs[].replicas
+          minReplicasPath: .spec.workerGroupSpecs[].minReplicas
+          maxReplicasPath: .spec.workerGroupSpecs[].maxReplicas
+        instanceIdPath: .spec.workerGroupSpecs[].groupName
         podSelector:
           componentTypeSelector:
             keyPath: .metadata.labels["ray.io/node-type"]
@@ -74,7 +68,7 @@ spec:
   optimizationInstructions:
     gangScheduling:
       podGroups:
-        - name: job
+        - name: cluster
           members:
             - componentName: head
               groupByKeyPaths:

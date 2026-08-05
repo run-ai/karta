@@ -1,5 +1,7 @@
-apiVersion: run.ai/v1alpha1
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
 kind: Karta
+apiVersion: run.ai/v1alpha1
 metadata:
   name: serving-kserve-io-inferenceservice-v1beta1
 spec:
@@ -18,21 +20,21 @@ spec:
           messageFieldName: message
         statusMappings:
           running:
-          - byConditions:
-              - type: PredictorReady
-                status: "True"
-              - type: RoutesReady
-                status: "True"
-              - type: LatestDeploymentReady
-                status: "True"
+            - byConditions:
+                - type: PredictorReady
+                  status: "True"
+                - type: RoutesReady
+                  status: "True"
+                - type: LatestDeploymentReady
+                  status: "True"
           failed:
-          - byConditions:
-              - type: PredictorReady
-                status: "False"
-              - type: PredictorConfigurationReady
-                status: "False"
-              - type: RoutesReady
-                status: "False"
+            - byConditions:
+                - type: PredictorReady
+                  status: "False"
+                - type: PredictorConfigurationReady
+                  status: "False"
+                - type: RoutesReady
+                  status: "False"
     childComponents:
       - name: predictor
         kind:

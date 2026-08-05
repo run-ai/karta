@@ -1,67 +1,65 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
-apiVersion: run.ai/v1alpha1
 kind: Karta
+apiVersion: run.ai/v1alpha1
 metadata:
   name: batch-job-v1
 spec:
+  structureDefinition:
+    rootComponent:
+      name: job
+      kind:
+        group: batch
+        version: v1
+        kind: Job
+      specDefinition:
+        podTemplateSpecPath: .spec.template
+      scaleDefinition:
+        replicasPath: .spec.parallelism // 1
+      statusDefinition:
+        conditionsDefinition:
+          path: .status.conditions
+          typeFieldName: type
+          statusFieldName: status
+          messageFieldName: message
+          reasonFieldName: reason
+        statusMappings:
+          initializing:
+            - byExpression:
+                expression: (.status.active // 0) > 0 and (.status.ready // 0) == 0
+                expectedResult: "true"
+          running:
+            - byExpression:
+                expression: (.status.active // 0) > 0 and (.status.ready // 0) > 0
+                expectedResult: "true"
+          completed:
+            - byConditions:
+                - type: Complete
+                  status: "True"
+          failed:
+            - byConditions:
+                - type: Failed
+                  status: "True"
+          degraded:
+            - byExpression:
+                expression: .spec.parallelism > 1 and (.status.ready // 0) < .spec.parallelism and ((.status.succeeded // 0) > 0 or (.status.failed // 0) > 0)
+                expectedResult: "true"
+          suspended:
+            - byConditions:
+                - type: Suspended
+                  status: "True"
+      suspendDefinition:
+        suspendActions:
+          - path: .spec.suspend
+            value: "true"
+        resumeActions:
+          - path: .spec.suspend
+            value: "false"
   optimizationInstructions:
     gangScheduling:
       podGroups:
-      - members:
-        - componentName: job
-          groupByKeyPaths:
-          - .metadata.labels["batch.kubernetes.io/job-name"]
-        name: job
-  structureDefinition:
-    rootComponent:
-      kind:
-        group: batch
-        kind: Job
-        version: v1
-      name: job
-      scaleDefinition:
-        replicasPath: .spec.parallelism // 1
-      specDefinition:
-        podTemplateSpecPath: .spec.template
-      statusDefinition:
-        conditionsDefinition:
-          messageFieldName: message
-          path: .status.conditions
-          reasonFieldName: reason
-          statusFieldName: status
-          typeFieldName: type
-        statusMappings:
-          completed:
-          - byConditions:
-            - status: "True"
-              type: Complete
-          degraded:
-          - byExpression:
-              expectedResult: "true"
-              expression: .spec.parallelism > 1 and (.status.ready // 0) < .spec.parallelism
-                and ((.status.succeeded // 0) > 0 or (.status.failed // 0) > 0)
-          failed:
-          - byConditions:
-            - status: "True"
-              type: Failed
-          initializing:
-          - byExpression:
-              expectedResult: "true"
-              expression: (.status.active // 0) > 0 and (.status.ready // 0) == 0
-          running:
-          - byExpression:
-              expectedResult: "true"
-              expression: (.status.active // 0) > 0 and (.status.ready // 0) > 0
-          suspended:
-          - byConditions:
-            - status: "True"
-              type: Suspended
-      suspendDefinition:
-        resumeActions:
-        - path: .spec.suspend
-          value: "false"
-        suspendActions:
-        - path: .spec.suspend
-          value: "true"
-status: {}
+        - name: job
+          members:
+            - componentName: job
+              groupByKeyPaths:
+                - .metadata.labels["batch.kubernetes.io/job-name"]

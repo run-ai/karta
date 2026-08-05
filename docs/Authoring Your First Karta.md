@@ -31,7 +31,7 @@ When something does not validate, see [Troubleshooting](./Troubleshooting.md).
 
 A Karta for the built-in `batch/v1` Job. A Job is the simplest useful example:
 one component, one pod template, and a status reported through conditions. The
-13 definitions in [`docs/samples/`](./samples/) cover more complex workloads
+definitions in [`docs/catalog/`](./catalog/) cover more complex workloads
 (JobSet, PyTorchJob, RayCluster, KServe, and more); start from the one closest
 to your workload when you write your own.
 
@@ -221,11 +221,11 @@ live workloads through the same uniform API, with no per-CRD code.
 
 - Add child components for workloads that own other resources. Each child needs
   an `ownerRef`. See the multi-component samples such as
-  [`docs/samples/kserve.yaml`](./samples/kserve.yaml) and
-  [`docs/samples/pytorch.yaml`](./samples/pytorch.yaml).
+  [`docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml`](./catalog/serving-kserve-io-inferenceservice-v1beta1.yaml) and
+  [`docs/catalog/kubeflow-org-pytorchjob-v1.yaml`](./catalog/kubeflow-org-pytorchjob-v1.yaml).
 - Handle workloads with repeated roles or instances (for example the replicated
   jobs of a JobSet) with `instanceIdPath` and a matching component instance
-  selector. See [`docs/samples/jobset.yaml`](./samples/jobset.yaml).
+  selector. See [`docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml`](./catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml).
 - Consume a definition from a controller with the Go Component API. See
   [`docs/examples/controller-runtime/`](./examples/controller-runtime/).
 - Read the full field reference in the [Technical Guide](./Technical%20Guide.md).

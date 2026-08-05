@@ -52,7 +52,7 @@ var jobsetWorkloadYAML []byte
 var lwsWorkloadYAML []byte
 
 // workloadExample pairs a sample workload with its Karta definition path.
-// Karta definitions live in docs/samples/ and are read at runtime so they
+// Karta definitions live in docs/catalog/ and are read at runtime so they
 // always reflect the latest version in the repository.
 type workloadExample struct {
 	name         string
@@ -105,12 +105,12 @@ func main() {
 	examples := []workloadExample{
 		{
 			name:         "JobSet",
-			kartaPath:    "../../samples/jobset.yaml",
+			kartaPath:    "../../catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml",
 			workloadYAML: jobsetWorkloadYAML,
 		},
 		{
 			name:         "LeaderWorkerSet",
-			kartaPath:    "../../samples/lws.yaml",
+			kartaPath:    "../../catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml",
 			workloadYAML: lwsWorkloadYAML,
 		},
 	}
@@ -130,7 +130,7 @@ func main() {
 // Notice there is no switch on CRD kind anywhere in this function — the Karta
 // definition absorbs all structural differences between workload types.
 func run(ctx context.Context, ex workloadExample, o opts) error {
-	// Load the Karta definition from docs/samples/.
+	// Load the Karta definition from docs/catalog/.
 	kartaYAML, err := os.ReadFile(ex.kartaPath)
 	if err != nil {
 		return fmt.Errorf("read Karta definition %s: %w", ex.kartaPath, err)

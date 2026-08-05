@@ -1,5 +1,7 @@
-apiVersion: run.ai/v1alpha1
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
 kind: Karta
+apiVersion: run.ai/v1alpha1
 metadata:
   name: leaderworkerset-x-k8s-io-leaderworkerset-v1
 spec:
@@ -19,30 +21,30 @@ spec:
         statusMappings:
           initializing:
             - byConditions:
-                - status: "True"
-                  type: Progressing
-                - status: "False"
-                  type: Available
+                - type: Progressing
+                  status: "True"
+                - type: Available
+                  status: "False"
           running:
-          - byConditions:
-              - type: Available
-                status: "True"
-                reason: "AllGroupsReady"
-              - type: Progressing
-                status: "False"
-              - type: UpdateInProgress
-                status: "False"
-          - byExpression:
-              expression: "(.status.replicas // 0) > 0 and .status.readyReplicas == .status.replicas and .status.updatedReplicas == .status.replicas"
-              expectedResult: "true"
+            - byConditions:
+                - type: Available
+                  status: "True"
+                  reason: AllGroupsReady
+                - type: Progressing
+                  status: "False"
+                - type: UpdateInProgress
+                  status: "False"
+            - byExpression:
+                expression: (.status.replicas // 0) > 0 and .status.readyReplicas == .status.replicas and .status.updatedReplicas == .status.replicas
+                expectedResult: "true"
           failed:
-          - byConditions:
-              - type: Available
-                status: "False"
-              - type: Progressing
-                status: "False"
-              - type: UpdateInProgress
-                status: "False"
+            - byConditions:
+                - type: Available
+                  status: "False"
+                - type: Progressing
+                  status: "False"
+                - type: UpdateInProgress
+                  status: "False"
     childComponents:
       - name: group
         ownerRef: leaderworkerset
