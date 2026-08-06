@@ -11,10 +11,10 @@ object. Offline, no cluster.
 Every definition should pass this:
 
 ```bash
-go run . --karta ./mydef.yaml
+go run ./hack/karta-verify --karta ./mydef.yaml
 ```
 
-It runs `KartaValidator` and exits 0 when the definition is well formed, or 1
+It runs `KartaValidator` and exits 0 when the definition is well-formed, or 1
 with the validator's message otherwise.
 
 ## Prove it against a real CR
@@ -24,7 +24,7 @@ so a definition can pass it and still extract nothing. Adding `--workload` runs
 the definition against a real custom resource and reports what came out.
 
 ```bash
-go run . --karta ./mydef.yaml --workload ./real-cr.yaml
+go run ./hack/karta-verify --karta ./mydef.yaml --workload ./real-cr.yaml
 ```
 
 ## Predict first
@@ -34,7 +34,7 @@ before the run. Reading the output after the fact invites rationalizing whatever
 appears; committing to the numbers first does not.
 
 ```bash
-go run . --karta ./mydef.yaml --workload ./real-cr.yaml --predict ./predict.yaml
+go run ./hack/karta-verify --karta ./mydef.yaml --workload ./real-cr.yaml --predict ./predict.yaml
 ```
 
 Predictions are partial. Only the fields present are compared, so a prediction
@@ -88,11 +88,12 @@ validator cannot see:
 Run against a definition and a manifest already in the repository:
 
 ```bash
-go run . \
-  --karta ../../../../docs/catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml \
-  --workload ../../../../docs/examples/quickstart/lws.yaml
+go run ./hack/karta-verify \
+  --karta docs/catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml \
+  --workload docs/examples/quickstart/lws.yaml
 ```
 
 The manifest declares `replicas: 3` and `size: 4`. The `group` component reports
 4 while its sibling `leader` reports 3, which is the sibling-consistency failure
-described in the scale section of `reference/technical-guide.md`.
+described in the scale section of
+`skills/add-workload-type/reference/technical-guide.md`.

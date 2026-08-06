@@ -36,12 +36,12 @@ Load these as needed. Do not guess field names or rules; confirm them here.
   component model, the three spec patterns, status mapping semantics, jq safety
   rules, scale, suspend, multi-instance, gang scheduling, and the checklist.
 - `reference/sample-index.md` - a decision table that maps a workload shape to
-  the closest existing sample under `docs/samples/`. Start here in step 2.
+  the closest existing definition under `docs/catalog/`. Start here in step 2.
 - `reference/troubleshooting.md` - every validator, jq, and runtime error mapped
   to its cause and fix, plus the mistakes that pass validation but behave wrong.
-- `scripts/verify/` - the offline harness. Validates a definition (step 6) and,
-  given a real CR, runs it and checks the extraction against predicted values
-  (step 7).
+- `hack/karta-verify/` in the repository root - the offline harness. Validates a
+  definition (step 6) and, given a real CR, runs it and checks the extraction
+  against predicted values (step 7).
 
 ## Workflow
 
@@ -77,7 +77,7 @@ From those inputs, establish:
 ### 2. Start from the closest sample
 
 Open `reference/sample-index.md`, find the row that matches the workload shape,
-and copy that sample from `docs/samples/` as the starting skeleton. Adapting a
+and copy that definition from `docs/catalog/` as the starting skeleton. Adapting a
 working sample is faster and safer than starting from an empty file. Change the
 GVK, the paths, and the status mapping to fit the target.
 
@@ -142,11 +142,10 @@ Always run the validator on the definition just written. Do not hand back a
 definition that has not passed it.
 
 ```bash
-cd scripts/verify
-go run . --karta <definition.yaml>
+go run ./hack/karta-verify --karta <definition.yaml>
 ```
 
-It exits 0 when the definition is well formed, and non-zero with the validator's
+It exits 0 when the definition is well-formed, and non-zero with the validator's
 message otherwise. Look any failure up in `reference/troubleshooting.md` by the
 message text, fix it, and run again.
 
@@ -162,7 +161,7 @@ The validator enforces these, so there is no need to check them by eye:
   both absent on a component.
 - Every jq expression parses and uses no rejected construct.
 
-These it cannot check. Confirm each one:
+The validator cannot check these. Confirm each one:
 
 - Pod selectors reference pod fields, not workload fields. Selectors of the same
   kind must be mutually exclusive across components so a pod maps to one component
@@ -193,7 +192,7 @@ unverified should be stated plainly rather than left for someone to discover.
 The same command does it, with `--workload` added. It builds the workload tree
 from the manifest and prints the extracted status, replica counts, and containers
 per component instance, with no cluster involved. Its flags and the predictions
-format are documented in `scripts/verify/README.md`.
+format are documented in `hack/karta-verify/README.md`.
 
 Predict before running. Writing down the expected values first is the point of
 this step: reading the output afterwards invites accepting whatever appears,
@@ -204,11 +203,11 @@ talked away.
    file: the status, and per component instance the replica count and container
    names. Derive them from the CR's own numbers, never by reading them back out
    of an existing definition.
-2. Run it, from `scripts/verify/`:
+2. Run it, from the repository root:
 
    ```bash
-   go run . --karta <definition.yaml> --workload <real-cr.yaml> \
-     --predict <predictions.yaml> --strict
+   go run ./hack/karta-verify --karta <definition.yaml> \
+     --workload <real-cr.yaml> --predict <predictions.yaml> --strict
    ```
 
 3. Reconcile every mismatch and warning. A mismatch means either the path is

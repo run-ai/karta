@@ -5,7 +5,7 @@
 // real workload object.
 //
 // With --karta alone it runs KartaValidator and reports whether the definition
-// is well formed. That is the check every definition should pass.
+// is well-formed. That is the check every definition should pass.
 //
 // Structural validation does not prove that any jq path resolves against a real
 // object, so a definition can validate and still extract nothing. Adding
@@ -17,10 +17,10 @@
 // the extraction and exits non-zero on any mismatch, so a wrong path is caught
 // instead of rationalized after the fact.
 //
-// Usage (from this directory):
+// Usage (from the repository root):
 //
-//	go run . --karta <definition.yaml>                          # validate only
-//	go run . --karta <definition.yaml> --workload <real-cr.yaml> # and extract
+//	go run ./hack/karta-verify --karta <definition.yaml>
+//	go run ./hack/karta-verify --karta <definition.yaml> --workload <real-cr.yaml>
 //
 // Flags:
 //
@@ -85,8 +85,8 @@ func main() {
 	flag.BoolVar(&strict, "strict", false, "exit non-zero when the extraction reports warnings")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage:\n"+
-			"  go run . --karta <definition.yaml>                           validate only\n"+
-			"  go run . --karta <definition.yaml> --workload <real-cr.yaml> validate and extract\n\nFlags:\n")
+			"  go run ./hack/karta-verify --karta <definition.yaml>                           validate only\n"+
+			"  go run ./hack/karta-verify --karta <definition.yaml> --workload <real-cr.yaml> validate and extract\n\nFlags:\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -157,9 +157,17 @@ func run(ctx context.Context, kartaPath, workloadPath, predictPath, dumpPath str
 	if wt.Status != nil {
 		observed.Status = wt.Status.Phases
 	}
+	// noInstances is collected during the walk rather than from wt.Children, so
+	// a nested component whose instanceIdPath matched nothing is caught too. Such
+	// a node contributes no rows to observed.Components, so it is invisible
+	// everywhere else in the report.
+	var noInstances []string
 	var walk func(prefix string, nodes []tree.ComponentNode)
 	walk = func(prefix string, nodes []tree.ComponentNode) {
 		for _, node := range nodes {
+			if len(node.Instances) == 0 {
+				noInstances = append(noInstances, prefix+node.Name)
+			}
 			for _, inst := range node.Instances {
 				key := prefix + node.Name
 				if inst.InstanceKey != nil {
@@ -237,10 +245,8 @@ func run(ctx context.Context, kartaPath, workloadPath, predictPath, dumpPath str
 			warnings = append(warnings, fmt.Sprintf("%s extracted a pod spec with no containers", c.Key))
 		}
 	}
-	for _, node := range wt.Children {
-		if len(node.Instances) == 0 {
-			warnings = append(warnings, fmt.Sprintf("%s produced no instances: instanceIdPath matched nothing", node.Name))
-		}
+	for _, name := range noInstances {
+		warnings = append(warnings, fmt.Sprintf("%s produced no instances: instanceIdPath matched nothing", name))
 	}
 	if len(warnings) > 0 {
 		fmt.Println("=== Warnings ===")
@@ -277,7 +283,8 @@ func run(ctx context.Context, kartaPath, workloadPath, predictPath, dumpPath str
 				fmt.Printf("  MISMATCH %s\n", m)
 			}
 			fmt.Printf("\n%d mismatch(es). The definition does not do what it was expected to do;\n"+
-				"fix the path or the prediction, then run again.\n", len(mismatches))
+				"fix the definition, or re-derive the prediction from the manifest, then run again.\n"+
+				"Do not copy the extracted values into the prediction to make this pass.\n", len(mismatches))
 			return 2, nil
 		}
 		fmt.Printf("  all %d predicted value(s) matched the extraction\n\n", countPredicted(predicted))
