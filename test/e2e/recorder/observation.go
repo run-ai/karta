@@ -23,7 +23,7 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// observation is one watched run of a flow: the workload being driven, the checkpoints still to fire, and
+// observation is one watched run of a flow: the workload being driven, the checkpoints still to act on, and
 // the CRs recorded so far. Its methods do the driving and the recording; Flow.observe fills it in.
 type observation struct {
 	flow     *Flow
@@ -36,7 +36,7 @@ type observation struct {
 	failure   string                     // why the flow did not finish, empty if it did
 }
 
-// snapshot is one recorded CR: the state read from its own fields, the object, and any action fired at it.
+// snapshot is one recorded CR: the state read from its own fields, the object, and any action performed at it.
 type snapshot struct {
 	state  kartav1alpha1.ResourceStatus
 	cr     *unstructured.Unstructured
@@ -111,8 +111,8 @@ func (f *Flow) openWatch(ctx context.Context, workload *unstructured.Unstructure
 	})
 }
 
-// record handles one observed CR: it keeps the CR if it is settled and new, fires the next checkpoint if the
-// workload just reached it, and reports whether the flow is finished (or a fired action failed).
+// record handles one observed CR: it keeps the CR if it is settled and new, performs the next checkpoint's
+// action if the workload just reached it, and reports whether the flow is finished (or an action failed).
 func (o *observation) record(ctx context.Context, cr *unstructured.Unstructured) (done bool) {
 	o.lastSeen = cr
 	if !isStatusSettled(cr) {
@@ -125,7 +125,7 @@ func (o *observation) record(ctx context.Context, cr *unstructured.Unstructured)
 		state = kartav1alpha1.UndefinedStatus
 	}
 	o.keep(cr, state)
-	if o.fireCheckpoint(ctx, state, cr) {
+	if o.advanceCheckpoint(ctx, state, cr) {
 		return true // the action failed; stop and report it
 	}
 	return o.hasReachedTerminal(state)
@@ -141,9 +141,9 @@ func (o *observation) keep(cr *unstructured.Unstructured, state kartav1alpha1.Re
 	o.snapshots = append(o.snapshots, snapshot{state: state, cr: cr.DeepCopy()})
 }
 
-// fireCheckpoint fires the next checkpoint's action if the workload just reached its state and gate, then
+// advanceCheckpoint performs the next checkpoint's action if the workload just reached its state and gate, then
 // drops it from pending. It reports whether the action failed, which stops the run.
-func (o *observation) fireCheckpoint(ctx context.Context, state kartav1alpha1.ResourceStatus, cr *unstructured.Unstructured) (actionFailed bool) {
+func (o *observation) advanceCheckpoint(ctx context.Context, state kartav1alpha1.ResourceStatus, cr *unstructured.Unstructured) (actionFailed bool) {
 	next := o.pending
 	reached := len(next) > 0 && state == next[0].State &&
 		(next[0].ActionPredicate == nil || next[0].ActionPredicate(cr))
@@ -151,7 +151,7 @@ func (o *observation) fireCheckpoint(ctx context.Context, state kartav1alpha1.Re
 		return false
 	}
 	if next[0].Action != nil {
-		action, err := o.flow.fireAction(ctx, o.workload, next[0].Action)
+		action, err := o.flow.performAction(ctx, o.workload, next[0].Action)
 		if err != nil {
 			o.failure = err.Error()
 			return true
@@ -162,9 +162,9 @@ func (o *observation) fireCheckpoint(ctx context.Context, state kartav1alpha1.Re
 	return false
 }
 
-// fireAction sends an action's merge-patch to the workload and returns the recorded operation. The result
+// performAction sends an action's merge-patch to the workload and returns the recorded operation. The result
 // object is not captured - the STATE events that follow already show where the operator drives it.
-func (f *Flow) fireAction(ctx context.Context, workload *unstructured.Unstructured, action *Action) (*RecordedAction, error) {
+func (f *Flow) performAction(ctx context.Context, workload *unstructured.Unstructured, action *Action) (*RecordedAction, error) {
 	target := blankWithGVK(workload)
 	target.SetName(workload.GetName())
 	target.SetNamespace(workload.GetNamespace())
@@ -182,14 +182,14 @@ func (f *Flow) fireAction(ctx context.Context, workload *unstructured.Unstructur
 	}, nil
 }
 
-// attachAction records the action fired at the snapshot just kept.
+// attachAction records the action performed at the snapshot just kept.
 func (o *observation) attachAction(action *RecordedAction) {
 	if len(o.snapshots) > 0 {
 		o.snapshots[len(o.snapshots)-1].action = action
 	}
 }
 
-// hasReachedTerminal reports whether state is the flow's terminal state and every checkpoint has already fired.
+// hasReachedTerminal reports whether state is the flow's terminal state and no checkpoints remain.
 func (o *observation) hasReachedTerminal(state kartav1alpha1.ResourceStatus) bool {
 	return state == o.flow.want() && len(o.pending) == 0
 }

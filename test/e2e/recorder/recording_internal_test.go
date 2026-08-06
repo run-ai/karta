@@ -14,7 +14,7 @@ import (
 )
 
 // A recording round-trips through writeRecording/loadRecording: metadata, the ordered STATE states, and a
-// fired action all survive the file.
+// performed action all survive the file.
 func TestRecordingRoundTrips(t *testing.T) {
 	rec := Recording{
 		SchemaVersion: schemaVersion,
