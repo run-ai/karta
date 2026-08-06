@@ -96,28 +96,36 @@ func condTrue(condType string) StateCheck {
 	}
 }
 
-// TestClassifyPicksMostAdvancedState: Classify keeps the furthest state a workload matches.
+// TestClassifyPicksMostAdvancedState: classify keeps the furthest state a workload matches.
 func TestClassifyPicksMostAdvancedState(t *testing.T) {
 	running := kartav1alpha1.RunningStatus
 	completed := kartav1alpha1.CompletedStatus
-	states := []NamedState{
+	states := []namedState{
 		{Name: running, Match: intAtLeast(1, "status", "active")},
 		{Name: completed, Match: condTrue("Complete")},
 	}
-	if got := Classify(objWithStatus(map[string]any{"active": int64(1)}), states); got != running {
+	if got := classify(objWithStatus(map[string]any{"active": int64(1)}), states); got != running {
 		t.Errorf("active=1 -> %q, want %q", got, running)
 	}
 	both := objWithStatus(map[string]any{"active": int64(1), "conditions": []any{map[string]any{"type": "Complete", "status": "True"}}})
-	if got := Classify(both, states); got != completed {
+	if got := classify(both, states); got != completed {
 		t.Errorf("Complete=True -> %q, want %q", got, completed)
 	}
-	if got := Classify(objWithStatus(map[string]any{}), states); got != "" {
+	if got := classify(objWithStatus(map[string]any{}), states); got != "" {
 		t.Errorf("no match -> %q, want empty", got)
 	}
 }
 
 func terminal(journey []journeyStep) kartav1alpha1.ResourceStatus {
 	return journey[len(journey)-1].State
+}
+
+func steps(states ...kartav1alpha1.ResourceStatus) []journeyStep {
+	j := make([]journeyStep, len(states))
+	for i, s := range states {
+		j[i] = journeyStep{State: s}
+	}
+	return j
 }
 
 // TestRecorderCatchesBackwardsJump: a Running -> byte-identical Initializing dip survives dedup, and the
@@ -127,7 +135,7 @@ func TestRecorderCatchesBackwardsJump(t *testing.T) {
 	running := kartav1alpha1.RunningStatus
 	completed := kartav1alpha1.CompletedStatus
 
-	states := []NamedState{
+	states := []namedState{
 		{Name: initializing, Match: intAtLeast(1, "status", "active")},
 		{Name: running, Match: intAtLeast(1, "status", "ready")},
 		{Name: completed, Match: condTrue("Complete")},
@@ -144,7 +152,7 @@ func TestRecorderCatchesBackwardsJump(t *testing.T) {
 
 	o := &observation{}
 	for _, cr := range seq {
-		o.keep(cr, Classify(cr, states))
+		o.keep(cr, classify(cr, states))
 	}
 
 	want := []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}
@@ -204,13 +212,13 @@ func TestStatusSettled(t *testing.T) {
 		}}
 	}
 	two := int64(2)
-	if !statusSettled(withGen(2, &two)) {
+	if !isStatusSettled(withGen(2, &two)) {
 		t.Error("observedGeneration == generation should be settled")
 	}
-	if statusSettled(withGen(3, &two)) {
+	if isStatusSettled(withGen(3, &two)) {
 		t.Error("observedGeneration < generation should NOT be settled")
 	}
-	if !statusSettled(withGen(2, nil)) {
+	if !isStatusSettled(withGen(2, nil)) {
 		t.Error("missing observedGeneration should be settled")
 	}
 }

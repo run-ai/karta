@@ -12,8 +12,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// SchemaVersion is bumped on incompatible format changes; v2 is the event stream (STATE and ACTION events).
-const SchemaVersion = 2
+// schemaVersion is bumped on incompatible format changes; v2 is the event stream (STATE and ACTION events).
+const schemaVersion = 2
 
 // Recording is one flow: metadata plus the ordered event stream a workload produced.
 type Recording struct {
@@ -37,10 +37,10 @@ const (
 // Event is one entry in the stream: a STATE event carries the full object and its own-fields state; an
 // ACTION event carries the mutation the flow fired to drive the next transition.
 type Event struct {
-	Kind   string                 `json:"kind"`
-	State  string                 `json:"state,omitempty"`
-	Object map[string]interface{} `json:"object,omitempty"`
-	Action *RecordedAction        `json:"action,omitempty"`
+	Kind   string          `json:"kind"`
+	State  string          `json:"state,omitempty"`
+	Object map[string]any  `json:"object,omitempty"`
+	Action *RecordedAction `json:"action,omitempty"`
 }
 
 // RecordedAction is a mutation fired between states.
@@ -50,13 +50,13 @@ type RecordedAction struct {
 }
 
 type Operation struct {
-	Verb      string                 `json:"verb"`
-	PatchType string                 `json:"patchType"`
-	Payload   map[string]interface{} `json:"payload"`
+	Verb      string         `json:"verb"`
+	PatchType string         `json:"patchType"`
+	Payload   map[string]any `json:"payload"`
 }
 
-// States is the ordered own-fields states the recording passed through (STATE events only).
-func (r Recording) States() []string {
+// states is the ordered own-fields states the recording passed through (STATE events only).
+func (r Recording) states() []string {
 	var out []string
 	for _, e := range r.Events {
 		if e.Kind == EventState {
@@ -66,11 +66,11 @@ func (r Recording) States() []string {
 	return out
 }
 
-func RecordingPath(fixturesRoot string, r Recording) string {
+func recordingPath(fixturesRoot string, r Recording) string {
 	return filepath.Join(fixturesRoot, r.Operator, r.Version, r.KartaName, r.Flow+".yaml")
 }
 
-func WriteRecording(path string, r Recording) error {
+func writeRecording(path string, r Recording) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("create dir for %s: %w", path, err)
 	}
@@ -84,7 +84,7 @@ func WriteRecording(path string, r Recording) error {
 	return nil
 }
 
-func LoadRecording(path string) (Recording, error) {
+func loadRecording(path string) (Recording, error) {
 	var r Recording
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -98,38 +98,38 @@ func LoadRecording(path string) (Recording, error) {
 
 // Reader walks a recording's STATE events (Next, then State/Object); ACTION events are skipped.
 type Reader struct {
-	rec    Recording
-	states []Event
-	pos    int
+	rec         Recording
+	stateEvents []Event
+	pos         int
 }
 
 func OpenRecording(path string) (*Reader, error) {
-	rec, err := LoadRecording(path)
+	rec, err := loadRecording(path)
 	if err != nil {
 		return nil, err
 	}
-	return NewReader(rec), nil
+	return newReader(rec), nil
 }
 
-func NewReader(rec Recording) *Reader {
-	var states []Event
+func newReader(rec Recording) *Reader {
+	var stateEvents []Event
 	for _, e := range rec.Events {
 		if e.Kind == EventState {
-			states = append(states, e)
+			stateEvents = append(stateEvents, e)
 		}
 	}
-	return &Reader{rec: rec, states: states, pos: -1}
+	return &Reader{rec: rec, stateEvents: stateEvents, pos: -1}
 }
 
 func (r *Reader) Next() bool {
 	r.pos++
-	return r.pos < len(r.states)
+	return r.pos < len(r.stateEvents)
 }
 
-func (r *Reader) State() string { return r.states[r.pos].State }
+func (r *Reader) State() string { return r.stateEvents[r.pos].State }
 
 func (r *Reader) Object() *unstructured.Unstructured {
-	return &unstructured.Unstructured{Object: r.states[r.pos].Object}
+	return &unstructured.Unstructured{Object: r.stateEvents[r.pos].Object}
 }
 
 func (r *Reader) Recording() Recording { return r.rec }

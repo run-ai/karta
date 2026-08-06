@@ -5,87 +5,12 @@ package recorder
 
 import (
 	"io"
-	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
-
-// Cluster is how the recorder reaches Kubernetes.
-type Cluster struct {
-	Client    client.Client
-	Dynamic   dynamic.Interface
-	Namespace string
-}
-
-// Config is the suite-wide setup a recorder needs: cluster access, where recordings are written, and where
-// progress lines go. The suite builds one and passes it to New.
-type Config struct {
-	Cluster   Cluster
-	OutputDir string
-	Log       io.Writer // progress and warnings; nil discards
-}
-
-// Recorder records the flows of one workload type: build and Run a Flow per case.
-type Recorder struct {
-	cluster   Cluster
-	outputDir string
-	log       io.Writer
-	operator  string
-	version   string
-	kartaName string
-	kartaFile string
-	states    []NamedState
-	timeout   time.Duration
-}
-
-// New starts a recorder from cfg; version is stamped on the recording and kartaFile is recorded as metadata
-// for the replay golden (neither path is read here).
-func New(cfg Config, operator, version, kartaName, kartaFile string) *Recorder {
-	if operator == "" || version == "" || kartaName == "" || kartaFile == "" {
-		panic("recorder: New needs a non-empty operator, version, kartaName, and kartaFile")
-	}
-	if cfg.OutputDir == "" {
-		panic("recorder: New needs a non-empty Config.OutputDir")
-	}
-	if cfg.Log == nil {
-		cfg.Log = io.Discard
-	}
-	return &Recorder{
-		cluster:   cfg.Cluster,
-		outputDir: cfg.OutputDir,
-		log:       cfg.Log,
-		operator:  operator,
-		version:   version,
-		kartaName: kartaName,
-		kartaFile: kartaFile,
-		timeout:   3 * time.Minute,
-	}
-}
-
-// AddState registers a state predicate; declare states least- to most-advanced (Classify keeps the furthest match).
-func (r *Recorder) AddState(name kartav1alpha1.ResourceStatus, match StateCheck) *Recorder {
-	if name == "" {
-		panic("recorder: AddState needs a non-empty state name")
-	}
-	if match == nil {
-		panic("recorder: AddState needs a non-nil predicate")
-	}
-	r.states = append(r.states, NamedState{Name: name, Match: match})
-	return r
-}
-
-// SetTimeout overrides the per-flow deadline (default 3m).
-func (r *Recorder) SetTimeout(d time.Duration) *Recorder {
-	if d <= 0 {
-		panic("recorder: SetTimeout needs a positive duration")
-	}
-	r.timeout = d
-	return r
-}
 
 // NewFlow starts a flow seeded from a manifest (path relative to test/e2e).
 func NewFlow(r *Recorder, name, manifest string) *Flow {
@@ -136,9 +61,20 @@ func (f *Flow) log() io.Writer        { return f.rec.log }
 // StateCheck recognises a state from the workload's own fields, never from Karta.
 type StateCheck func(*unstructured.Unstructured) bool
 
-type NamedState struct {
+type namedState struct {
 	Name  kartav1alpha1.ResourceStatus
 	Match StateCheck
+}
+
+// classify returns the furthest-along state the workload matches, judged from its own fields.
+func classify(cr *unstructured.Unstructured, states []namedState) kartav1alpha1.ResourceStatus {
+	var name kartav1alpha1.ResourceStatus
+	for _, s := range states {
+		if s.Match(cr) {
+			name = s.Name
+		}
+	}
+	return name
 }
 
 // journeyStep is one stop on a journey. ActionPredicate lets the same state appear more than once (a scale
@@ -148,25 +84,6 @@ type journeyStep struct {
 	Action          *Action
 	ActionPredicate StateCheck
 	Optional        bool // a transient step the workload may miss; the order check tolerates its absence
-}
-
-func steps(states ...kartav1alpha1.ResourceStatus) []journeyStep {
-	j := make([]journeyStep, len(states))
-	for i, s := range states {
-		j[i] = journeyStep{State: s}
-	}
-	return j
-}
-
-// Classify returns the furthest-along state the workload matches, judged from its own fields.
-func Classify(u *unstructured.Unstructured, states []NamedState) kartav1alpha1.ResourceStatus {
-	var name kartav1alpha1.ResourceStatus
-	for _, s := range states {
-		if s.Match(u) {
-			name = s.Name
-		}
-	}
-	return name
 }
 
 type ActionType string
