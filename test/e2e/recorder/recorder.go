@@ -21,6 +21,9 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
+// defaultTimeout bounds one flow's Run when Config.Timeout is unset.
+const defaultTimeout = 3 * time.Minute
+
 // Cluster is how the recorder reaches Kubernetes.
 type Cluster struct {
 	Client    client.Client
@@ -33,18 +36,17 @@ type Cluster struct {
 type Config struct {
 	Cluster   Cluster
 	OutputDir string
-	Log       io.Writer // progress and warnings; nil discards
+	Log       io.Writer     // progress and warnings; nil discards
+	Timeout   time.Duration // per-flow deadline; zero uses defaultTimeout
 }
 
 // Recorder records the flows of one workload type: build and Run a Flow per case.
 type Recorder struct {
-	cluster   Cluster
-	outputDir string
-	log       io.Writer
-	operator  string
-	version   string
-	kartaName string
-	kartaFile string
+	config    Config
+	operator  string // operator key, e.g. "batch-job"; stamped as Recording.Operator
+	version   string // operator version, resolved by the suite; stamped as Recording.Version
+	kartaName string // Karta definition name; stamped as Recording.KartaName
+	kartaFile string // repo-relative path to the Karta definition, for the replay golden
 	states    []namedState
 	timeout   time.Duration
 }
@@ -61,15 +63,17 @@ func New(cfg Config, operator, version, kartaName, kartaFile string) *Recorder {
 	if cfg.Log == nil {
 		cfg.Log = io.Discard
 	}
+	timeout := defaultTimeout
+	if cfg.Timeout > 0 {
+		timeout = cfg.Timeout
+	}
 	return &Recorder{
-		cluster:   cfg.Cluster,
-		outputDir: cfg.OutputDir,
-		log:       cfg.Log,
+		config:    cfg,
 		operator:  operator,
 		version:   version,
 		kartaName: kartaName,
 		kartaFile: kartaFile,
-		timeout:   3 * time.Minute,
+		timeout:   timeout,
 	}
 }
 
@@ -131,7 +135,7 @@ func (f *Flow) createWorkload(ctx context.Context) (*unstructured.Unstructured, 
 	if err := yaml.Unmarshal(raw, workload); err != nil {
 		return nil, fmt.Errorf("parse manifest %s: %w", f.manifest, err)
 	}
-	workload.SetNamespace(f.rec.cluster.Namespace)
+	workload.SetNamespace(f.rec.config.Cluster.Namespace)
 	if err := f.client().Create(ctx, workload); err != nil {
 		return nil, fmt.Errorf("create workload for %s: %w", f.name, err)
 	}
@@ -183,7 +187,7 @@ func (f *Flow) write(obs *observation, succeeded bool) (*Recording, error) {
 		}
 	}
 
-	out.Path = recordingPath(f.rec.outputDir, out)
+	out.Path = recordingPath(f.rec.config.OutputDir, out)
 	if err := writeRecording(out.Path, out); err != nil {
 		return nil, fmt.Errorf("write recording %s: %w", out.Path, err)
 	}
