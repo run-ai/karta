@@ -106,7 +106,7 @@ func (f *Flow) openWatch(ctx context.Context, workload *unstructured.Unstructure
 	return watchtools.NewRetryWatcherWithContext(ctx, startRV, &cache.ListWatch{
 		WatchFuncWithContext: func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 			opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", workload.GetName()).String()
-			return f.rec.cluster.Dynamic.Resource(mapping.Resource).Namespace(namespace).Watch(ctx, opts)
+			return f.rec.config.Cluster.Dynamic.Resource(mapping.Resource).Namespace(namespace).Watch(ctx, opts)
 		},
 	})
 }

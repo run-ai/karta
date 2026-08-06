@@ -55,8 +55,8 @@ func (f *Flow) last() *journeyStep { return &f.journey[len(f.journey)-1] }
 func (f *Flow) want() kartav1alpha1.ResourceStatus { return f.journey[len(f.journey)-1].State }
 
 // client and log are shortcuts to the recorder's bound cluster access, so the driving code reads cleanly.
-func (f *Flow) client() client.Client { return f.rec.cluster.Client }
-func (f *Flow) log() io.Writer        { return f.rec.log }
+func (f *Flow) client() client.Client { return f.rec.config.Cluster.Client }
+func (f *Flow) log() io.Writer        { return f.rec.config.Log }
 
 // StateCheck recognises a state from the workload's own fields, never from Karta.
 type StateCheck func(*unstructured.Unstructured) bool
