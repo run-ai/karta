@@ -39,6 +39,8 @@ Load these as needed. Do not guess field names or rules; confirm them here.
   the closest existing sample under `docs/samples/`. Start here in step 2.
 - `reference/troubleshooting.md` - every validator, jq, and runtime error mapped
   to its cause and fix, plus the mistakes that pass validation but behave wrong.
+- `scripts/verify/` - the offline harness used in step 7. Validates a definition,
+  runs it against a real CR, and checks the extraction against predicted values.
 
 ## Workflow
 
@@ -165,32 +167,41 @@ If a check fails or a later error appears, look it up in
 
 Reading the YAML back is not verification. A path can pass every check in step 6,
 resolve to null against the real object, and produce a definition that reports
-nothing. Run it and read the output.
+nothing. Prove it against the CR instead.
 
-The offline quickstart at `docs/examples/quickstart/` is the harness. It loads a
-Karta definition together with a workload object and exercises the uniform API:
-status, replica counts, per-container resources, a pod template mutation, and a
-read-back, with no cluster involved. `tree.Build` runs `KartaValidator` on load,
-so structural errors surface there too.
+Use `scripts/verify/`, bundled with this skill. It validates the definition,
+builds the workload tree from a real manifest, and prints the extracted status,
+replica counts, and containers per component instance, with no cluster involved.
+`reference` for its flags and predictions format is `scripts/verify/README.md`.
 
-Copy `docs/examples/quickstart/` to a scratch directory, point the embedded
-workload and the definition path at the new definition and the user's example CR,
-and run `go run .`. Keep the copy out of the repository; it is a test fixture, not
-a deliverable.
+Predict before running. Writing down the expected values first is the point of
+this step: reading the output afterwards invites accepting whatever appears,
+while a prediction that disagrees with the extraction is a defect that cannot be
+talked away.
 
-The definition is done only when the run shows all of the following:
+1. From the CR, write the values the definition should produce into a predictions
+   file: the status, and per component instance the replica count and container
+   names. Derive them from the CR's own numbers, never by reading them back out
+   of an existing definition.
+2. Run it, from `scripts/verify/`:
 
-- Status resolves to a real Karta status, not `Undefined`. `Undefined` means no
-  rule in `statusDefinition` matched the CR.
-- Every component that declares a spec pattern yields at least one pod template.
-  An empty result means the spec path missed.
-- Every component with an `instanceIdPath` yields the instance keys the CR
-  actually contains, with no missing or extra keys.
-- Replica counts match the numbers in the CR by inspection.
-- Container resources match the CR's containers.
+   ```bash
+   go run . --karta <definition.yaml> --workload <real-cr.yaml> \
+     --predict <predictions.yaml> --strict
+   ```
 
-Show the user this output alongside the definition. When something comes back
-empty or wrong, do not adjust the checklist; go to
+3. Reconcile every mismatch and warning. A mismatch means either the path is
+   wrong or the understanding of the CRD is wrong. Decide which before changing
+   anything, and never edit the prediction just to make the run pass.
+
+The definition is done when the command exits 0 with `--strict`: the status
+resolved, every component declaring a spec pattern extracted a pod spec with
+containers, every `instanceIdPath` produced the instance keys the CR contains,
+and every predicted number matched.
+
+Show the user the run output alongside the definition. Keep the predictions file
+and any scratch copies out of the repository. When something comes back empty or
+wrong, do not adjust the checklist; look the symptom up in
 `reference/troubleshooting.md`, fix the path, and run again. If a second example
 CR in a different state is available (completed or failed), run against it too to
 confirm the other status rules fire.
