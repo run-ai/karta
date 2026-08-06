@@ -1,37 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Package main validates a Karta definition, and optionally runs it against a
-// real workload object.
-//
-// With --karta alone it runs KartaValidator and reports whether the definition
-// is well-formed. That is the check every definition should pass.
-//
-// Structural validation does not prove that any jq path resolves against a real
-// object, so a definition can validate and still extract nothing. Adding
-// --workload closes that gap: the definition is run against a real custom
-// resource and what it extracted is reported.
-//
-// Predict before you run. Write the values expected from the CR into a
-// predictions file and pass --predict. The command compares the prediction to
-// the extraction and exits non-zero on any mismatch, so a wrong path is caught
-// instead of rationalized after the fact.
-//
-// Usage (from the repository root):
-//
-//	go run ./hack/karta-verify --karta <definition.yaml>
-//	go run ./hack/karta-verify --karta <definition.yaml> --workload <real-cr.yaml>
-//
-// Flags:
-//
-//	--karta     path to the Karta definition (required)
-//	--workload  path to a real workload manifest; without it, validation only
-//	--predict   path to a predictions file to check the extraction against
-//	--dump      write the observed extraction to this path, in predictions format
-//	--strict    exit non-zero when the extraction reports warnings
-//
-// The extraction flags require --workload. Passing one without it is an error
-// rather than a pass, so a dropped --workload cannot look like success.
+// Package main validates a Karta definition and, given a real workload object,
+// reports what the definition extracted from it. See README.md for usage.
 //
 // Exit codes: 0 success, 1 load or validation failure, 2 prediction mismatch,
 // 3 warnings under --strict.
@@ -53,19 +24,16 @@ import (
 	"github.com/run-ai/karta/pkg/tree"
 )
 
-// observation is what the definition extracted from the workload object. It is
-// also the predictions format, so a --dump of a verified run can seed the
-// prediction for the next one.
+// observation doubles as the predictions format, so --dump output can seed the
+// next run's prediction.
 type observation struct {
 	Status     []string    `json:"status"`
 	Components []component `json:"components"`
 }
 
-// component is one extracted component instance. Key is "name" for a
-// single-instance component and "name[instanceId]" for one instance of a
-// multi-instance component, prefixed by the owner path for nested components
-// (for example "group/leader"). In a predictions file every field except Key is
-// optional; only the fields present are compared.
+// component is one extracted component instance. Key is "name",
+// "name[instanceId]" when multi-instance, prefixed by the owner path when
+// nested ("group/leader"). In a prediction, only the fields set are compared.
 type component struct {
 	Key         string   `json:"key"`
 	Replicas    *int32   `json:"replicas,omitempty"`
@@ -96,9 +64,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// The extraction flags cannot do anything without a workload. Refusing the
-	// combination keeps a dropped --workload from exiting 0 having checked
-	// nothing it was asked to check.
+	// Refused rather than ignored, so a dropped --workload cannot exit 0.
 	if workloadPath == "" {
 		for flagName, set := range map[string]bool{"--predict": predictPath != "", "--dump": dumpPath != "", "--strict": strict} {
 			if set {
@@ -125,8 +91,7 @@ func run(ctx context.Context, kartaPath, workloadPath, predictPath, dumpPath str
 		return 1, fmt.Errorf("parse Karta definition: %w", err)
 	}
 
-	// Validate before building, so a structural error is reported as such rather
-	// than surfacing later as an extraction failure.
+	// Validate first, so a structural error is not reported as an extraction failure.
 	if err := v1alpha1.NewKartaValidator(karta).Validate(); err != nil {
 		return 1, fmt.Errorf("Karta definition is not valid: %w", err)
 	}
@@ -157,10 +122,8 @@ func run(ctx context.Context, kartaPath, workloadPath, predictPath, dumpPath str
 	if wt.Status != nil {
 		observed.Status = wt.Status.Phases
 	}
-	// noInstances is collected during the walk rather than from wt.Children, so
-	// a nested component whose instanceIdPath matched nothing is caught too. Such
-	// a node contributes no rows to observed.Components, so it is invisible
-	// everywhere else in the report.
+	// Collected during the walk, not from wt.Children, to catch nested components.
+	// A node with no instances contributes no rows, so nothing else reports it.
 	var noInstances []string
 	var walk func(prefix string, nodes []tree.ComponentNode)
 	walk = func(prefix string, nodes []tree.ComponentNode) {
@@ -213,8 +176,7 @@ func run(ctx context.Context, kartaPath, workloadPath, predictPath, dumpPath str
 	}
 	walk("", wt.Children)
 
-	// The resolver reports the Undefined status explicitly when no rule matched,
-	// so an unresolved status is either an empty list or exactly that value.
+	// The resolver reports Undefined explicitly, so unresolved is empty or that value.
 	unresolved := len(observed.Status) == 0 ||
 		(len(observed.Status) == 1 && observed.Status[0] == string(v1alpha1.UndefinedStatus))
 
@@ -231,8 +193,6 @@ func run(ctx context.Context, kartaPath, workloadPath, predictPath, dumpPath str
 	}
 	fmt.Println()
 
-	// Every warning is a valid-but-empty extraction: the definition passed
-	// validation and still produced nothing usable at that point.
 	var warnings []string
 	if unresolved {
 		warnings = append(warnings, "status is unresolved: no rule in statusDefinition matched this object")
@@ -296,8 +256,7 @@ func run(ctx context.Context, kartaPath, workloadPath, predictPath, dumpPath str
 	return 0, nil
 }
 
-// compare checks only what the prediction declares, so a prediction may cover a
-// single component or a single field without having to restate the whole tree.
+// compare checks only what the prediction declares, so a partial prediction is valid.
 func compare(predicted, observed observation) []string {
 	byKey := make(map[string]component, len(observed.Components))
 	for _, c := range observed.Components {
