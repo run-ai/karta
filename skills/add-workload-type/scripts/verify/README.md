@@ -3,12 +3,29 @@
 
 # verify
 
-Proves a Karta definition against a real workload object, offline.
+Validates a Karta definition, and optionally proves it against a real workload
+object. Offline, no cluster.
 
-`KartaValidator` proves a definition is well formed. It does not prove that any
-jq path resolves against a real object, so a definition can pass validation and
-still extract nothing. This command validates the definition, runs it against a
-real custom resource, and reports what came out.
+## Validate
+
+Every definition should pass this:
+
+```bash
+go run . --karta ./mydef.yaml
+```
+
+It runs `KartaValidator` and exits 0 when the definition is well formed, or 1
+with the validator's message otherwise.
+
+## Prove it against a real CR
+
+Validation says nothing about whether a jq path resolves against a real object,
+so a definition can pass it and still extract nothing. Adding `--workload` runs
+the definition against a real custom resource and reports what came out.
+
+```bash
+go run . --karta ./mydef.yaml --workload ./real-cr.yaml
+```
 
 ## Predict first
 
@@ -41,10 +58,14 @@ components:
 | Flag | Purpose |
 |---|---|
 | `--karta` | Path to the Karta definition. Required. |
-| `--workload` | Path to a real workload manifest. Required. |
-| `--predict` | Predictions file to check the extraction against. |
-| `--dump` | Write the observed extraction, in predictions format. |
-| `--strict` | Exit non-zero when the run reports warnings. |
+| `--workload` | Path to a real workload manifest. Without it, validation only. |
+| `--predict` | Predictions file to check the extraction against. Requires `--workload`. |
+| `--dump` | Write the observed extraction, in predictions format. Requires `--workload`. |
+| `--strict` | Exit non-zero when the run reports warnings. Requires `--workload`. |
+
+The three extraction flags cannot do anything without a workload, so passing one
+without it is an error rather than a pass. A dropped `--workload` must not look
+like success.
 
 Exit codes: 0 success, 1 load or validation failure, 2 prediction mismatch,
 3 warnings under `--strict`. Note that `go run` reports a non-zero program exit

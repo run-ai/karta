@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Package main verifies a Karta definition against a real workload object.
+// Package main validates a Karta definition, and optionally runs it against a
+// real workload object.
 //
-// Structural validation proves a definition is well formed. It does not prove
-// that any jq path resolves against a real object, so a definition can validate
-// and still extract nothing. This command closes that gap: it validates the
-// definition, runs it against a real custom resource, and reports what was
-// actually extracted.
+// With --karta alone it runs KartaValidator and reports whether the definition
+// is well formed. That is the check every definition should pass.
+//
+// Structural validation does not prove that any jq path resolves against a real
+// object, so a definition can validate and still extract nothing. Adding
+// --workload closes that gap: the definition is run against a real custom
+// resource and what it extracted is reported.
 //
 // Predict before you run. Write the values expected from the CR into a
 // predictions file and pass --predict. The command compares the prediction to
@@ -16,15 +19,19 @@
 //
 // Usage (from this directory):
 //
-//	go run . --karta <definition.yaml> --workload <real-cr.yaml> [flags]
+//	go run . --karta <definition.yaml>                          # validate only
+//	go run . --karta <definition.yaml> --workload <real-cr.yaml> # and extract
 //
 // Flags:
 //
 //	--karta     path to the Karta definition (required)
-//	--workload  path to a real workload manifest (required)
+//	--workload  path to a real workload manifest; without it, validation only
 //	--predict   path to a predictions file to check the extraction against
 //	--dump      write the observed extraction to this path, in predictions format
 //	--strict    exit non-zero when the extraction reports warnings
+//
+// The extraction flags require --workload. Passing one without it is an error
+// rather than a pass, so a dropped --workload cannot look like success.
 //
 // Exit codes: 0 success, 1 load or validation failure, 2 prediction mismatch,
 // 3 warnings under --strict.
@@ -72,19 +79,33 @@ func main() {
 	var kartaPath, workloadPath, predictPath, dumpPath string
 	var strict bool
 	flag.StringVar(&kartaPath, "karta", "", "path to the Karta definition (required)")
-	flag.StringVar(&workloadPath, "workload", "", "path to a real workload manifest (required)")
+	flag.StringVar(&workloadPath, "workload", "", "path to a real workload manifest; without it, validation only")
 	flag.StringVar(&predictPath, "predict", "", "path to a predictions file to check the extraction against")
 	flag.StringVar(&dumpPath, "dump", "", "write the observed extraction to this path, in predictions format")
 	flag.BoolVar(&strict, "strict", false, "exit non-zero when the extraction reports warnings")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: go run . --karta <definition.yaml> --workload <real-cr.yaml> [flags]\n\nFlags:\n")
+		fmt.Fprintf(os.Stderr, "Usage:\n"+
+			"  go run . --karta <definition.yaml>                           validate only\n"+
+			"  go run . --karta <definition.yaml> --workload <real-cr.yaml> validate and extract\n\nFlags:\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 
-	if kartaPath == "" || workloadPath == "" {
+	if kartaPath == "" {
 		flag.Usage()
 		os.Exit(1)
+	}
+
+	// The extraction flags cannot do anything without a workload. Refusing the
+	// combination keeps a dropped --workload from exiting 0 having checked
+	// nothing it was asked to check.
+	if workloadPath == "" {
+		for flagName, set := range map[string]bool{"--predict": predictPath != "", "--dump": dumpPath != "", "--strict": strict} {
+			if set {
+				fmt.Fprintf(os.Stderr, "error: %s requires --workload\n", flagName)
+				os.Exit(1)
+			}
+		}
 	}
 
 	code, err := run(context.Background(), kartaPath, workloadPath, predictPath, dumpPath, strict)
@@ -110,6 +131,12 @@ func run(ctx context.Context, kartaPath, workloadPath, predictPath, dumpPath str
 		return 1, fmt.Errorf("Karta definition is not valid: %w", err)
 	}
 	fmt.Printf("=== Validation ===\n  %s is structurally valid\n\n", kartaPath)
+
+	if workloadPath == "" {
+		fmt.Printf("No --workload given, so the definition was not run against a real object.\n" +
+			"It is structurally valid; whether its jq paths resolve is still unproven.\n")
+		return 0, nil
+	}
 
 	workloadYAML, err := os.ReadFile(workloadPath)
 	if err != nil {

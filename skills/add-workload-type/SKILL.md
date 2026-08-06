@@ -39,8 +39,9 @@ Load these as needed. Do not guess field names or rules; confirm them here.
   the closest existing sample under `docs/samples/`. Start here in step 2.
 - `reference/troubleshooting.md` - every validator, jq, and runtime error mapped
   to its cause and fix, plus the mistakes that pass validation but behave wrong.
-- `scripts/verify/` - the offline harness used in step 7. Validates a definition,
-  runs it against a real CR, and checks the extraction against predicted values.
+- `scripts/verify/` - the offline harness. Validates a definition (step 6) and,
+  given a real CR, runs it and checks the extraction against predicted values
+  (step 7).
 
 ## Workflow
 
@@ -52,13 +53,14 @@ documentation to get them right.
 Ask the user for two inputs up front:
 
 - The CRD schema (`kubectl get crd <name> -o yaml`, or the operator's API types).
+  This is what the definition is written from.
 - At least one real example CR (`kubectl get <kind> <name> -o yaml`), ideally one
-  that is running and one that has finished. Step 7 runs the definition against
-  it. A definition written from the schema alone is unverified, because a jq path
-  can be structurally valid and still point at a field no real object carries.
+  that is running and one that has finished. This is optional but valuable: it
+  unlocks step 7, which is the only way to prove the paths resolve. A jq path can
+  be structurally valid and still point at a field no real object carries.
 
-If the user cannot supply a real CR, continue, but say plainly at the end that
-the definition was never exercised and which parts are unverified.
+Proceed either way. Without a CR the definition can still be written and
+validated; it just cannot be exercised, which step 7 covers.
 
 From those inputs, establish:
 
@@ -134,13 +136,21 @@ workload's own conditions or phases into Karta's normalized statuses:
   `byExpression`, in which case all of them must hold (AND). Map only the
   statuses the workload actually reports.
 
-### 6. Self-check against the validator
+### 6. Validate the definition
 
-This checklist is structural only. It confirms the definition is well formed. It
-does not prove that any path resolves against a real object, so it cannot replace
-step 7.
+Always run the validator on the definition just written. Do not hand back a
+definition that has not passed it.
 
-Before finishing, confirm each item:
+```bash
+cd scripts/verify
+go run . --karta <definition.yaml>
+```
+
+It exits 0 when the definition is well formed, and non-zero with the validator's
+message otherwise. Look any failure up in `reference/troubleshooting.md` by the
+message text, fix it, and run again.
+
+The validator enforces these, so there is no need to check them by eye:
 
 - All kinds use a full GVK (only `Pod` may omit the group).
 - The root component has a `statusDefinition` and no `ownerRef`.
@@ -150,29 +160,40 @@ Before finishing, confirm each item:
 - No component sets more than one of the three spec patterns.
 - `instanceIdPath` and a `componentInstanceSelector` are either both present or
   both absent on a component.
+- Every jq expression parses and uses no rejected construct.
+
+These it cannot check. Confirm each one:
+
 - Pod selectors reference pod fields, not workload fields. Selectors of the same
   kind must be mutually exclusive across components so a pod maps to one component
-  of that kind; different selector kinds may coexist on a component. This is an
-  authoring guideline, not a validator check. Verify role-label keys against the
-  controller's real pod labels (they are operator-specific), and when two roles
-  share a label, disambiguate by matching a key only one role carries (key
-  existence).
+  of that kind; different selector kinds may coexist on a component. Verify
+  role-label keys against the controller's real pod labels (they are
+  operator-specific), and when two roles share a label, disambiguate by matching
+  a key only one role carries (key existence).
 - Status conditions and phases match the workload's real API.
-- Every gang-scheduling member names a defined component.
+- Every gang-scheduling `componentName` names a defined component. The validator
+  checks this only for the deprecated `podGroups` format; references under
+  `podGroup.subGroups` are not checked, so verify those by hand.
+- Replica counts describe the right level of the tree, and siblings at the same
+  level agree. See the scale section of `reference/technical-guide.md`.
 
-If a check fails or a later error appears, look it up in
-`reference/troubleshooting.md` by the message text.
+A valid definition is still an unproven one: validation says nothing about
+whether a path resolves against a real object. Step 7 is what proves that.
 
-### 7. Run the definition against the real CR
+### 7. Run the definition against a real CR (optional)
 
-Reading the YAML back is not verification. A path can pass every check in step 6,
-resolve to null against the real object, and produce a definition that reports
-nothing. Prove it against the CR instead.
+Do this whenever the user supplied a real CR. It is the only step that proves a
+path resolves: a definition can pass step 6 in full, resolve to null against the
+real object, and report nothing.
 
-Use `scripts/verify/`, bundled with this skill. It validates the definition,
-builds the workload tree from a real manifest, and prints the extracted status,
-replica counts, and containers per component instance, with no cluster involved.
-`reference` for its flags and predictions format is `scripts/verify/README.md`.
+When no CR is available, skip the step and say so in the final answer. The
+definition is structurally valid and never exercised, and which parts are
+unverified should be stated plainly rather than left for someone to discover.
+
+The same command does it, with `--workload` added. It builds the workload tree
+from the manifest and prints the extracted status, replica counts, and containers
+per component instance, with no cluster involved. Its flags and the predictions
+format are documented in `scripts/verify/README.md`.
 
 Predict before running. Writing down the expected values first is the point of
 this step: reading the output afterwards invites accepting whatever appears,
