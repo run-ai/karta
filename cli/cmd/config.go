@@ -21,11 +21,8 @@ const (
 	configFileName = "config.yaml"
 )
 
-// Config holds all persistent CLI preferences. Code reads config.Foo, never flags or env vars directly.
 type Config struct {
-	Namespace  string `mapstructure:"namespace"`
-	Kubeconfig string `mapstructure:"kubeconfig"`
-	Output     string `mapstructure:"output"`
+	Output string `mapstructure:"output" yaml:"output" json:"output"`
 }
 
 // config is the single source of truth set by PersistentPreRunE before each RunE.
@@ -82,18 +79,8 @@ func buildConfig(cmd *cobra.Command) (*Config, error) {
 		return nil, err
 	}
 
-	if f := cmd.Root().PersistentFlags().Lookup(flagKubeconfig); f != nil {
-		if err := v.BindPFlag(flagKubeconfig, f); err != nil {
-			return nil, err
-		}
-	}
 	if f := cmd.Root().PersistentFlags().Lookup(flagOutput); f != nil {
 		if err := v.BindPFlag(flagOutput, f); err != nil {
-			return nil, err
-		}
-	}
-	if f := cmd.Flags().Lookup(flagNamespace); f != nil {
-		if err := v.BindPFlag(flagNamespace, f); err != nil {
 			return nil, err
 		}
 	}

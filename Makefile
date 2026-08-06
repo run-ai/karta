@@ -10,6 +10,10 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
+CLI_LOCALBIN ?= $(shell pwd)/cli/bin
+$(CLI_LOCALBIN):
+	mkdir -p $(CLI_LOCALBIN)
+
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 KARTA_CHART_DIR := $(PROJECT_DIR)/charts/karta
 KARTA_CRDS_DIR := $(KARTA_CHART_DIR)/crds
@@ -122,8 +126,8 @@ download-dependencies:
 ##@ CLI
 
 .PHONY: cli-build
-cli-build: $(LOCALBIN) ## Build the karta CLI binary.
-	cd cli && go build -o $(LOCALBIN)/karta .
+cli-build: $(CLI_LOCALBIN) ## Build the karta CLI binary.
+	cd cli && go build -o $(CLI_LOCALBIN)/karta .
 
 .PHONY: cli-test
 cli-test: ## Run the CLI unit tests.

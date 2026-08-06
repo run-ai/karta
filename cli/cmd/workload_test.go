@@ -9,12 +9,14 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 // newTestTree wires the workload command (which owns the namespace flag) under
 // a bare root, plus a dummy runnable subcommand that inherits the flag.
 func newTestTree() (*cobra.Command, *bytes.Buffer) {
 	root := &cobra.Command{Use: "root", SilenceUsage: true, SilenceErrors: true}
+	genericclioptions.NewConfigFlags(true).AddFlags(root.PersistentFlags())
 
 	wl := newWorkloadCommand()
 	wl.AddCommand(&cobra.Command{

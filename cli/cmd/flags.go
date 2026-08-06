@@ -7,20 +7,15 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 const (
-	flagConfig     = "config"
-	flagKubeconfig = "kubeconfig"
-	flagNamespace  = "namespace"
-	flagOutput     = "output"
+	flagConfig = "config"
+	flagOutput = "output"
 )
 
-// withKubeconfig registers the --kubeconfig persistent flag on cmd.
-func withKubeconfig(cmd *cobra.Command) {
-	cmd.PersistentFlags().String(flagKubeconfig, "",
-		"Path to the kubeconfig file to use (defaults to $KUBECONFIG or ~/.kube/config)")
-}
+var kubeFlags *genericclioptions.ConfigFlags
 
 // withOutput registers the -o/--output enum persistent flag on cmd, backed by
 // generator.Output, along with its shell completion.
@@ -32,12 +27,6 @@ func withOutput(cmd *cobra.Command) {
 		func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 			return out.Allowed(), cobra.ShellCompDirectiveNoFileComp
 		}))
-}
-
-// withNamespace registers the -n/--namespace persistent flag on cmd.
-func withNamespace(cmd *cobra.Command) {
-	cmd.PersistentFlags().StringP(flagNamespace, "n", "",
-		"Namespace scope for workload commands")
 }
 
 // withConfig registers the --config persistent flag on cmd.

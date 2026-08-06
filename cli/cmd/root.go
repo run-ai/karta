@@ -6,11 +6,14 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 // NewRootCommand builds the root command for the karta binary. Global flags are
 // registered as persistent flags so every subcommand inherits them.
 func NewRootCommand() *cobra.Command {
+	kubeFlags = genericclioptions.NewConfigFlags(true)
+
 	cmd := &cobra.Command{
 		Use:   "karta",
 		Short: "Workload-aware visibility for any Kubernetes workload type",
@@ -28,7 +31,7 @@ func NewRootCommand() *cobra.Command {
 		},
 	}
 
-	withKubeconfig(cmd)
+	kubeFlags.AddFlags(cmd.PersistentFlags())
 	withOutput(cmd)
 	withConfig(cmd)
 

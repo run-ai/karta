@@ -19,7 +19,7 @@ var _ = Describe("config loading", func() {
 		dir = GinkgoT().TempDir()
 		DeferCleanup(os.Setenv, "HOME", os.Getenv("HOME"))
 		Expect(os.Setenv("HOME", GinkgoT().TempDir())).To(Succeed())
-		for _, key := range []string{"KARTA_CONFIG", "KARTA_OUTPUT", "KARTA_NAMESPACE", "KARTA_KUBECONFIG"} {
+		for _, key := range []string{"KARTA_CONFIG", "KARTA_OUTPUT"} {
 			DeferCleanup(os.Setenv, key, os.Getenv(key))
 			Expect(os.Unsetenv(key)).To(Succeed())
 		}
@@ -28,8 +28,6 @@ var _ = Describe("config loading", func() {
 	Context("config file resolution", func() {
 		It("reads the default path from HOME", func() {
 			home := GinkgoT().TempDir()
-			DeferCleanup(os.Setenv, "HOME", os.Getenv("HOME"))
-			DeferCleanup(os.Setenv, "KARTA_CONFIG", os.Getenv("KARTA_CONFIG"))
 			Expect(os.Setenv("HOME", home)).To(Succeed())
 			Expect(os.Setenv("KARTA_CONFIG", "")).To(Succeed())
 			Expect(os.MkdirAll(filepath.Join(home, ".karta"), 0755)).To(Succeed())
@@ -65,8 +63,6 @@ var _ = Describe("config loading", func() {
 		})
 
 		It("ignores a missing default config", func() {
-			DeferCleanup(os.Setenv, "HOME", os.Getenv("HOME"))
-			DeferCleanup(os.Setenv, "KARTA_CONFIG", os.Getenv("KARTA_CONFIG"))
 			Expect(os.Setenv("HOME", GinkgoT().TempDir())).To(Succeed())
 			Expect(os.Setenv("KARTA_CONFIG", "")).To(Succeed())
 
@@ -140,40 +136,6 @@ var _ = Describe("config loading", func() {
 		})
 	})
 
-	Context("namespace precedence", func() {
-		var cfg string
-
-		BeforeEach(func() {
-			cfg = filepath.Join(dir, "config.yaml")
-			writeFile(cfg, "namespace: my-team\n")
-		})
-
-		It("defaults to empty", func() {
-			Expect(runOnWorkload([]string{"workload", "noop"})).To(Succeed())
-			Expect(config.Namespace).To(BeEmpty())
-		})
-
-		It("config file sets namespace", func() {
-			Expect(runOnWorkload([]string{"--config", cfg, "workload", "noop"})).To(Succeed())
-			Expect(config.Namespace).To(Equal("my-team"))
-		})
-
-		It("env var overrides the config file", func() {
-			Expect(os.Setenv("KARTA_NAMESPACE", "env-team")).To(Succeed())
-			DeferCleanup(os.Unsetenv, "KARTA_NAMESPACE")
-
-			Expect(runOnWorkload([]string{"--config", cfg, "workload", "noop"})).To(Succeed())
-			Expect(config.Namespace).To(Equal("env-team"))
-		})
-
-		It("explicit flag overrides the env var", func() {
-			Expect(os.Setenv("KARTA_NAMESPACE", "env-team")).To(Succeed())
-			DeferCleanup(os.Unsetenv, "KARTA_NAMESPACE")
-
-			Expect(runOnWorkload([]string{"--config", cfg, "workload", "-n", "flag-team", "noop"})).To(Succeed())
-			Expect(config.Namespace).To(Equal("flag-team"))
-		})
-	})
 })
 
 func runWithConfig(args ...string) (*Config, error) {
@@ -187,27 +149,6 @@ func runWithConfig(args ...string) (*Config, error) {
 	root.SetArgs(args)
 	err := root.Execute()
 	return config, err
-}
-
-// runOnWorkload builds a fresh root+workload+noop tree and executes args.
-// Cobra commands can only Execute once, so a fresh tree is required per call.
-func runOnWorkload(args []string) error {
-	GinkgoHelper()
-	root := NewRootCommand()
-	for _, sub := range root.Commands() {
-		if sub.Use == "workload" {
-			sub.AddCommand(&cobra.Command{
-				Use:  "noop",
-				RunE: func(*cobra.Command, []string) error { return nil },
-			})
-			root.SetOut(nil)
-			root.SetErr(nil)
-			root.SetArgs(args)
-			return root.Execute()
-		}
-	}
-	Fail("workload subcommand not found")
-	return nil
 }
 
 func writeFile(path, content string) {
