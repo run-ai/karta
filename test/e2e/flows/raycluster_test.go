@@ -15,10 +15,12 @@ import (
 
 var _ = Describe("RayCluster", Ordered, Label("kuberay", "raycluster"), func() {
 	var rec *recorder.Recorder
+	var fx recorder.Fixture
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/ray-io-raycluster-v1.yaml", "ray-io-raycluster-v1")
-		rec = recorder.New(cfg, "kuberay", operatorVersion("kuberay"), "ray-io-raycluster-v1", "../../docs/catalog/ray-io-raycluster-v1.yaml").
+		fx = recorder.Fixture{Operator: "kuberay", Version: operatorVersion("kuberay"), KartaName: "ray-io-raycluster-v1", KartaFile: "../../docs/catalog/ray-io-raycluster-v1.yaml"}
+		rec = recorder.New(cfg).
 			SetTimeout(8*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, RayInitializing()).
 			AddState(kartav1alpha1.RunningStatus, PhaseEq("ready", "status", "state")).
@@ -26,19 +28,22 @@ var _ = Describe("RayCluster", Ordered, Label("kuberay", "raycluster"), func() {
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "running", "testdata/raycluster/running.yaml").
+		out, err := recorder.NewFlow(rec, "running", "testdata/raycluster/running.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("suspended", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "suspended", "testdata/raycluster/suspended.yaml").Reaches(kartav1alpha1.SuspendedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "suspended", "testdata/raycluster/suspended.yaml").Reaches(kartav1alpha1.SuspendedStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("resumed", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "resumed", "testdata/raycluster/resumed.yaml").
+		out, err := recorder.NewFlow(rec, "resumed", "testdata/raycluster/resumed.yaml").
 			At(kartav1alpha1.SuspendedStatus).Do(Resume()).Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 })

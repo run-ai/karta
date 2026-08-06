@@ -15,18 +15,21 @@ import (
 
 var _ = Describe("KnativeService", Ordered, Label("knative"), func() {
 	var rec *recorder.Recorder
+	var fx recorder.Fixture
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/serving-knative-dev-service-v1.yaml", "serving-knative-dev-service-v1")
-		rec = recorder.New(cfg, "knative", operatorVersion("knative"), "serving-knative-dev-service-v1", "../../docs/catalog/serving-knative-dev-service-v1.yaml").
+		fx = recorder.Fixture{Operator: "knative", Version: operatorVersion("knative"), KartaName: "serving-knative-dev-service-v1", KartaFile: "../../docs/catalog/serving-knative-dev-service-v1.yaml"}
+		rec = recorder.New(cfg).
 			SetTimeout(5*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, CondStatus("Ready", "Unknown")).
 			AddState(kartav1alpha1.RunningStatus, CondTrue("Ready"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "running", "testdata/knative/running.yaml").
+		out, err := recorder.NewFlow(rec, "running", "testdata/knative/running.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 })

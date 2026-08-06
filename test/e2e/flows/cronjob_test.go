@@ -13,30 +13,35 @@ import (
 
 var _ = Describe("CronJob (built-in)", Ordered, Label("cronjob", "builtin"), func() {
 	var rec *recorder.Recorder
+	var fx recorder.Fixture
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/batch-cronjob-v1.yaml", "batch-cronjob-v1")
-		rec = recorder.New(cfg, "cronjob", operatorVersion("cronjob"), "batch-cronjob-v1", "../../docs/catalog/batch-cronjob-v1.yaml").
+		fx = recorder.Fixture{Operator: "cronjob", Version: operatorVersion("cronjob"), KartaName: "batch-cronjob-v1", KartaFile: "../../docs/catalog/batch-cronjob-v1.yaml"}
+		rec = recorder.New(cfg).
 			AddState(kartav1alpha1.InitializingStatus, Absent("status", "lastScheduleTime")).
 			AddState(kartav1alpha1.RunningStatus, CronjobFired()).
 			AddState(kartav1alpha1.SuspendedStatus, BoolTrue("spec", "suspend"))
 	})
 
 	It("initializing", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "initializing", "testdata/cronjob/initializing.yaml").
+		out, err := recorder.NewFlow(rec, "initializing", "testdata/cronjob/initializing.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "running", "testdata/cronjob/running.yaml").
+		out, err := recorder.NewFlow(rec, "running", "testdata/cronjob/running.yaml").
 			Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("suspended", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "suspended", "testdata/cronjob/suspended.yaml").
+		out, err := recorder.NewFlow(rec, "suspended", "testdata/cronjob/suspended.yaml").
 			Reaches(kartav1alpha1.SuspendedStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 })

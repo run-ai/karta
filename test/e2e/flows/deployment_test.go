@@ -13,36 +13,41 @@ import (
 
 var _ = Describe("Deployment (built-in)", Ordered, Label("deployment", "builtin"), func() {
 	var rec *recorder.Recorder
+	var fx recorder.Fixture
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/apps-deployment-v1.yaml", "apps-deployment-v1")
-		rec = recorder.New(cfg, "deployment", operatorVersion("deployment"), "apps-deployment-v1", "../../docs/catalog/apps-deployment-v1.yaml").
+		fx = recorder.Fixture{Operator: "deployment", Version: operatorVersion("deployment"), KartaName: "apps-deployment-v1", KartaFile: "../../docs/catalog/apps-deployment-v1.yaml"}
+		rec = recorder.New(cfg).
 			AddState(kartav1alpha1.InitializingStatus, AllOf(CondTrue("Progressing"), CondNotTrue("Available"))).
 			AddState(kartav1alpha1.RunningStatus, CondReason("Progressing", "NewReplicaSetAvailable")).
 			AddState(kartav1alpha1.FailedStatus, CondFalse("Progressing"))
 	})
 
 	It("scaled", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "scaled", "testdata/deployment/running.yaml").
+		out, err := recorder.NewFlow(rec, "scaled", "testdata/deployment/running.yaml").
 			Maybe(kartav1alpha1.InitializingStatus). // startup, before the first Running (Deployment stays Running while scaling)
 			At(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(3)).
 			At(kartav1alpha1.RunningStatus).When(ReplicasReady(3)).Do(ScaleReplicas(1)).
 			At(kartav1alpha1.RunningStatus).WaitUntil(ReplicasReady(1)).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	// Bad image, no progress deadline: Progressing stays True with Available False, read as Initializing.
 	It("initializing", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "initializing", "testdata/deployment/initializing.yaml").
+		out, err := recorder.NewFlow(rec, "initializing", "testdata/deployment/initializing.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	// Pinned to a nonexistent node with a 10s progress deadline: Progressing=False/ProgressDeadlineExceeded,
 	// read as Failed. It passes through Initializing first.
 	It("failed", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "failed", "testdata/deployment/failed.yaml").
+		out, err := recorder.NewFlow(rec, "failed", "testdata/deployment/failed.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 })

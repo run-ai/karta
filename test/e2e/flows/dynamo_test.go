@@ -15,26 +15,30 @@ import (
 
 var _ = Describe("DynamoGraphDeployment", Ordered, Label("dynamo"), func() {
 	var rec *recorder.Recorder
+	var fx recorder.Fixture
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml", "nvidia-com-dynamographdeployment-v1alpha1")
 		// The decode worker pulls env from hf-token-secret; the operator reads it from the workload's own
 		// namespace, so seed it here (up.sh only creates it in default).
 		ensureSecret(ctx, "hf-token-secret", map[string]string{"HF_TOKEN": "dummy"})
-		rec = recorder.New(cfg, "dynamo", operatorVersion("dynamo"), "nvidia-com-dynamographdeployment-v1alpha1", "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml").
+		fx = recorder.Fixture{Operator: "dynamo", Version: operatorVersion("dynamo"), KartaName: "nvidia-com-dynamographdeployment-v1alpha1", KartaFile: "../../docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml"}
+		rec = recorder.New(cfg).
 			SetTimeout(8*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, PhaseAny([]string{"initializing", "pending", ""}, "status", "state")).
 			AddState(kartav1alpha1.RunningStatus, PhaseEq("successful", "status", "state"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "running", "testdata/dynamo/running.yaml").
+		out, err := recorder.NewFlow(rec, "running", "testdata/dynamo/running.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("initializing", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "initializing", "testdata/dynamo/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "initializing", "testdata/dynamo/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 })

@@ -40,23 +40,24 @@ type Config struct {
 	Timeout   time.Duration // per-flow deadline; zero uses defaultTimeout
 }
 
-// Recorder records the flows of one workload type: build and Run a Flow per case.
-type Recorder struct {
-	config    Config
-	operator  string // operator key, e.g. "batch-job"; stamped as Recording.Operator
-	version   string // operator version, resolved by the suite; stamped as Recording.Version
-	kartaName string // Karta definition name; stamped as Recording.KartaName
-	kartaFile string // repo-relative path to the Karta definition, for the replay golden
-	states    []namedState
-	timeout   time.Duration
+// Fixture is a recording's catalog identity: where it files under the fixtures tree, and which Karta
+// definition the replay checks it against. Save-time labeling; the recorder never reads it while driving.
+type Fixture struct {
+	Operator  string // operator key, e.g. "deployment"
+	Version   string // operator version, resolved by the suite
+	KartaName string // Karta definition name
+	KartaFile string // repo-relative path to the Karta definition, read by the replay golden
 }
 
-// New starts a recorder from cfg; version is stamped on the recording and kartaFile is recorded as metadata
-// for the replay golden (neither path is read here).
-func New(cfg Config, operator, version, kartaName, kartaFile string) *Recorder {
-	if operator == "" || version == "" || kartaName == "" || kartaFile == "" {
-		panic("recorder: New needs a non-empty operator, version, kartaName, and kartaFile")
-	}
+// Recorder records the flows of one workload type: build and Run a Flow per case, then Save each Recording.
+type Recorder struct {
+	config  Config
+	states  []namedState
+	timeout time.Duration
+}
+
+// New starts a recorder from cfg. Build flows on it and Run them; Save writes each Recording under cfg.OutputDir.
+func New(cfg Config) *Recorder {
 	if cfg.OutputDir == "" {
 		panic("recorder: New needs a non-empty Config.OutputDir")
 	}
@@ -67,14 +68,7 @@ func New(cfg Config, operator, version, kartaName, kartaFile string) *Recorder {
 	if cfg.Timeout > 0 {
 		timeout = cfg.Timeout
 	}
-	return &Recorder{
-		config:    cfg,
-		operator:  operator,
-		version:   version,
-		kartaName: kartaName,
-		kartaFile: kartaFile,
-		timeout:   timeout,
-	}
+	return &Recorder{config: cfg, timeout: timeout}
 }
 
 // AddState registers a state predicate; declare states least- to most-advanced (classify keeps the furthest match).
@@ -98,8 +92,8 @@ func (r *Recorder) SetTimeout(d time.Duration) *Recorder {
 	return r
 }
 
-// Run creates the workload, drives it through the journey, and writes the recording. On a flow-level failure
-// the recording is still written (succeeded:false) for triage.
+// Run creates the workload, drives it through the journey, and returns the recording of what it observed;
+// pass it to Save to persist. On a flow-level failure the recording still comes back (succeeded:false).
 func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 	if len(f.journey) == 0 {
 		return nil, fmt.Errorf("flow %s declares no stops", f.name)
@@ -115,10 +109,7 @@ func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 
 	obs := f.observe(flowCtx, workload)
 	orderErr := observedOrderErr(f.journey, obs.states(), f.want())
-	out, err := f.write(obs, obs.failure == "" && orderErr == nil)
-	if err != nil {
-		return nil, err
-	}
+	out := f.buildRecording(obs, obs.failure == "" && orderErr == nil)
 	if obs.failure != "" {
 		return out, errors.New(obs.failure)
 	}
@@ -167,18 +158,14 @@ func (f *Flow) observe(ctx context.Context, workload *unstructured.Unstructured)
 	return o
 }
 
-// write persists the run under <outputDir>/<operator>/<version>/<kartaName>/<flow>.yaml and returns it: a
-// STATE event per distinct CR, and an ACTION event after a state where the flow performed one.
-func (f *Flow) write(obs *observation, succeeded bool) (*Recording, error) {
-	out := Recording{
+// buildRecording assembles the observed run into a Recording: a STATE event per distinct CR, and an ACTION
+// event after a state where the flow performed one. Save fills in the catalog fields (Operator, Version, ...).
+func (f *Flow) buildRecording(obs *observation, succeeded bool) *Recording {
+	out := &Recording{
 		SchemaVersion: schemaVersion,
-		Operator:      f.rec.operator,
-		Version:       f.rec.version,
-		KartaName:     f.rec.kartaName,
 		Flow:          f.name,
 		Want:          string(f.want()),
 		Succeeded:     succeeded,
-		KartaFile:     strings.TrimPrefix(f.rec.kartaFile, "../../"),
 	}
 	for _, snap := range obs.snapshots {
 		out.Events = append(out.Events, Event{Kind: EventState, State: string(snap.state), Object: significantFields(snap.cr)})
@@ -186,14 +173,30 @@ func (f *Flow) write(obs *observation, succeeded bool) (*Recording, error) {
 			out.Events = append(out.Events, Event{Kind: EventAction, Action: snap.action})
 		}
 	}
+	return out
+}
 
-	out.Path = recordingPath(f.rec.config.OutputDir, out)
-	if err := writeRecording(out.Path, out); err != nil {
-		return nil, fmt.Errorf("write recording %s: %w", out.Path, err)
+// Save stamps fx onto rec and writes it under <OutputDir>/<operator>/<version>/<kartaName>/<flow>.yaml,
+// returning the path. Save every run, passed or failed, so a failed flow still leaves its triage artifact; a
+// nil recording (a flow that errored before observing anything) is a no-op.
+func (r *Recorder) Save(fx Fixture, rec *Recording) (string, error) {
+	if rec == nil {
+		return "", nil
 	}
-	fmt.Fprintf(f.log(), "recorded %s/%s/%s/%s.yaml (%d events %v)\n",
-		f.rec.operator, f.rec.version, f.rec.kartaName, f.name, len(out.Events), obs.states())
-	return &out, nil
+	if fx.Operator == "" || fx.Version == "" || fx.KartaName == "" || fx.KartaFile == "" {
+		panic("recorder: Save needs a non-empty Fixture Operator, Version, KartaName, and KartaFile")
+	}
+	rec.Operator = fx.Operator
+	rec.Version = fx.Version
+	rec.KartaName = fx.KartaName
+	rec.KartaFile = strings.TrimPrefix(fx.KartaFile, "../../")
+	rec.Path = recordingPath(r.config.OutputDir, *rec)
+	if err := writeRecording(rec.Path, *rec); err != nil {
+		return "", fmt.Errorf("write recording %s: %w", rec.Path, err)
+	}
+	fmt.Fprintf(r.config.Log, "recorded %s/%s/%s/%s.yaml (%d events %v)\n",
+		fx.Operator, fx.Version, fx.KartaName, rec.Flow, len(rec.Events), rec.states())
+	return rec.Path, nil
 }
 
 // checkpoints are the journey stops the recorder must reach and act on in order: those carrying an action or

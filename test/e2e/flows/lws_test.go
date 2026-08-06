@@ -13,28 +13,32 @@ import (
 
 var _ = Describe("LeaderWorkerSet", Ordered, Label("lws"), func() {
 	var rec *recorder.Recorder
+	var fx recorder.Fixture
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml", "leaderworkerset-x-k8s-io-leaderworkerset-v1")
-		rec = recorder.New(cfg, "lws", operatorVersion("lws"), "leaderworkerset-x-k8s-io-leaderworkerset-v1", "../../docs/catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml").
+		fx = recorder.Fixture{Operator: "lws", Version: operatorVersion("lws"), KartaName: "leaderworkerset-x-k8s-io-leaderworkerset-v1", KartaFile: "../../docs/catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml"}
+		rec = recorder.New(cfg).
 			AddState(kartav1alpha1.InitializingStatus, AllOf(CondTrue("Progressing"), CondNotTrue("Available"))).
 			AddState(kartav1alpha1.RunningStatus, CondTrue("Available"))
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "running", "testdata/lws/running.yaml").
+		out, err := recorder.NewFlow(rec, "running", "testdata/lws/running.yaml").
 			Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("scaled", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "scaled", "testdata/lws/scaled.yaml").
+		out, err := recorder.NewFlow(rec, "scaled", "testdata/lws/scaled.yaml").
 			Maybe(kartav1alpha1.InitializingStatus).
 			At(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(2)).
 			Maybe(kartav1alpha1.InitializingStatus).
 			At(kartav1alpha1.RunningStatus).When(ReplicasReady(2)).Do(ScaleReplicas(1)).
 			Maybe(kartav1alpha1.InitializingStatus).
 			At(kartav1alpha1.RunningStatus).WaitUntil(ReplicasReady(1)).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 })

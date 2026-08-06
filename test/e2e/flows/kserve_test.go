@@ -15,10 +15,12 @@ import (
 
 var _ = Describe("KServe InferenceService", Ordered, Label("kserve"), func() {
 	var rec *recorder.Recorder
+	var fx recorder.Fixture
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml", "serving-kserve-io-inferenceservice-v1beta1")
-		rec = recorder.New(cfg, "kserve", operatorVersion("kserve"), "serving-kserve-io-inferenceservice-v1beta1", "../../docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml").
+		fx = recorder.Fixture{Operator: "kserve", Version: operatorVersion("kserve"), KartaName: "serving-kserve-io-inferenceservice-v1beta1", KartaFile: "../../docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml"}
+		rec = recorder.New(cfg).
 			SetTimeout(6*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, CondPending("Ready")).
 			AddState(kartav1alpha1.RunningStatus, CondTrue("Ready")).
@@ -26,16 +28,18 @@ var _ = Describe("KServe InferenceService", Ordered, Label("kserve"), func() {
 	})
 
 	It("running", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "running", "testdata/kserve/running.yaml").
+		out, err := recorder.NewFlow(rec, "running", "testdata/kserve/running.yaml").
 			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	// Custom predictor with a nonexistent-registry image: PredictorReady/PredictorConfigurationReady/
 	// RoutesReady all False -> Failed.
 	It("failed", func(ctx SpecContext) {
-		_, err := recorder.NewFlow(rec, "failed", "testdata/kserve/failed.yaml").
+		out, err := recorder.NewFlow(rec, "failed", "testdata/kserve/failed.yaml").
 			Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
+		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 })
