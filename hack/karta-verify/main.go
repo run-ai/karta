@@ -93,7 +93,7 @@ func run(ctx context.Context, kartaPath, workloadPath, predictPath, dumpPath str
 
 	// Validate first, so a structural error is not reported as an extraction failure.
 	if err := v1alpha1.NewKartaValidator(karta).Validate(); err != nil {
-		return 1, fmt.Errorf("Karta definition is not valid: %w", err)
+		return 1, fmt.Errorf("invalid Karta definition: %w", err)
 	}
 	fmt.Printf("=== Validation ===\n  %s is structurally valid\n\n", kartaPath)
 
