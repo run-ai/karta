@@ -35,7 +35,7 @@ const (
 )
 
 // Event is one entry in the stream: a STATE event carries the full object and its own-fields state; an
-// ACTION event carries the mutation the flow fired to drive the next transition.
+// ACTION event carries the mutation the flow performed to drive the next transition.
 type Event struct {
 	Kind   string          `json:"kind"`
 	State  string          `json:"state,omitempty"`
@@ -43,7 +43,7 @@ type Event struct {
 	Action *RecordedAction `json:"action,omitempty"`
 }
 
-// RecordedAction is a mutation fired between states.
+// RecordedAction is a mutation performed between states.
 type RecordedAction struct {
 	Name      string    `json:"name"`
 	Operation Operation `json:"operation"`

@@ -153,7 +153,7 @@ func (f *Flow) deleteWorkload(ctx context.Context, workload *unstructured.Unstru
 func (f *Flow) observe(ctx context.Context, workload *unstructured.Unstructured) *observation {
 	o := &observation{flow: f, workload: workload, pending: checkpoints(f.journey)}
 
-	// A workload already at its terminal state when Create returns never fires a watch event (the watch
+	// A workload already at its terminal state when Create returns never produces a watch event (the watch
 	// replays only newer resourceVersions), so record it straight from the create response.
 	if isStatusSettled(workload) && o.hasReachedTerminal(classify(workload, f.rec.states)) {
 		o.record(ctx, workload)
@@ -164,7 +164,7 @@ func (f *Flow) observe(ctx context.Context, workload *unstructured.Unstructured)
 }
 
 // write persists the run under <outputDir>/<operator>/<version>/<kartaName>/<flow>.yaml and returns it: a
-// STATE event per distinct CR, and an ACTION event after a state where the flow fired one.
+// STATE event per distinct CR, and an ACTION event after a state where the flow performed one.
 func (f *Flow) write(obs *observation, succeeded bool) (*Recording, error) {
 	out := Recording{
 		SchemaVersion: schemaVersion,
@@ -192,7 +192,7 @@ func (f *Flow) write(obs *observation, succeeded bool) (*Recording, error) {
 	return &out, nil
 }
 
-// checkpoints are the journey stops the recorder must reach and fire in order: those carrying an action or
+// checkpoints are the journey stops the recorder must reach and act on in order: those carrying an action or
 // an action predicate. Plain stops between them are recorded as they pass but are not checkpoints.
 func checkpoints(journey []journeyStep) []journeyStep {
 	var out []journeyStep

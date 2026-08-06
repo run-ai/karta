@@ -36,7 +36,7 @@ func (f *Flow) Maybe(state kartav1alpha1.ResourceStatus) *Flow {
 	return f
 }
 
-// At adds a stop to gate with When/WaitUntil or fire with Do.
+// At adds a stop to gate with When/WaitUntil, or attach an action with Do.
 func (f *Flow) At(state kartav1alpha1.ResourceStatus) *Flow {
 	f.journey = append(f.journey, journeyStep{State: state})
 	return f
