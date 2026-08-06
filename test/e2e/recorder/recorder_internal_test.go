@@ -46,28 +46,43 @@ func TestAddStateRejectsNilMatch(t *testing.T) {
 	(&Recorder{}).AddState("Running", nil)
 }
 
-func TestNewValidatesRequiredInput(t *testing.T) {
-	valid := Config{OutputDir: "out"}
+func TestNewRejectsEmptyOutputDir(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("New with an empty Config.OutputDir did not panic")
+		}
+	}()
+	New(Config{})
+}
+
+func TestSaveValidatesFixture(t *testing.T) {
+	r := New(Config{OutputDir: "out"})
 	cases := []struct {
-		name                                    string
-		cfg                                     Config
-		operator, version, kartaName, kartaFile string
+		name string
+		fx   Fixture
 	}{
-		{"empty operator", valid, "", "v", "n", "f"},
-		{"empty version", valid, "op", "", "n", "f"},
-		{"empty kartaName", valid, "op", "v", "", "f"},
-		{"empty kartaFile", valid, "op", "v", "n", ""},
-		{"empty outputDir", Config{}, "op", "v", "n", "f"},
+		{"empty operator", Fixture{Version: "v", KartaName: "n", KartaFile: "f"}},
+		{"empty version", Fixture{Operator: "op", KartaName: "n", KartaFile: "f"}},
+		{"empty kartaName", Fixture{Operator: "op", Version: "v", KartaFile: "f"}},
+		{"empty kartaFile", Fixture{Operator: "op", Version: "v", KartaName: "n"}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			defer func() {
 				if recover() == nil {
-					t.Error("New did not panic")
+					t.Error("Save did not panic on an incomplete fixture")
 				}
 			}()
-			New(c.cfg, c.operator, c.version, c.kartaName, c.kartaFile)
+			r.Save(c.fx, &Recording{Flow: "flow"})
 		})
+	}
+}
+
+func TestSaveIgnoresNilRecording(t *testing.T) {
+	fx := Fixture{Operator: "op", Version: "v", KartaName: "n", KartaFile: "f"}
+	path, err := New(Config{OutputDir: "out"}).Save(fx, nil)
+	if err != nil || path != "" {
+		t.Errorf("Save(fx, nil) = (%q, %v), want empty path and nil error", path, err)
 	}
 }
 
