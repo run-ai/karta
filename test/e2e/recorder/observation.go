@@ -5,13 +5,19 @@ package recorder
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/tools/cache"
+	watchtools "k8s.io/client-go/tools/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
@@ -76,14 +82,43 @@ func (o *observation) follow(ctx context.Context) {
 	}
 }
 
+// openWatch starts a resilient watch of the workload by name that resumes after transient drops.
+func (f *Flow) openWatch(ctx context.Context, workload *unstructured.Unstructured) (watch.Interface, error) {
+	gvk := workload.GroupVersionKind()
+	mapping, err := f.client().RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, fmt.Errorf("rest mapping for %s: %w", gvk, err)
+	}
+	namespace := workload.GetNamespace()
+	if namespace == "" {
+		return nil, fmt.Errorf("workload %s has no namespace", workload.GetName())
+	}
+
+	startRV := workload.GetResourceVersion()
+	if startRV == "" { // Create was a no-op (the object already existed); fetch a current RV to start from
+		current := blankWithGVK(workload)
+		if err := f.client().Get(ctx, client.ObjectKeyFromObject(workload), current); err != nil {
+			return nil, fmt.Errorf("get %s for watch resource version: %w", workload.GetName(), err)
+		}
+		startRV = current.GetResourceVersion()
+	}
+
+	return watchtools.NewRetryWatcherWithContext(ctx, startRV, &cache.ListWatch{
+		WatchFuncWithContext: func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+			opts.FieldSelector = fields.OneTermEqualSelector("metadata.name", workload.GetName()).String()
+			return f.rec.cluster.Dynamic.Resource(mapping.Resource).Namespace(namespace).Watch(ctx, opts)
+		},
+	})
+}
+
 // record handles one observed CR: it keeps the CR if it is settled and new, fires the next checkpoint if the
 // workload just reached it, and reports whether the flow is finished (or a fired action failed).
 func (o *observation) record(ctx context.Context, cr *unstructured.Unstructured) (done bool) {
 	o.lastSeen = cr
-	if !statusSettled(cr) {
+	if !isStatusSettled(cr) {
 		return false // a half-written status is not a real state yet
 	}
-	state := Classify(cr, o.flow.rec.states)
+	state := classify(cr, o.flow.rec.states)
 	if state == "" {
 		// A settled CR we cannot classify is a real gap: keep it as Undefined so the order check fails and
 		// the run is saved for triage, rather than skipping it silently.
@@ -93,7 +128,17 @@ func (o *observation) record(ctx context.Context, cr *unstructured.Unstructured)
 	if o.fireCheckpoint(ctx, state, cr) {
 		return true // the action failed; stop and report it
 	}
-	return o.reachedTerminal(state)
+	return o.hasReachedTerminal(state)
+}
+
+// keep appends cr as a new snapshot, unless it duplicates the last kept one (same significant fields).
+func (o *observation) keep(cr *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) {
+	sig := significantFields(cr)
+	if o.lastSig != nil && reflect.DeepEqual(o.lastSig, sig) {
+		return
+	}
+	o.lastSig = sig
+	o.snapshots = append(o.snapshots, snapshot{state: state, cr: cr.DeepCopy()})
 }
 
 // fireCheckpoint fires the next checkpoint's action if the workload just reached its state and gate, then
@@ -111,15 +156,47 @@ func (o *observation) fireCheckpoint(ctx context.Context, state kartav1alpha1.Re
 			o.failure = err.Error()
 			return true
 		}
-		o.attach(action)
+		o.attachAction(action)
 	}
 	o.pending = next[1:]
 	return false
 }
 
-// reconnect handles a dropped watch: it re-lists the workload for a fresh resourceVersion, records that
+// fireAction sends an action's merge-patch to the workload and returns the recorded operation. The result
+// object is not captured - the STATE events that follow already show where the operator drives it.
+func (f *Flow) fireAction(ctx context.Context, workload *unstructured.Unstructured, action *Action) (*RecordedAction, error) {
+	target := blankWithGVK(workload)
+	target.SetName(workload.GetName())
+	target.SetNamespace(workload.GetNamespace())
+	if err := f.client().Patch(ctx, target, client.RawPatch(types.MergePatchType, action.Patch)); err != nil {
+		return nil, fmt.Errorf("action %s on %s/%s: %w", action.Type, workload.GetNamespace(), workload.GetName(), err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(action.Patch, &payload); err != nil {
+		return nil, fmt.Errorf("action %s payload: %w", action.Type, err)
+	}
+	return &RecordedAction{
+		Name:      string(action.Type),
+		Operation: Operation{Verb: "PATCH", PatchType: "application/merge-patch+json", Payload: payload},
+	}, nil
+}
+
+// attachAction records the action fired at the snapshot just kept.
+func (o *observation) attachAction(action *RecordedAction) {
+	if len(o.snapshots) > 0 {
+		o.snapshots[len(o.snapshots)-1].action = action
+	}
+}
+
+// hasReachedTerminal reports whether state is the flow's terminal state and every checkpoint has already fired.
+func (o *observation) hasReachedTerminal(state kartav1alpha1.ResourceStatus) bool {
+	return state == o.flow.want() && len(o.pending) == 0
+}
+
+// reconnect handles a dropped watch: it re-fetches the workload for a fresh resourceVersion, records that
 // state, and opens a new watch. It returns the new watcher, or stop=true when the run must end - failure was
-// set, or the re-listed state already finished the flow.
+// set, or the re-fetched state already finished the flow.
 func (o *observation) reconnect(ctx context.Context, closed watch.Interface, lastWatchErr error) (watch.Interface, bool) {
 	// The RetryWatcher gave up, typically "too old resource version" after the object sat idle while etcd
 	// compacted its history. If the flow's context is already done, give up too.
@@ -130,7 +207,7 @@ func (o *observation) reconnect(ctx context.Context, closed watch.Interface, las
 	}
 	closed.Stop()
 
-	current, failure := o.relist(ctx)
+	current, failure := o.refetch(ctx)
 	if failure != "" {
 		o.failure = failure
 		return nil, true
@@ -147,41 +224,24 @@ func (o *observation) reconnect(ctx context.Context, closed watch.Interface, las
 	return fresh, false
 }
 
-// relist fetches the workload's current object after a watch drop, retrying transient control-plane blips (a
+// refetch fetches the workload's current object after a watch drop, retrying transient control-plane blips (a
 // heavy operator can briefly reject the Get while its authorizer reloads). It returns the object to resume
 // from, or a non-empty failure message when it must give up: the workload is gone, or the context ended.
-func (o *observation) relist(ctx context.Context) (*unstructured.Unstructured, string) {
-	current := gvkOnly(o.workload)
+func (o *observation) refetch(ctx context.Context) (*unstructured.Unstructured, string) {
+	current := blankWithGVK(o.workload)
 	for {
 		err := o.flow.client().Get(ctx, client.ObjectKeyFromObject(o.workload), current)
 		if err == nil {
 			return current, ""
 		}
 		if apierrors.IsNotFound(err) {
-			return nil, fmt.Sprintf("workload gone during flow (re-list 404); observed %v", o.states())
+			return nil, fmt.Sprintf("workload gone during flow (re-fetch 404); observed %v", o.states())
 		}
 		select {
 		case <-ctx.Done():
-			return nil, fmt.Sprintf("re-list after watch closed kept failing: %v; observed %v", err, o.states())
+			return nil, fmt.Sprintf("re-fetch after watch closed kept failing: %v; observed %v", err, o.states())
 		case <-time.After(2 * time.Second):
 		}
-	}
-}
-
-// keep appends cr as a new snapshot, unless it duplicates the last kept one (same significant fields).
-func (o *observation) keep(cr *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) {
-	sig := significantFields(cr)
-	if o.lastSig != nil && reflect.DeepEqual(o.lastSig, sig) {
-		return
-	}
-	o.lastSig = sig
-	o.snapshots = append(o.snapshots, snapshot{state: state, cr: cr.DeepCopy()})
-}
-
-// attach records the action fired at the snapshot just kept.
-func (o *observation) attach(action *RecordedAction) {
-	if len(o.snapshots) > 0 {
-		o.snapshots[len(o.snapshots)-1].action = action
 	}
 }
 
@@ -192,9 +252,4 @@ func (o *observation) states() []kartav1alpha1.ResourceStatus {
 		out[i] = s.state
 	}
 	return out
-}
-
-// reachedTerminal reports whether state is the flow's terminal state and every checkpoint has already fired.
-func (o *observation) reachedTerminal(state kartav1alpha1.ResourceStatus) bool {
-	return state == o.flow.want() && len(o.pending) == 0
 }

@@ -13,11 +13,11 @@ import (
 	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// A recording round-trips through WriteRecording/LoadRecording: metadata, the ordered STATE states, and a
+// A recording round-trips through writeRecording/loadRecording: metadata, the ordered STATE states, and a
 // fired action all survive the file.
 func TestRecordingRoundTrips(t *testing.T) {
 	rec := Recording{
-		SchemaVersion: SchemaVersion,
+		SchemaVersion: schemaVersion,
 		Operator:      "batch-job",
 		KartaName:     "batch-job-v1",
 		Flow:          "resumed",
@@ -42,18 +42,18 @@ func TestRecordingRoundTrips(t *testing.T) {
 	}
 
 	path := filepath.Join(t.TempDir(), "op", "v1", "batch-job-v1", "resumed.yaml")
-	if err := WriteRecording(path, rec); err != nil {
+	if err := writeRecording(path, rec); err != nil {
 		t.Fatal(err)
 	}
-	got, err := LoadRecording(path)
+	got, err := loadRecording(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got.Operator != "batch-job" || got.Flow != "resumed" || len(got.Events) != 3 {
 		t.Fatalf("recording round-trip mismatch: %+v", got)
 	}
-	if !reflect.DeepEqual(got.States(), []string{"Suspended", "Completed"}) {
-		t.Errorf("states round-trip mismatch: %v", got.States())
+	if !reflect.DeepEqual(got.states(), []string{"Suspended", "Completed"}) {
+		t.Errorf("states round-trip mismatch: %v", got.states())
 	}
 	act := got.Events[1].Action
 	if act == nil || act.Name != "Resume" || act.Operation.Verb != "PATCH" {
@@ -72,7 +72,7 @@ func TestReaderWalksStates(t *testing.T) {
 		{Kind: EventState, State: "Running", Object: map[string]interface{}{"status": map[string]interface{}{"ready": float64(1)}}},
 	}}
 
-	r := NewReader(rec)
+	r := newReader(rec)
 	var states []string
 	for r.Next() {
 		states = append(states, r.State())
@@ -81,7 +81,7 @@ func TestReaderWalksStates(t *testing.T) {
 		t.Errorf("reader states = %v, want [Initializing Running]", states)
 	}
 
-	r2 := NewReader(rec)
+	r2 := newReader(rec)
 	r2.Next()
 	r2.Next()
 	if v, _, _ := unstructured.NestedFloat64(r2.Object().Object, "status", "ready"); v != 1 {
