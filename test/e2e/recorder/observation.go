@@ -46,7 +46,7 @@ type snapshot struct {
 // follow watches the workload until the flow finishes or fails, recording each CR it sees. It reconnects
 // when the apiserver drops a stale watch, and sets failure on timeout or an unrecoverable error.
 func (o *observation) follow(ctx context.Context) {
-	watcher, err := o.flow.openWatch(ctx, o.workload)
+	watcher, err := o.flow.startWatch(ctx, o.workload)
 	if err != nil {
 		o.failure = err.Error()
 		return
@@ -82,8 +82,8 @@ func (o *observation) follow(ctx context.Context) {
 	}
 }
 
-// openWatch starts a resilient watch of the workload by name that resumes after transient drops.
-func (f *Flow) openWatch(ctx context.Context, workload *unstructured.Unstructured) (watch.Interface, error) {
+// startWatch starts a resilient watch of the workload by name that resumes after transient drops.
+func (f *Flow) startWatch(ctx context.Context, workload *unstructured.Unstructured) (watch.Interface, error) {
 	gvk := workload.GroupVersionKind()
 	mapping, err := f.client().RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
@@ -216,7 +216,7 @@ func (o *observation) reconnect(ctx context.Context, closed watch.Interface, las
 	if o.record(ctx, current) {
 		return nil, true
 	}
-	fresh, err := o.flow.openWatch(ctx, o.workload)
+	fresh, err := o.flow.startWatch(ctx, o.workload)
 	if err != nil {
 		o.failure = err.Error()
 		return nil, true
