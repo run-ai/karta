@@ -11,8 +11,9 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 CLI_LOCALBIN ?= $(shell pwd)/cli/bin
-$(CLI_LOCALBIN):
-	mkdir -p $(CLI_LOCALBIN)
+CLI_LOCALBIN_ABS := $(abspath $(CLI_LOCALBIN))
+$(CLI_LOCALBIN_ABS):
+	mkdir -p $@
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 KARTA_CHART_DIR := $(PROJECT_DIR)/charts/karta
@@ -93,8 +94,11 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
 	@set -e; \
-	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)" ;\
-	curl -sSfL --proto '=https' --tlsv1.2 https://golangci-lint.run/install.sh | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION)
+	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)"; \
+	tmp=$$(mktemp); \
+	trap 'rm -f "$$tmp"' EXIT; \
+	curl -sSfL --proto '=https' --proto-redir '=https' --tlsv1.2 https://golangci-lint.run/install.sh -o "$$tmp"; \
+	sh "$$tmp" -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION)
 
 .PHONY: go-licence-detector
 go-licence-detector: $(GO_LICENCE_DETECTOR) ## Download go-licence-detector locally if necessary.
@@ -126,8 +130,8 @@ download-dependencies:
 ##@ CLI
 
 .PHONY: cli-build
-cli-build: $(CLI_LOCALBIN) ## Build the karta CLI binary.
-	cd cli && go build -o $(CLI_LOCALBIN)/karta .
+cli-build: $(CLI_LOCALBIN_ABS) ## Build the karta CLI binary.
+	cd cli && go build -o $(CLI_LOCALBIN_ABS)/karta .
 
 .PHONY: cli-test
 cli-test: ## Run the CLI unit tests.
