@@ -22,13 +22,15 @@ jobs:
           cache-dependency-path: |
             go.sum
             operator/go.sum
+            cli/go.sum
 
       - name: Cache bin tools
         uses: actions/cache@v6
         with:
           path: bin
-          key: ${{ runner.os }}-bin-${{ hashFiles('Makefile') }}
+          key: ${{ runner.os }}-bin-${{ hashFiles('Makefile') }}-${{ hashFiles('go.mod') }}
           restore-keys: |
+            ${{ runner.os }}-bin-${{ hashFiles('Makefile') }}-
             ${{ runner.os }}-bin-
 
       - name: Run checks

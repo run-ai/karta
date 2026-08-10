@@ -10,6 +10,11 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
+CLI_LOCALBIN ?= $(shell pwd)/cli/bin
+CLI_LOCALBIN_ABS := $(abspath $(CLI_LOCALBIN))
+$(CLI_LOCALBIN_ABS):
+	mkdir -p $@
+
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 KARTA_CHART_DIR := $(PROJECT_DIR)/charts/karta
 KARTA_CRDS_DIR := $(KARTA_CHART_DIR)/crds
@@ -88,11 +93,12 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
-	@[ -f "$(GOLANGCI_LINT)" ] || { \
-	set -e; \
-	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)" ;\
-	curl -sSfL https://golangci-lint.run/install.sh  | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
-	}
+	@set -e; \
+	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)"; \
+	tmp=$$(mktemp); \
+	trap 'rm -f "$$tmp"' EXIT; \
+	curl -sSfL --proto '=https' --proto-redir '=https' --tlsv1.2 https://golangci-lint.run/install.sh -o "$$tmp"; \
+	sh "$$tmp" -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION)
 
 .PHONY: go-licence-detector
 go-licence-detector: $(GO_LICENCE_DETECTOR) ## Download go-licence-detector locally if necessary.
@@ -104,10 +110,12 @@ $(GO_LICENCE_DETECTOR): $(LOCALBIN)
 	}
 
 .PHONY: generate-licenses
-generate-licenses: go-licence-detector download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
+generate-licenses: go-licence-detector ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
 	@set -eu; \
 	echo "Generating NOTICE and THIRD_PARTY_LICENSES files from current dependencies using go-licence-detector"; \
-	go mod download -json > $(LOCALBIN)/deps.json; \
+	go mod download -json > $(LOCALBIN)/root-deps.json; \
+	(cd cli && go mod download -json) > $(LOCALBIN)/cli-deps.json; \
+	python3 hack/merge-go-deps.py $(LOCALBIN)/root-deps.json $(LOCALBIN)/cli-deps.json > $(LOCALBIN)/deps.json; \
 	$(GO_LICENCE_DETECTOR) -in $(LOCALBIN)/deps.json \
 		-noticeTemplate=hack/licenses/notice.tpl \
 		-noticeOut=NOTICE \
@@ -119,8 +127,22 @@ generate-licenses: go-licence-detector download-dependencies ## Regenerate NOTIC
 download-dependencies:
 	go mod download
 
+##@ CLI
+
+.PHONY: cli-build
+cli-build: $(CLI_LOCALBIN_ABS) ## Build the karta CLI binary.
+	cd cli && go build -o $(CLI_LOCALBIN_ABS)/karta .
+
+.PHONY: cli-test
+cli-test: ## Run the CLI unit tests.
+	cd cli && go test ./...
+
+.PHONY: cli-lint
+cli-lint: golangci-lint ## Lint the CLI module.
+	cd cli && $(GOLANGCI_LINT) run -c $(PROJECT_DIR)/.golangci.yml
+
 .PHONY: check
-check: download-dependencies validate test
+check: download-dependencies validate test cli-test cli-lint
 
 ##@ Helm
 

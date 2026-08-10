@@ -6,11 +6,14 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 // NewRootCommand builds the root command for the karta binary. Global flags are
 // registered as persistent flags so every subcommand inherits them.
 func NewRootCommand() *cobra.Command {
+	kubeFlags = genericclioptions.NewConfigFlags(true)
+
 	cmd := &cobra.Command{
 		Use:   "karta",
 		Short: "Workload-aware visibility for any Kubernetes workload type",
@@ -18,13 +21,30 @@ func NewRootCommand() *cobra.Command {
 			"built on the Karta abstraction layer. Inspect workloads running in a " +
 			"namespace and the definitions Karta understands.",
 		SilenceUsage: true,
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			if cmd.Name() == cobra.ShellCompRequestCmd {
+				return nil
+			}
+			var err error
+			config, err = buildConfig(cmd)
+			return err
+		},
 	}
 
-	withKubeconfig(cmd)
+	kubeFlags.AddFlags(cmd.PersistentFlags())
 	withOutput(cmd)
+	withConfig(cmd)
 
 	cmd.AddCommand(newWorkloadCommand())
 	cmd.AddCommand(newDefinitionCommand())
+
+	cmd.InitDefaultCompletionCmd()
+	for _, sub := range cmd.Commands() {
+		if sub.Name() == "completion" {
+			sub.PersistentPreRunE = func(*cobra.Command, []string) error { return nil }
+			break
+		}
+	}
 
 	return cmd
 }
