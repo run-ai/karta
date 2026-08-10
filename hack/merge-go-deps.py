@@ -20,6 +20,12 @@ for fname in sys.argv[1:]:
             break
         obj, pos = dec.raw_decode(data, pos)
         path = obj.get("Path", "")
-        if path and path not in seen:
-            seen[path] = True
+        if not path:
+            continue
+        version = obj.get("Version", "")
+        if path in seen:
+            if seen[path] != version:
+                sys.exit(f"error: module {path} has conflicting versions: {seen[path]} vs {version}")
+        else:
+            seen[path] = version
             print(json.dumps(obj))

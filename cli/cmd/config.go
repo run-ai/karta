@@ -89,8 +89,10 @@ func buildConfig(cmd *cobra.Command) (*Config, error) {
 	if err := v.UnmarshalExact(&cfg); err != nil {
 		return nil, fmt.Errorf("config: %w", err)
 	}
-	if err := NewOutputFlag().Set(cfg.Output); err != nil {
-		return nil, fmt.Errorf("output: %w", err)
+	if f := cmd.Root().PersistentFlags().Lookup(flagOutput); f != nil {
+		if err := f.Value.Set(cfg.Output); err != nil {
+			return nil, fmt.Errorf("output: %w", err)
+		}
 	}
 	return &cfg, nil
 }
