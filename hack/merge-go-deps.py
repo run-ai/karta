@@ -8,6 +8,7 @@ import sys
 import json
 
 seen = {}
+conflicts = []
 for fname in sys.argv[1:]:
     with open(fname) as f:
         data = f.read()
@@ -25,7 +26,10 @@ for fname in sys.argv[1:]:
         version = obj.get("Version", "")
         if path in seen:
             if seen[path] != version:
-                sys.exit(f"error: module {path} has conflicting versions: {seen[path]} vs {version}")
+                conflicts.append(f"  {path}: {seen[path]} vs {version}")
         else:
             seen[path] = version
             print(json.dumps(obj))
+
+if conflicts:
+    sys.exit("error: conflicting module versions:\n" + "\n".join(conflicts))
