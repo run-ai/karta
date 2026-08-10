@@ -41,6 +41,20 @@ ports:
   metrics: 8080
   health: 8081
 
+webhook:
+  enabled: true
+  port: 9443
+  cert:
+    # auto: the operator self-signs and rotates the serving cert (no cert-manager).
+    # manual: certs are supplied externally (cert-manager, an admin, ...); the
+    #   operator only reads the mounted Secret and never touches the cert.
+    provisionMode: auto
+    # manual mode only: a static CA bundle to stamp on the webhook configs.
+    caBundle: ""
+    # manual mode only: annotations for the webhook configs. Wire cert-manager
+    # here, e.g. cert-manager.io/inject-ca-from: <namespace>/<certificate-name>
+    annotations: {}
+
 logLevel: info
 
 # Extra flags appended after the chart's default args. Use this to add flags
