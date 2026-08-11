@@ -13,8 +13,8 @@ import (
 	"os"
 
 	"github.com/run-ai/karta/operator/pkg"
-	"github.com/run-ai/karta/pkg/version"
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+	"github.com/run-ai/karta/pkg/version"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
