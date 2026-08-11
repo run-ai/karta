@@ -83,8 +83,11 @@ func (v *KartaValidator) checkUniqueRootGVK(ctx context.Context, karta *kartav1a
 	return nil
 }
 
-func (v *KartaValidator) ValidateUpdate(_ context.Context, _, karta *kartav1alpha1.Karta) (admission.Warnings, error) {
-	return nil, kartav1alpha1.NewKartaValidator(karta).Validate()
+func (v *KartaValidator) ValidateUpdate(ctx context.Context, _, karta *kartav1alpha1.Karta) (admission.Warnings, error) {
+	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
+		return nil, err
+	}
+	return nil, v.checkUniqueRootGVK(ctx, karta)
 }
 
 func (v *KartaValidator) ValidateDelete(_ context.Context, _ *kartav1alpha1.Karta) (admission.Warnings, error) {

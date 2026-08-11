@@ -140,6 +140,21 @@ var _ = Describe("KartaValidator", func() {
 		Expect(err).To(HaveOccurred())
 	})
 
+	It("rejects an update that changes the root GVK to one another Karta already has", func() {
+		jobGVK := &kartav1alpha1.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
+		v := newValidator(namedKarta("ray", rayGVK), namedKarta("job", jobGVK))
+		updated := namedKarta("job", rayGVK)
+		_, err := v.ValidateUpdate(ctx, namedKarta("job", jobGVK), updated)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring(`already exists ("ray")`))
+	})
+
+	It("allows updating a Karta that keeps its own root GVK", func() {
+		v := newValidator(namedKarta("ray", rayGVK))
+		_, err := v.ValidateUpdate(ctx, namedKarta("ray", rayGVK), namedKarta("ray", rayGVK))
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("allows delete", func() {
 		_, err := newValidator().ValidateDelete(ctx, kartaWithRootKind(nil))
 		Expect(err).NotTo(HaveOccurred())
