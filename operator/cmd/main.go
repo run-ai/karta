@@ -13,7 +13,7 @@ import (
 	"os"
 
 	"github.com/run-ai/karta/operator/pkg"
-	"github.com/run-ai/karta/operator/pkg/version"
+	"github.com/run-ai/karta/pkg/version"
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -74,7 +74,7 @@ func run() error {
 	flag.Parse()
 
 	if printVersion {
-		fmt.Println(version.Version)
+		fmt.Println(version.String())
 		return nil
 	}
 
@@ -154,7 +154,7 @@ func run() error {
 		return fmt.Errorf("register readyz: %w", err)
 	}
 
-	logger.Info("Starting Karta operator manager", "version", version.Version)
+	logger.Info("Starting Karta operator manager", "version", version.String())
 	if err = mgr.Start(ctx); err != nil {
 		return fmt.Errorf("manager exited: %w", err)
 	}

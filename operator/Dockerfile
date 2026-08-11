@@ -13,14 +13,18 @@ FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS build
 
 ARG TARGETOS
 ARG TARGETARCH
-ARG VERSION=dev
+ARG VERSION=0.0.0-dev
+ARG COMMIT=unknown
+ARG BUILD_DATE=unknown
 
 WORKDIR /src
 COPY . .
 WORKDIR /src/operator
 RUN CGO_ENABLED=0 GO111MODULE=on GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 	go build -trimpath \
-	-ldflags "-X github.com/run-ai/karta/operator/pkg/version.Version=${VERSION}" \
+	-ldflags "-X github.com/run-ai/karta/pkg/version.version=${VERSION} \
+	          -X github.com/run-ai/karta/pkg/version.commit=${COMMIT} \
+	          -X github.com/run-ai/karta/pkg/version.buildDate=${BUILD_DATE}" \
 	-o /karta-operator ./cmd
 
 FROM gcr.io/distroless/static-debian13:nonroot

@@ -32,11 +32,12 @@ func NewRootCommand() *cobra.Command {
 	}
 
 	kubeFlags.AddFlags(cmd.PersistentFlags())
-	withOutput(cmd)
+	out := withOutput(cmd)
 	withConfig(cmd)
 
 	cmd.AddCommand(newWorkloadCommand())
 	cmd.AddCommand(newDefinitionCommand())
+	cmd.AddCommand(newVersionCommand(out))
 
 	cmd.InitDefaultCompletionCmd()
 	for _, sub := range cmd.Commands() {
