@@ -26,6 +26,10 @@ var _ = Describe("version command", func() {
 			DeferCleanup(os.Setenv, key, os.Getenv(key))
 			Expect(os.Unsetenv(key)).To(Succeed())
 		}
+		// Redirect KARTA_CONFIG to a nonexistent path so a developer's
+		// ~/.karta/config.yaml (e.g. output: wide) does not leak into tests
+		// that do not pass --config explicitly.
+		Expect(os.Setenv("KARTA_CONFIG", filepath.Join(dir, "no-such.yaml"))).To(Succeed())
 	})
 
 	DescribeTable("output formats",
@@ -36,11 +40,6 @@ var _ = Describe("version command", func() {
 			check(out)
 		},
 		Entry("table", []string{"version"}, func(out string) {
-			Expect(out).To(ContainSubstring("Version:"))
-			Expect(out).To(ContainSubstring("Go Version:"))
-			Expect(out).To(ContainSubstring("Platform:"))
-		}),
-		Entry("wide", []string{"version", "-o", "wide"}, func(out string) {
 			Expect(out).To(ContainSubstring("Version:"))
 			Expect(out).To(ContainSubstring("Go Version:"))
 			Expect(out).To(ContainSubstring("Platform:"))
@@ -57,12 +56,10 @@ var _ = Describe("version command", func() {
 		}),
 	)
 
-	It("table and wide produce identical output", func() {
-		table, err := runVersion("version")
-		Expect(err).NotTo(HaveOccurred())
-		wide, err := runVersion("version", "-o", "wide")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(table).To(Equal(wide))
+	It("rejects -o wide with a version-specific error", func() {
+		_, err := runVersion("version", "-o", "wide")
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("not supported by the version command"))
 	})
 
 	It("rejects positional arguments", func() {

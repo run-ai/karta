@@ -15,16 +15,13 @@ import (
 	"github.com/run-ai/karta/pkg/version"
 )
 
-// newVersionCommand builds the "karta version" subcommand.
 func newVersionCommand(out *Enum[generator.Output]) *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Print the karta version",
 		Args:  cobra.NoArgs,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			// Best effort. buildConfig applies the merged output preference to
-			// the -o flag; a broken config must not stop version from reporting
-			// the build, so the error is deliberately dropped.
+			// config may set the output format; do not fail on error.
 			if cfg, err := buildConfig(cmd); err == nil {
 				config = cfg
 			}
@@ -49,7 +46,9 @@ func newVersionCommand(out *Enum[generator.Output]) *cobra.Command {
 				}
 				_, err = w.Write(b)
 				return err
-			case generator.OutputTable, generator.OutputWide:
+			case generator.OutputWide:
+				return fmt.Errorf("output format %q is not supported by the version command; use table, json, or yaml", format)
+			case generator.OutputTable:
 				tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 				for _, row := range [][2]string{
 					{"Version", info.Version},
@@ -58,7 +57,6 @@ func newVersionCommand(out *Enum[generator.Output]) *cobra.Command {
 					{"Go Version", info.GoVersion},
 					{"Platform", info.Platform},
 				} {
-					// Write errors surface from Flush.
 					_, _ = fmt.Fprintf(tw, "%s:\t%s\n", row[0], row[1])
 				}
 				return tw.Flush()
