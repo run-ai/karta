@@ -145,14 +145,24 @@ cli-build: $(CLI_LOCALBIN_ABS) ## Build the karta CLI binary.
 	cd cli && go build -trimpath $(LDFLAGS) -o $(CLI_LOCALBIN_ABS)/karta .
 
 .PHONY: cli-verify-version
-cli-verify-version: cli-build ## Assert the CLI binary was stamped, not defaulted.
+cli-verify-version: cli-build ## Assert the CLI binary stamps version, commit, and buildDate.
 	@set -e; \
 	out="$$($(CLI_LOCALBIN_ABS)/karta version -o json)"; \
 	echo "$$out"; \
-	if echo "$$out" | grep -q '"version": "0.0.0-dev"'; then \
-		echo "ldflags did not apply: version is the compiled-in default" >&2; \
-		exit 1; \
-	fi
+	_ver="$$(echo "$$out" | grep '"version":' | sed 's/.*"version": "\([^"]*\)".*/\1/')"; \
+	_cmt="$$(echo "$$out" | grep '"commit":' | sed 's/.*"commit": "\([^"]*\)".*/\1/')"; \
+	_bdt="$$(echo "$$out" | grep '"buildDate":' | sed 's/.*"buildDate": "\([^"]*\)".*/\1/')"; \
+	fail=0; \
+	if [ -z "$$_ver" ] || [ "$$_ver" != "$(VERSION)" ]; then \
+		echo "version mismatch: got '$$_ver', want '$(VERSION)'" >&2; fail=1; \
+	fi; \
+	if [ -z "$$_cmt" ] || [ "$$_cmt" != "$(COMMIT)" ]; then \
+		echo "commit mismatch: got '$$_cmt', want '$(COMMIT)'" >&2; fail=1; \
+	fi; \
+	if [ -z "$$_bdt" ] || [ "$$_bdt" = "unknown" ]; then \
+		echo "buildDate not stamped: '$$_bdt'" >&2; fail=1; \
+	fi; \
+	exit $$fail
 
 .PHONY: cli-test
 cli-test: ## Run the CLI unit tests.
