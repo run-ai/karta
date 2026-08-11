@@ -33,6 +33,12 @@ const (
 	// crdGroupKindIndexKey indexes CustomResourceDefinitions by group and kind so
 	// the reconciler can locate the CRD for a Karta root GVK directly.
 	crdGroupKindIndexKey = "spec.group+spec.names.kind"
+	// kartaGVKIndexKey indexes Kartas by their full root GVK (group/version/kind),
+	// read from the spec (not the metadata labels), so a lookup by workload type
+	// does not depend on the GVK index labels being stamped yet. The version is
+	// part of the key, so two Kartas for the same group/kind but different
+	// versions are distinct and both allowed.
+	kartaGVKIndexKey = "spec.rootComponent.gvk"
 )
 
 // Reconciler reconciles Karta CRs.
@@ -74,6 +80,11 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("index CRDs by %s: %w", crdGroupKindIndexKey, err)
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(),
+		&kartav1alpha1.Karta{}, kartaGVKIndexKey, indexKartaByRootGVK); err != nil {
+		return fmt.Errorf("index Kartas by %s: %w", kartaGVKIndexKey, err)
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(ControllerName).
 		For(&kartav1alpha1.Karta{}).
@@ -83,6 +94,14 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Complete(r)
+}
+
+func indexKartaByRootGVK(obj client.Object) []string {
+	gvk := rootGVK(obj.(*kartav1alpha1.Karta))
+	if gvk == nil {
+		return nil
+	}
+	return []string{gvk.String()}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
