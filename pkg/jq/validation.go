@@ -223,6 +223,8 @@ func checkASTNode(v reflect.Value) error {
 			return ErrDelFunc
 		case "range", "paths", "recurse", "walk", "repeat":
 			return fmt.Errorf("function '%s' may produce excessive output and is not allowed", n.Name)
+		case "until", "while":
+			return fmt.Errorf("function '%s' may loop unboundedly and is not allowed", n.Name)
 		}
 	}
 	return nil

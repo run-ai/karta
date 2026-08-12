@@ -138,6 +138,8 @@ var _ = Describe("JQ Validation", func() {
 			Entry("should reject paths function", "paths", "function 'paths'"),
 			Entry("should reject range function", "range(1000000)", "function 'range'"),
 			Entry("should reject repeat function", "repeat(.)", "function 'repeat'"),
+			Entry("should reject until function", `"x" | until(length > 1000000; . + .)`, "function 'until'"),
+			Entry("should reject while function", `"x" | while(length < 1000000; . + .)`, "function 'while'"),
 
 			// Recursive descent operator
 			Entry("should reject recursive descent operator", ".. | .name", "recursive descent operator"),
