@@ -16,15 +16,11 @@ $(CLI_LOCALBIN_ABS):
 	mkdir -p $@
 
 # Version stamping. CI overrides VERSION with the scheme in push-artifacts.yaml
-# (tag v1.2.3 -> 1.2.3, main -> 0.0.0-main-<sha>).
-VERSION    ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
-COMMIT     ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+# (tag v1.2.3 -> 1.2.3, main -> 0.0.0-dev-<sha>).
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
 
 VERSION_PKG := github.com/run-ai/karta/pkg/version
-LDFLAGS     := -ldflags "-X $(VERSION_PKG).version=$(VERSION) \
-                         -X $(VERSION_PKG).commit=$(COMMIT) \
-                         -X $(VERSION_PKG).buildDate=$(BUILD_DATE)"
+LDFLAGS     := -ldflags "-X $(VERSION_PKG).version=$(VERSION)"
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 KARTA_CHART_DIR := $(PROJECT_DIR)/charts/karta
@@ -145,24 +141,12 @@ cli-build: $(CLI_LOCALBIN_ABS) ## Build the karta CLI binary.
 	cd cli && go build -trimpath $(LDFLAGS) -o $(CLI_LOCALBIN_ABS)/karta .
 
 .PHONY: cli-verify-version
-cli-verify-version: cli-build ## Assert the CLI binary stamps version, commit, and buildDate.
+cli-verify-version: cli-build ## Assert the CLI binary reports the stamped version.
 	@set -e; \
-	out="$$($(CLI_LOCALBIN_ABS)/karta version -o json)"; \
+	out="$$($(CLI_LOCALBIN_ABS)/karta --version)"; \
 	echo "$$out"; \
-	_ver="$$(echo "$$out" | grep '"version":' | sed 's/.*"version": "\([^"]*\)".*/\1/')"; \
-	_cmt="$$(echo "$$out" | grep '"commit":' | sed 's/.*"commit": "\([^"]*\)".*/\1/')"; \
-	_bdt="$$(echo "$$out" | grep '"buildDate":' | sed 's/.*"buildDate": "\([^"]*\)".*/\1/')"; \
-	fail=0; \
-	if [ -z "$$_ver" ] || [ "$$_ver" != "$(VERSION)" ]; then \
-		echo "version mismatch: got '$$_ver', want '$(VERSION)'" >&2; fail=1; \
-	fi; \
-	if [ -z "$$_cmt" ] || [ "$$_cmt" != "$(COMMIT)" ]; then \
-		echo "commit mismatch: got '$$_cmt', want '$(COMMIT)'" >&2; fail=1; \
-	fi; \
-	if [ -z "$$_bdt" ] || [ "$$_bdt" = "unknown" ]; then \
-		echo "buildDate not stamped: '$$_bdt'" >&2; fail=1; \
-	fi; \
-	exit $$fail
+	[ "$$out" = "$(VERSION)" ] || { \
+		echo "version mismatch: got '$$out', want '$(VERSION)'" >&2; exit 1; }
 
 .PHONY: cli-test
 cli-test: ## Run the CLI unit tests.

@@ -7,6 +7,8 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+
+	"github.com/run-ai/karta/pkg/version"
 )
 
 // NewRootCommand builds the root command for the karta binary. Global flags are
@@ -20,6 +22,7 @@ func NewRootCommand() *cobra.Command {
 		Long: "Karta gives operators a uniform view of any Kubernetes workload type, " +
 			"built on the Karta abstraction layer. Inspect workloads running in a " +
 			"namespace and the definitions Karta understands.",
+		Version:      version.String(),
 		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if cmd.Name() == cobra.ShellCompRequestCmd {
@@ -31,13 +34,15 @@ func NewRootCommand() *cobra.Command {
 		},
 	}
 
+	// Print the bare version, matching what the operator's --version reports.
+	cmd.SetVersionTemplate("{{.Version}}\n")
+
 	kubeFlags.AddFlags(cmd.PersistentFlags())
-	out := withOutput(cmd)
+	withOutput(cmd)
 	withConfig(cmd)
 
 	cmd.AddCommand(newWorkloadCommand())
 	cmd.AddCommand(newDefinitionCommand())
-	cmd.AddCommand(newVersionCommand(out))
 
 	cmd.InitDefaultCompletionCmd()
 	for _, sub := range cmd.Commands() {

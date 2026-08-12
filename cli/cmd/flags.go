@@ -8,8 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-
-	"github.com/run-ai/karta/cli/pkg/generator"
 )
 
 const (
@@ -21,7 +19,7 @@ var kubeFlags *genericclioptions.ConfigFlags
 
 // withOutput registers the -o/--output enum persistent flag on cmd, backed by
 // generator.Output, along with its shell completion.
-func withOutput(cmd *cobra.Command) *Enum[generator.Output] {
+func withOutput(cmd *cobra.Command) {
 	out := NewOutputFlag()
 	cmd.PersistentFlags().VarP(out, flagOutput, "o",
 		"Output format: one of "+strings.Join(out.Allowed(), ", "))
@@ -29,7 +27,6 @@ func withOutput(cmd *cobra.Command) *Enum[generator.Output] {
 		func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 			return out.Allowed(), cobra.ShellCompDirectiveNoFileComp
 		}))
-	return out
 }
 
 // withConfig registers the --config persistent flag on cmd.

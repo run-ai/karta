@@ -8,9 +8,7 @@ $(LOCALBIN):
 
 # Version is derived automatically from git. Falls back to "0.0.0-dev" when
 # there are no tags or git is unavailable (e.g. a bare source tarball).
-VERSION    ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
-COMMIT     ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
 
 # Container image settings (defaults for ghcr.io/run-ai/karta OSS publishing).
 # Override any component from the command line, e.g.:
@@ -24,12 +22,10 @@ IMAGE           ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 CONTAINER_TOOL ?= docker
 BUILD_ARGS     ?=
 
-# VERSION_PKG is the Go package path that holds the version variables. The build
-# targets inject them into the binary via -ldflags so they are available at runtime.
+# VERSION_PKG is the Go package path that holds the version variable. The build
+# targets inject it into the binary via -ldflags so it is available at runtime.
 VERSION_PKG = github.com/run-ai/karta/pkg/version
-LDFLAGS     = -ldflags "-X $(VERSION_PKG).version=$(VERSION) \
-                        -X $(VERSION_PKG).commit=$(COMMIT) \
-                        -X $(VERSION_PKG).buildDate=$(BUILD_DATE)"
+LDFLAGS     = -ldflags "-X $(VERSION_PKG).version=$(VERSION)"
 
 GOLANGCI_LINT         ?= $(LOCALBIN)/golangci-lint
 # GOLANGCI_LINT_VERSION is defined in ../hack/tools.mk (shared with the root
@@ -112,8 +108,6 @@ docker-build: ## Build Docker image for the host arch
 	$(CONTAINER_TOOL) build $(BUILD_ARGS) \
 		--build-arg TARGETARCH=$(shell go env GOARCH) \
 		--build-arg VERSION=$(VERSION) \
-		--build-arg COMMIT=$(COMMIT) \
-		--build-arg BUILD_DATE=$(BUILD_DATE) \
 		--tag $(IMAGE) \
 		-f Dockerfile \
 		..
@@ -124,8 +118,6 @@ docker-buildx-push: ## Build and push a multi-arch Docker image via BuildKit (re
 	$(CONTAINER_TOOL) buildx build $(BUILD_ARGS) \
 		--platform $(PLATFORMS_CSV) \
 		--build-arg VERSION=$(VERSION) \
-		--build-arg COMMIT=$(COMMIT) \
-		--build-arg BUILD_DATE=$(BUILD_DATE) \
 		--tag $(IMAGE) \
 		-f Dockerfile \
 		--push \

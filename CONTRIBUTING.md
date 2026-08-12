@@ -144,7 +144,7 @@ pass, `make test` runs the tests and mock generation on their own.
 
 | Trigger | Published `version` and `appVersion` |
 |---|---|
-| Push to `main` (dev build) | `0.0.0-main-<short-sha>` |
+| Push to `main` (dev build) | `0.0.0-dev-<short-sha>` |
 | Tag push (release) | the tag (e.g. tag `v1.2.3` → `1.2.3`) |
 
 Consumers pin a specific release by chart `version` (which equals the tag), e.g. `version: 1.2.3` in the consumer's `Chart.yaml` dependency entry.

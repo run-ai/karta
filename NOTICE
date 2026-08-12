@@ -47,6 +47,7 @@ Third-party Dependencies:
 - github.com/spf13/cobra (Apache-2.0)
 - github.com/spf13/viper (MIT)
 - k8s.io/cli-runtime (Apache-2.0)
+- k8s.io/client-go (Apache-2.0)
 - github.com/Azure/go-ansiterm (MIT)
 - github.com/blang/semver/v4 (MIT)
 - github.com/davecgh/go-spew (ISC)
@@ -81,7 +82,6 @@ Third-party Dependencies:
 - google.golang.org/protobuf (BSD-3-Clause)
 - gopkg.in/evanphx/json-patch.v4 (BSD-3-Clause)
 - gopkg.in/yaml.v3 (MIT)
-- k8s.io/client-go (Apache-2.0)
 - sigs.k8s.io/kustomize/api (Apache-2.0)
 - sigs.k8s.io/kustomize/kyaml (Apache-2.0)
 

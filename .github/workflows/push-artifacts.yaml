@@ -40,12 +40,10 @@ jobs:
             PACKAGE_VERSION=${GITHUB_REF_NAME#v}
           else
             echo "Push to main: dev build keyed off the commit sha"
-            PACKAGE_VERSION=0.0.0-main-$(git rev-parse --short HEAD)
+            PACKAGE_VERSION=0.0.0-dev-$(git rev-parse --short HEAD)
           fi
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
           echo "PACKAGE_VERSION=$PACKAGE_VERSION"
-          echo "COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
@@ -74,7 +72,7 @@ jobs:
       - name: Build and push operator image
         working-directory: operator
         run: |
-          make docker-buildx-push VERSION=$PACKAGE_VERSION COMMIT=$COMMIT BUILD_DATE=$BUILD_DATE
+          make docker-buildx-push VERSION=$PACKAGE_VERSION
 
       - name: Build helm chart
         run: |
