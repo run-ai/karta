@@ -29,8 +29,7 @@ func kartaWithRootKind(gvk *kartav1alpha1.GroupVersionKind) *kartav1alpha1.Karta
 	}
 }
 
-// namedKarta builds a spec-valid Karta with a name and root GVK, carrying the GVK
-// index labels the mutating webhook stamps on create so it mirrors a stored Karta.
+// namedKarta builds a spec-valid Karta with a name and root GVK.
 func namedKarta(name string, gvk *kartav1alpha1.GroupVersionKind) *kartav1alpha1.Karta {
 	k := kartaWithRootKind(gvk)
 	k.Name = name
