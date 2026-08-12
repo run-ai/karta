@@ -22,7 +22,4 @@ config/crd/_.yaml
 *~
 .vscode/
 .idea
-
-# AI coding assistant state
-.claude/
 /docs/examples/quickstart/quickstart
