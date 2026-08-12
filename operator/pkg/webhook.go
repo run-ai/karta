@@ -27,6 +27,9 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
+// Default stamps the GVK index labels derived from the root component GVK. It
+// runs on create, so any labels a user supplies are normalized to match the GVK;
+// the validating webhook then rejects any edit or removal on update.
 func (w *KartaLabeler) Default(_ context.Context, karta *kartav1alpha1.Karta) error {
 	desired := desiredRootLabels(karta)
 	if desired == nil {
@@ -83,11 +86,37 @@ func (v *KartaValidator) checkUniqueRootGVK(ctx context.Context, karta *kartav1a
 	return nil
 }
 
-func (v *KartaValidator) ValidateUpdate(ctx context.Context, _, karta *kartav1alpha1.Karta) (admission.Warnings, error) {
+func (v *KartaValidator) ValidateUpdate(ctx context.Context, oldObj, karta *kartav1alpha1.Karta) (admission.Warnings, error) {
 	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
 		return nil, err
 	}
+	// The root component GVK is immutable once the Karta is created (#224).
+	// It backs the GVK label index and the per-GVK uniqueness guarantee, so
+	// letting it change would leave stale labels and could smuggle in a
+	// duplicate that create-time validation already rejected.
+	oldGVK, newGVK := rootGVK(oldObj), rootGVK(karta)
+	switch {
+	case oldGVK == nil && newGVK == nil:
+	case oldGVK == nil || newGVK == nil || *oldGVK != *newGVK:
+		return nil, fmt.Errorf("the root component GVK is immutable and cannot be changed after creation")
+	}
+	if err := checkRootLabels(karta); err != nil {
+		return nil, err
+	}
 	return nil, v.checkUniqueRootGVK(ctx, karta)
+}
+
+// checkRootLabels rejects a Karta whose GVK index labels do not match the values
+// derived from the root component GVK. The mutating webhook stamps these labels on
+// create; because the GVK is immutable they must stay in sync, so an update that
+// edits or removes one is rejected.
+func checkRootLabels(karta *kartav1alpha1.Karta) error {
+	for k, want := range desiredRootLabels(karta) {
+		if got, ok := karta.Labels[k]; !ok || got != want {
+			return fmt.Errorf("label %q is managed by the operator and must equal %q; it cannot be edited or removed", k, want)
+		}
+	}
+	return nil
 }
 
 func (v *KartaValidator) ValidateDelete(_ context.Context, _ *kartav1alpha1.Karta) (admission.Warnings, error) {
