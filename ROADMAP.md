@@ -66,10 +66,9 @@ of the roadmap is itself public and reviewable.
 - CLI. A command-line tool for read-only visibility into any Karta-described
   workload: list workloads, inspect component structure, and drill into the
   workload tree from the terminal without writing per-CRD kubectl commands.
-- Headlamp plugin. The GUI face of workload visibility, built on the CNCF
-  [Headlamp](https://github.com/kubernetes-sigs/headlamp) project. Surfaces the
-  Karta workload tree, component status, and pod attribution in a browser-based
-  cluster UI without a custom dashboard.
+- Headlamp plugin. Browser-based workload visibility built on the CNCF
+  [Headlamp](https://github.com/kubernetes-sigs/headlamp) project: shows the
+  Karta workload tree, component status, and pod attribution.
 - Cross-resource expressions. Let a Karta reference values from related
   resources in its path expressions
   ([#80](https://github.com/run-ai/karta/issues/80)).
