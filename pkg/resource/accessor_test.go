@@ -7,6 +7,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"runtime"
+	"runtime/debug"
 	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -1355,6 +1358,65 @@ var _ = Describe("Accessor", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed to match status"))
 				Expect(result).To(BeNil())
+			})
+
+			It("should treat ExpectedResult as a literal value, not evaluate it", func() {
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorKarta := types.ReactorKarta()
+				reactorKarta.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Failed: []v1alpha1.StatusMatcher{
+						{
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression: `.status.phase`,
+								ExpectedResult: `failed" or . == . #`,
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+				result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).NotTo(BeNil())
+				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
+			})
+
+			It("should not evaluate the contents of ExpectedResult", func() {
+				const doublingTargetBytes = 32 * 1024 * 1024
+				const allocCeilingBytes = 8 * 1024 * 1024
+
+				prevLimit := debug.SetMemoryLimit(256 * 1024 * 1024)
+				defer debug.SetMemoryLimit(prevLimit)
+
+				reactorObject := types.NewReactorObject()
+				reactorObject.Status.Phase = "running"
+				reactorKarta := types.ReactorKarta()
+				reactorKarta.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+					Running: []v1alpha1.StatusMatcher{
+						{
+							ByExpression: &v1alpha1.ExpressionMatcher{
+								Expression: `.`,
+								ExpectedResult: fmt.Sprintf(`\("x" | until(length > %d; . + .))`, doublingTargetBytes),
+							},
+						},
+					},
+				}
+				accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+				var before, after runtime.MemStats
+				runtime.GC()
+				runtime.ReadMemStats(&before)
+
+				_, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+				runtime.ReadMemStats(&after)
+				allocated := after.TotalAlloc - before.TotalAlloc
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(allocated).To(BeNumerically("<", uint64(allocCeilingBytes)),
+					"ExpectedResult drove %d MiB of allocation", allocated/(1024*1024))
 			})
 		})
 
