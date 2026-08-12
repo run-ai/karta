@@ -63,26 +63,26 @@ of the roadmap is itself public and reviewable.
   instead of every consumer re-bundling its own copies. Turns the bundled
   `docs/catalog/` set into a shared, versioned source the ecosystem can pull from.
   Tracked by [#86](https://github.com/run-ai/karta/issues/86).
-- **CLI.** A command-line tool for read-only visibility into any Karta-described
-  workload — list workloads, inspect component structure, and drill into the
+- CLI. A command-line tool for read-only visibility into any Karta-described
+  workload: list workloads, inspect component structure, and drill into the
   workload tree from the terminal without writing per-CRD kubectl commands.
-- **Headlamp plugin.** The GUI face of workload visibility, built on the CNCF
+- Headlamp plugin. The GUI face of workload visibility, built on the CNCF
   [Headlamp](https://github.com/kubernetes-sigs/headlamp) project. Surfaces the
   Karta workload tree, component status, and pod attribution in a browser-based
-  cluster UI without a bespoke dashboard.
-- **Cross-resource expressions.** Let a Karta reference values from related
+  cluster UI without a custom dashboard.
+- Cross-resource expressions. Let a Karta reference values from related
   resources in its path expressions
   ([#80](https://github.com/run-ai/karta/issues/80)).
 
 ## Next
 
-**Theme: broader coverage and operational observability.**
+Theme: broader coverage and operational observability.
 
 - **Broader, tested workload coverage.** Expand the pre-built, tested example set
   and keep pace with upstream APIs of the workloads Karta describes — including
   **Kubeflow Trainer v2** and Dynamo `v1beta1`
   ([#78](https://github.com/run-ai/karta/issues/78)).
-- **Metrics exporter.** A Prometheus-compatible exporter that re-exposes existing
+- Metrics exporter. A Prometheus-compatible exporter that re-exposes existing
   per-pod operational metrics (GPU utilization, GPU memory, CPU, memory) at
   workload and component granularity using Karta's structural knowledge. Enables
   consumers to answer questions like "what is the GPU utilization of the prefill
@@ -126,7 +126,7 @@ it stay vendor-neutral and broadly adoptable.
 Completed milestones, most recent first. The GitHub issue is the permanent record;
 this section is a quick reference for what has already shipped.
 
-- **Helm chart / CRD upgrade hook** — Helm chart hardening and CRD upgrader hook
+- Helm chart / CRD upgrade hook: Helm chart hardening and CRD upgrader hook
   shipped ([#43](https://github.com/run-ai/karta/issues/43), Aug 2026).
 
 ---
