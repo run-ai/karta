@@ -40,7 +40,7 @@ jobs:
             PACKAGE_VERSION=${GITHUB_REF_NAME#v}
           else
             echo "Push to main: dev build keyed off the commit sha"
-            PACKAGE_VERSION=0.0.0-dev-$(git rev-parse --short HEAD)
+            PACKAGE_VERSION=0.0.0-main-$(git rev-parse --short HEAD)
           fi
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
           echo "PACKAGE_VERSION=$PACKAGE_VERSION"

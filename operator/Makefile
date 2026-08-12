@@ -6,9 +6,9 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
-# Version is derived automatically from git. Falls back to "0.0.0-dev" when
+# Version is derived automatically from git. Falls back to "0.0.0-main" when
 # there are no tags or git is unavailable (e.g. a bare source tarball).
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-main")
 
 # Container image settings (defaults for ghcr.io/run-ai/karta OSS publishing).
 # Override any component from the command line, e.g.:

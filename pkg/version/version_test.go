@@ -11,7 +11,7 @@ import (
 var _ = Describe("version", func() {
 	// The default is mirrored by the Makefiles and the operator Dockerfile, and
 	// is the sentinel cli-verify-version checks against.
-	It("defaults to 0.0.0-dev when the binary is not stamped", func() {
-		Expect(String()).To(Equal("0.0.0-dev"))
+	It("defaults to 0.0.0-main when the binary is not stamped", func() {
+		Expect(String()).To(Equal("0.0.0-main"))
 	})
 })

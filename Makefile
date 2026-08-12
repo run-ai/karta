@@ -16,8 +16,8 @@ $(CLI_LOCALBIN_ABS):
 	mkdir -p $@
 
 # Version stamping. CI overrides VERSION with the scheme in push-artifacts.yaml
-# (tag v1.2.3 -> 1.2.3, main -> 0.0.0-dev-<sha>).
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
+# (tag v1.2.3 -> 1.2.3, main -> 0.0.0-main-<sha>).
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-main")
 
 VERSION_PKG := github.com/run-ai/karta/pkg/version
 LDFLAGS     := -ldflags "-X $(VERSION_PKG).version=$(VERSION)"
