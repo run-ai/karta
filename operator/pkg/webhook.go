@@ -90,14 +90,12 @@ func (v *KartaValidator) ValidateUpdate(ctx context.Context, oldObj, karta *kart
 	if err := kartav1alpha1.NewKartaValidator(karta).Validate(); err != nil {
 		return nil, err
 	}
-	// The root component GVK is immutable once the Karta is created (#224).
-	// It backs the GVK label index and the per-GVK uniqueness guarantee, so
-	// letting it change would leave stale labels and could smuggle in a
-	// duplicate that create-time validation already rejected.
+	// The root component GVK is immutable once the Karta is created. It backs the
+	// GVK label index and the per-GVK uniqueness guarantee, so letting it change
+	// would leave stale labels and could smuggle in a duplicate that create-time
+	// validation already rejected.
 	oldGVK, newGVK := rootGVK(oldObj), rootGVK(karta)
-	switch {
-	case oldGVK == nil && newGVK == nil:
-	case oldGVK == nil || newGVK == nil || *oldGVK != *newGVK:
+	if oldGVK == nil || newGVK == nil || *oldGVK != *newGVK {
 		return nil, fmt.Errorf("the root component GVK is immutable and cannot be changed after creation")
 	}
 	if err := checkRootLabels(karta); err != nil {
