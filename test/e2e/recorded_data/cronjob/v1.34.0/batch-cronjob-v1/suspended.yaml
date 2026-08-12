@@ -4,11 +4,11 @@ events:
     apiVersion: batch/v1
     kind: CronJob
     metadata:
-      creationTimestamp: "2026-08-03T18:48:00Z"
+      creationTimestamp: "2026-08-12T18:39:00Z"
       generation: 1
       name: karta-e2e-cronjob-suspended
-      namespace: test-nsxnd
-      uid: 5f1e33c3-b1d1-4254-98b2-2fd9ffd2596e
+      namespace: test-x9zjw
+      uid: e3029134-9c5c-407d-8ce5-0237affbbc35
     spec:
       concurrencyPolicy: Allow
       failedJobsHistoryLimit: 1

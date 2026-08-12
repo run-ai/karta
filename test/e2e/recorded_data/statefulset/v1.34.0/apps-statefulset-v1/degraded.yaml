@@ -4,11 +4,11 @@ events:
     apiVersion: apps/v1
     kind: StatefulSet
     metadata:
-      creationTimestamp: "2026-08-03T19:50:48Z"
+      creationTimestamp: "2026-08-12T18:33:35Z"
       generation: 1
       name: karta-e2e-sts-degraded
-      namespace: test-5cptl
-      uid: c69e04fa-dc4e-4ebd-a55e-8498f02fef7f
+      namespace: test-x9zjw
+      uid: cb058c72-237f-4e7b-ad02-d1ec73f21730
     spec:
       persistentVolumeClaimRetentionPolicy:
         whenDeleted: Retain
@@ -68,11 +68,11 @@ events:
     apiVersion: apps/v1
     kind: StatefulSet
     metadata:
-      creationTimestamp: "2026-08-03T19:50:48Z"
+      creationTimestamp: "2026-08-12T18:33:35Z"
       generation: 1
       name: karta-e2e-sts-degraded
-      namespace: test-5cptl
-      uid: c69e04fa-dc4e-4ebd-a55e-8498f02fef7f
+      namespace: test-x9zjw
+      uid: cb058c72-237f-4e7b-ad02-d1ec73f21730
     spec:
       persistentVolumeClaimRetentionPolicy:
         whenDeleted: Retain
@@ -134,11 +134,11 @@ events:
     apiVersion: apps/v1
     kind: StatefulSet
     metadata:
-      creationTimestamp: "2026-08-03T19:50:48Z"
+      creationTimestamp: "2026-08-12T18:33:35Z"
       generation: 1
       name: karta-e2e-sts-degraded
-      namespace: test-5cptl
-      uid: c69e04fa-dc4e-4ebd-a55e-8498f02fef7f
+      namespace: test-x9zjw
+      uid: cb058c72-237f-4e7b-ad02-d1ec73f21730
     spec:
       persistentVolumeClaimRetentionPolicy:
         whenDeleted: Retain

@@ -4,11 +4,11 @@ events:
     apiVersion: kubeflow.org/v1
     kind: PyTorchJob
     metadata:
-      creationTimestamp: "2026-08-03T21:04:00Z"
+      creationTimestamp: "2026-08-12T18:42:49Z"
       generation: 1
       name: karta-e2e-pytorch-failed
-      namespace: test-mbwpr
-      uid: 8701bcef-465c-4cae-894d-e9ca5b4f02aa
+      namespace: test-x9zjw
+      uid: 0ed154ec-fcc7-4fb9-b84a-ec137c31135f
     spec:
       pytorchReplicaSpecs:
         Master:
@@ -29,8 +29,8 @@ events:
                     memory: 64Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T21:04:00Z"
-        lastUpdateTime: "2026-08-03T21:04:00Z"
+      - lastTransitionTime: "2026-08-12T18:42:49Z"
+        lastUpdateTime: "2026-08-12T18:42:49Z"
         message: PyTorchJob karta-e2e-pytorch-failed is created.
         reason: PyTorchJobCreated
         status: "True"
@@ -38,18 +38,18 @@ events:
       replicaStatuses:
         Master:
           selector: training.kubeflow.org/job-name=karta-e2e-pytorch-failed,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=master
-      startTime: "2026-08-03T21:04:00Z"
+      startTime: "2026-08-12T18:42:49Z"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: kubeflow.org/v1
     kind: PyTorchJob
     metadata:
-      creationTimestamp: "2026-08-03T21:04:00Z"
+      creationTimestamp: "2026-08-12T18:42:49Z"
       generation: 1
       name: karta-e2e-pytorch-failed
-      namespace: test-mbwpr
-      uid: 8701bcef-465c-4cae-894d-e9ca5b4f02aa
+      namespace: test-x9zjw
+      uid: 0ed154ec-fcc7-4fb9-b84a-ec137c31135f
     spec:
       pytorchReplicaSpecs:
         Master:
@@ -70,14 +70,14 @@ events:
                     memory: 64Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T21:04:00Z"
-        lastUpdateTime: "2026-08-03T21:04:00Z"
+      - lastTransitionTime: "2026-08-12T18:42:49Z"
+        lastUpdateTime: "2026-08-12T18:42:49Z"
         message: PyTorchJob karta-e2e-pytorch-failed is created.
         reason: PyTorchJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-08-03T21:04:01Z"
-        lastUpdateTime: "2026-08-03T21:04:01Z"
+      - lastTransitionTime: "2026-08-12T18:42:50Z"
+        lastUpdateTime: "2026-08-12T18:42:50Z"
         message: PyTorchJob karta-e2e-pytorch-failed is running.
         reason: PyTorchJobRunning
         status: "True"
@@ -86,18 +86,18 @@ events:
         Master:
           active: 1
           selector: training.kubeflow.org/job-name=karta-e2e-pytorch-failed,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=master
-      startTime: "2026-08-03T21:04:00Z"
+      startTime: "2026-08-12T18:42:49Z"
   state: Running
 - kind: STATE
   object:
     apiVersion: kubeflow.org/v1
     kind: PyTorchJob
     metadata:
-      creationTimestamp: "2026-08-03T21:04:00Z"
+      creationTimestamp: "2026-08-12T18:42:49Z"
       generation: 1
       name: karta-e2e-pytorch-failed
-      namespace: test-mbwpr
-      uid: 8701bcef-465c-4cae-894d-e9ca5b4f02aa
+      namespace: test-x9zjw
+      uid: 0ed154ec-fcc7-4fb9-b84a-ec137c31135f
     spec:
       pytorchReplicaSpecs:
         Master:
@@ -117,22 +117,22 @@ events:
                     cpu: 50m
                     memory: 64Mi
     status:
-      completionTime: "2026-08-03T21:04:17Z"
+      completionTime: "2026-08-12T18:43:06Z"
       conditions:
-      - lastTransitionTime: "2026-08-03T21:04:00Z"
-        lastUpdateTime: "2026-08-03T21:04:00Z"
+      - lastTransitionTime: "2026-08-12T18:42:49Z"
+        lastUpdateTime: "2026-08-12T18:42:49Z"
         message: PyTorchJob karta-e2e-pytorch-failed is created.
         reason: PyTorchJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-08-03T21:04:01Z"
-        lastUpdateTime: "2026-08-03T21:04:01Z"
+      - lastTransitionTime: "2026-08-12T18:42:50Z"
+        lastUpdateTime: "2026-08-12T18:42:50Z"
         message: PyTorchJob karta-e2e-pytorch-failed is running.
         reason: PyTorchJobRunning
         status: "False"
         type: Running
-      - lastTransitionTime: "2026-08-03T21:04:17Z"
-        lastUpdateTime: "2026-08-03T21:04:17Z"
+      - lastTransitionTime: "2026-08-12T18:43:06Z"
+        lastUpdateTime: "2026-08-12T18:43:06Z"
         message: PyTorchJob karta-e2e-pytorch-failed is failed because 1 Master replica(s)
           failed.
         reason: PyTorchJobFailed
@@ -142,7 +142,7 @@ events:
         Master:
           failed: 1
           selector: training.kubeflow.org/job-name=karta-e2e-pytorch-failed,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=master
-      startTime: "2026-08-03T21:04:00Z"
+      startTime: "2026-08-12T18:42:49Z"
   state: Failed
 flow: failed
 kartaFile: docs/catalog/kubeflow-org-pytorchjob-v1.yaml

@@ -4,11 +4,11 @@ events:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-03T20:36:08Z"
+      creationTimestamp: "2026-08-12T18:36:14Z"
       generation: 1
       name: karta-e2e-jobset-completed
-      namespace: test-cq97h
-      uid: 670d2c81-81a4-4a02-90ec-447336644113
+      namespace: test-x9zjw
+      uid: d2a21d7e-0572-421b-b6c6-0cf67e366c4d
     spec:
       network:
         enableDNSHostnames: true
@@ -64,11 +64,11 @@ events:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-03T20:36:08Z"
+      creationTimestamp: "2026-08-12T18:36:14Z"
       generation: 1
       name: karta-e2e-jobset-completed
-      namespace: test-cq97h
-      uid: 670d2c81-81a4-4a02-90ec-447336644113
+      namespace: test-x9zjw
+      uid: d2a21d7e-0572-421b-b6c6-0cf67e366c4d
     spec:
       network:
         enableDNSHostnames: true
@@ -124,11 +124,11 @@ events:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-03T20:36:08Z"
+      creationTimestamp: "2026-08-12T18:36:14Z"
       generation: 1
       name: karta-e2e-jobset-completed
-      namespace: test-cq97h
-      uid: 670d2c81-81a4-4a02-90ec-447336644113
+      namespace: test-x9zjw
+      uid: d2a21d7e-0572-421b-b6c6-0cf67e366c4d
     spec:
       network:
         enableDNSHostnames: true
@@ -184,11 +184,11 @@ events:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-03T20:36:08Z"
+      creationTimestamp: "2026-08-12T18:36:14Z"
       generation: 1
       name: karta-e2e-jobset-completed
-      namespace: test-cq97h
-      uid: 670d2c81-81a4-4a02-90ec-447336644113
+      namespace: test-x9zjw
+      uid: d2a21d7e-0572-421b-b6c6-0cf67e366c4d
     spec:
       network:
         enableDNSHostnames: true
@@ -244,11 +244,11 @@ events:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-03T20:36:08Z"
+      creationTimestamp: "2026-08-12T18:36:14Z"
       generation: 1
       name: karta-e2e-jobset-completed
-      namespace: test-cq97h
-      uid: 670d2c81-81a4-4a02-90ec-447336644113
+      namespace: test-x9zjw
+      uid: d2a21d7e-0572-421b-b6c6-0cf67e366c4d
     spec:
       network:
         enableDNSHostnames: true
@@ -304,11 +304,11 @@ events:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-03T20:36:08Z"
+      creationTimestamp: "2026-08-12T18:36:14Z"
       generation: 1
       name: karta-e2e-jobset-completed
-      namespace: test-cq97h
-      uid: 670d2c81-81a4-4a02-90ec-447336644113
+      namespace: test-x9zjw
+      uid: d2a21d7e-0572-421b-b6c6-0cf67e366c4d
     spec:
       network:
         enableDNSHostnames: true
@@ -351,7 +351,7 @@ events:
         operator: All
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T20:36:33Z"
+      - lastTransitionTime: "2026-08-12T18:36:36Z"
         message: jobset completed successfully
         reason: AllJobsCompleted
         status: "True"

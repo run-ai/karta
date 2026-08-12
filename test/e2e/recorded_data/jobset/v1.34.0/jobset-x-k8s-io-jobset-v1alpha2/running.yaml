@@ -4,11 +4,11 @@ events:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-03T20:36:08Z"
+      creationTimestamp: "2026-08-12T18:36:14Z"
       generation: 1
       name: karta-e2e-jobset-running
-      namespace: test-cq97h
-      uid: 30ec4d71-1c02-4dbe-a7f7-ef667104346b
+      namespace: test-x9zjw
+      uid: 12b2daf0-c560-4c9a-85c1-8d78936f9cce
     spec:
       network:
         enableDNSHostnames: true
@@ -64,11 +64,11 @@ events:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-03T20:36:08Z"
+      creationTimestamp: "2026-08-12T18:36:14Z"
       generation: 1
       name: karta-e2e-jobset-running
-      namespace: test-cq97h
-      uid: 30ec4d71-1c02-4dbe-a7f7-ef667104346b
+      namespace: test-x9zjw
+      uid: 12b2daf0-c560-4c9a-85c1-8d78936f9cce
     spec:
       network:
         enableDNSHostnames: true

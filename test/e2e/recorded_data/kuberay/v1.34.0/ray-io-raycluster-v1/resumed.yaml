@@ -4,11 +4,11 @@ events:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
-      creationTimestamp: "2026-08-04T04:52:48Z"
+      creationTimestamp: "2026-08-12T18:42:15Z"
       generation: 1
       name: karta-e2e-ray-resumed
-      namespace: test-c2zk2
-      uid: 799b6f3d-5c6d-49a5-87b5-7619276a39f6
+      namespace: test-x9zjw
+      uid: a96f2dff-6e9c-49fd-a4ac-83b5332e33dc
     spec:
       headGroupSpec:
         rayStartParams: {}
@@ -58,22 +58,22 @@ events:
                   memory: 512Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: Head Pod not found
         reason: HeadPodNotFound
         status: "False"
         type: HeadPodReady
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: RayCluster Pods are being provisioned for first time
         reason: RayClusterPodsProvisioning
         status: "False"
         type: RayClusterProvisioned
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspended
         status: "False"
         type: RayClusterSuspended
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspending
         status: "True"
@@ -90,12 +90,12 @@ events:
         serve: "8000"
       head:
         serviceName: karta-e2e-ray-resumed-head-svc
-      lastUpdateTime: "2026-08-04T04:52:48Z"
+      lastUpdateTime: "2026-08-12T18:42:15Z"
       maxWorkerReplicas: 1
       observedGeneration: 1
       state: suspended
       stateTransitionTimes:
-        suspended: "2026-08-04T04:52:48Z"
+        suspended: "2026-08-12T18:42:15Z"
   state: Suspended
 - action:
     name: Resume
@@ -111,11 +111,11 @@ events:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
-      creationTimestamp: "2026-08-04T04:52:48Z"
+      creationTimestamp: "2026-08-12T18:42:15Z"
       generation: 2
       name: karta-e2e-ray-resumed
-      namespace: test-c2zk2
-      uid: 799b6f3d-5c6d-49a5-87b5-7619276a39f6
+      namespace: test-x9zjw
+      uid: a96f2dff-6e9c-49fd-a4ac-83b5332e33dc
     spec:
       headGroupSpec:
         rayStartParams: {}
@@ -165,22 +165,22 @@ events:
                   memory: 512Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: Head Pod not found
         reason: HeadPodNotFound
         status: "False"
         type: HeadPodReady
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: RayCluster Pods are being provisioned for first time
         reason: RayClusterPodsProvisioning
         status: "False"
         type: RayClusterProvisioned
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspended
         status: "False"
         type: RayClusterSuspended
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspending
         status: "True"
@@ -197,23 +197,24 @@ events:
         serve: "8000"
       head:
         serviceName: karta-e2e-ray-resumed-head-svc
-      lastUpdateTime: "2026-08-04T04:52:48Z"
+      lastUpdateTime: "2026-08-12T18:42:15Z"
       maxWorkerReplicas: 1
       observedGeneration: 1
       state: suspended
       stateTransitionTimes:
-        suspended: "2026-08-04T04:52:48Z"
+        suspended: "2026-08-12T18:42:15Z"
+  staleObservedGeneration: true
   state: Initializing
 - kind: STATE
   object:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
-      creationTimestamp: "2026-08-04T04:52:48Z"
+      creationTimestamp: "2026-08-12T18:42:15Z"
       generation: 2
       name: karta-e2e-ray-resumed
-      namespace: test-c2zk2
-      uid: 799b6f3d-5c6d-49a5-87b5-7619276a39f6
+      namespace: test-x9zjw
+      uid: a96f2dff-6e9c-49fd-a4ac-83b5332e33dc
     spec:
       headGroupSpec:
         rayStartParams: {}
@@ -263,22 +264,22 @@ events:
                   memory: 512Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: Head Pod not found
         reason: HeadPodNotFound
         status: "False"
         type: HeadPodReady
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: RayCluster has been suspended
         reason: RayClusterPodsProvisioning
         status: "False"
         type: RayClusterProvisioned
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspended
         status: "True"
         type: RayClusterSuspended
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspending
         status: "False"
@@ -295,23 +296,23 @@ events:
         serve: "8000"
       head:
         serviceName: karta-e2e-ray-resumed-head-svc
-      lastUpdateTime: "2026-08-04T04:52:48Z"
+      lastUpdateTime: "2026-08-12T18:42:15Z"
       maxWorkerReplicas: 1
       observedGeneration: 2
       state: suspended
       stateTransitionTimes:
-        suspended: "2026-08-04T04:52:48Z"
+        suspended: "2026-08-12T18:42:15Z"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
-      creationTimestamp: "2026-08-04T04:52:48Z"
+      creationTimestamp: "2026-08-12T18:42:15Z"
       generation: 2
       name: karta-e2e-ray-resumed
-      namespace: test-c2zk2
-      uid: 799b6f3d-5c6d-49a5-87b5-7619276a39f6
+      namespace: test-x9zjw
+      uid: a96f2dff-6e9c-49fd-a4ac-83b5332e33dc
     spec:
       headGroupSpec:
         rayStartParams: {}
@@ -361,22 +362,22 @@ events:
                   memory: 512Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: Head Pod not found
         reason: HeadPodNotFound
         status: "False"
         type: HeadPodReady
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: RayCluster has been suspended
         reason: RayClusterPodsProvisioning
         status: "False"
         type: RayClusterProvisioned
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspended
         status: "False"
         type: RayClusterSuspended
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspending
         status: "False"
@@ -393,23 +394,23 @@ events:
         serve: "8000"
       head:
         serviceName: karta-e2e-ray-resumed-head-svc
-      lastUpdateTime: "2026-08-04T04:52:48Z"
+      lastUpdateTime: "2026-08-12T18:42:15Z"
       maxWorkerReplicas: 1
       observedGeneration: 2
       state: suspended
       stateTransitionTimes:
-        suspended: "2026-08-04T04:52:48Z"
+        suspended: "2026-08-12T18:42:15Z"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
-      creationTimestamp: "2026-08-04T04:52:48Z"
+      creationTimestamp: "2026-08-12T18:42:15Z"
       generation: 2
       name: karta-e2e-ray-resumed
-      namespace: test-c2zk2
-      uid: 799b6f3d-5c6d-49a5-87b5-7619276a39f6
+      namespace: test-x9zjw
+      uid: a96f2dff-6e9c-49fd-a4ac-83b5332e33dc
     spec:
       headGroupSpec:
         rayStartParams: {}
@@ -459,22 +460,120 @@ events:
                   memory: 512Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
+        message: Head Pod not found
+        reason: HeadPodNotFound
+        status: "False"
+        type: HeadPodReady
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
+        message: RayCluster Pods are being provisioned for first time
+        reason: RayClusterPodsProvisioning
+        status: "False"
+        type: RayClusterProvisioned
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
+        message: ""
+        reason: RayClusterSuspended
+        status: "False"
+        type: RayClusterSuspended
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
+        message: ""
+        reason: RayClusterSuspending
+        status: "False"
+        type: RayClusterSuspending
+      desiredCPU: 250m
+      desiredGPU: "0"
+      desiredMemory: 1Gi
+      desiredTPU: "0"
+      endpoints:
+        client: "10001"
+        dashboard: "8265"
+        gcs-server: "6379"
+        metrics: "8080"
+        serve: "8000"
+      head:
+        serviceName: karta-e2e-ray-resumed-head-svc
+      lastUpdateTime: "2026-08-12T18:42:17Z"
+      maxWorkerReplicas: 1
+      observedGeneration: 2
+      state: suspended
+      stateTransitionTimes:
+        suspended: "2026-08-12T18:42:15Z"
+  state: Initializing
+- kind: STATE
+  object:
+    apiVersion: ray.io/v1
+    kind: RayCluster
+    metadata:
+      creationTimestamp: "2026-08-12T18:42:15Z"
+      generation: 2
+      name: karta-e2e-ray-resumed
+      namespace: test-x9zjw
+      uid: a96f2dff-6e9c-49fd-a4ac-83b5332e33dc
+    spec:
+      headGroupSpec:
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              livenessProbe:
+                failureThreshold: 30
+                initialDelaySeconds: 30
+                periodSeconds: 10
+                tcpSocket:
+                  port: 6379
+              name: ray-head
+              readinessProbe:
+                failureThreshold: 30
+                initialDelaySeconds: 10
+                periodSeconds: 5
+                tcpSocket:
+                  port: 6379
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 2Gi
+                requests:
+                  cpu: 250m
+                  memory: 1Gi
+      rayVersion: 2.40.0
+      suspend: false
+      workerGroupSpecs:
+      - groupName: small
+        maxReplicas: 1
+        minReplicas: 0
+        numOfHosts: 1
+        rayStartParams: {}
+        replicas: 0
+        template:
+          spec:
+            containers:
+            - image: ray-e2e:local
+              imagePullPolicy: IfNotPresent
+              name: ray-worker
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
+    status:
+      conditions:
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: Unknown
         status: "False"
         type: HeadPodReady
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: RayCluster Pods are being provisioned for first time
         reason: RayClusterPodsProvisioning
         status: "False"
         type: RayClusterProvisioned
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspended
         status: "False"
         type: RayClusterSuspended
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspending
         status: "False"
@@ -490,25 +589,25 @@ events:
         metrics: "8080"
         serve: "8000"
       head:
-        podName: karta-e2e-ray-resumed-head-klzmt
+        podName: karta-e2e-ray-resumed-head-h2pcp
         serviceName: karta-e2e-ray-resumed-head-svc
-      lastUpdateTime: "2026-08-04T04:52:50Z"
+      lastUpdateTime: "2026-08-12T18:42:17Z"
       maxWorkerReplicas: 1
       observedGeneration: 2
       state: suspended
       stateTransitionTimes:
-        suspended: "2026-08-04T04:52:48Z"
+        suspended: "2026-08-12T18:42:15Z"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
-      creationTimestamp: "2026-08-04T04:52:48Z"
+      creationTimestamp: "2026-08-12T18:42:15Z"
       generation: 2
       name: karta-e2e-ray-resumed
-      namespace: test-c2zk2
-      uid: 799b6f3d-5c6d-49a5-87b5-7619276a39f6
+      namespace: test-x9zjw
+      uid: a96f2dff-6e9c-49fd-a4ac-83b5332e33dc
     spec:
       headGroupSpec:
         rayStartParams: {}
@@ -558,22 +657,22 @@ events:
                   memory: 512Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: 'containers with unready status: [ray-head]; ray-head: '
         reason: ContainerCreating
         status: "False"
         type: HeadPodReady
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: RayCluster Pods are being provisioned for first time
         reason: RayClusterPodsProvisioning
         status: "False"
         type: RayClusterProvisioned
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspended
         status: "False"
         type: RayClusterSuspended
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspending
         status: "False"
@@ -589,25 +688,25 @@ events:
         metrics: "8080"
         serve: "8000"
       head:
-        podName: karta-e2e-ray-resumed-head-klzmt
+        podName: karta-e2e-ray-resumed-head-h2pcp
         serviceName: karta-e2e-ray-resumed-head-svc
-      lastUpdateTime: "2026-08-04T04:52:51Z"
+      lastUpdateTime: "2026-08-12T18:42:17Z"
       maxWorkerReplicas: 1
       observedGeneration: 2
       state: suspended
       stateTransitionTimes:
-        suspended: "2026-08-04T04:52:48Z"
+        suspended: "2026-08-12T18:42:15Z"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
-      creationTimestamp: "2026-08-04T04:52:48Z"
+      creationTimestamp: "2026-08-12T18:42:15Z"
       generation: 2
       name: karta-e2e-ray-resumed
-      namespace: test-c2zk2
-      uid: 799b6f3d-5c6d-49a5-87b5-7619276a39f6
+      namespace: test-x9zjw
+      uid: a96f2dff-6e9c-49fd-a4ac-83b5332e33dc
     spec:
       headGroupSpec:
         rayStartParams: {}
@@ -657,22 +756,22 @@ events:
                   memory: 512Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: 'containers with unready status: [ray-head]'
         reason: ContainersNotReady
         status: "False"
         type: HeadPodReady
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: RayCluster Pods are being provisioned for first time
         reason: RayClusterPodsProvisioning
         status: "False"
         type: RayClusterProvisioned
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspended
         status: "False"
         type: RayClusterSuspended
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspending
         status: "False"
@@ -688,27 +787,27 @@ events:
         metrics: "8080"
         serve: "8000"
       head:
-        podIP: 10.244.1.14
-        podName: karta-e2e-ray-resumed-head-klzmt
-        serviceIP: 10.244.1.14
+        podIP: 10.244.1.58
+        podName: karta-e2e-ray-resumed-head-h2pcp
+        serviceIP: 10.244.1.58
         serviceName: karta-e2e-ray-resumed-head-svc
-      lastUpdateTime: "2026-08-04T04:52:52Z"
+      lastUpdateTime: "2026-08-12T18:42:18Z"
       maxWorkerReplicas: 1
       observedGeneration: 2
       state: suspended
       stateTransitionTimes:
-        suspended: "2026-08-04T04:52:48Z"
+        suspended: "2026-08-12T18:42:15Z"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
-      creationTimestamp: "2026-08-04T04:52:48Z"
+      creationTimestamp: "2026-08-12T18:42:15Z"
       generation: 2
       name: karta-e2e-ray-resumed
-      namespace: test-c2zk2
-      uid: 799b6f3d-5c6d-49a5-87b5-7619276a39f6
+      namespace: test-x9zjw
+      uid: a96f2dff-6e9c-49fd-a4ac-83b5332e33dc
     spec:
       headGroupSpec:
         rayStartParams: {}
@@ -758,22 +857,22 @@ events:
                   memory: 512Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-08-04T04:53:03Z"
+      - lastTransitionTime: "2026-08-12T18:42:29Z"
         message: ""
         reason: HeadPodRunningAndReady
         status: "True"
         type: HeadPodReady
-      - lastTransitionTime: "2026-08-04T04:53:03Z"
+      - lastTransitionTime: "2026-08-12T18:42:29Z"
         message: All Ray Pods are ready for the first time
         reason: AllPodRunningAndReadyFirstTime
         status: "True"
         type: RayClusterProvisioned
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspended
         status: "False"
         type: RayClusterSuspended
-      - lastTransitionTime: "2026-08-04T04:52:48Z"
+      - lastTransitionTime: "2026-08-12T18:42:15Z"
         message: ""
         reason: RayClusterSuspending
         status: "False"
@@ -789,17 +888,17 @@ events:
         metrics: "8080"
         serve: "8000"
       head:
-        podIP: 10.244.1.14
-        podName: karta-e2e-ray-resumed-head-klzmt
-        serviceIP: 10.244.1.14
+        podIP: 10.244.1.58
+        podName: karta-e2e-ray-resumed-head-h2pcp
+        serviceIP: 10.244.1.58
         serviceName: karta-e2e-ray-resumed-head-svc
-      lastUpdateTime: "2026-08-04T04:53:03Z"
+      lastUpdateTime: "2026-08-12T18:42:29Z"
       maxWorkerReplicas: 1
       observedGeneration: 2
       state: ready
       stateTransitionTimes:
-        ready: "2026-08-04T04:53:03Z"
-        suspended: "2026-08-04T04:52:48Z"
+        ready: "2026-08-12T18:42:29Z"
+        suspended: "2026-08-12T18:42:15Z"
   state: Running
 flow: resumed
 kartaFile: docs/catalog/ray-io-raycluster-v1.yaml

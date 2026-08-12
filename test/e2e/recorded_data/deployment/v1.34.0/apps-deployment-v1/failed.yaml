@@ -6,11 +6,11 @@ events:
     metadata:
       annotations:
         deployment.kubernetes.io/revision: "1"
-      creationTimestamp: "2026-08-03T19:45:10Z"
+      creationTimestamp: "2026-08-12T18:43:19Z"
       generation: 1
       name: karta-e2e-deploy-failed
-      namespace: test-wmqms
-      uid: 0dd49f25-acd2-415b-9047-616d940010a5
+      namespace: test-x9zjw
+      uid: fd1febc5-7cb2-4701-836a-7a34af1f2b31
     spec:
       progressDeadlineSeconds: 10
       replicas: 1
@@ -51,8 +51,8 @@ events:
           terminationGracePeriodSeconds: 30
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T19:45:10Z"
-        lastUpdateTime: "2026-08-03T19:45:10Z"
+      - lastTransitionTime: "2026-08-12T18:43:19Z"
+        lastUpdateTime: "2026-08-12T18:43:19Z"
         message: Created new replica set "karta-e2e-deploy-failed-86c976d7f4"
         reason: NewReplicaSetCreated
         status: "True"
@@ -65,11 +65,11 @@ events:
     metadata:
       annotations:
         deployment.kubernetes.io/revision: "1"
-      creationTimestamp: "2026-08-03T19:45:10Z"
+      creationTimestamp: "2026-08-12T18:43:19Z"
       generation: 1
       name: karta-e2e-deploy-failed
-      namespace: test-wmqms
-      uid: 0dd49f25-acd2-415b-9047-616d940010a5
+      namespace: test-x9zjw
+      uid: fd1febc5-7cb2-4701-836a-7a34af1f2b31
     spec:
       progressDeadlineSeconds: 10
       replicas: 1
@@ -110,14 +110,14 @@ events:
           terminationGracePeriodSeconds: 30
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T19:45:10Z"
-        lastUpdateTime: "2026-08-03T19:45:10Z"
+      - lastTransitionTime: "2026-08-12T18:43:19Z"
+        lastUpdateTime: "2026-08-12T18:43:19Z"
         message: Created new replica set "karta-e2e-deploy-failed-86c976d7f4"
         reason: NewReplicaSetCreated
         status: "True"
         type: Progressing
-      - lastTransitionTime: "2026-08-03T19:45:10Z"
-        lastUpdateTime: "2026-08-03T19:45:10Z"
+      - lastTransitionTime: "2026-08-12T18:43:19Z"
+        lastUpdateTime: "2026-08-12T18:43:19Z"
         message: Deployment does not have minimum availability.
         reason: MinimumReplicasUnavailable
         status: "False"
@@ -132,11 +132,11 @@ events:
     metadata:
       annotations:
         deployment.kubernetes.io/revision: "1"
-      creationTimestamp: "2026-08-03T19:45:10Z"
+      creationTimestamp: "2026-08-12T18:43:19Z"
       generation: 1
       name: karta-e2e-deploy-failed
-      namespace: test-wmqms
-      uid: 0dd49f25-acd2-415b-9047-616d940010a5
+      namespace: test-x9zjw
+      uid: fd1febc5-7cb2-4701-836a-7a34af1f2b31
     spec:
       progressDeadlineSeconds: 10
       replicas: 1
@@ -177,14 +177,14 @@ events:
           terminationGracePeriodSeconds: 30
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T19:45:10Z"
-        lastUpdateTime: "2026-08-03T19:45:10Z"
+      - lastTransitionTime: "2026-08-12T18:43:19Z"
+        lastUpdateTime: "2026-08-12T18:43:19Z"
         message: Deployment does not have minimum availability.
         reason: MinimumReplicasUnavailable
         status: "False"
         type: Available
-      - lastTransitionTime: "2026-08-03T19:45:10Z"
-        lastUpdateTime: "2026-08-03T19:45:10Z"
+      - lastTransitionTime: "2026-08-12T18:43:19Z"
+        lastUpdateTime: "2026-08-12T18:43:19Z"
         message: ReplicaSet "karta-e2e-deploy-failed-86c976d7f4" is progressing.
         reason: ReplicaSetUpdated
         status: "True"
@@ -201,11 +201,11 @@ events:
     metadata:
       annotations:
         deployment.kubernetes.io/revision: "1"
-      creationTimestamp: "2026-08-03T19:45:10Z"
+      creationTimestamp: "2026-08-12T18:43:19Z"
       generation: 1
       name: karta-e2e-deploy-failed
-      namespace: test-wmqms
-      uid: 0dd49f25-acd2-415b-9047-616d940010a5
+      namespace: test-x9zjw
+      uid: fd1febc5-7cb2-4701-836a-7a34af1f2b31
     spec:
       progressDeadlineSeconds: 10
       replicas: 1
@@ -246,14 +246,14 @@ events:
           terminationGracePeriodSeconds: 30
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T19:45:10Z"
-        lastUpdateTime: "2026-08-03T19:45:10Z"
+      - lastTransitionTime: "2026-08-12T18:43:19Z"
+        lastUpdateTime: "2026-08-12T18:43:19Z"
         message: Deployment does not have minimum availability.
         reason: MinimumReplicasUnavailable
         status: "False"
         type: Available
-      - lastTransitionTime: "2026-08-03T19:45:21Z"
-        lastUpdateTime: "2026-08-03T19:45:21Z"
+      - lastTransitionTime: "2026-08-12T18:43:30Z"
+        lastUpdateTime: "2026-08-12T18:43:30Z"
         message: ReplicaSet "karta-e2e-deploy-failed-86c976d7f4" has timed out progressing.
         reason: ProgressDeadlineExceeded
         status: "False"

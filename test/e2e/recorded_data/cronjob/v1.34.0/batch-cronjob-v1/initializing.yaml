@@ -4,11 +4,11 @@ events:
     apiVersion: batch/v1
     kind: CronJob
     metadata:
-      creationTimestamp: "2026-08-03T18:47:38Z"
+      creationTimestamp: "2026-08-12T18:38:57Z"
       generation: 1
       name: karta-e2e-cronjob
-      namespace: test-nsxnd
-      uid: 70807379-602b-4466-9ec6-51c8fab2fdc2
+      namespace: test-x9zjw
+      uid: adba05bc-9e98-4086-8ba9-f3b690bd6939
     spec:
       concurrencyPolicy: Allow
       failedJobsHistoryLimit: 1

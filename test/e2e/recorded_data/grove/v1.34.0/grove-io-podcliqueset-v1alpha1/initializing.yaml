@@ -4,11 +4,11 @@ events:
     apiVersion: grove.io/v1alpha1
     kind: PodCliqueSet
     metadata:
-      creationTimestamp: "2026-08-04T04:16:43Z"
+      creationTimestamp: "2026-08-12T18:40:34Z"
       generation: 1
       name: karta-e2e-grove-initializing
-      namespace: test-vv5hm
-      uid: 755a01a4-b695-4583-ac31-b8177e11d1af
+      namespace: test-x9zjw
+      uid: edb9d957-19c1-4cf0-bf05-425093d2fe33
     spec:
       replicas: 1
       template:

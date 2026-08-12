@@ -4,13 +4,13 @@ events:
     apiVersion: apps.nvidia.com/v1alpha1
     kind: NIMService
     metadata:
-      creationTimestamp: "2026-08-04T05:03:55Z"
+      creationTimestamp: "2026-08-12T18:40:38Z"
       finalizers:
       - finalizer.nimservice.apps.nvidia.com
       generation: 2
       name: karta-e2e-nim
-      namespace: test-hs5c4
-      uid: a73774b5-98f2-4110-ba5d-8e4cb2c00d56
+      namespace: test-x9zjw
+      uid: f57e7352-1899-4470-a026-04bf5e52df89
     spec:
       authSecret: ngc-secret
       env:
@@ -49,13 +49,13 @@ events:
     apiVersion: apps.nvidia.com/v1alpha1
     kind: NIMService
     metadata:
-      creationTimestamp: "2026-08-04T05:03:55Z"
+      creationTimestamp: "2026-08-12T18:40:38Z"
       finalizers:
       - finalizer.nimservice.apps.nvidia.com
       generation: 2
       name: karta-e2e-nim
-      namespace: test-hs5c4
-      uid: a73774b5-98f2-4110-ba5d-8e4cb2c00d56
+      namespace: test-x9zjw
+      uid: f57e7352-1899-4470-a026-04bf5e52df89
     spec:
       authSecret: ngc-secret
       env:
@@ -90,7 +90,7 @@ events:
           volumeAccessMode: ReadWriteOnce
     status:
       conditions:
-      - lastTransitionTime: "2026-08-04T05:03:55Z"
+      - lastTransitionTime: "2026-08-12T18:40:38Z"
         message: The PVC has been created for storing NIM
         reason: PVCCreated
         status: "True"
@@ -102,13 +102,13 @@ events:
     apiVersion: apps.nvidia.com/v1alpha1
     kind: NIMService
     metadata:
-      creationTimestamp: "2026-08-04T05:03:55Z"
+      creationTimestamp: "2026-08-12T18:40:38Z"
       finalizers:
       - finalizer.nimservice.apps.nvidia.com
       generation: 2
       name: karta-e2e-nim
-      namespace: test-hs5c4
-      uid: a73774b5-98f2-4110-ba5d-8e4cb2c00d56
+      namespace: test-x9zjw
+      uid: f57e7352-1899-4470-a026-04bf5e52df89
     spec:
       authSecret: ngc-secret
       env:
@@ -143,13 +143,71 @@ events:
           volumeAccessMode: ReadWriteOnce
     status:
       conditions:
-      - lastTransitionTime: "2026-08-04T05:03:55Z"
+      - lastTransitionTime: "2026-08-12T18:40:38Z"
+        message: ""
+        reason: NotReady
+        status: "False"
+        type: Ready
+      - lastTransitionTime: "2026-08-12T18:40:38Z"
+        message: ""
+        reason: Ready
+        status: "False"
+        type: Failed
+      state: NotReady
+  state: Initializing
+- kind: STATE
+  object:
+    apiVersion: apps.nvidia.com/v1alpha1
+    kind: NIMService
+    metadata:
+      creationTimestamp: "2026-08-12T18:40:38Z"
+      finalizers:
+      - finalizer.nimservice.apps.nvidia.com
+      generation: 2
+      name: karta-e2e-nim
+      namespace: test-x9zjw
+      uid: f57e7352-1899-4470-a026-04bf5e52df89
+    spec:
+      authSecret: ngc-secret
+      env:
+      - name: NIM_REQUEST_LATENCY
+        value: "2"
+      expose:
+        ingress:
+          spec: {}
+        service:
+          port: 8000
+          type: ClusterIP
+      image:
+        pullPolicy: IfNotPresent
+        repository: nim-cpu
+        tag: e2e
+      inferencePlatform: standalone
+      livenessProbe: {}
+      metrics:
+        serviceMonitor: {}
+      readinessProbe: {}
+      replicas: 1
+      scale:
+        hpa:
+          maxReplicas: 0
+          minReplicas: 1
+      startupProbe: {}
+      storage:
+        nimCache: {}
+        pvc:
+          create: true
+          size: 1Gi
+          volumeAccessMode: ReadWriteOnce
+    status:
+      conditions:
+      - lastTransitionTime: "2026-08-12T18:40:38Z"
         message: |
           Waiting for deployment "karta-e2e-nim" rollout to finish: 0 out of 1 new replicas have been updated...
         reason: NotReady
         status: "False"
         type: Ready
-      - lastTransitionTime: "2026-08-04T05:03:55Z"
+      - lastTransitionTime: "2026-08-12T18:40:38Z"
         message: |
           Waiting for deployment "karta-e2e-nim" rollout to finish: 0 out of 1 new replicas have been updated...
         reason: Ready
@@ -162,13 +220,13 @@ events:
     apiVersion: apps.nvidia.com/v1alpha1
     kind: NIMService
     metadata:
-      creationTimestamp: "2026-08-04T05:03:55Z"
+      creationTimestamp: "2026-08-12T18:40:38Z"
       finalizers:
       - finalizer.nimservice.apps.nvidia.com
       generation: 2
       name: karta-e2e-nim
-      namespace: test-hs5c4
-      uid: a73774b5-98f2-4110-ba5d-8e4cb2c00d56
+      namespace: test-x9zjw
+      uid: f57e7352-1899-4470-a026-04bf5e52df89
     spec:
       authSecret: ngc-secret
       env:
@@ -203,83 +261,13 @@ events:
           volumeAccessMode: ReadWriteOnce
     status:
       conditions:
-      - lastTransitionTime: "2026-08-04T05:03:55Z"
-        message: The PVC has been created for storing NIM
-        reason: PVCCreated
-        status: "True"
-        type: NIM_CACHE_PVC_CREATED
-      - lastTransitionTime: "2026-08-04T05:03:55Z"
-        message: |
-          Waiting for deployment "karta-e2e-nim" rollout to finish: 0 out of 1 new replicas have been updated...
-        reason: NotReady
-        status: "False"
-        type: Ready
-      - lastTransitionTime: "2026-08-04T05:03:55Z"
-        message: |
-          Waiting for deployment "karta-e2e-nim" rollout to finish: 0 out of 1 new replicas have been updated...
-        reason: Ready
-        status: "False"
-        type: Failed
-      state: NotReady
-  state: Initializing
-- kind: STATE
-  object:
-    apiVersion: apps.nvidia.com/v1alpha1
-    kind: NIMService
-    metadata:
-      creationTimestamp: "2026-08-04T05:03:55Z"
-      finalizers:
-      - finalizer.nimservice.apps.nvidia.com
-      generation: 2
-      name: karta-e2e-nim
-      namespace: test-hs5c4
-      uid: a73774b5-98f2-4110-ba5d-8e4cb2c00d56
-    spec:
-      authSecret: ngc-secret
-      env:
-      - name: NIM_REQUEST_LATENCY
-        value: "2"
-      expose:
-        ingress:
-          spec: {}
-        service:
-          port: 8000
-          type: ClusterIP
-      image:
-        pullPolicy: IfNotPresent
-        repository: nim-cpu
-        tag: e2e
-      inferencePlatform: standalone
-      livenessProbe: {}
-      metrics:
-        serviceMonitor: {}
-      readinessProbe: {}
-      replicas: 1
-      scale:
-        hpa:
-          maxReplicas: 0
-          minReplicas: 1
-      startupProbe: {}
-      storage:
-        nimCache: {}
-        pvc:
-          create: true
-          size: 1Gi
-          volumeAccessMode: ReadWriteOnce
-    status:
-      conditions:
-      - lastTransitionTime: "2026-08-04T05:03:55Z"
-        message: The PVC has been created for storing NIM
-        reason: PVCCreated
-        status: "True"
-        type: NIM_CACHE_PVC_CREATED
-      - lastTransitionTime: "2026-08-04T05:03:55Z"
+      - lastTransitionTime: "2026-08-12T18:40:38Z"
         message: |
           Waiting for deployment "karta-e2e-nim" rollout to finish: 0 of 1 updated replicas are available...
         reason: NotReady
         status: "False"
         type: Ready
-      - lastTransitionTime: "2026-08-04T05:03:55Z"
+      - lastTransitionTime: "2026-08-12T18:40:38Z"
         message: |
           Waiting for deployment "karta-e2e-nim" rollout to finish: 0 of 1 updated replicas are available...
         reason: Ready
@@ -292,13 +280,13 @@ events:
     apiVersion: apps.nvidia.com/v1alpha1
     kind: NIMService
     metadata:
-      creationTimestamp: "2026-08-04T05:03:55Z"
+      creationTimestamp: "2026-08-12T18:40:38Z"
       finalizers:
       - finalizer.nimservice.apps.nvidia.com
       generation: 2
       name: karta-e2e-nim
-      namespace: test-hs5c4
-      uid: a73774b5-98f2-4110-ba5d-8e4cb2c00d56
+      namespace: test-x9zjw
+      uid: f57e7352-1899-4470-a026-04bf5e52df89
     spec:
       authSecret: ngc-secret
       env:
@@ -333,24 +321,19 @@ events:
           volumeAccessMode: ReadWriteOnce
     status:
       conditions:
-      - lastTransitionTime: "2026-08-04T05:03:55Z"
-        message: The PVC has been created for storing NIM
-        reason: PVCCreated
-        status: "True"
-        type: NIM_CACHE_PVC_CREATED
-      - lastTransitionTime: "2026-08-04T05:05:04Z"
+      - lastTransitionTime: "2026-08-12T18:41:37Z"
         message: |
           deployment "karta-e2e-nim" successfully rolled out
         reason: Ready
         status: "True"
         type: Ready
-      - lastTransitionTime: "2026-08-04T05:03:55Z"
+      - lastTransitionTime: "2026-08-12T18:40:38Z"
         message: ""
         reason: Ready
         status: "False"
         type: Failed
       model:
-        clusterEndpoint: 10.96.175.226:8000
+        clusterEndpoint: 10.96.113.174:8000
         externalEndpoint: ""
         name: meta/llama-3.2-1b-instruct
       state: Ready

@@ -4,11 +4,11 @@ events:
     apiVersion: apps.nvidia.com/v1alpha1
     kind: NIMService
     metadata:
-      creationTimestamp: "2026-08-04T05:05:04Z"
+      creationTimestamp: "2026-08-12T18:41:37Z"
       generation: 1
       name: karta-e2e-nim-initializing
-      namespace: test-hs5c4
-      uid: f7ec3997-5771-4295-8016-688ec492b173
+      namespace: test-x9zjw
+      uid: 67e5f7b5-7633-483b-bc4a-def2d69b6156
     spec:
       authSecret: ngc-secret
       env:

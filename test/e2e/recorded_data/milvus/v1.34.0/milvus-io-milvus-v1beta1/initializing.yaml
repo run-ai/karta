@@ -4,11 +4,11 @@ events:
     apiVersion: milvus.io/v1beta1
     kind: Milvus
     metadata:
-      creationTimestamp: "2026-08-04T04:13:04Z"
+      creationTimestamp: "2026-08-12T18:36:12Z"
       generation: 1
       name: karta-e2e-milvus-initializing
-      namespace: test-tprlp
-      uid: 7a8d5b0a-b319-463e-8fba-cad79c37144a
+      namespace: test-x9zjw
+      uid: 9ef226ef-d0ec-47c2-b8ed-4a4dd8c82d8f
     spec:
       components:
         image: milvusdb/milvus:v0.0.0-nonexistent

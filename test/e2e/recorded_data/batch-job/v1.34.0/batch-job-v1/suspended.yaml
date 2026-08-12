@@ -4,16 +4,16 @@ events:
     apiVersion: batch/v1
     kind: Job
     metadata:
-      creationTimestamp: "2026-08-03T12:51:43Z"
+      creationTimestamp: "2026-08-12T18:44:37Z"
       generation: 1
       labels:
-        batch.kubernetes.io/controller-uid: 67d4ed09-5f74-4e69-afa6-1a007cb84a6b
+        batch.kubernetes.io/controller-uid: 2d92f218-e146-4d5b-b03b-5ec6c76cc1a6
         batch.kubernetes.io/job-name: karta-e2e-job-suspended
-        controller-uid: 67d4ed09-5f74-4e69-afa6-1a007cb84a6b
+        controller-uid: 2d92f218-e146-4d5b-b03b-5ec6c76cc1a6
         job-name: karta-e2e-job-suspended
       name: karta-e2e-job-suspended
-      namespace: test-t2jbj
-      uid: 67d4ed09-5f74-4e69-afa6-1a007cb84a6b
+      namespace: test-x9zjw
+      uid: 2d92f218-e146-4d5b-b03b-5ec6c76cc1a6
     spec:
       backoffLimit: 0
       completionMode: NonIndexed
@@ -23,14 +23,14 @@ events:
       podReplacementPolicy: TerminatingOrFailed
       selector:
         matchLabels:
-          batch.kubernetes.io/controller-uid: 67d4ed09-5f74-4e69-afa6-1a007cb84a6b
+          batch.kubernetes.io/controller-uid: 2d92f218-e146-4d5b-b03b-5ec6c76cc1a6
       suspend: true
       template:
         metadata:
           labels:
-            batch.kubernetes.io/controller-uid: 67d4ed09-5f74-4e69-afa6-1a007cb84a6b
+            batch.kubernetes.io/controller-uid: 2d92f218-e146-4d5b-b03b-5ec6c76cc1a6
             batch.kubernetes.io/job-name: karta-e2e-job-suspended
-            controller-uid: 67d4ed09-5f74-4e69-afa6-1a007cb84a6b
+            controller-uid: 2d92f218-e146-4d5b-b03b-5ec6c76cc1a6
             job-name: karta-e2e-job-suspended
         spec:
           containers:
@@ -52,8 +52,8 @@ events:
           terminationGracePeriodSeconds: 30
     status:
       conditions:
-      - lastProbeTime: "2026-08-03T12:51:43Z"
-        lastTransitionTime: "2026-08-03T12:51:43Z"
+      - lastProbeTime: "2026-08-12T18:44:37Z"
+        lastTransitionTime: "2026-08-12T18:44:37Z"
         message: Job suspended
         reason: JobSuspended
         status: "True"

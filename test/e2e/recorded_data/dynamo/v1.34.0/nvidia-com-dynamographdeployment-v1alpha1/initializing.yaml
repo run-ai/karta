@@ -6,11 +6,11 @@ events:
     metadata:
       annotations:
         nvidia.com/dynamo-operator-origin-version: 1.2.1
-      creationTimestamp: "2026-08-04T05:11:36Z"
+      creationTimestamp: "2026-08-12T18:42:00Z"
       generation: 1
       name: karta-e2e-dynamo-initializing
-      namespace: test-nzr8d
-      uid: bc083cf7-3e61-44a7-91e1-e3fbf39d270f
+      namespace: test-x9zjw
+      uid: 04e931fa-f2d8-4996-a524-6bd95e9b98bd
     spec:
       services:
         Frontend:

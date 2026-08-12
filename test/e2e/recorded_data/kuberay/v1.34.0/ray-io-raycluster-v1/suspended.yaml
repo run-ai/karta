@@ -4,11 +4,11 @@ events:
     apiVersion: ray.io/v1
     kind: RayCluster
     metadata:
-      creationTimestamp: "2026-08-03T21:45:05Z"
+      creationTimestamp: "2026-08-12T18:42:15Z"
       generation: 1
       name: karta-e2e-ray-suspended
-      namespace: test-gdzw8
-      uid: c926c129-fd5c-4a46-8236-dbbb1ea73ab1
+      namespace: test-x9zjw
+      uid: 2e13574e-d757-40e8-bfcb-653f35671260
     spec:
       headGroupSpec:
         rayStartParams: {}

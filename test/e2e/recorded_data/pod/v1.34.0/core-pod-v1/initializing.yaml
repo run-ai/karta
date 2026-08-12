@@ -4,11 +4,11 @@ events:
     apiVersion: v1
     kind: Pod
     metadata:
-      creationTimestamp: "2026-08-03T18:49:00Z"
+      creationTimestamp: "2026-08-12T18:39:54Z"
       generation: 1
       name: karta-e2e-pod-initializing
-      namespace: test-nsxnd
-      uid: 45ac4981-101f-44ad-922f-004051c6a173
+      namespace: test-x9zjw
+      uid: 1b258142-7003-463a-837d-3135f4d8c474
     spec:
       automountServiceAccountToken: false
       containers:

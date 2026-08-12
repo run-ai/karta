@@ -6,11 +6,11 @@ events:
     metadata:
       annotations:
         deployment.kubernetes.io/revision: "1"
-      creationTimestamp: "2026-08-03T19:45:10Z"
+      creationTimestamp: "2026-08-12T18:43:19Z"
       generation: 1
       name: karta-e2e-deploy-initializing
-      namespace: test-wmqms
-      uid: 3a843de5-652a-453d-92b2-60623f2d552c
+      namespace: test-x9zjw
+      uid: a1efc00c-46cf-4d1c-a8b1-31b9a7df2026
     spec:
       progressDeadlineSeconds: 600
       replicas: 1
@@ -49,8 +49,8 @@ events:
           terminationGracePeriodSeconds: 30
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T19:45:10Z"
-        lastUpdateTime: "2026-08-03T19:45:10Z"
+      - lastTransitionTime: "2026-08-12T18:43:19Z"
+        lastUpdateTime: "2026-08-12T18:43:19Z"
         message: Created new replica set "karta-e2e-deploy-initializing-5f5996cdc5"
         reason: NewReplicaSetCreated
         status: "True"

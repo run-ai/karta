@@ -4,13 +4,13 @@ events:
     apiVersion: serving.kserve.io/v1beta1
     kind: InferenceService
     metadata:
-      creationTimestamp: "2026-08-03T22:59:41Z"
+      creationTimestamp: "2026-08-12T18:32:26Z"
       finalizers:
       - inferenceservice.finalizers
       generation: 1
       name: karta-e2e-kserve-failed
-      namespace: test-rbwn4
-      uid: 96e38171-b547-4f90-a36c-06e57cb8341c
+      namespace: test-x9zjw
+      uid: 4184cdec-ed37-479d-b757-ea6bb8a804bf
     spec:
       predictor:
         containers:
@@ -29,13 +29,13 @@ events:
     apiVersion: serving.kserve.io/v1beta1
     kind: InferenceService
     metadata:
-      creationTimestamp: "2026-08-03T22:59:41Z"
+      creationTimestamp: "2026-08-12T18:32:26Z"
       finalizers:
       - inferenceservice.finalizers
       generation: 1
       name: karta-e2e-kserve-failed
-      namespace: test-rbwn4
-      uid: 96e38171-b547-4f90-a36c-06e57cb8341c
+      namespace: test-x9zjw
+      uid: 4184cdec-ed37-479d-b757-ea6bb8a804bf
     spec:
       predictor:
         containers:
@@ -52,12 +52,12 @@ events:
       components:
         predictor: {}
       conditions:
-      - lastTransitionTime: "2026-08-03T22:59:41Z"
+      - lastTransitionTime: "2026-08-12T18:32:26Z"
         reason: PredictorConfigurationReady not ready
         severity: Info
         status: Unknown
         type: LatestDeploymentReady
-      - lastTransitionTime: "2026-08-03T22:59:41Z"
+      - lastTransitionTime: "2026-08-12T18:32:26Z"
         reason: PredictorRouteReady not ready
         severity: Info
         status: Unknown
@@ -73,13 +73,13 @@ events:
     apiVersion: serving.kserve.io/v1beta1
     kind: InferenceService
     metadata:
-      creationTimestamp: "2026-08-03T22:59:41Z"
+      creationTimestamp: "2026-08-12T18:32:26Z"
       finalizers:
       - inferenceservice.finalizers
       generation: 1
       name: karta-e2e-kserve-failed
-      namespace: test-rbwn4
-      uid: 96e38171-b547-4f90-a36c-06e57cb8341c
+      namespace: test-x9zjw
+      uid: 4184cdec-ed37-479d-b757-ea6bb8a804bf
     spec:
       predictor:
         containers:
@@ -97,12 +97,12 @@ events:
         predictor:
           latestCreatedRevision: karta-e2e-kserve-failed-predictor-00001
       conditions:
-      - lastTransitionTime: "2026-08-03T22:59:42Z"
+      - lastTransitionTime: "2026-08-12T18:32:26Z"
         reason: PredictorConfigurationReady not ready
         severity: Info
         status: "False"
         type: LatestDeploymentReady
-      - lastTransitionTime: "2026-08-03T22:59:42Z"
+      - lastTransitionTime: "2026-08-12T18:32:26Z"
         message: 'Revision "karta-e2e-kserve-failed-predictor-00001" failed with message:
           Unable to fetch image "karta-e2e-no-such-registry.invalid/nope:latest":
           failed to resolve image to digest: Get "https://karta-e2e-no-such-registry.invalid/v2/":
@@ -112,26 +112,26 @@ events:
         severity: Info
         status: "False"
         type: PredictorConfigurationReady
-      - lastTransitionTime: "2026-08-03T22:59:42Z"
+      - lastTransitionTime: "2026-08-12T18:32:26Z"
         message: Configuration "karta-e2e-kserve-failed-predictor" does not have any
           ready Revision.
         reason: RevisionMissing
         status: "False"
         type: PredictorReady
-      - lastTransitionTime: "2026-08-03T22:59:42Z"
+      - lastTransitionTime: "2026-08-12T18:32:26Z"
         message: Configuration "karta-e2e-kserve-failed-predictor" does not have any
           ready Revision.
         reason: RevisionMissing
         severity: Info
         status: "False"
         type: PredictorRouteReady
-      - lastTransitionTime: "2026-08-03T22:59:42Z"
+      - lastTransitionTime: "2026-08-12T18:32:26Z"
         message: Configuration "karta-e2e-kserve-failed-predictor" does not have any
           ready Revision.
         reason: RevisionMissing
         status: "False"
         type: Ready
-      - lastTransitionTime: "2026-08-03T22:59:42Z"
+      - lastTransitionTime: "2026-08-12T18:32:26Z"
         reason: PredictorRouteReady not ready
         severity: Info
         status: "False"

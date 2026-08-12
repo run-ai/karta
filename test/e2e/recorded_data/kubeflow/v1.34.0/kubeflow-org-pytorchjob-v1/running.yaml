@@ -4,11 +4,11 @@ events:
     apiVersion: kubeflow.org/v1
     kind: PyTorchJob
     metadata:
-      creationTimestamp: "2026-08-03T21:02:58Z"
+      creationTimestamp: "2026-08-12T18:42:31Z"
       generation: 1
       name: karta-e2e-pytorch
-      namespace: test-mbwpr
-      uid: faca9104-3770-49dd-b487-d3a7fcb4a465
+      namespace: test-x9zjw
+      uid: 158f338d-eabe-41d3-9072-de8a64335080
     spec:
       pytorchReplicaSpecs:
         Master:
@@ -43,8 +43,8 @@ events:
                     memory: 64Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T21:02:59Z"
-        lastUpdateTime: "2026-08-03T21:02:59Z"
+      - lastTransitionTime: "2026-08-12T18:42:31Z"
+        lastUpdateTime: "2026-08-12T18:42:31Z"
         message: PyTorchJob karta-e2e-pytorch is created.
         reason: PyTorchJobCreated
         status: "True"
@@ -54,18 +54,18 @@ events:
           selector: training.kubeflow.org/job-name=karta-e2e-pytorch,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=master
         Worker:
           selector: training.kubeflow.org/job-name=karta-e2e-pytorch,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=worker
-      startTime: "2026-08-03T21:02:59Z"
+      startTime: "2026-08-12T18:42:31Z"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: kubeflow.org/v1
     kind: PyTorchJob
     metadata:
-      creationTimestamp: "2026-08-03T21:02:58Z"
+      creationTimestamp: "2026-08-12T18:42:31Z"
       generation: 1
       name: karta-e2e-pytorch
-      namespace: test-mbwpr
-      uid: faca9104-3770-49dd-b487-d3a7fcb4a465
+      namespace: test-x9zjw
+      uid: 158f338d-eabe-41d3-9072-de8a64335080
     spec:
       pytorchReplicaSpecs:
         Master:
@@ -100,14 +100,14 @@ events:
                     memory: 64Mi
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T21:02:59Z"
-        lastUpdateTime: "2026-08-03T21:02:59Z"
+      - lastTransitionTime: "2026-08-12T18:42:31Z"
+        lastUpdateTime: "2026-08-12T18:42:31Z"
         message: PyTorchJob karta-e2e-pytorch is created.
         reason: PyTorchJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-08-03T21:03:43Z"
-        lastUpdateTime: "2026-08-03T21:03:43Z"
+      - lastTransitionTime: "2026-08-12T18:42:32Z"
+        lastUpdateTime: "2026-08-12T18:42:32Z"
         message: PyTorchJob karta-e2e-pytorch is running.
         reason: PyTorchJobRunning
         status: "True"
@@ -118,7 +118,7 @@ events:
           selector: training.kubeflow.org/job-name=karta-e2e-pytorch,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=master
         Worker:
           selector: training.kubeflow.org/job-name=karta-e2e-pytorch,training.kubeflow.org/operator-name=pytorchjob-controller,training.kubeflow.org/replica-type=worker
-      startTime: "2026-08-03T21:02:59Z"
+      startTime: "2026-08-12T18:42:31Z"
   state: Running
 flow: running
 kartaFile: docs/catalog/kubeflow-org-pytorchjob-v1.yaml

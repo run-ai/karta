@@ -4,11 +4,11 @@ events:
     apiVersion: kubeflow.org/v2beta1
     kind: MPIJob
     metadata:
-      creationTimestamp: "2026-08-03T21:04:36Z"
+      creationTimestamp: "2026-08-12T18:37:14Z"
       generation: 1
       name: karta-e2e-mpi-failed
-      namespace: test-sgm8j
-      uid: fb6a394c-bc00-43a5-b1c6-efc33b3d4940
+      namespace: test-x9zjw
+      uid: 69ae1f7e-f6a3-4426-bc0c-26d9210526da
     spec:
       launcherCreationPolicy: AtStartup
       mpiImplementation: OpenMPI
@@ -49,27 +49,27 @@ events:
       sshAuthMountPath: /root/.ssh
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T21:04:36Z"
-        lastUpdateTime: "2026-08-03T21:04:36Z"
-        message: MPIJob test-sgm8j/karta-e2e-mpi-failed is created.
+      - lastTransitionTime: "2026-08-12T18:37:14Z"
+        lastUpdateTime: "2026-08-12T18:37:14Z"
+        message: MPIJob test-x9zjw/karta-e2e-mpi-failed is created.
         reason: MPIJobCreated
         status: "True"
         type: Created
       replicaStatuses:
         Launcher: {}
         Worker: {}
-      startTime: "2026-08-03T21:04:36Z"
+      startTime: "2026-08-12T18:37:14Z"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: kubeflow.org/v2beta1
     kind: MPIJob
     metadata:
-      creationTimestamp: "2026-08-03T21:04:36Z"
+      creationTimestamp: "2026-08-12T18:37:14Z"
       generation: 1
       name: karta-e2e-mpi-failed
-      namespace: test-sgm8j
-      uid: fb6a394c-bc00-43a5-b1c6-efc33b3d4940
+      namespace: test-x9zjw
+      uid: 69ae1f7e-f6a3-4426-bc0c-26d9210526da
     spec:
       launcherCreationPolicy: AtStartup
       mpiImplementation: OpenMPI
@@ -110,77 +110,15 @@ events:
       sshAuthMountPath: /root/.ssh
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T21:04:36Z"
-        lastUpdateTime: "2026-08-03T21:04:36Z"
-        message: MPIJob test-sgm8j/karta-e2e-mpi-failed is created.
+      - lastTransitionTime: "2026-08-12T18:37:14Z"
+        lastUpdateTime: "2026-08-12T18:37:14Z"
+        message: MPIJob test-x9zjw/karta-e2e-mpi-failed is created.
         reason: MPIJobCreated
         status: "True"
         type: Created
-      replicaStatuses:
-        Launcher:
-          active: 1
-        Worker: {}
-      startTime: "2026-08-03T21:04:36Z"
-  state: Initializing
-- kind: STATE
-  object:
-    apiVersion: kubeflow.org/v2beta1
-    kind: MPIJob
-    metadata:
-      creationTimestamp: "2026-08-03T21:04:36Z"
-      generation: 1
-      name: karta-e2e-mpi-failed
-      namespace: test-sgm8j
-      uid: fb6a394c-bc00-43a5-b1c6-efc33b3d4940
-    spec:
-      launcherCreationPolicy: AtStartup
-      mpiImplementation: OpenMPI
-      mpiReplicaSpecs:
-        Launcher:
-          replicas: 1
-          template:
-            spec:
-              containers:
-              - command:
-                - "false"
-                image: busybox:1.36
-                name: mpi-launcher
-                resources:
-                  requests:
-                    cpu: 50m
-                    memory: 64Mi
-        Worker:
-          replicas: 1
-          template:
-            spec:
-              containers:
-              - command:
-                - sleep
-                - infinity
-                image: busybox:1.36
-                name: mpi-worker
-                resources:
-                  requests:
-                    cpu: 50m
-                    memory: 64Mi
-      runLauncherAsWorker: false
-      runPolicy:
-        backoffLimit: 0
-        cleanPodPolicy: None
-        suspend: false
-      slotsPerWorker: 1
-      sshAuthMountPath: /root/.ssh
-    status:
-      conditions:
-      - lastTransitionTime: "2026-08-03T21:04:36Z"
-        lastUpdateTime: "2026-08-03T21:04:36Z"
-        message: MPIJob test-sgm8j/karta-e2e-mpi-failed is created.
-        reason: MPIJobCreated
-        status: "True"
-        type: Created
-      - lastTransitionTime: "2026-08-03T21:04:37Z"
-        lastUpdateTime: "2026-08-03T21:04:37Z"
-        message: MPIJob test-sgm8j/karta-e2e-mpi-failed is running.
+      - lastTransitionTime: "2026-08-12T18:37:14Z"
+        lastUpdateTime: "2026-08-12T18:37:14Z"
+        message: MPIJob test-x9zjw/karta-e2e-mpi-failed is running.
         reason: MPIJobRunning
         status: "True"
         type: Running
@@ -189,18 +127,18 @@ events:
           active: 1
         Worker:
           active: 1
-      startTime: "2026-08-03T21:04:36Z"
+      startTime: "2026-08-12T18:37:14Z"
   state: Running
 - kind: STATE
   object:
     apiVersion: kubeflow.org/v2beta1
     kind: MPIJob
     metadata:
-      creationTimestamp: "2026-08-03T21:04:36Z"
+      creationTimestamp: "2026-08-12T18:37:14Z"
       generation: 1
       name: karta-e2e-mpi-failed
-      namespace: test-sgm8j
-      uid: fb6a394c-bc00-43a5-b1c6-efc33b3d4940
+      namespace: test-x9zjw
+      uid: 69ae1f7e-f6a3-4426-bc0c-26d9210526da
     spec:
       launcherCreationPolicy: AtStartup
       mpiImplementation: OpenMPI
@@ -241,15 +179,15 @@ events:
       sshAuthMountPath: /root/.ssh
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T21:04:36Z"
-        lastUpdateTime: "2026-08-03T21:04:36Z"
-        message: MPIJob test-sgm8j/karta-e2e-mpi-failed is created.
+      - lastTransitionTime: "2026-08-12T18:37:14Z"
+        lastUpdateTime: "2026-08-12T18:37:14Z"
+        message: MPIJob test-x9zjw/karta-e2e-mpi-failed is created.
         reason: MPIJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-08-03T21:04:37Z"
-        lastUpdateTime: "2026-08-03T21:04:37Z"
-        message: MPIJob test-sgm8j/karta-e2e-mpi-failed is running.
+      - lastTransitionTime: "2026-08-12T18:37:14Z"
+        lastUpdateTime: "2026-08-12T18:37:14Z"
+        message: MPIJob test-x9zjw/karta-e2e-mpi-failed is running.
         reason: MPIJobRunning
         status: "True"
         type: Running
@@ -259,18 +197,18 @@ events:
           failed: 1
         Worker:
           active: 1
-      startTime: "2026-08-03T21:04:36Z"
+      startTime: "2026-08-12T18:37:14Z"
   state: Running
 - kind: STATE
   object:
     apiVersion: kubeflow.org/v2beta1
     kind: MPIJob
     metadata:
-      creationTimestamp: "2026-08-03T21:04:36Z"
+      creationTimestamp: "2026-08-12T18:37:14Z"
       generation: 1
       name: karta-e2e-mpi-failed
-      namespace: test-sgm8j
-      uid: fb6a394c-bc00-43a5-b1c6-efc33b3d4940
+      namespace: test-x9zjw
+      uid: 69ae1f7e-f6a3-4426-bc0c-26d9210526da
     spec:
       launcherCreationPolicy: AtStartup
       mpiImplementation: OpenMPI
@@ -311,15 +249,15 @@ events:
       sshAuthMountPath: /root/.ssh
     status:
       conditions:
-      - lastTransitionTime: "2026-08-03T21:04:36Z"
-        lastUpdateTime: "2026-08-03T21:04:36Z"
-        message: MPIJob test-sgm8j/karta-e2e-mpi-failed is created.
+      - lastTransitionTime: "2026-08-12T18:37:14Z"
+        lastUpdateTime: "2026-08-12T18:37:14Z"
+        message: MPIJob test-x9zjw/karta-e2e-mpi-failed is created.
         reason: MPIJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-08-03T21:04:37Z"
-        lastUpdateTime: "2026-08-03T21:04:37Z"
-        message: MPIJob test-sgm8j/karta-e2e-mpi-failed is running.
+      - lastTransitionTime: "2026-08-12T18:37:14Z"
+        lastUpdateTime: "2026-08-12T18:37:14Z"
+        message: MPIJob test-x9zjw/karta-e2e-mpi-failed is running.
         reason: MPIJobRunning
         status: "True"
         type: Running
@@ -328,18 +266,18 @@ events:
           failed: 1
         Worker:
           active: 1
-      startTime: "2026-08-03T21:04:36Z"
+      startTime: "2026-08-12T18:37:14Z"
   state: Running
 - kind: STATE
   object:
     apiVersion: kubeflow.org/v2beta1
     kind: MPIJob
     metadata:
-      creationTimestamp: "2026-08-03T21:04:36Z"
+      creationTimestamp: "2026-08-12T18:37:14Z"
       generation: 1
       name: karta-e2e-mpi-failed
-      namespace: test-sgm8j
-      uid: fb6a394c-bc00-43a5-b1c6-efc33b3d4940
+      namespace: test-x9zjw
+      uid: 69ae1f7e-f6a3-4426-bc0c-26d9210526da
     spec:
       launcherCreationPolicy: AtStartup
       mpiImplementation: OpenMPI
@@ -379,22 +317,22 @@ events:
       slotsPerWorker: 1
       sshAuthMountPath: /root/.ssh
     status:
-      completionTime: "2026-08-03T21:04:40Z"
+      completionTime: "2026-08-12T18:37:18Z"
       conditions:
-      - lastTransitionTime: "2026-08-03T21:04:36Z"
-        lastUpdateTime: "2026-08-03T21:04:36Z"
-        message: MPIJob test-sgm8j/karta-e2e-mpi-failed is created.
+      - lastTransitionTime: "2026-08-12T18:37:14Z"
+        lastUpdateTime: "2026-08-12T18:37:14Z"
+        message: MPIJob test-x9zjw/karta-e2e-mpi-failed is created.
         reason: MPIJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-08-03T21:04:37Z"
-        lastUpdateTime: "2026-08-03T21:04:37Z"
-        message: MPIJob test-sgm8j/karta-e2e-mpi-failed is running.
+      - lastTransitionTime: "2026-08-12T18:37:14Z"
+        lastUpdateTime: "2026-08-12T18:37:14Z"
+        message: MPIJob test-x9zjw/karta-e2e-mpi-failed is running.
         reason: MPIJobRunning
         status: "False"
         type: Running
-      - lastTransitionTime: "2026-08-03T21:04:40Z"
-        lastUpdateTime: "2026-08-03T21:04:40Z"
+      - lastTransitionTime: "2026-08-12T18:37:18Z"
+        lastUpdateTime: "2026-08-12T18:37:18Z"
         message: Job has reached the specified backoff limit
         reason: BackoffLimitExceeded
         status: "True"
@@ -403,7 +341,7 @@ events:
         Launcher:
           failed: 1
         Worker: {}
-      startTime: "2026-08-03T21:04:36Z"
+      startTime: "2026-08-12T18:37:14Z"
   state: Failed
 flow: failed
 kartaFile: docs/catalog/kubeflow-org-mpijob-v2beta1.yaml

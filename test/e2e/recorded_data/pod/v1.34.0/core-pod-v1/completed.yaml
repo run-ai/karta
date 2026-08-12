@@ -4,11 +4,11 @@ events:
     apiVersion: v1
     kind: Pod
     metadata:
-      creationTimestamp: "2026-08-03T18:48:17Z"
+      creationTimestamp: "2026-08-12T18:39:12Z"
       generation: 1
       name: karta-e2e-pod-completed
-      namespace: test-nsxnd
-      uid: 2e29e9fa-4b0e-41ce-a41e-fd365b881114
+      namespace: test-x9zjw
+      uid: 7ea09daa-c8aa-4695-92ca-e47979ea787b
     spec:
       automountServiceAccountToken: false
       containers:
@@ -41,7 +41,7 @@ events:
             memory: 16Mi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
-      nodeName: karta-play-worker
+      nodeName: rec-all-worker2
       preemptionPolicy: PreemptLowerPriority
       priority: 0
       restartPolicy: Never
@@ -62,7 +62,7 @@ events:
     status:
       conditions:
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         status: "True"
         type: PodScheduled
       phase: Pending
@@ -73,11 +73,11 @@ events:
     apiVersion: v1
     kind: Pod
     metadata:
-      creationTimestamp: "2026-08-03T18:48:17Z"
+      creationTimestamp: "2026-08-12T18:39:12Z"
       generation: 1
       name: karta-e2e-pod-completed
-      namespace: test-nsxnd
-      uid: 2e29e9fa-4b0e-41ce-a41e-fd365b881114
+      namespace: test-x9zjw
+      uid: 7ea09daa-c8aa-4695-92ca-e47979ea787b
     spec:
       automountServiceAccountToken: false
       containers:
@@ -110,7 +110,7 @@ events:
             memory: 16Mi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
-      nodeName: karta-play-worker
+      nodeName: rec-all-worker2
       preemptionPolicy: PreemptLowerPriority
       priority: 0
       restartPolicy: Never
@@ -131,33 +131,33 @@ events:
     status:
       conditions:
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         observedGeneration: 1
         status: "False"
         type: PodReadyToStartContainers
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         message: 'containers with incomplete status: [init-wait]'
         observedGeneration: 1
         reason: ContainersNotInitialized
         status: "False"
         type: Initialized
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         message: 'containers with unready status: [worker]'
         observedGeneration: 1
         reason: ContainersNotReady
         status: "False"
         type: Ready
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         message: 'containers with unready status: [worker]'
         observedGeneration: 1
         reason: ContainersNotReady
         status: "False"
         type: ContainersReady
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         observedGeneration: 1
         status: "True"
         type: PodScheduled
@@ -172,9 +172,9 @@ events:
         state:
           waiting:
             reason: PodInitializing
-      hostIP: 172.18.0.5
+      hostIP: 172.18.0.4
       hostIPs:
-      - ip: 172.18.0.5
+      - ip: 172.18.0.4
       initContainerStatuses:
       - image: busybox:1.36
         imageID: ""
@@ -189,18 +189,18 @@ events:
       observedGeneration: 1
       phase: Pending
       qosClass: Burstable
-      startTime: "2026-08-03T18:48:17Z"
+      startTime: "2026-08-12T18:39:12Z"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: v1
     kind: Pod
     metadata:
-      creationTimestamp: "2026-08-03T18:48:17Z"
+      creationTimestamp: "2026-08-12T18:39:12Z"
       generation: 1
       name: karta-e2e-pod-completed
-      namespace: test-nsxnd
-      uid: 2e29e9fa-4b0e-41ce-a41e-fd365b881114
+      namespace: test-x9zjw
+      uid: 7ea09daa-c8aa-4695-92ca-e47979ea787b
     spec:
       automountServiceAccountToken: false
       containers:
@@ -233,7 +233,7 @@ events:
             memory: 16Mi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
-      nodeName: karta-play-worker
+      nodeName: rec-all-worker2
       preemptionPolicy: PreemptLowerPriority
       priority: 0
       restartPolicy: Never
@@ -254,33 +254,33 @@ events:
     status:
       conditions:
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:18Z"
+        lastTransitionTime: "2026-08-12T18:39:13Z"
         observedGeneration: 1
         status: "True"
         type: PodReadyToStartContainers
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         message: 'containers with incomplete status: [init-wait]'
         observedGeneration: 1
         reason: ContainersNotInitialized
         status: "False"
         type: Initialized
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         message: 'containers with unready status: [worker]'
         observedGeneration: 1
         reason: ContainersNotReady
         status: "False"
         type: Ready
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         message: 'containers with unready status: [worker]'
         observedGeneration: 1
         reason: ContainersNotReady
         status: "False"
         type: ContainersReady
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         observedGeneration: 1
         status: "True"
         type: PodScheduled
@@ -295,14 +295,14 @@ events:
         state:
           waiting:
             reason: PodInitializing
-      hostIP: 172.18.0.5
+      hostIP: 172.18.0.4
       hostIPs:
-      - ip: 172.18.0.5
+      - ip: 172.18.0.4
       initContainerStatuses:
       - allocatedResources:
           cpu: 10m
           memory: 16Mi
-        containerID: containerd://3f5957ba84749c189009982a51bc328d96ea1d846f21a30c425e57d90a922a5e
+        containerID: containerd://5cab4a26c30f901c218bd692859864e4c727a1a03101c5b175cd2a17f4d2c80c
         image: docker.io/library/busybox:1.36
         imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
         lastState: {}
@@ -316,7 +316,7 @@ events:
         started: true
         state:
           running:
-            startedAt: "2026-08-03T18:48:17Z"
+            startedAt: "2026-08-12T18:39:12Z"
         user:
           linux:
             gid: 0
@@ -326,22 +326,22 @@ events:
             uid: 0
       observedGeneration: 1
       phase: Pending
-      podIP: 10.244.1.91
+      podIP: 10.244.1.45
       podIPs:
-      - ip: 10.244.1.91
+      - ip: 10.244.1.45
       qosClass: Burstable
-      startTime: "2026-08-03T18:48:17Z"
+      startTime: "2026-08-12T18:39:12Z"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: v1
     kind: Pod
     metadata:
-      creationTimestamp: "2026-08-03T18:48:17Z"
+      creationTimestamp: "2026-08-12T18:39:12Z"
       generation: 1
       name: karta-e2e-pod-completed
-      namespace: test-nsxnd
-      uid: 2e29e9fa-4b0e-41ce-a41e-fd365b881114
+      namespace: test-x9zjw
+      uid: 7ea09daa-c8aa-4695-92ca-e47979ea787b
     spec:
       automountServiceAccountToken: false
       containers:
@@ -374,7 +374,7 @@ events:
             memory: 16Mi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
-      nodeName: karta-play-worker
+      nodeName: rec-all-worker2
       preemptionPolicy: PreemptLowerPriority
       priority: 0
       restartPolicy: Never
@@ -395,31 +395,31 @@ events:
     status:
       conditions:
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:18Z"
+        lastTransitionTime: "2026-08-12T18:39:13Z"
         observedGeneration: 1
         status: "True"
         type: PodReadyToStartContainers
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:26Z"
+        lastTransitionTime: "2026-08-12T18:39:21Z"
         observedGeneration: 1
         status: "True"
         type: Initialized
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         message: 'containers with unready status: [worker]'
         observedGeneration: 1
         reason: ContainersNotReady
         status: "False"
         type: Ready
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         message: 'containers with unready status: [worker]'
         observedGeneration: 1
         reason: ContainersNotReady
         status: "False"
         type: ContainersReady
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         observedGeneration: 1
         status: "True"
         type: PodScheduled
@@ -434,14 +434,14 @@ events:
         state:
           waiting:
             reason: PodInitializing
-      hostIP: 172.18.0.5
+      hostIP: 172.18.0.4
       hostIPs:
-      - ip: 172.18.0.5
+      - ip: 172.18.0.4
       initContainerStatuses:
       - allocatedResources:
           cpu: 10m
           memory: 16Mi
-        containerID: containerd://3f5957ba84749c189009982a51bc328d96ea1d846f21a30c425e57d90a922a5e
+        containerID: containerd://5cab4a26c30f901c218bd692859864e4c727a1a03101c5b175cd2a17f4d2c80c
         image: docker.io/library/busybox:1.36
         imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
         lastState: {}
@@ -455,11 +455,11 @@ events:
         started: false
         state:
           terminated:
-            containerID: containerd://3f5957ba84749c189009982a51bc328d96ea1d846f21a30c425e57d90a922a5e
+            containerID: containerd://5cab4a26c30f901c218bd692859864e4c727a1a03101c5b175cd2a17f4d2c80c
             exitCode: 0
-            finishedAt: "2026-08-03T18:48:25Z"
+            finishedAt: "2026-08-12T18:39:20Z"
             reason: Completed
-            startedAt: "2026-08-03T18:48:17Z"
+            startedAt: "2026-08-12T18:39:12Z"
         user:
           linux:
             gid: 0
@@ -469,22 +469,22 @@ events:
             uid: 0
       observedGeneration: 1
       phase: Pending
-      podIP: 10.244.1.91
+      podIP: 10.244.1.45
       podIPs:
-      - ip: 10.244.1.91
+      - ip: 10.244.1.45
       qosClass: Burstable
-      startTime: "2026-08-03T18:48:17Z"
+      startTime: "2026-08-12T18:39:12Z"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: v1
     kind: Pod
     metadata:
-      creationTimestamp: "2026-08-03T18:48:17Z"
+      creationTimestamp: "2026-08-12T18:39:12Z"
       generation: 1
       name: karta-e2e-pod-completed
-      namespace: test-nsxnd
-      uid: 2e29e9fa-4b0e-41ce-a41e-fd365b881114
+      namespace: test-x9zjw
+      uid: 7ea09daa-c8aa-4695-92ca-e47979ea787b
     spec:
       automountServiceAccountToken: false
       containers:
@@ -517,7 +517,7 @@ events:
             memory: 16Mi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
-      nodeName: karta-play-worker
+      nodeName: rec-all-worker2
       preemptionPolicy: PreemptLowerPriority
       priority: 0
       restartPolicy: Never
@@ -538,27 +538,27 @@ events:
     status:
       conditions:
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:18Z"
+        lastTransitionTime: "2026-08-12T18:39:13Z"
         observedGeneration: 1
         status: "True"
         type: PodReadyToStartContainers
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:26Z"
+        lastTransitionTime: "2026-08-12T18:39:21Z"
         observedGeneration: 1
         status: "True"
         type: Initialized
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:27Z"
+        lastTransitionTime: "2026-08-12T18:39:22Z"
         observedGeneration: 1
         status: "True"
         type: Ready
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:27Z"
+        lastTransitionTime: "2026-08-12T18:39:22Z"
         observedGeneration: 1
         status: "True"
         type: ContainersReady
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         observedGeneration: 1
         status: "True"
         type: PodScheduled
@@ -566,7 +566,7 @@ events:
       - allocatedResources:
           cpu: 50m
           memory: 32Mi
-        containerID: containerd://3e53c31120e7432e2417f7bdb5210ccc223dea2b10bda7666effe5ca2c324af1
+        containerID: containerd://fa9893fa69129fb6f255ffeac956a5d49beb5caea18f982599fbd412299a7f34
         image: docker.io/library/busybox:1.36
         imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
         lastState: {}
@@ -580,7 +580,7 @@ events:
         started: true
         state:
           running:
-            startedAt: "2026-08-03T18:48:26Z"
+            startedAt: "2026-08-12T18:39:21Z"
         user:
           linux:
             gid: 0
@@ -588,14 +588,14 @@ events:
             - 0
             - 10
             uid: 0
-      hostIP: 172.18.0.5
+      hostIP: 172.18.0.4
       hostIPs:
-      - ip: 172.18.0.5
+      - ip: 172.18.0.4
       initContainerStatuses:
       - allocatedResources:
           cpu: 10m
           memory: 16Mi
-        containerID: containerd://3f5957ba84749c189009982a51bc328d96ea1d846f21a30c425e57d90a922a5e
+        containerID: containerd://5cab4a26c30f901c218bd692859864e4c727a1a03101c5b175cd2a17f4d2c80c
         image: docker.io/library/busybox:1.36
         imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
         lastState: {}
@@ -609,11 +609,11 @@ events:
         started: false
         state:
           terminated:
-            containerID: containerd://3f5957ba84749c189009982a51bc328d96ea1d846f21a30c425e57d90a922a5e
+            containerID: containerd://5cab4a26c30f901c218bd692859864e4c727a1a03101c5b175cd2a17f4d2c80c
             exitCode: 0
-            finishedAt: "2026-08-03T18:48:25Z"
+            finishedAt: "2026-08-12T18:39:20Z"
             reason: Completed
-            startedAt: "2026-08-03T18:48:17Z"
+            startedAt: "2026-08-12T18:39:12Z"
         user:
           linux:
             gid: 0
@@ -623,22 +623,22 @@ events:
             uid: 0
       observedGeneration: 1
       phase: Running
-      podIP: 10.244.1.91
+      podIP: 10.244.1.45
       podIPs:
-      - ip: 10.244.1.91
+      - ip: 10.244.1.45
       qosClass: Burstable
-      startTime: "2026-08-03T18:48:17Z"
+      startTime: "2026-08-12T18:39:12Z"
   state: Running
 - kind: STATE
   object:
     apiVersion: v1
     kind: Pod
     metadata:
-      creationTimestamp: "2026-08-03T18:48:17Z"
+      creationTimestamp: "2026-08-12T18:39:12Z"
       generation: 1
       name: karta-e2e-pod-completed
-      namespace: test-nsxnd
-      uid: 2e29e9fa-4b0e-41ce-a41e-fd365b881114
+      namespace: test-x9zjw
+      uid: 7ea09daa-c8aa-4695-92ca-e47979ea787b
     spec:
       automountServiceAccountToken: false
       containers:
@@ -671,7 +671,7 @@ events:
             memory: 16Mi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
-      nodeName: karta-play-worker
+      nodeName: rec-all-worker2
       preemptionPolicy: PreemptLowerPriority
       priority: 0
       restartPolicy: Never
@@ -692,30 +692,30 @@ events:
     status:
       conditions:
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:18Z"
+        lastTransitionTime: "2026-08-12T18:39:13Z"
         observedGeneration: 1
         status: "True"
         type: PodReadyToStartContainers
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:26Z"
+        lastTransitionTime: "2026-08-12T18:39:21Z"
         observedGeneration: 1
         reason: PodCompleted
         status: "True"
         type: Initialized
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:37Z"
+        lastTransitionTime: "2026-08-12T18:39:32Z"
         observedGeneration: 1
         reason: PodCompleted
         status: "False"
         type: Ready
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:37Z"
+        lastTransitionTime: "2026-08-12T18:39:32Z"
         observedGeneration: 1
         reason: PodCompleted
         status: "False"
         type: ContainersReady
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         observedGeneration: 1
         status: "True"
         type: PodScheduled
@@ -723,7 +723,7 @@ events:
       - allocatedResources:
           cpu: 50m
           memory: 32Mi
-        containerID: containerd://3e53c31120e7432e2417f7bdb5210ccc223dea2b10bda7666effe5ca2c324af1
+        containerID: containerd://fa9893fa69129fb6f255ffeac956a5d49beb5caea18f982599fbd412299a7f34
         image: docker.io/library/busybox:1.36
         imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
         lastState: {}
@@ -737,11 +737,11 @@ events:
         started: false
         state:
           terminated:
-            containerID: containerd://3e53c31120e7432e2417f7bdb5210ccc223dea2b10bda7666effe5ca2c324af1
+            containerID: containerd://fa9893fa69129fb6f255ffeac956a5d49beb5caea18f982599fbd412299a7f34
             exitCode: 0
-            finishedAt: "2026-08-03T18:48:36Z"
+            finishedAt: "2026-08-12T18:39:31Z"
             reason: Completed
-            startedAt: "2026-08-03T18:48:26Z"
+            startedAt: "2026-08-12T18:39:21Z"
         user:
           linux:
             gid: 0
@@ -749,14 +749,14 @@ events:
             - 0
             - 10
             uid: 0
-      hostIP: 172.18.0.5
+      hostIP: 172.18.0.4
       hostIPs:
-      - ip: 172.18.0.5
+      - ip: 172.18.0.4
       initContainerStatuses:
       - allocatedResources:
           cpu: 10m
           memory: 16Mi
-        containerID: containerd://3f5957ba84749c189009982a51bc328d96ea1d846f21a30c425e57d90a922a5e
+        containerID: containerd://5cab4a26c30f901c218bd692859864e4c727a1a03101c5b175cd2a17f4d2c80c
         image: docker.io/library/busybox:1.36
         imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
         lastState: {}
@@ -770,11 +770,11 @@ events:
         started: false
         state:
           terminated:
-            containerID: containerd://3f5957ba84749c189009982a51bc328d96ea1d846f21a30c425e57d90a922a5e
+            containerID: containerd://5cab4a26c30f901c218bd692859864e4c727a1a03101c5b175cd2a17f4d2c80c
             exitCode: 0
-            finishedAt: "2026-08-03T18:48:25Z"
+            finishedAt: "2026-08-12T18:39:20Z"
             reason: Completed
-            startedAt: "2026-08-03T18:48:17Z"
+            startedAt: "2026-08-12T18:39:12Z"
         user:
           linux:
             gid: 0
@@ -784,22 +784,22 @@ events:
             uid: 0
       observedGeneration: 1
       phase: Running
-      podIP: 10.244.1.91
+      podIP: 10.244.1.45
       podIPs:
-      - ip: 10.244.1.91
+      - ip: 10.244.1.45
       qosClass: Burstable
-      startTime: "2026-08-03T18:48:17Z"
+      startTime: "2026-08-12T18:39:12Z"
   state: Running
 - kind: STATE
   object:
     apiVersion: v1
     kind: Pod
     metadata:
-      creationTimestamp: "2026-08-03T18:48:17Z"
+      creationTimestamp: "2026-08-12T18:39:12Z"
       generation: 1
       name: karta-e2e-pod-completed
-      namespace: test-nsxnd
-      uid: 2e29e9fa-4b0e-41ce-a41e-fd365b881114
+      namespace: test-x9zjw
+      uid: 7ea09daa-c8aa-4695-92ca-e47979ea787b
     spec:
       automountServiceAccountToken: false
       containers:
@@ -832,7 +832,7 @@ events:
             memory: 16Mi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
-      nodeName: karta-play-worker
+      nodeName: rec-all-worker2
       preemptionPolicy: PreemptLowerPriority
       priority: 0
       restartPolicy: Never
@@ -853,30 +853,30 @@ events:
     status:
       conditions:
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:38Z"
+        lastTransitionTime: "2026-08-12T18:39:33Z"
         observedGeneration: 1
         status: "False"
         type: PodReadyToStartContainers
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:26Z"
+        lastTransitionTime: "2026-08-12T18:39:21Z"
         observedGeneration: 1
         reason: PodCompleted
         status: "True"
         type: Initialized
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:37Z"
+        lastTransitionTime: "2026-08-12T18:39:32Z"
         observedGeneration: 1
         reason: PodCompleted
         status: "False"
         type: Ready
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:37Z"
+        lastTransitionTime: "2026-08-12T18:39:32Z"
         observedGeneration: 1
         reason: PodCompleted
         status: "False"
         type: ContainersReady
       - lastProbeTime: null
-        lastTransitionTime: "2026-08-03T18:48:17Z"
+        lastTransitionTime: "2026-08-12T18:39:12Z"
         observedGeneration: 1
         status: "True"
         type: PodScheduled
@@ -884,7 +884,7 @@ events:
       - allocatedResources:
           cpu: 50m
           memory: 32Mi
-        containerID: containerd://3e53c31120e7432e2417f7bdb5210ccc223dea2b10bda7666effe5ca2c324af1
+        containerID: containerd://fa9893fa69129fb6f255ffeac956a5d49beb5caea18f982599fbd412299a7f34
         image: docker.io/library/busybox:1.36
         imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
         lastState: {}
@@ -898,11 +898,11 @@ events:
         started: false
         state:
           terminated:
-            containerID: containerd://3e53c31120e7432e2417f7bdb5210ccc223dea2b10bda7666effe5ca2c324af1
+            containerID: containerd://fa9893fa69129fb6f255ffeac956a5d49beb5caea18f982599fbd412299a7f34
             exitCode: 0
-            finishedAt: "2026-08-03T18:48:36Z"
+            finishedAt: "2026-08-12T18:39:31Z"
             reason: Completed
-            startedAt: "2026-08-03T18:48:26Z"
+            startedAt: "2026-08-12T18:39:21Z"
         user:
           linux:
             gid: 0
@@ -910,14 +910,14 @@ events:
             - 0
             - 10
             uid: 0
-      hostIP: 172.18.0.5
+      hostIP: 172.18.0.4
       hostIPs:
-      - ip: 172.18.0.5
+      - ip: 172.18.0.4
       initContainerStatuses:
       - allocatedResources:
           cpu: 10m
           memory: 16Mi
-        containerID: containerd://3f5957ba84749c189009982a51bc328d96ea1d846f21a30c425e57d90a922a5e
+        containerID: containerd://5cab4a26c30f901c218bd692859864e4c727a1a03101c5b175cd2a17f4d2c80c
         image: docker.io/library/busybox:1.36
         imageID: docker.io/library/busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662
         lastState: {}
@@ -931,11 +931,11 @@ events:
         started: false
         state:
           terminated:
-            containerID: containerd://3f5957ba84749c189009982a51bc328d96ea1d846f21a30c425e57d90a922a5e
+            containerID: containerd://5cab4a26c30f901c218bd692859864e4c727a1a03101c5b175cd2a17f4d2c80c
             exitCode: 0
-            finishedAt: "2026-08-03T18:48:25Z"
+            finishedAt: "2026-08-12T18:39:20Z"
             reason: Completed
-            startedAt: "2026-08-03T18:48:17Z"
+            startedAt: "2026-08-12T18:39:12Z"
         user:
           linux:
             gid: 0
@@ -945,11 +945,11 @@ events:
             uid: 0
       observedGeneration: 1
       phase: Succeeded
-      podIP: 10.244.1.91
+      podIP: 10.244.1.45
       podIPs:
-      - ip: 10.244.1.91
+      - ip: 10.244.1.45
       qosClass: Burstable
-      startTime: "2026-08-03T18:48:17Z"
+      startTime: "2026-08-12T18:39:12Z"
   state: Completed
 flow: completed
 kartaFile: docs/catalog/core-pod-v1.yaml
