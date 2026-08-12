@@ -41,12 +41,12 @@ var _ = Describe("Grove PodCliqueSet", Ordered, Label("grove"), func() {
 
 	It("scaled", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "scaled", "testdata/grove/scaled.yaml").
-			Maybe(kartav1alpha1.InitializingStatus).
+			OptionalReaches(kartav1alpha1.InitializingStatus).
 			At(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "availableReplicas")).Do(ScaleReplicas(2)).
-			Maybe(kartav1alpha1.InitializingStatus).
+			OptionalReaches(kartav1alpha1.InitializingStatus).
 			At(kartav1alpha1.RunningStatus).When(IntEq(2, "status", "availableReplicas")).Do(ScaleReplicas(1)).
-			Maybe(kartav1alpha1.InitializingStatus).
-			At(kartav1alpha1.RunningStatus).WaitUntil(IntEq(1, "status", "availableReplicas")).Run(ctx)
+			OptionalReaches(kartav1alpha1.InitializingStatus).
+			At(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "availableReplicas")).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})

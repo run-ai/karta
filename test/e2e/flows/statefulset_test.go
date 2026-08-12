@@ -24,16 +24,16 @@ var _ = Describe("StatefulSet (built-in)", Ordered, Label("statefulset", "builti
 			AddState(kartav1alpha1.DegradedStatus, ReplicasDegraded())
 	})
 
-	// A StatefulSet takes transient Initializing/Degraded dips while scaling; the Maybe steps declare them
+	// A StatefulSet takes transient Initializing/Degraded dips while scaling; the OptionalReaches steps declare them
 	// so the order check tolerates them, and the recorder only stops at the ReplicasReady gates.
 	It("scaled", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "scaled", "testdata/statefulset/running.yaml").
-			Maybe(kartav1alpha1.InitializingStatus).
+			OptionalReaches(kartav1alpha1.InitializingStatus).
 			At(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(3)).
-			Maybe(kartav1alpha1.InitializingStatus).Maybe(kartav1alpha1.DegradedStatus).
+			OptionalReaches(kartav1alpha1.InitializingStatus).OptionalReaches(kartav1alpha1.DegradedStatus).
 			At(kartav1alpha1.RunningStatus).When(ReplicasReady(3)).Do(ScaleReplicas(1)).
-			Maybe(kartav1alpha1.InitializingStatus).
-			At(kartav1alpha1.RunningStatus).WaitUntil(ReplicasReady(1)).Run(ctx)
+			OptionalReaches(kartav1alpha1.InitializingStatus).
+			At(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})

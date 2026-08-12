@@ -34,7 +34,7 @@ func TestRecordingRoundTrips(t *testing.T) {
 					Payload: map[string]interface{}{"spec": map[string]interface{}{"suspend": false}},
 				},
 			}},
-			{Kind: EventState, State: "Completed", Object: map[string]interface{}{
+			{Kind: EventState, State: "Completed", StaleObservedGeneration: true, Object: map[string]interface{}{
 				"kind": "Job", "metadata": map[string]interface{}{"name": "j"},
 				"status": map[string]interface{}{"active": float64(0), "succeeded": float64(1)},
 			}},
@@ -58,6 +58,9 @@ func TestRecordingRoundTrips(t *testing.T) {
 	act := got.Events[1].Action
 	if act == nil || act.Name != "Resume" || act.Operation.Verb != "PATCH" {
 		t.Fatalf("action did not round-trip: %+v", act)
+	}
+	if got.Events[0].StaleObservedGeneration || !got.Events[2].StaleObservedGeneration {
+		t.Errorf("staleObservedGeneration flag did not round-trip: %v, %v", got.Events[0].StaleObservedGeneration, got.Events[2].StaleObservedGeneration)
 	}
 	if v, ok := act.Operation.Payload["spec"].(map[string]interface{})["suspend"]; !ok || v != false {
 		t.Errorf("action payload did not round-trip: %+v", act.Operation.Payload)

@@ -35,12 +35,14 @@ const (
 )
 
 // Event is one entry in the stream: a STATE event carries the full object and its own-fields state; an
-// ACTION event carries the mutation the flow performed to drive the next transition.
+// ACTION event carries the mutation the flow performed to drive the next transition. StaleObservedGeneration marks a
+// frame captured before the controller observed the spec: recorded, but outside the order-checked walk.
 type Event struct {
-	Kind   string          `json:"kind"`
-	State  string          `json:"state,omitempty"`
-	Object map[string]any  `json:"object,omitempty"`
-	Action *RecordedAction `json:"action,omitempty"`
+	Kind                    string          `json:"kind"`
+	State                   string          `json:"state,omitempty"`
+	StaleObservedGeneration bool            `json:"staleObservedGeneration,omitempty"`
+	Object                  map[string]any  `json:"object,omitempty"`
+	Action                  *RecordedAction `json:"action,omitempty"`
 }
 
 // RecordedAction is a mutation performed between states.

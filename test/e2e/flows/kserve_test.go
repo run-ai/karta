@@ -38,7 +38,7 @@ var _ = Describe("KServe InferenceService", Ordered, Label("kserve"), func() {
 	// RoutesReady all False -> Failed.
 	It("failed", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "failed", "testdata/kserve/failed.yaml").
-			Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
+			OptionalReaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})

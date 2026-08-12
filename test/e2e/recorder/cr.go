@@ -10,35 +10,39 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// significantFields drops the fields the apiserver bumps on every event (resourceVersion, managedFields) so
-// keep dedups on real changes.
+// volatileFields are bumped by the apiserver on every write without a real change.
+var volatileFields = [][]string{
+	{"metadata", "resourceVersion"},
+	{"metadata", "managedFields"},
+}
+
+// significantFields drops the volatile fields so keep dedups on real changes.
 func significantFields(cr *unstructured.Unstructured) map[string]any {
 	stripped := cr.DeepCopy().Object
-	unstructured.RemoveNestedField(stripped, "metadata", "resourceVersion")
-	unstructured.RemoveNestedField(stripped, "metadata", "managedFields")
+	for _, field := range volatileFields {
+		unstructured.RemoveNestedField(stripped, field...)
+	}
 	return stripped
 }
 
-// isStatusSettled reports whether the controller has caught up (observedGeneration >= generation); workloads
-// without those fields count as settled.
-func isStatusSettled(cr *unstructured.Unstructured) bool {
-	gen, hasGen, _ := unstructured.NestedInt64(cr.Object, "metadata", "generation")
+// isWorkloadObserved reports whether the workload's controller has observed its current spec
+// (status.observedGeneration >= metadata.generation); workloads without observedGeneration count as observed.
+func isWorkloadObserved(cr *unstructured.Unstructured) bool {
 	observed, hasObserved, _ := unstructured.NestedInt64(cr.Object, "status", "observedGeneration")
-	if !hasGen || !hasObserved {
+	if !hasObserved {
 		return true
 	}
-	return observed >= gen
+	return observed >= cr.GetGeneration()
 }
 
-// blankWithGVK returns a fresh object carrying only src's GVK, so a merge-patch or a Get never sends back a
-// stale spec or status.
+// blankWithGVK returns a fresh object carrying only src's GVK.
 func blankWithGVK(src *unstructured.Unstructured) *unstructured.Unstructured {
 	blank := &unstructured.Unstructured{}
 	blank.SetGroupVersionKind(src.GroupVersionKind())
 	return blank
 }
 
-// dumpStatus renders a CR's status block for the failure messages; safe on a nil object.
+// dumpStatus renders a CR's status block for the failure messages, best effort; safe on a nil object.
 func dumpStatus(cr *unstructured.Unstructured) string {
 	if cr == nil {
 		return "(no object observed)"
@@ -48,5 +52,6 @@ func dumpStatus(cr *unstructured.Unstructured) string {
 	if err != nil {
 		return fmt.Sprintf("(status marshal error: %v)", err)
 	}
+	// MarshalIndent prefixes every line except the first; indent it too so the block lines up.
 	return "  " + string(b)
 }

@@ -42,7 +42,7 @@ var _ = Describe("RayCluster", Ordered, Label("kuberay", "raycluster"), func() {
 
 	It("resumed", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "resumed", "testdata/raycluster/resumed.yaml").
-			At(kartav1alpha1.SuspendedStatus).Do(Resume()).Maybe(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+			At(kartav1alpha1.SuspendedStatus).Do(Resume()).OptionalReaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})

@@ -41,7 +41,7 @@ type Config struct {
 }
 
 // Fixture is a recording's catalog identity: where it files under the fixtures tree, and which Karta
-// definition the replay checks it against. Save-time labeling; the recorder never reads it while driving.
+// definition the replay checks it against.
 type Fixture struct {
 	Operator  string // operator key, e.g. "deployment"
 	Version   string // operator version, resolved by the suite
@@ -143,14 +143,14 @@ func (f *Flow) deleteWorkload(ctx context.Context, workload *unstructured.Unstru
 	}
 }
 
-// observe watches the workload and records every distinct settled CR until the flow finishes, firing the
+// observe watches the workload and records every distinct CR until the flow finishes, acting on the
 // journey's checkpoints as their states are reached. Its failure is set if the terminal state was not met.
 func (f *Flow) observe(ctx context.Context, workload *unstructured.Unstructured) *observation {
 	o := &observation{flow: f, workload: workload, pending: checkpoints(f.journey)}
 
 	// A workload already at its terminal state when Create returns never produces a watch event (the watch
 	// replays only newer resourceVersions), so record it straight from the create response.
-	if isStatusSettled(workload) && o.hasReachedTerminal(classify(workload, f.rec.states)) {
+	if isWorkloadObserved(workload) && o.hasReachedTerminal(classify(workload, f.rec.states)) {
 		o.record(ctx, workload)
 		return o
 	}
@@ -168,7 +168,7 @@ func (f *Flow) buildRecording(obs *observation, succeeded bool) *Recording {
 		Succeeded:     succeeded,
 	}
 	for _, snap := range obs.snapshots {
-		out.Events = append(out.Events, Event{Kind: EventState, State: string(snap.state), Object: significantFields(snap.cr)})
+		out.Events = append(out.Events, Event{Kind: EventState, State: string(snap.state), StaleObservedGeneration: snap.staleObservedGeneration, Object: significantFields(snap.cr)})
 		if snap.action != nil {
 			out.Events = append(out.Events, Event{Kind: EventAction, Action: snap.action})
 		}
@@ -177,8 +177,7 @@ func (f *Flow) buildRecording(obs *observation, succeeded bool) *Recording {
 }
 
 // Save stamps fx onto rec and writes it under <OutputDir>/<operator>/<version>/<kartaName>/<flow>.yaml,
-// returning the path. Save every run, passed or failed, so a failed flow still leaves its triage artifact; a
-// nil recording (a flow that errored before observing anything) is a no-op.
+// returning the path. A failed run is saved too (succeeded:false); a nil recording is a no-op.
 func (r *Recorder) Save(fx Fixture, rec *Recording) (string, error) {
 	if rec == nil {
 		return "", nil

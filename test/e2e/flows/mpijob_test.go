@@ -37,14 +37,14 @@ var _ = Describe("MPIJob", Ordered, Label("kubeflow", "mpijob"), func() {
 	// CR reads Initializing again for a tick before the terminal.
 	It("completed", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "completed", "testdata/mpijob/completed.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Maybe(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
+			Reaches(kartav1alpha1.InitializingStatus).OptionalReaches(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("failed", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "failed", "testdata/mpijob/failed.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Maybe(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
+			Reaches(kartav1alpha1.InitializingStatus).OptionalReaches(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})

@@ -26,10 +26,10 @@ var _ = Describe("Deployment (built-in)", Ordered, Label("deployment", "builtin"
 
 	It("scaled", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "scaled", "testdata/deployment/running.yaml").
-			Maybe(kartav1alpha1.InitializingStatus). // startup, before the first Running (Deployment stays Running while scaling)
+			OptionalReaches(kartav1alpha1.InitializingStatus). // startup, before the first Running (Deployment stays Running while scaling)
 			At(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(3)).
 			At(kartav1alpha1.RunningStatus).When(ReplicasReady(3)).Do(ScaleReplicas(1)).
-			At(kartav1alpha1.RunningStatus).WaitUntil(ReplicasReady(1)).Run(ctx)
+			At(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})

@@ -38,9 +38,10 @@ type observation struct {
 
 // snapshot is one recorded CR: the state read from its own fields, the object, and any action performed at it.
 type snapshot struct {
-	state  kartav1alpha1.ResourceStatus
-	cr     *unstructured.Unstructured
-	action *RecordedAction
+	state                   kartav1alpha1.ResourceStatus
+	cr                      *unstructured.Unstructured
+	action                  *RecordedAction
+	staleObservedGeneration bool // the controller had not observed the spec yet; recorded, but never judged
 }
 
 // follow watches the workload until the flow finishes or fails, recording each CR it sees. It reconnects
@@ -111,20 +112,21 @@ func (f *Flow) startWatch(ctx context.Context, workload *unstructured.Unstructur
 	})
 }
 
-// record handles one observed CR: it keeps the CR if it is settled and new, performs the next checkpoint's
-// action if the workload just reached it, and reports whether the flow is finished (or an action failed).
+// record handles one seen CR: it keeps every distinct frame, but acts on checkpoints and the terminal only
+// once the controller has observed the current spec.
 func (o *observation) record(ctx context.Context, cr *unstructured.Unstructured) (done bool) {
 	o.lastSeen = cr
-	if !isStatusSettled(cr) {
-		return false // a half-written status is not a real state yet
-	}
 	state := classify(cr, o.flow.rec.states)
 	if state == "" {
-		// A settled CR we cannot classify is a real gap: keep it as Undefined so the order check fails and
-		// the run is saved for triage, rather than skipping it silently.
+		// A CR we cannot classify is a real gap: keep it as Undefined so an observed frame fails the order
+		// check and the run is saved for triage, rather than skipping it silently.
 		state = kartav1alpha1.UndefinedStatus
 	}
-	o.keep(cr, state)
+	observed := isWorkloadObserved(cr)
+	o.keep(cr, state, observed)
+	if !observed {
+		return false
+	}
 	if o.advanceCheckpoint(ctx, state, cr) {
 		return true // the action failed; stop and report it
 	}
@@ -132,13 +134,13 @@ func (o *observation) record(ctx context.Context, cr *unstructured.Unstructured)
 }
 
 // keep appends cr as a new snapshot, unless it duplicates the last kept one (same significant fields).
-func (o *observation) keep(cr *unstructured.Unstructured, state kartav1alpha1.ResourceStatus) {
+func (o *observation) keep(cr *unstructured.Unstructured, state kartav1alpha1.ResourceStatus, observed bool) {
 	sig := significantFields(cr)
 	if o.lastSig != nil && reflect.DeepEqual(o.lastSig, sig) {
 		return
 	}
 	o.lastSig = sig
-	o.snapshots = append(o.snapshots, snapshot{state: state, cr: cr.DeepCopy()})
+	o.snapshots = append(o.snapshots, snapshot{state: state, cr: cr.DeepCopy(), staleObservedGeneration: !observed})
 }
 
 // advanceCheckpoint performs the next checkpoint's action if the workload just reached its state and gate, then
@@ -245,11 +247,13 @@ func (o *observation) refetch(ctx context.Context) (*unstructured.Unstructured, 
 	}
 }
 
-// states is the ordered sequence of states the workload passed through - the walk the order check validates.
+// states is the ordered sequence of observed-frame states - the walk the order check validates.
 func (o *observation) states() []kartav1alpha1.ResourceStatus {
-	out := make([]kartav1alpha1.ResourceStatus, len(o.snapshots))
-	for i, s := range o.snapshots {
-		out[i] = s.state
+	var out []kartav1alpha1.ResourceStatus
+	for _, s := range o.snapshots {
+		if !s.staleObservedGeneration {
+			out = append(out, s.state)
+		}
 	}
 	return out
 }
