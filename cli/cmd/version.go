@@ -18,7 +18,7 @@ import (
 func newVersionCommand(out *Enum[generator.Output]) *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: "Print the karta version",
+		Short: "Print the cli version",
 		Args:  cobra.NoArgs,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// config may set the output format; do not fail on error.
