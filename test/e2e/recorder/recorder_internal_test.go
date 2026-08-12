@@ -167,7 +167,7 @@ func TestRecorderCatchesBackwardsJump(t *testing.T) {
 
 	o := &observation{}
 	for _, cr := range seq {
-		o.keep(cr, classify(cr, states))
+		o.keep(cr, classify(cr, states), true)
 	}
 
 	want := []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}
@@ -179,6 +179,24 @@ func TestRecorderCatchesBackwardsJump(t *testing.T) {
 	}
 	if err := observedOrderErr(steps(initializing, running, initializing, completed), o.states(), completed); err != nil {
 		t.Errorf("declaring the Initializing revisit should accept the dip, got %v", err)
+	}
+}
+
+// TestStaleFramesAreKeptButNotJudged: a frame whose controller has not observed the spec yet is
+// recorded for fidelity but stays out of the order-checked walk.
+func TestStaleFramesAreKeptButNotJudged(t *testing.T) {
+	o := &observation{}
+	o.keep(objWithStatus(map[string]any{"active": int64(1)}), kartav1alpha1.InitializingStatus, true)
+	o.keep(objWithStatus(map[string]any{"active": int64(2)}), kartav1alpha1.InitializingStatus, false)
+
+	if len(o.snapshots) != 2 {
+		t.Fatalf("staleObservedGeneration frame not recorded: %d snapshots", len(o.snapshots))
+	}
+	if !o.snapshots[1].staleObservedGeneration {
+		t.Error("second snapshot should be marked staleObservedGeneration")
+	}
+	if got := o.states(); len(got) != 1 {
+		t.Errorf("staleObservedGeneration frame leaked into the judged walk: %v", got)
 	}
 }
 
@@ -215,7 +233,7 @@ func TestObservedOrder(t *testing.T) {
 	}
 }
 
-func TestStatusSettled(t *testing.T) {
+func TestWorkloadObserved(t *testing.T) {
 	withGen := func(gen int64, obs *int64) *unstructured.Unstructured {
 		status := map[string]any{}
 		if obs != nil {
@@ -227,13 +245,13 @@ func TestStatusSettled(t *testing.T) {
 		}}
 	}
 	two := int64(2)
-	if !isStatusSettled(withGen(2, &two)) {
+	if !isWorkloadObserved(withGen(2, &two)) {
 		t.Error("observedGeneration == generation should be settled")
 	}
-	if isStatusSettled(withGen(3, &two)) {
+	if isWorkloadObserved(withGen(3, &two)) {
 		t.Error("observedGeneration < generation should NOT be settled")
 	}
-	if !isStatusSettled(withGen(2, nil)) {
+	if !isWorkloadObserved(withGen(2, nil)) {
 		t.Error("missing observedGeneration should be settled")
 	}
 }
