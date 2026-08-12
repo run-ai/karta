@@ -34,7 +34,6 @@ func NewRootCommand() *cobra.Command {
 		},
 	}
 
-	// Print the bare version, matching what the operator's --version reports.
 	cmd.SetVersionTemplate("{{.Version}}\n")
 
 	kubeFlags.AddFlags(cmd.PersistentFlags())
