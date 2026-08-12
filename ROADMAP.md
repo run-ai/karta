@@ -81,11 +81,10 @@ Theme: broader coverage and operational observability.
   and keep pace with upstream APIs of the workloads Karta describes — including
   **Kubeflow Trainer v2** and Dynamo `v1beta1`
   ([#78](https://github.com/run-ai/karta/issues/78)).
-- Metrics exporter. A Prometheus-compatible exporter that re-exposes existing
-  per-pod operational metrics (GPU utilization, GPU memory, CPU, memory) at
-  workload and component granularity using Karta's structural knowledge. Enables
-  consumers to answer questions like "what is the GPU utilization of the prefill
-  component of this job?" without writing per-CRD PromQL.
+- Metrics exporter. An exporter that publishes workload state and pod-to-workload
+  attribution derived from Karta descriptions, making any cluster's existing
+  metrics addressable at workload and role scope — without hand-authored queries
+  per workload type.
 
 ## Later
 
