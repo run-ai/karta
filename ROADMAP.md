@@ -58,17 +58,17 @@ of the roadmap is itself public and reviewable.
   tree, from the root component down through child components to the pods, so
   consumers can reason about and render the whole structure rather than individual
   fields. Tracked by [#32](https://github.com/run-ai/karta/issues/32).
+  - CLI. A command-line tool for read-only visibility into any Karta-described
+    workload: list workloads, inspect component structure, and drill into the
+    workload tree from the terminal without writing per-CRD kubectl commands.
+  - Headlamp plugin. Browser-based workload visibility built on the CNCF
+    [Headlamp](https://github.com/kubernetes-sigs/headlamp) project: shows the
+    Karta workload tree, component status, and pod attribution.
 - **Karta as a registry.** A discoverable catalog of Karta definitions, so the
   community can publish, find, and reuse descriptions for common workload types
   instead of every consumer re-bundling its own copies. Turns the bundled
   `docs/catalog/` set into a shared, versioned source the ecosystem can pull from.
   Tracked by [#86](https://github.com/run-ai/karta/issues/86).
-- CLI. A command-line tool for read-only visibility into any Karta-described
-  workload: list workloads, inspect component structure, and drill into the
-  workload tree from the terminal without writing per-CRD kubectl commands.
-- Headlamp plugin. Browser-based workload visibility built on the CNCF
-  [Headlamp](https://github.com/kubernetes-sigs/headlamp) project: shows the
-  Karta workload tree, component status, and pod attribution.
 - Cross-resource expressions. Let a Karta reference values from related
   resources in its path expressions
   ([#80](https://github.com/run-ai/karta/issues/80)).
