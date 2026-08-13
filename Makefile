@@ -15,6 +15,13 @@ CLI_LOCALBIN_ABS := $(abspath $(CLI_LOCALBIN))
 $(CLI_LOCALBIN_ABS):
 	mkdir -p $@
 
+# Version stamping. CI overrides VERSION with the scheme in push-artifacts.yaml
+# (tag v1.2.3 -> 1.2.3, main -> 0.0.0-main-<sha>).
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-main")
+
+VERSION_PKG := github.com/run-ai/karta/pkg/version
+LDFLAGS     := -ldflags "-X $(VERSION_PKG).version=$(VERSION)"
+
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 KARTA_CHART_DIR := $(PROJECT_DIR)/charts/karta
 KARTA_CRDS_DIR := $(KARTA_CHART_DIR)/crds
@@ -131,7 +138,15 @@ download-dependencies:
 
 .PHONY: cli-build
 cli-build: $(CLI_LOCALBIN_ABS) ## Build the karta CLI binary.
-	cd cli && go build -o $(CLI_LOCALBIN_ABS)/karta .
+	cd cli && go build -trimpath $(LDFLAGS) -o $(CLI_LOCALBIN_ABS)/karta .
+
+.PHONY: cli-verify-version
+cli-verify-version: cli-build ## Assert the CLI binary reports the stamped version.
+	@set -e; \
+	out="$$($(CLI_LOCALBIN_ABS)/karta --version)"; \
+	echo "$$out"; \
+	[ "$$out" = "$(VERSION)" ] || { \
+		echo "version mismatch: got '$$out', want '$(VERSION)'" >&2; exit 1; }
 
 .PHONY: cli-test
 cli-test: ## Run the CLI unit tests.
@@ -142,7 +157,7 @@ cli-lint: golangci-lint ## Lint the CLI module.
 	cd cli && $(GOLANGCI_LINT) run -c $(PROJECT_DIR)/.golangci.yml
 
 .PHONY: check
-check: download-dependencies validate test cli-test cli-lint
+check: download-dependencies validate test cli-test cli-lint cli-verify-version
 
 ##@ Helm
 

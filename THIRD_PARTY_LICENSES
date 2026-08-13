@@ -196,6 +196,11 @@ For complete license texts, please refer to the source repositories or the LICEN
 - Version: v0.36.3
 - License: Apache-2.0
 
+### k8s.io/client-go
+- Name: k8s.io/client-go
+- Version: v0.36.3
+- License: Apache-2.0
+
 ### github.com/Azure/go-ansiterm
 - Name: github.com/Azure/go-ansiterm
 - Version: v0.0.0-20230124172434-306776ec8161
@@ -365,11 +370,6 @@ For complete license texts, please refer to the source repositories or the LICEN
 - Name: gopkg.in/yaml.v3
 - Version: v3.0.1
 - License: MIT
-
-### k8s.io/client-go
-- Name: k8s.io/client-go
-- Version: v0.36.3
-- License: Apache-2.0
 
 ### sigs.k8s.io/kustomize/api
 - Name: sigs.k8s.io/kustomize/api
