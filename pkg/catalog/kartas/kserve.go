@@ -28,17 +28,37 @@ func KServe() *v1alpha1.Karta {
 							StatusFieldName:  "status",
 							MessageFieldName: ptr.To("message"),
 						},
+						// KServe emits a different condition set per deployment mode, and
+						// matchers within one status are OR'd, so each mode gets its own.
+						// Serverless reports RoutesReady and LatestDeploymentReady, which
+						// come from the underlying Knative Revision; RawDeployment has no
+						// Knative and reports only IngressReady, PredictorReady and Ready.
+						// Matching solely on the Serverless set leaves a healthy
+						// RawDeployment InferenceService Undefined.
 						StatusMappings: v1alpha1.StatusMappings{
-							Running: []v1alpha1.StatusMatcher{{ByConditions: []v1alpha1.ExpectedCondition{
-								{Type: "PredictorReady", Status: ptr.To("True")},
-								{Type: "RoutesReady", Status: ptr.To("True")},
-								{Type: "LatestDeploymentReady", Status: ptr.To("True")},
-							}}},
-							Failed: []v1alpha1.StatusMatcher{{ByConditions: []v1alpha1.ExpectedCondition{
-								{Type: "PredictorReady", Status: ptr.To("False")},
-								{Type: "PredictorConfigurationReady", Status: ptr.To("False")},
-								{Type: "RoutesReady", Status: ptr.To("False")},
-							}}},
+							Running: []v1alpha1.StatusMatcher{
+								{ByConditions: []v1alpha1.ExpectedCondition{
+									{Type: "PredictorReady", Status: ptr.To("True")},
+									{Type: "RoutesReady", Status: ptr.To("True")},
+									{Type: "LatestDeploymentReady", Status: ptr.To("True")},
+								}},
+								{ByConditions: []v1alpha1.ExpectedCondition{
+									{Type: "PredictorReady", Status: ptr.To("True")},
+									{Type: "IngressReady", Status: ptr.To("True")},
+									{Type: "Ready", Status: ptr.To("True")},
+								}},
+							},
+							Failed: []v1alpha1.StatusMatcher{
+								{ByConditions: []v1alpha1.ExpectedCondition{
+									{Type: "PredictorReady", Status: ptr.To("False")},
+									{Type: "PredictorConfigurationReady", Status: ptr.To("False")},
+									{Type: "RoutesReady", Status: ptr.To("False")},
+								}},
+								{ByConditions: []v1alpha1.ExpectedCondition{
+									{Type: "PredictorReady", Status: ptr.To("False")},
+									{Type: "Ready", Status: ptr.To("False")},
+								}},
+							},
 						},
 					},
 				},

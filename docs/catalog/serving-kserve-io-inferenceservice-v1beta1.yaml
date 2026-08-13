@@ -79,6 +79,11 @@ spec:
               type: PredictorConfigurationReady
             - status: "False"
               type: RoutesReady
+          - byConditions:
+            - status: "False"
+              type: PredictorReady
+            - status: "False"
+              type: Ready
           running:
           - byConditions:
             - status: "True"
@@ -87,3 +92,10 @@ spec:
               type: RoutesReady
             - status: "True"
               type: LatestDeploymentReady
+          - byConditions:
+            - status: "True"
+              type: PredictorReady
+            - status: "True"
+              type: IngressReady
+            - status: "True"
+              type: Ready
