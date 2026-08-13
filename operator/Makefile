@@ -86,17 +86,17 @@ check: fmt-check vet lint test ## Run all checks (fmt-check, vet, lint, test)
 .PHONY: build
 build: ## Build the karta-operator binary for the host OS/arch
 	mkdir -p $(LOCALBIN)
-	go build $(LDFLAGS) -o $(LOCALBIN)/karta-operator ./cmd
+	go build -trimpath $(LDFLAGS) -o $(LOCALBIN)/karta-operator ./cmd
 
 .PHONY: build-linux-amd64
 build-linux-amd64: ## Cross-compile for linux/amd64
 	mkdir -p $(LOCALBIN)
-	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(LOCALBIN)/karta-operator-amd64 ./cmd
+	GOOS=linux GOARCH=amd64 go build -trimpath $(LDFLAGS) -o $(LOCALBIN)/karta-operator-amd64 ./cmd
 
 .PHONY: build-linux-arm64
 build-linux-arm64: ## Cross-compile for linux/arm64
 	mkdir -p $(LOCALBIN)
-	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o $(LOCALBIN)/karta-operator-arm64 ./cmd
+	GOOS=linux GOARCH=arm64 go build -trimpath $(LDFLAGS) -o $(LOCALBIN)/karta-operator-arm64 ./cmd
 
 .PHONY: build-all
 build-all: build-linux-amd64 build-linux-arm64 ## Cross-compile for all supported platforms

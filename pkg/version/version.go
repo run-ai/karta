@@ -8,7 +8,7 @@
 package version
 
 // Populated at link time. The default applies to a plain `go build`.
-var version = "0.0.0-main"
+var version = "unknown"
 
 // String returns the build version.
 func String() string { return version }
