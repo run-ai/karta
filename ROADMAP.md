@@ -39,7 +39,7 @@ of the roadmap is itself public and reviewable.
 
 ## Now
 
-**Theme: make Karta a standalone, shippable project.**
+**Theme: make Karta a standalone, shippable project with first-class visibility tooling.**
 
 - **Karta controller / operator.** A standalone controller that reconciles Karta
   resources and the workloads they describe — today the core processing lives in
@@ -58,29 +58,33 @@ of the roadmap is itself public and reviewable.
   tree, from the root component down through child components to the pods, so
   consumers can reason about and render the whole structure rather than individual
   fields. Tracked by [#32](https://github.com/run-ai/karta/issues/32).
+  - CLI. A command-line tool for read-only visibility into any Karta-described
+    workload: list workloads, inspect component structure, and drill into the
+    workload tree from the terminal without writing per-CRD kubectl commands.
+  - Headlamp plugin. Browser-based workload visibility built on the CNCF
+    [Headlamp](https://github.com/kubernetes-sigs/headlamp) project: shows the
+    Karta workload tree, component status, and pod attribution.
 - **Karta as a registry.** A discoverable catalog of Karta definitions, so the
   community can publish, find, and reuse descriptions for common workload types
   instead of every consumer re-bundling its own copies. Turns the bundled
   `docs/catalog/` set into a shared, versioned source the ecosystem can pull from.
   Tracked by [#86](https://github.com/run-ai/karta/issues/86).
+- Cross-resource expressions. Let a Karta reference values from related
+  resources in its path expressions
+  ([#80](https://github.com/run-ai/karta/issues/80)).
 
 ## Next
 
-**Theme: deepen the contract — breadth and richer expressions — on the path to a
-vendor-neutral v1beta1.**
+Theme: broader coverage and operational observability.
 
 - **Broader, tested workload coverage.** Expand the pre-built, tested example set
   and keep pace with upstream APIs of the workloads Karta describes — including
   **Kubeflow Trainer v2** and Dynamo `v1beta1`
   ([#78](https://github.com/run-ai/karta/issues/78)).
-- **API versioning toward v1beta1.** A documented versioning and deprecation
-  policy, and graduation of the CRD from `v1alpha1` toward `v1beta1` as the
-  schema settles.
-- **Cross-resource expressions.** Let a Karta reference values from related
-  resources in its path expressions
-  ([#80](https://github.com/run-ai/karta/issues/80)).
-- **Packaging & install.** Helm chart hardening, including a CRD upgrade hook
-  ([#43](https://github.com/run-ai/karta/issues/43)).
+- Metrics exporter. An exporter that publishes workload state and pod-to-workload
+  attribution derived from Karta descriptions, making any cluster's existing
+  metrics addressable at workload and role scope — without hand-authored queries
+  per workload type.
 
 ## Later
 
@@ -92,11 +96,6 @@ vendor-neutral v1beta1.**
   and act on the same description. Karta itself stays a thin, neutral contract;
   richer behavior lives in separate projects across the Karta ecosystem. Examples
   of such ecosystem projects that read and act on the contract:
-  - **CLI** — read-only visibility: list and drill into any Karta-described
-    workload from the command line.
-  - **Headlamp plugin** — the GUI face of visibility, built on the CNCF
-    [Headlamp](https://github.com/kubernetes-sigs/headlamp) project rather than a
-    bespoke dashboard.
   - **Mutation runtime** — a controller that submits and mutates workloads and
     provisions secondary resources from a Karta description, without per-CRD code.
   - **Governance / policy engine** — admission- and runtime-level rules
@@ -119,6 +118,16 @@ Karta deliberately stays narrow. It describes workload **structure**; it does no
 schedule, queue, autoscale, or own a workload's lifecycle. Those belong to the
 tools that consume a Karta description. Keeping Karta a thin contract is what lets
 it stay vendor-neutral and broadly adoptable.
+
+## Changelog
+
+Completed milestones, most recent first. The GitHub issue is the permanent record;
+this section is a quick reference for what has already shipped.
+
+- Helm chart / CRD upgrade hook: Helm chart hardening and CRD upgrader hook
+  shipped ([#43](https://github.com/run-ai/karta/issues/43), Aug 2026).
+
+---
 
 ## Get involved
 
