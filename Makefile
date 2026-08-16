@@ -178,6 +178,27 @@ helm-validate: ## Validate the chart renders and the CRD ConfigMap fits in etcd
 	helm template $(KARTA_CHART_DIR)
 	@set -e; tmp=$$(mktemp); trap 'rm -f "$$tmp"' EXIT; helm template $(KARTA_CHART_DIR) -s templates/hooks/pre/crd-upgrader-configmap.yaml > "$$tmp"; s=$$(wc -c < "$$tmp"); echo "crd-upgrader ConfigMap: $$s bytes (max $(CRD_CONFIGMAP_MAX_BYTES))"; test $$s -le $(CRD_CONFIGMAP_MAX_BYTES) || { echo "error: CRD ConfigMap is $$s bytes, over the $(CRD_CONFIGMAP_MAX_BYTES) limit; it must fit in a single ~1 MiB etcd object"; exit 1; }
 
+##@ Air-gap
+
+IMAGE_LOCK_OUT_DIR ?= $(PROJECT_DIR)/dist
+IMAGE_LOCK_PLATFORMS ?= linux/amd64 linux/arm64
+
+.PHONY: image-lock
+image-lock: ## Generate the per-platform ImageLock for a release (VERSION=vX.Y.Z)
+	cd hack/imagelock && go run . \
+		--chart $(KARTA_CHART_DIR) \
+		--version $(VERSION) \
+		$(foreach p,$(IMAGE_LOCK_PLATFORMS),--platform $(p)) \
+		--out-dir $(IMAGE_LOCK_OUT_DIR)
+
+.PHONY: image-lock-verify
+image-lock-verify: ## Fail if the chart renders a container image the lock generator does not classify
+	cd hack/imagelock && go run . --chart $(KARTA_CHART_DIR) --verify-only
+
+.PHONY: image-lock-test
+image-lock-test: ## Run the image-lock generator unit tests
+	cd hack/imagelock && go test ./...
+
 ##@ E2E
 
 # Cluster name for the e2e targets. Override to run isolated clusters in parallel,
