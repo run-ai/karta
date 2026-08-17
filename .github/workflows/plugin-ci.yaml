@@ -6,10 +6,13 @@ name: Headlamp Plugin
 on:
   push:
     branches: [ main, v0.* ]
-    paths: [ 'headlamp-plugin/**', 'Makefile' ]
+    paths: [ 'headlamp-plugin/**', 'Makefile', '.github/workflows/plugin-ci.yaml' ]
   pull_request:
     branches: [ main, v0.* ]
-    paths: [ 'headlamp-plugin/**', 'Makefile' ]
+    paths: [ 'headlamp-plugin/**', 'Makefile', '.github/workflows/plugin-ci.yaml' ]
+
+permissions:
+  contents: read
 
 jobs:
   plugin-ci:
@@ -18,6 +21,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@v7

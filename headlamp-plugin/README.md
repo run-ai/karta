@@ -5,9 +5,12 @@ Copyright (c) 2026 NVIDIA Corporation
 
 # Karta Headlamp Plugin
 
-A [Headlamp](https://headlamp.dev) plugin that visualizes Karta workload
-trees: the components, instances, and normalized status of any workload
-described by a Karta definition (`kartas.run.ai`).
+A [Headlamp](https://headlamp.dev) plugin scaffold for visualizing Karta
+workload trees: the components, instances, and normalized status of any
+workload described by a Karta definition (`kartas.run.ai`). Currently this
+is a placeholder setup, a `/karta/workloads` route and a WASM engine
+exporting only `kartaVersion`. The real tree visualization and engine
+bindings land in follow-up work (RUN-42193).
 
 ## How the WASM engine is built and loaded
 
@@ -15,7 +18,7 @@ described by a Karta definition (`kartas.run.ai`).
 (`GOOS=js GOARCH=wasm`) and shipped as a plugin asset via the
 `headlamp.extraDist` entry in `package.json`. At runtime, `src/lib/engine.ts`
 fetches `wasm_exec.js` and `karta.wasm` from wherever Headlamp served this
-plugin from and instantiates the module in the browser — see `src/lib/engine.ts`
+plugin from and instantiates the module in the browser, see `src/lib/engine.ts`
 for the details.
 
 ## Development
@@ -30,8 +33,8 @@ npm start
 
 `npm start` watches `src/` and rebuilds the plugin bundle on change, copying
 it (plus whatever is currently in `engine/`) into Headlamp's plugin
-directory. It does **not** watch Go source or rerun `make plugin-wasm` for
-you — after editing `engine/main.go`, rerun `make plugin-wasm` from the
+directory. It does not watch Go source or rerun `make plugin-wasm` for
+you, after editing `engine/main.go`, rerun `make plugin-wasm` from the
 repository root, then save any file under `src/` (or restart `npm start`) to
 pick up the new binary.
 
