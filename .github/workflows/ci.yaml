@@ -22,13 +22,15 @@ jobs:
           cache-dependency-path: |
             go.sum
             operator/go.sum
+            cli/go.sum
 
       - name: Cache bin tools
         uses: actions/cache@v6
         with:
           path: bin
-          key: ${{ runner.os }}-bin-${{ hashFiles('Makefile') }}
+          key: ${{ runner.os }}-bin-${{ hashFiles('Makefile') }}-${{ hashFiles('go.mod') }}
           restore-keys: |
+            ${{ runner.os }}-bin-${{ hashFiles('Makefile') }}-
             ${{ runner.os }}-bin-
 
       - name: Run checks
@@ -47,6 +49,12 @@ jobs:
 
       - name: Validate helm chart renders
         run: make helm-validate
+
+      - name: Verify air-gap image lock coverage
+        run: make image-lock-verify
+
+      - name: Test air-gap image lock generator
+        run: make image-lock-test
 
       - name: Run operator checks
         working-directory: operator

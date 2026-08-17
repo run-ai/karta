@@ -11,6 +11,7 @@ updates:
   - package-ecosystem: gomod
     directories:
       - "/"
+      - "/cli"
       - "/operator"
       - "/docs/examples/*"
     schedule:

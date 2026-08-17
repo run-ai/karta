@@ -6,9 +6,9 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
-# Version is derived automatically from git. Falls back to "dev" when there
-# are no tags or git is unavailable (e.g. a bare source tarball).
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+# Version is derived automatically from git. Falls back to "0.0.0-main" when
+# there are no tags or git is unavailable (e.g. a bare source tarball).
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-main")
 
 # Container image settings (defaults for ghcr.io/run-ai/karta OSS publishing).
 # Override any component from the command line, e.g.:
@@ -22,10 +22,10 @@ IMAGE           ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 CONTAINER_TOOL ?= docker
 BUILD_ARGS     ?=
 
-# VERSION_PKG is the Go package path that holds the Version variable. The build
-# targets inject VERSION into the binary via -ldflags so it is available at runtime.
-VERSION_PKG = github.com/run-ai/karta/operator/pkg/version
-LDFLAGS     = -ldflags "-X $(VERSION_PKG).Version=$(VERSION)"
+# VERSION_PKG is the Go package path that holds the version variable. The build
+# targets inject it into the binary via -ldflags so it is available at runtime.
+VERSION_PKG = github.com/run-ai/karta/pkg/version
+LDFLAGS     = -ldflags "-X $(VERSION_PKG).version=$(VERSION)"
 
 GOLANGCI_LINT         ?= $(LOCALBIN)/golangci-lint
 # GOLANGCI_LINT_VERSION is defined in ../hack/tools.mk (shared with the root
@@ -86,17 +86,17 @@ check: fmt-check vet lint test ## Run all checks (fmt-check, vet, lint, test)
 .PHONY: build
 build: ## Build the karta-operator binary for the host OS/arch
 	mkdir -p $(LOCALBIN)
-	go build $(LDFLAGS) -o $(LOCALBIN)/karta-operator ./cmd
+	go build -trimpath $(LDFLAGS) -o $(LOCALBIN)/karta-operator ./cmd
 
 .PHONY: build-linux-amd64
 build-linux-amd64: ## Cross-compile for linux/amd64
 	mkdir -p $(LOCALBIN)
-	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(LOCALBIN)/karta-operator-amd64 ./cmd
+	GOOS=linux GOARCH=amd64 go build -trimpath $(LDFLAGS) -o $(LOCALBIN)/karta-operator-amd64 ./cmd
 
 .PHONY: build-linux-arm64
 build-linux-arm64: ## Cross-compile for linux/arm64
 	mkdir -p $(LOCALBIN)
-	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o $(LOCALBIN)/karta-operator-arm64 ./cmd
+	GOOS=linux GOARCH=arm64 go build -trimpath $(LDFLAGS) -o $(LOCALBIN)/karta-operator-arm64 ./cmd
 
 .PHONY: build-all
 build-all: build-linux-amd64 build-linux-arm64 ## Cross-compile for all supported platforms

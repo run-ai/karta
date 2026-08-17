@@ -10,6 +10,18 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
+CLI_LOCALBIN ?= $(shell pwd)/cli/bin
+CLI_LOCALBIN_ABS := $(abspath $(CLI_LOCALBIN))
+$(CLI_LOCALBIN_ABS):
+	mkdir -p $@
+
+# Version stamping. CI overrides VERSION with the scheme in push-artifacts.yaml
+# (tag v1.2.3 -> 1.2.3, main -> 0.0.0-main-<sha>).
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-main")
+
+VERSION_PKG := github.com/run-ai/karta/pkg/version
+LDFLAGS     := -ldflags "-X $(VERSION_PKG).version=$(VERSION)"
+
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 KARTA_CHART_DIR := $(PROJECT_DIR)/charts/karta
 KARTA_CRDS_DIR := $(KARTA_CHART_DIR)/crds
@@ -88,11 +100,12 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
-	@[ -f "$(GOLANGCI_LINT)" ] || { \
-	set -e; \
-	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)" ;\
-	curl -sSfL https://golangci-lint.run/install.sh  | sh -s -- -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION) ;\
-	}
+	@set -e; \
+	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)"; \
+	tmp=$$(mktemp); \
+	trap 'rm -f "$$tmp"' EXIT; \
+	curl -sSfL --proto '=https' --proto-redir '=https' --tlsv1.2 https://golangci-lint.run/install.sh -o "$$tmp"; \
+	sh "$$tmp" -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION)
 
 .PHONY: go-licence-detector
 go-licence-detector: $(GO_LICENCE_DETECTOR) ## Download go-licence-detector locally if necessary.
@@ -104,10 +117,12 @@ $(GO_LICENCE_DETECTOR): $(LOCALBIN)
 	}
 
 .PHONY: generate-licenses
-generate-licenses: go-licence-detector download-dependencies ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
+generate-licenses: go-licence-detector ## Regenerate NOTICE and THIRD_PARTY_LICENSES from current dependencies.
 	@set -eu; \
 	echo "Generating NOTICE and THIRD_PARTY_LICENSES files from current dependencies using go-licence-detector"; \
-	go mod download -json > $(LOCALBIN)/deps.json; \
+	go mod download -json > $(LOCALBIN)/root-deps.json; \
+	(cd cli && go mod download -json) > $(LOCALBIN)/cli-deps.json; \
+	python3 hack/merge-go-deps.py $(LOCALBIN)/root-deps.json $(LOCALBIN)/cli-deps.json > $(LOCALBIN)/deps.json; \
 	$(GO_LICENCE_DETECTOR) -in $(LOCALBIN)/deps.json \
 		-noticeTemplate=hack/licenses/notice.tpl \
 		-noticeOut=NOTICE \
@@ -119,8 +134,30 @@ generate-licenses: go-licence-detector download-dependencies ## Regenerate NOTIC
 download-dependencies:
 	go mod download
 
+##@ CLI
+
+.PHONY: cli-build
+cli-build: $(CLI_LOCALBIN_ABS) ## Build the karta CLI binary.
+	cd cli && go build -trimpath $(LDFLAGS) -o $(CLI_LOCALBIN_ABS)/karta .
+
+.PHONY: cli-verify-version
+cli-verify-version: cli-build ## Assert the CLI binary reports the stamped version.
+	@set -e; \
+	out="$$($(CLI_LOCALBIN_ABS)/karta --version)"; \
+	echo "$$out"; \
+	[ "$$out" = "$(VERSION)" ] || { \
+		echo "version mismatch: got '$$out', want '$(VERSION)'" >&2; exit 1; }
+
+.PHONY: cli-test
+cli-test: ## Run the CLI unit tests.
+	cd cli && go test ./...
+
+.PHONY: cli-lint
+cli-lint: golangci-lint ## Lint the CLI module.
+	cd cli && $(GOLANGCI_LINT) run -c $(PROJECT_DIR)/.golangci.yml
+
 .PHONY: check
-check: download-dependencies validate test
+check: download-dependencies validate test cli-test cli-lint cli-verify-version
 
 ##@ Helm
 
@@ -140,6 +177,27 @@ CRD_CONFIGMAP_MAX_BYTES ?= 1000000
 helm-validate: ## Validate the chart renders and the CRD ConfigMap fits in etcd
 	helm template $(KARTA_CHART_DIR)
 	@set -e; tmp=$$(mktemp); trap 'rm -f "$$tmp"' EXIT; helm template $(KARTA_CHART_DIR) -s templates/hooks/pre/crd-upgrader-configmap.yaml > "$$tmp"; s=$$(wc -c < "$$tmp"); echo "crd-upgrader ConfigMap: $$s bytes (max $(CRD_CONFIGMAP_MAX_BYTES))"; test $$s -le $(CRD_CONFIGMAP_MAX_BYTES) || { echo "error: CRD ConfigMap is $$s bytes, over the $(CRD_CONFIGMAP_MAX_BYTES) limit; it must fit in a single ~1 MiB etcd object"; exit 1; }
+
+##@ Air-gap
+
+IMAGE_LOCK_OUT_DIR ?= $(PROJECT_DIR)/dist
+IMAGE_LOCK_PLATFORMS ?= linux/amd64 linux/arm64
+
+.PHONY: image-lock
+image-lock: ## Generate the per-platform ImageLock for a release (VERSION=vX.Y.Z)
+	cd hack/imagelock && go run . \
+		--chart $(KARTA_CHART_DIR) \
+		--version $(VERSION) \
+		$(foreach p,$(IMAGE_LOCK_PLATFORMS),--platform $(p)) \
+		--out-dir $(IMAGE_LOCK_OUT_DIR)
+
+.PHONY: image-lock-verify
+image-lock-verify: ## Fail if the chart renders a container image the lock generator does not classify
+	cd hack/imagelock && go run . --chart $(KARTA_CHART_DIR) --verify-only
+
+.PHONY: image-lock-test
+image-lock-test: ## Run the image-lock generator unit tests
+	cd hack/imagelock && go test ./...
 
 ##@ E2E
 
