@@ -23,3 +23,9 @@ config/crd/_.yaml
 .vscode/
 .idea
 /docs/examples/quickstart/quickstart
+
+# Generated air-gap image locks (make image-lock)
+/dist/
+
+# built imagelock tool binary
+/hack/imagelock/imagelock

@@ -131,6 +131,27 @@ helm-lint: ## Lint the helm chart
 helm-validate: ## Validate the helm chart renders
 	helm template $(KARTA_CHART_DIR)
 
+##@ Air-gap
+
+IMAGE_LOCK_OUT_DIR ?= $(PROJECT_DIR)/dist
+IMAGE_LOCK_PLATFORMS ?= linux/amd64 linux/arm64
+
+.PHONY: image-lock
+image-lock: ## Generate the per-platform ImageLock for a release (VERSION=vX.Y.Z)
+	cd hack/imagelock && go run . \
+		--chart $(KARTA_CHART_DIR) \
+		--version $(VERSION) \
+		$(foreach p,$(IMAGE_LOCK_PLATFORMS),--platform $(p)) \
+		--out-dir $(IMAGE_LOCK_OUT_DIR)
+
+.PHONY: image-lock-verify
+image-lock-verify: ## Fail if the chart renders a container image the lock generator does not classify
+	cd hack/imagelock && go run . --chart $(KARTA_CHART_DIR) --verify-only
+
+.PHONY: image-lock-test
+image-lock-test: ## Run the image-lock generator unit tests
+	cd hack/imagelock && go test ./...
+
 ##@ E2E
 
 # Cluster name for the e2e targets. Override to run isolated clusters in parallel,
