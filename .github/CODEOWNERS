@@ -1,2 +1,5 @@
 # Specify the default code owners for the entire repository
 *       @ronlv10 @yuval-gr @rogirun @shaked-bouktus @AviadHayumi @Isan-Rivkin
+
+# Headlamp plugin PRs are owned by the frontend guild
+/headlamp-plugin/ @run-ai/frontend-guild
