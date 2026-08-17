@@ -74,6 +74,12 @@ jobs:
         run: |
           make docker-buildx-push VERSION=$PACKAGE_VERSION
 
+      - name: Generate air-gap image lock
+        if: github.ref_type == 'tag'
+        run: |
+          # After the operator push so its tag resolves; PACKAGE_VERSION has no leading v.
+          make image-lock VERSION="$PACKAGE_VERSION"
+
       - name: Build helm chart
         run: |
           helm package ./charts/karta -d ./charts \
@@ -88,6 +94,9 @@ jobs:
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v3
         with:
-          files: charts/karta-${{ env.PACKAGE_VERSION }}.tgz
+          files: |
+            charts/karta-${{ env.PACKAGE_VERSION }}.tgz
+            dist/imagelock-karta-v${{ env.PACKAGE_VERSION }}-linux-amd64.yaml
+            dist/imagelock-karta-v${{ env.PACKAGE_VERSION }}-linux-arm64.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
