@@ -13,6 +13,7 @@ updates:
       - "/"
       - "/cli"
       - "/operator"
+      - "/hack/imagelock"
       - "/docs/examples/*"
     schedule:
       interval: weekly
