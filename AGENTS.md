@@ -46,7 +46,7 @@ Boundaries for anything touching credentials or security-relevant configuration:
 Good and bad examples:
 
 ```text
-Good example value:  image: ghcr.io/example/inference:latest
+Good example value:  image: ghcr.io/example/inference:v1.2.3
 Bad example value:   image: registry.internal.corp/team/inference:latest
 
 Good secret handling:  token := os.Getenv("GITHUB_TOKEN")
