@@ -32,6 +32,32 @@ Never do:
 - Reference customer or partner names without their explicit permission.
 - Push speculative commits to debug CI.
 
+## Security and Secrets
+
+Boundaries for anything touching credentials or security-relevant configuration:
+
+- Never commit credentials of any kind: API keys, tokens, kubeconfig files, certificates, private keys, registry passwords. This applies to test fixtures and examples too.
+- Use placeholder values in examples and fixtures. Never paste command output that may embed real cluster endpoints, node names, or internal hostnames.
+- Code that needs a secret reads it from an environment variable or a mounted Kubernetes Secret. Document the variable name, never a value.
+- Do not add scripts or workflow steps that download and execute remote code.
+- Do not weaken webhook TLS or RBAC defaults in the Helm chart to simplify local development. Use the documented certificate modes instead (`docs/Webhook Certificates.md`).
+- A secret committed by mistake is not fixed by a follow-up commit. History must be rewritten and the credential rotated. Report it per `SECURITY.md`.
+
+Good and bad examples:
+
+```text
+Good commit:  fix(jq): reject expressions that exceed the evaluation depth limit
+Bad commit:   fixed stuff
+
+Good example value:  image: ghcr.io/example/inference:latest
+Bad example value:   image: registry.internal.corp/team/inference:latest
+
+Good secret handling:  token := os.Getenv("GITHUB_TOKEN")
+Bad secret handling:   token := "ghp_..." hardcoded in a test
+```
+
+For vulnerability handling and disclosure, `SECURITY.md` is authoritative. For the full Karta spec and path syntax, see `docs/Technical Guide.md`; this file intentionally stays at the workflow level.
+
 ## Repo Layout
 
 - `pkg/` Karta Go library source
