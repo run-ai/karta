@@ -223,9 +223,9 @@ empty :=
 space := $(empty) $(empty)
 E2E_LABELS ?= $(subst $(space), || ,$(strip $(filter-out all,$(WORKLOADS))))
 
-# FLOW="scaled" narrows a record to one flow by name (focuses the spec titled "<FLOW> flow ...").
+# FLOW="scaled" narrows a record to one flow by name (focuses the spec with that title).
 ifneq ($(strip $(FLOW)),)
-E2E_FOCUS := $(strip $(FLOW)) flow
+E2E_FOCUS := $(strip $(FLOW))
 endif
 
 # Pick which operators to install:
