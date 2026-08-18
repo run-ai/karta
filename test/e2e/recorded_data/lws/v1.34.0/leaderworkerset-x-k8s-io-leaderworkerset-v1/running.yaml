@@ -250,7 +250,7 @@ flow: running
 kartaFile: docs/catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml
 kartaName: leaderworkerset-x-k8s-io-leaderworkerset-v1
 operator: lws
-schemaVersion: 2
+schemaVersion: 1
 succeeded: true
 version: v1.34.0
 want: Running

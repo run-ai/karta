@@ -22,7 +22,7 @@ var _ = Describe("NIMService", Ordered, Label("nim"), func() {
 		// The NIMService references authSecret ngc-secret; the operator reads it from the workload's own
 		// namespace, so seed it here (up.sh only creates it in default).
 		ensureSecret(ctx, "ngc-secret", map[string]string{"NGC_API_KEY": "dummy-not-a-real-token"})
-		fx = recorder.Fixture{Operator: "nim", Version: operatorVersion("nim"), KartaName: "apps-nvidia-com-nimservice-v1alpha1", KartaFile: "../../docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml"}
+		fx = recorder.Fixture{Operator: "nim", Version: operatorVersion("nim"), KartaName: "apps-nvidia-com-nimservice-v1alpha1", KartaFile: "docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml"}
 		rec = recorder.New(cfg).
 			SetTimeout(5*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, PhaseNot([]string{"Ready", "Failed"}, "status", "state")).

@@ -19,7 +19,7 @@ var _ = Describe("KnativeService", Ordered, Label("knative"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/serving-knative-dev-service-v1.yaml", "serving-knative-dev-service-v1")
-		fx = recorder.Fixture{Operator: "knative", Version: operatorVersion("knative"), KartaName: "serving-knative-dev-service-v1", KartaFile: "../../docs/catalog/serving-knative-dev-service-v1.yaml"}
+		fx = recorder.Fixture{Operator: "knative", Version: operatorVersion("knative"), KartaName: "serving-knative-dev-service-v1", KartaFile: "docs/catalog/serving-knative-dev-service-v1.yaml"}
 		rec = recorder.New(cfg).
 			SetTimeout(5*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, CondStatus("Ready", "Unknown")).

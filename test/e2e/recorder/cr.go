@@ -16,8 +16,8 @@ var volatileFields = [][]string{
 	{"metadata", "managedFields"},
 }
 
-// significantFields drops the volatile fields so keep dedups on real changes.
-func significantFields(cr *unstructured.Unstructured) map[string]any {
+// stripVolatileFields drops the volatile fields so keep dedups on real changes.
+func stripVolatileFields(cr *unstructured.Unstructured) map[string]any {
 	stripped := cr.DeepCopy().Object
 	for _, field := range volatileFields {
 		unstructured.RemoveNestedField(stripped, field...)

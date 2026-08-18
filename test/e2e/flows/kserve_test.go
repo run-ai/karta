@@ -19,7 +19,7 @@ var _ = Describe("KServe InferenceService", Ordered, Label("kserve"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml", "serving-kserve-io-inferenceservice-v1beta1")
-		fx = recorder.Fixture{Operator: "kserve", Version: operatorVersion("kserve"), KartaName: "serving-kserve-io-inferenceservice-v1beta1", KartaFile: "../../docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml"}
+		fx = recorder.Fixture{Operator: "kserve", Version: operatorVersion("kserve"), KartaName: "serving-kserve-io-inferenceservice-v1beta1", KartaFile: "docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml"}
 		rec = recorder.New(cfg).
 			SetTimeout(6*time.Minute).
 			AddState(kartav1alpha1.InitializingStatus, CondPending("Ready")).

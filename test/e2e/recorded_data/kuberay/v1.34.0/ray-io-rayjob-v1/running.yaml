@@ -690,7 +690,7 @@ flow: running
 kartaFile: docs/catalog/ray-io-rayjob-v1.yaml
 kartaName: ray-io-rayjob-v1
 operator: kuberay
-schemaVersion: 2
+schemaVersion: 1
 succeeded: true
 version: v1.34.0
 want: Running

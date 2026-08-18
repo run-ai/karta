@@ -54,7 +54,7 @@ flow: initializing
 kartaFile: docs/catalog/core-pod-v1.yaml
 kartaName: core-pod-v1
 operator: pod
-schemaVersion: 2
+schemaVersion: 1
 succeeded: true
 version: v1.34.0
 want: Initializing

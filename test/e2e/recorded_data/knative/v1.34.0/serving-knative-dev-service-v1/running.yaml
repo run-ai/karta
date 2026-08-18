@@ -445,7 +445,7 @@ flow: running
 kartaFile: docs/catalog/serving-knative-dev-service-v1.yaml
 kartaName: serving-knative-dev-service-v1
 operator: knative
-schemaVersion: 2
+schemaVersion: 1
 succeeded: true
 version: v1.34.0
 want: Running

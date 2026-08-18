@@ -18,7 +18,7 @@ reads each state the same way. No Ginkgo or Gomega; failures come back as errors
 - observation.go: one live run. The watch loop (follow, startWatch), recording each frame
   (record, keep), checkpoint actions (advanceCheckpoint, performAction), and watch
   recovery (reconnect, refetch).
-- cr.go: helpers over an unstructured CR. significantFields, isWorkloadObserved,
+- cr.go: helpers over an unstructured CR. stripVolatileFields, isWorkloadObserved,
   blankWithGVK, dumpStatus.
 - order.go: the invariant. observedOrderErr checks the observed states are a legal walk
   of the declared journey.
@@ -61,6 +61,6 @@ Karta, asserting each state matches.
 
 ```sh
 go test ./...            # offline unit tests, no cluster
-make test-e2e            # from the repo root: recorder tests + the replay golden
+make test-replay         # from the repo root: recorder tests + the replay golden
 make record-e2e          # from the repo root, records the flows against a live cluster
 ```

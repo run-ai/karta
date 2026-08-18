@@ -44,7 +44,7 @@ flow: initializing
 kartaFile: docs/catalog/batch-cronjob-v1.yaml
 kartaName: batch-cronjob-v1
 operator: cronjob
-schemaVersion: 2
+schemaVersion: 1
 succeeded: true
 version: v1.34.0
 want: Initializing

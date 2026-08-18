@@ -17,7 +17,7 @@ var _ = Describe("CronJob (built-in)", Ordered, Label("cronjob", "builtin"), fun
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/batch-cronjob-v1.yaml", "batch-cronjob-v1")
-		fx = recorder.Fixture{Operator: "cronjob", Version: operatorVersion("cronjob"), KartaName: "batch-cronjob-v1", KartaFile: "../../docs/catalog/batch-cronjob-v1.yaml"}
+		fx = recorder.Fixture{Operator: "cronjob", Version: operatorVersion("cronjob"), KartaName: "batch-cronjob-v1", KartaFile: "docs/catalog/batch-cronjob-v1.yaml"}
 		rec = recorder.New(cfg).
 			AddState(kartav1alpha1.InitializingStatus, Absent("status", "lastScheduleTime")).
 			AddState(kartav1alpha1.RunningStatus, CronjobFired()).

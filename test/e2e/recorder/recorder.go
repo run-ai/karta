@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,7 +45,7 @@ type Fixture struct {
 	Operator  string // operator key, e.g. "deployment"
 	Version   string // operator version, resolved by the suite
 	KartaName string // Karta definition name
-	KartaFile string // repo-relative path to the Karta definition, read by the replay golden
+	KartaFile string // repo-relative path to the Karta definition, stored as recording metadata
 }
 
 // Recorder records the flows of one workload type: build and Run a Flow per case, then Save each Recording.
@@ -93,7 +92,7 @@ func (r *Recorder) SetTimeout(d time.Duration) *Recorder {
 }
 
 // Run creates the workload, drives it through the journey, and returns the recording of what it observed;
-// pass it to Save to persist. On a flow-level failure the recording still comes back (succeeded:false).
+// pass it to Save to persist. On a flow-level failure the recording is still returned (succeeded:false).
 func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 	if len(f.journey) == 0 {
 		return nil, fmt.Errorf("flow %s declares no stops", f.name)
@@ -116,7 +115,7 @@ func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 	return out, orderErr
 }
 
-// createWorkload reads the flow's workload manifest and creates it in the recorder's namespace.
+// createWorkload reads the flow's workload manifest and creates it on the cluster in the recorder's namespace.
 func (f *Flow) createWorkload(ctx context.Context) (*unstructured.Unstructured, error) {
 	raw, err := os.ReadFile(f.manifest)
 	if err != nil {
@@ -133,8 +132,8 @@ func (f *Flow) createWorkload(ctx context.Context) (*unstructured.Unstructured, 
 	return workload, nil
 }
 
-// deleteWorkload removes the workload once the flow is done. It runs on a fresh, bounded context so cleanup
-// still happens after the flow's own context was cancelled; a failed delete is logged, not fatal.
+// deleteWorkload removes the workload. It runs on a fresh, bounded context so cleanup still happens after
+// the flow's own context was cancelled; a failed delete is logged, not fatal.
 func (f *Flow) deleteWorkload(ctx context.Context, workload *unstructured.Unstructured) {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 	defer cancel()
@@ -168,7 +167,7 @@ func (f *Flow) buildRecording(obs *observation, succeeded bool) *Recording {
 		Succeeded:     succeeded,
 	}
 	for _, snap := range obs.snapshots {
-		out.Events = append(out.Events, Event{Kind: EventState, State: string(snap.state), StaleObservedGeneration: snap.staleObservedGeneration, Object: significantFields(snap.cr)})
+		out.Events = append(out.Events, Event{Kind: EventState, State: string(snap.state), StaleObservedGeneration: snap.staleObservedGeneration, Object: stripVolatileFields(snap.cr)})
 		if snap.action != nil {
 			out.Events = append(out.Events, Event{Kind: EventAction, Action: snap.action})
 		}
@@ -188,7 +187,7 @@ func (r *Recorder) Save(fx Fixture, rec *Recording) (string, error) {
 	rec.Operator = fx.Operator
 	rec.Version = fx.Version
 	rec.KartaName = fx.KartaName
-	rec.KartaFile = strings.TrimPrefix(fx.KartaFile, "../../")
+	rec.KartaFile = fx.KartaFile
 	rec.Path = recordingPath(r.config.OutputDir, *rec)
 	if err := writeRecording(rec.Path, *rec); err != nil {
 		return "", fmt.Errorf("write recording %s: %w", rec.Path, err)

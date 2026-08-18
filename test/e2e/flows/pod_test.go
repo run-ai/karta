@@ -17,7 +17,7 @@ var _ = Describe("Pod (built-in)", Ordered, Label("pod", "builtin"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		installKarta(ctx, "../../docs/catalog/core-pod-v1.yaml", "core-pod-v1")
-		fx = recorder.Fixture{Operator: "pod", Version: operatorVersion("pod"), KartaName: "core-pod-v1", KartaFile: "../../docs/catalog/core-pod-v1.yaml"}
+		fx = recorder.Fixture{Operator: "pod", Version: operatorVersion("pod"), KartaName: "core-pod-v1", KartaFile: "docs/catalog/core-pod-v1.yaml"}
 		rec = recorder.New(cfg).
 			AddState(kartav1alpha1.InitializingStatus, PhaseEq("Pending", "status", "phase")).
 			AddState(kartav1alpha1.RunningStatus, PhaseEq("Running", "status", "phase")).

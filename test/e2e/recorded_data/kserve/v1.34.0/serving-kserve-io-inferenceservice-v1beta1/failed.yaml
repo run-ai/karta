@@ -147,7 +147,7 @@ flow: failed
 kartaFile: docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml
 kartaName: serving-kserve-io-inferenceservice-v1beta1
 operator: kserve
-schemaVersion: 2
+schemaVersion: 1
 succeeded: true
 version: v1.34.0
 want: Failed

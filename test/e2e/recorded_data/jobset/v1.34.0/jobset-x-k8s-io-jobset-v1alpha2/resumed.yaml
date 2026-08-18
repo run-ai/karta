@@ -688,7 +688,7 @@ flow: resumed
 kartaFile: docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml
 kartaName: jobset-x-k8s-io-jobset-v1alpha2
 operator: jobset
-schemaVersion: 2
+schemaVersion: 1
 succeeded: true
 version: v1.34.0
 want: Completed
