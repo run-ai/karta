@@ -89,13 +89,13 @@ type namedState struct {
 	Match StateCheck
 }
 
-// classify returns the furthest-along state the workload matches, judged from its own fields.
+// classify returns the furthest-along state the workload matches, judged from its own fields; states are
+// declared least- to most-advanced, so the walk runs from the end.
 func classify(cr *unstructured.Unstructured, states []namedState) kartav1alpha1.ResourceStatus {
-	var name kartav1alpha1.ResourceStatus
-	for _, s := range states {
-		if s.Match(cr) {
-			name = s.Name
+	for i := len(states) - 1; i >= 0; i-- {
+		if states[i].Match(cr) {
+			return states[i].Name
 		}
 	}
-	return name
+	return ""
 }

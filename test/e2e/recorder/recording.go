@@ -12,8 +12,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// schemaVersion is bumped on incompatible format changes; v2 is the event stream (STATE and ACTION events).
-const schemaVersion = 2
+// schemaVersion is bumped on incompatible format changes; v1 is the event stream (STATE and ACTION events).
+const schemaVersion = 1
 
 // Recording is one flow: metadata plus the ordered event stream a workload produced.
 type Recording struct {

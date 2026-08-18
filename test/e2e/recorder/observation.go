@@ -31,7 +31,7 @@ type observation struct {
 
 	pending   []journeyStep              // checkpoints not yet reached, in order
 	snapshots []snapshot                 // the distinct CRs kept, in order
-	lastSig   map[string]any             // significant fields of the last kept CR, for dedup
+	lastSig   map[string]any             // last kept CR minus volatile fields, for dedup
 	lastSeen  *unstructured.Unstructured // most recent CR, shown in triage on timeout
 	failure   string                     // why the flow did not finish, empty if it did
 }
@@ -113,8 +113,9 @@ func (f *Flow) startWatch(ctx context.Context, workload *unstructured.Unstructur
 }
 
 // record handles one seen CR: it keeps every distinct frame, but acts on checkpoints and the terminal only
-// once the controller has observed the current spec.
-func (o *observation) record(ctx context.Context, cr *unstructured.Unstructured) (done bool) {
+// once the controller has observed the current spec. stop=true means stop watching - the flow reached its
+// terminal state, or an action failed (the failure itself is in o.failure).
+func (o *observation) record(ctx context.Context, cr *unstructured.Unstructured) (stop bool) {
 	o.lastSeen = cr
 	state := classify(cr, o.flow.rec.states)
 	if state == "" {
@@ -133,9 +134,10 @@ func (o *observation) record(ctx context.Context, cr *unstructured.Unstructured)
 	return o.hasReachedTerminal(state)
 }
 
-// keep appends cr as a new snapshot, unless it duplicates the last kept one (same significant fields).
+// keep appends cr as a new snapshot, unless it duplicates the last kept one (same content once the volatile
+// fields are stripped).
 func (o *observation) keep(cr *unstructured.Unstructured, state kartav1alpha1.ResourceStatus, observed bool) {
-	sig := significantFields(cr)
+	sig := stripVolatileFields(cr)
 	if o.lastSig != nil && reflect.DeepEqual(o.lastSig, sig) {
 		return
 	}
@@ -158,14 +160,14 @@ func (o *observation) advanceCheckpoint(ctx context.Context, state kartav1alpha1
 			o.failure = err.Error()
 			return true
 		}
-		o.attachAction(action)
+		o.recordAction(action)
 	}
 	o.pending = next[1:]
 	return false
 }
 
-// performAction sends an action's merge-patch to the workload and returns the recorded operation. The result
-// object is not captured - the STATE events that follow already show where the operator drives it.
+// performAction performs the action's operation on the workload and returns the recorded operation. The
+// result object is not captured - the STATE events that follow show where the operator drives it.
 func (f *Flow) performAction(ctx context.Context, workload *unstructured.Unstructured, action *Action) (*RecordedAction, error) {
 	target := blankWithGVK(workload)
 	target.SetName(workload.GetName())
@@ -184,11 +186,10 @@ func (f *Flow) performAction(ctx context.Context, workload *unstructured.Unstruc
 	}, nil
 }
 
-// attachAction records the action performed at the snapshot just kept.
-func (o *observation) attachAction(action *RecordedAction) {
-	if len(o.snapshots) > 0 {
-		o.snapshots[len(o.snapshots)-1].action = action
-	}
+// recordAction stores the action on the snapshot just kept; a checkpoint only fires after record kept a
+// frame, so snapshots is never empty here.
+func (o *observation) recordAction(action *RecordedAction) {
+	o.snapshots[len(o.snapshots)-1].action = action
 }
 
 // hasReachedTerminal reports whether state is the flow's terminal state and no checkpoints remain.
