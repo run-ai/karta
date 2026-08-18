@@ -12,7 +12,7 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// NewFlow starts a flow seeded from a manifest (path relative to test/e2e).
+// NewFlow starts a flow seeded from a manifest (path relative to test/e2e); declare its journey with Through.
 func NewFlow(r *Recorder, name, manifest string) *Flow {
 	return &Flow{rec: r, name: name, manifest: manifest}
 }
@@ -26,6 +26,33 @@ type Flow struct {
 	journey  []journeyStep
 }
 
+// Through declares the ordered stops of the journey.
+func (f *Flow) Through(steps ...Step) *Flow {
+	for _, s := range steps {
+		f.journey = append(f.journey, s.step)
+	}
+	return f
+}
+
+// Step is one declared stop, built with Reaches and refined with Optional, When, and Do.
+type Step struct {
+	step journeyStep
+}
+
+// Reaches declares a stop the workload must pass through.
+func Reaches(state kartav1alpha1.ResourceStatus) Step {
+	return Step{step: journeyStep{State: state}}
+}
+
+// Optional marks a stop the workload may skip; the order check tolerates its absence.
+func (s Step) Optional() Step { s.step.Optional = true; return s }
+
+// When gates the stop on a predicate over the workload's own fields.
+func (s Step) When(gate StateCheck) Step { s.step.ActionPredicate = gate; return s }
+
+// Do attaches an action performed once the stop is reached.
+func (s Step) Do(action *Action) Step { s.step.Action = action; return s }
+
 // journeyStep is one stop on a journey. State borrows Karta's ResourceStatus as the shared vocabulary so the
 // replay compares one-to-one; the value is judged from the workload's own fields, never from Karta.
 // ActionPredicate lets the same state appear more than once (a scale flow is Running at 1, 3, then 1): the
@@ -35,6 +62,14 @@ type journeyStep struct {
 	Action          *Action
 	ActionPredicate StateCheck
 	Optional        bool // a transient step the workload may miss; the order check tolerates its absence
+}
+
+// StateCheck recognises a state from the workload's own fields, never from Karta.
+type StateCheck func(*unstructured.Unstructured) bool
+
+type namedState struct {
+	Name  kartav1alpha1.ResourceStatus
+	Match StateCheck
 }
 
 type ActionType string
@@ -50,45 +85,6 @@ type Action struct {
 	Patch []byte
 }
 
-// Reaches adds a stop the workload must pass through.
-func (f *Flow) Reaches(state kartav1alpha1.ResourceStatus) *Flow {
-	f.journey = append(f.journey, journeyStep{State: state})
-	return f
-}
-
-// OptionalReaches adds a stop the workload may skip; the order check tolerates its absence.
-func (f *Flow) OptionalReaches(state kartav1alpha1.ResourceStatus) *Flow {
-	f.journey = append(f.journey, journeyStep{State: state, Optional: true})
-	return f
-}
-
-// At adds a stop to gate with When, or attach an action with Do.
-func (f *Flow) At(state kartav1alpha1.ResourceStatus) *Flow {
-	f.journey = append(f.journey, journeyStep{State: state})
-	return f
-}
-
-// When gates the current stop on a predicate over the workload's own fields.
-func (f *Flow) When(gate StateCheck) *Flow { f.last().ActionPredicate = gate; return f }
-
-// Do attaches an action performed once the current stop is reached.
-func (f *Flow) Do(action *Action) *Flow { f.last().Action = action; return f }
-
-func (f *Flow) last() *journeyStep { return &f.journey[len(f.journey)-1] }
-
-func (f *Flow) want() kartav1alpha1.ResourceStatus { return f.journey[len(f.journey)-1].State }
-
-func (f *Flow) client() client.Client { return f.rec.config.Cluster.Client }
-func (f *Flow) log() io.Writer        { return f.rec.config.Log }
-
-// StateCheck recognises a state from the workload's own fields, never from Karta.
-type StateCheck func(*unstructured.Unstructured) bool
-
-type namedState struct {
-	Name  kartav1alpha1.ResourceStatus
-	Match StateCheck
-}
-
 // classify returns the furthest-along state the workload matches, judged from its own fields; states are
 // declared least- to most-advanced, so the walk runs from the end.
 func classify(cr *unstructured.Unstructured, states []namedState) kartav1alpha1.ResourceStatus {
@@ -99,3 +95,8 @@ func classify(cr *unstructured.Unstructured, states []namedState) kartav1alpha1.
 	}
 	return ""
 }
+
+func (f *Flow) want() kartav1alpha1.ResourceStatus { return f.journey[len(f.journey)-1].State }
+
+func (f *Flow) client() client.Client { return f.rec.config.Cluster.Client }
+func (f *Flow) log() io.Writer        { return f.rec.config.Log }

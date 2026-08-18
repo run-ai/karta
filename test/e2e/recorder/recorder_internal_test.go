@@ -174,10 +174,10 @@ func TestRecorderCatchesBackwardsJump(t *testing.T) {
 	if !reflect.DeepEqual(o.states(), want) {
 		t.Fatalf("recorder dropped the return: got %v, want %v", o.states(), want)
 	}
-	if observedOrderErr(steps(initializing, running, completed), o.states(), completed) == nil {
+	if validateObservedOrder(steps(initializing, running, completed), o.states(), completed) == nil {
 		t.Error("strict journey should reject the undeclared Running -> Initializing dip")
 	}
-	if err := observedOrderErr(steps(initializing, running, initializing, completed), o.states(), completed); err != nil {
+	if err := validateObservedOrder(steps(initializing, running, initializing, completed), o.states(), completed); err != nil {
 		t.Errorf("declaring the Initializing revisit should accept the dip, got %v", err)
 	}
 }
@@ -223,7 +223,7 @@ func TestObservedOrder(t *testing.T) {
 		{"wrong terminal", steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running}, false},
 	}
 	for _, c := range tests {
-		err := observedOrderErr(c.journey, c.observed, terminal(c.journey))
+		err := validateObservedOrder(c.journey, c.observed, terminal(c.journey))
 		if c.ok && err != nil {
 			t.Errorf("%s: want ok, got %v", c.name, err)
 		}

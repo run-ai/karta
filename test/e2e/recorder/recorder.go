@@ -107,7 +107,7 @@ func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 	defer cancel()
 
 	obs := f.observe(flowCtx, workload)
-	orderErr := observedOrderErr(f.journey, obs.states(), f.want())
+	orderErr := validateObservedOrder(f.journey, obs.states(), f.want())
 	out := f.buildRecording(obs, obs.failure == "" && orderErr == nil)
 	if obs.failure != "" {
 		return out, errors.New(obs.failure)
@@ -143,9 +143,9 @@ func (f *Flow) deleteWorkload(ctx context.Context, workload *unstructured.Unstru
 }
 
 // observe watches the workload and records every distinct CR until the flow finishes, acting on the
-// journey's checkpoints as their states are reached. Its failure is set if the terminal state was not met.
+// journey's action steps as their states are reached. Its failure is set if the terminal state was not met.
 func (f *Flow) observe(ctx context.Context, workload *unstructured.Unstructured) *observation {
-	o := &observation{flow: f, workload: workload, pending: checkpoints(f.journey)}
+	o := &observation{flow: f, workload: workload, pending: actionSteps(f.journey)}
 
 	// A workload already at its terminal state when Create returns never produces a watch event (the watch
 	// replays only newer resourceVersions), so record it straight from the create response.
@@ -197,9 +197,9 @@ func (r *Recorder) Save(fx Fixture, rec *Recording) (string, error) {
 	return rec.Path, nil
 }
 
-// checkpoints are the journey stops the recorder must reach and act on in order: those carrying an action or
-// an action predicate. Plain stops between them are recorded as they pass but are not checkpoints.
-func checkpoints(journey []journeyStep) []journeyStep {
+// actionSteps filters the journey to the stops the recorder must reach and act on in order: those carrying an action or
+// an action predicate. Plain stops between them are recorded as they pass but are not acted on.
+func actionSteps(journey []journeyStep) []journeyStep {
 	var out []journeyStep
 	for _, step := range journey {
 		if step.Action != nil || step.ActionPredicate != nil {

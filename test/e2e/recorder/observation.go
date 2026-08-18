@@ -23,13 +23,13 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// observation is one watched run of a flow: the workload being driven, the checkpoints still to act on, and
+// observation is one watched run of a flow: the workload being driven, the action steps still to act on, and
 // the CRs recorded so far. Its methods do the driving and the recording; Flow.observe fills it in.
 type observation struct {
 	flow     *Flow
 	workload *unstructured.Unstructured
 
-	pending   []journeyStep              // checkpoints not yet reached, in order
+	pending   []journeyStep              // action steps not yet reached, in order
 	snapshots []snapshot                 // the distinct CRs kept, in order
 	lastSig   map[string]any             // last kept CR minus volatile fields, for dedup
 	lastSeen  *unstructured.Unstructured // most recent CR, shown in triage on timeout
@@ -112,7 +112,7 @@ func (f *Flow) startWatch(ctx context.Context, workload *unstructured.Unstructur
 	})
 }
 
-// record handles one seen CR: it keeps every distinct frame, but acts on checkpoints and the terminal only
+// record handles one seen CR: it keeps every distinct frame, but acts on the action steps and the terminal only
 // once the controller has observed the current spec. stop=true means stop watching - the flow reached its
 // terminal state, or an action failed (the failure itself is in o.failure).
 func (o *observation) record(ctx context.Context, cr *unstructured.Unstructured) (stop bool) {
@@ -128,7 +128,7 @@ func (o *observation) record(ctx context.Context, cr *unstructured.Unstructured)
 	if !observed {
 		return false
 	}
-	if o.advanceCheckpoint(ctx, state, cr) {
+	if o.advanceStep(ctx, state, cr) {
 		return true // the action failed; stop and report it
 	}
 	return o.hasReachedTerminal(state)
@@ -145,9 +145,9 @@ func (o *observation) keep(cr *unstructured.Unstructured, state kartav1alpha1.Re
 	o.snapshots = append(o.snapshots, snapshot{state: state, cr: cr.DeepCopy(), staleObservedGeneration: !observed})
 }
 
-// advanceCheckpoint performs the next checkpoint's action if the workload just reached its state and gate, then
+// advanceStep performs the next checkpoint's action if the workload just reached its state and gate, then
 // drops it from pending. It reports whether the action failed, which stops the run.
-func (o *observation) advanceCheckpoint(ctx context.Context, state kartav1alpha1.ResourceStatus, cr *unstructured.Unstructured) (actionFailed bool) {
+func (o *observation) advanceStep(ctx context.Context, state kartav1alpha1.ResourceStatus, cr *unstructured.Unstructured) (actionFailed bool) {
 	next := o.pending
 	reached := len(next) > 0 && state == next[0].State &&
 		(next[0].ActionPredicate == nil || next[0].ActionPredicate(cr))
@@ -192,7 +192,7 @@ func (o *observation) recordAction(action *RecordedAction) {
 	o.snapshots[len(o.snapshots)-1].action = action
 }
 
-// hasReachedTerminal reports whether state is the flow's terminal state and no checkpoints remain.
+// hasReachedTerminal reports whether state is the flow's terminal state and no action steps remain.
 func (o *observation) hasReachedTerminal(state kartav1alpha1.ResourceStatus) bool {
 	return state == o.flow.want() && len(o.pending) == 0
 }
