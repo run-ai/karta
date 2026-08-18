@@ -350,7 +350,8 @@ flow: running
 kartaFile: docs/catalog/serving-kserve-io-inferenceservice-v1beta1.yaml
 kartaName: serving-kserve-io-inferenceservice-v1beta1
 operator: kserve
+result:
+  succeeded: true
 schemaVersion: 1
-succeeded: true
 version: v1.34.0
 want: Running

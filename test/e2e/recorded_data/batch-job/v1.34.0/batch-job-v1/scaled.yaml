@@ -434,7 +434,8 @@ flow: scaled
 kartaFile: docs/catalog/batch-job-v1.yaml
 kartaName: batch-job-v1
 operator: batch-job
+result:
+  succeeded: true
 schemaVersion: 1
-succeeded: true
 version: v1.34.0
 want: Running

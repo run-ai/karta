@@ -41,7 +41,8 @@ flow: initializing
 kartaFile: docs/catalog/grove-io-podcliqueset-v1alpha1.yaml
 kartaName: grove-io-podcliqueset-v1alpha1
 operator: grove
+result:
+  succeeded: true
 schemaVersion: 1
-succeeded: true
 version: v1.34.0
 want: Initializing

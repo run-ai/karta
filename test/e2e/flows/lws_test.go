@@ -35,11 +35,11 @@ var _ = Describe("LeaderWorkerSet", Ordered, Label("lws"), func() {
 	It("scaled", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "scaled", "testdata/lws/scaled.yaml").Through(
 			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
-			recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(2)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).With(ReplicasReady(1)).Do(ScaleReplicas(2)),
 			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
-			recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(2)).Do(ScaleReplicas(1)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).With(ReplicasReady(2)).Do(ScaleReplicas(1)),
 			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
-			recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(1)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).With(ReplicasReady(1)),
 		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())

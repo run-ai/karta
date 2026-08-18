@@ -29,12 +29,12 @@ var _ = Describe("StatefulSet (built-in)", Ordered, Label("statefulset", "builti
 	It("scaled", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "scaled", "testdata/statefulset/running.yaml").Through(
 			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
-			recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(3)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).With(ReplicasReady(1)).Do(ScaleReplicas(3)),
 			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
 			recorder.Reaches(kartav1alpha1.DegradedStatus).Optional(),
-			recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(3)).Do(ScaleReplicas(1)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).With(ReplicasReady(3)).Do(ScaleReplicas(1)),
 			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
-			recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(1)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).With(ReplicasReady(1)),
 		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())

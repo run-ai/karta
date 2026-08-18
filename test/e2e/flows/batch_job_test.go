@@ -88,9 +88,9 @@ var _ = Describe("BatchJob (built-in)", Ordered, Label("batch-job", "builtin"), 
 	It("scaled", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "scaled", "testdata/batch-job/scaled.yaml").Through(
 			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
-			recorder.Reaches(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "ready")).Do(ScaleParallelism(3)),
-			recorder.Reaches(kartav1alpha1.RunningStatus).When(IntEq(3, "status", "ready")).Do(ScaleParallelism(1)),
-			recorder.Reaches(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "ready")),
+			recorder.Reaches(kartav1alpha1.RunningStatus).With(IntEq(1, "status", "ready")).Do(ScaleParallelism(3)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).With(IntEq(3, "status", "ready")).Do(ScaleParallelism(1)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).With(IntEq(1, "status", "ready")),
 		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())

@@ -74,7 +74,8 @@ flow: suspended
 kartaFile: docs/catalog/kubeflow-org-mpijob-v2beta1.yaml
 kartaName: kubeflow-org-mpijob-v2beta1
 operator: kubeflow
+result:
+  succeeded: true
 schemaVersion: 1
-succeeded: true
 version: v1.34.0
 want: Suspended

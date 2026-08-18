@@ -807,7 +807,8 @@ flow: completed
 kartaFile: docs/catalog/ray-io-rayjob-v1.yaml
 kartaName: ray-io-rayjob-v1
 operator: kuberay
+result:
+  succeeded: true
 schemaVersion: 1
-succeeded: true
 version: v1.34.0
 want: Completed

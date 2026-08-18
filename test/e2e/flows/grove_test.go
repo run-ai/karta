@@ -44,11 +44,11 @@ var _ = Describe("Grove PodCliqueSet", Ordered, Label("grove"), func() {
 	It("scaled", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "scaled", "testdata/grove/scaled.yaml").Through(
 			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
-			recorder.Reaches(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "availableReplicas")).Do(ScaleReplicas(2)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).With(IntEq(1, "status", "availableReplicas")).Do(ScaleReplicas(2)),
 			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
-			recorder.Reaches(kartav1alpha1.RunningStatus).When(IntEq(2, "status", "availableReplicas")).Do(ScaleReplicas(1)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).With(IntEq(2, "status", "availableReplicas")).Do(ScaleReplicas(1)),
 			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
-			recorder.Reaches(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "availableReplicas")),
+			recorder.Reaches(kartav1alpha1.RunningStatus).With(IntEq(1, "status", "availableReplicas")),
 		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())

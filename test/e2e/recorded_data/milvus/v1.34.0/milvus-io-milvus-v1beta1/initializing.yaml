@@ -33,7 +33,8 @@ flow: initializing
 kartaFile: docs/catalog/milvus-io-milvus-v1beta1.yaml
 kartaName: milvus-io-milvus-v1beta1
 operator: milvus
+result:
+  succeeded: true
 schemaVersion: 1
-succeeded: true
 version: v1.34.0
 want: Initializing

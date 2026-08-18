@@ -1039,7 +1039,8 @@ flow: scaled
 kartaFile: docs/catalog/apps-statefulset-v1.yaml
 kartaName: apps-statefulset-v1
 operator: statefulset
+result:
+  succeeded: true
 schemaVersion: 1
-succeeded: true
 version: v1.34.0
 want: Running

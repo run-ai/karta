@@ -904,7 +904,8 @@ flow: resumed
 kartaFile: docs/catalog/ray-io-raycluster-v1.yaml
 kartaName: ray-io-raycluster-v1
 operator: kuberay
+result:
+  succeeded: true
 schemaVersion: 1
-succeeded: true
 version: v1.34.0
 want: Running
