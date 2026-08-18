@@ -27,26 +27,29 @@ var _ = Describe("Grove PodCliqueSet", Ordered, Label("grove"), func() {
 	})
 
 	It("running", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "running", "testdata/grove/running.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "running", "testdata/grove/running.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("initializing", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "initializing", "testdata/grove/initializing.yaml").Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "initializing", "testdata/grove/initializing.yaml").Through(recorder.Reaches(kartav1alpha1.InitializingStatus)).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("scaled", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "scaled", "testdata/grove/scaled.yaml").
-			OptionalReaches(kartav1alpha1.InitializingStatus).
-			At(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "availableReplicas")).Do(ScaleReplicas(2)).
-			OptionalReaches(kartav1alpha1.InitializingStatus).
-			At(kartav1alpha1.RunningStatus).When(IntEq(2, "status", "availableReplicas")).Do(ScaleReplicas(1)).
-			OptionalReaches(kartav1alpha1.InitializingStatus).
-			At(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "availableReplicas")).Run(ctx)
+		out, err := recorder.NewFlow(rec, "scaled", "testdata/grove/scaled.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "availableReplicas")).Do(ScaleReplicas(2)),
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.RunningStatus).When(IntEq(2, "status", "availableReplicas")).Do(ScaleReplicas(1)),
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "availableReplicas")),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})

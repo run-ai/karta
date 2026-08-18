@@ -25,11 +25,12 @@ var _ = Describe("Deployment (built-in)", Ordered, Label("deployment", "builtin"
 	})
 
 	It("scaled", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "scaled", "testdata/deployment/running.yaml").
-			OptionalReaches(kartav1alpha1.InitializingStatus). // startup, before the first Running (Deployment stays Running while scaling)
-			At(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(3)).
-			At(kartav1alpha1.RunningStatus).When(ReplicasReady(3)).Do(ScaleReplicas(1)).
-			At(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Run(ctx)
+		out, err := recorder.NewFlow(rec, "scaled", "testdata/deployment/running.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(), // startup, before the first Running (Deployment stays Running while scaling)
+			recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(3)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(3)).Do(ScaleReplicas(1)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(1)),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
@@ -37,7 +38,7 @@ var _ = Describe("Deployment (built-in)", Ordered, Label("deployment", "builtin"
 	// Bad image, no progress deadline: Progressing stays True with Available False, read as Initializing.
 	It("initializing", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "initializing", "testdata/deployment/initializing.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
+			Through(recorder.Reaches(kartav1alpha1.InitializingStatus)).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
@@ -45,8 +46,10 @@ var _ = Describe("Deployment (built-in)", Ordered, Label("deployment", "builtin"
 	// Pinned to a nonexistent node with a 10s progress deadline: Progressing=False/ProgressDeadlineExceeded,
 	// read as Failed. It passes through Initializing first.
 	It("failed", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "failed", "testdata/deployment/failed.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "failed", "testdata/deployment/failed.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.FailedStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})

@@ -27,8 +27,10 @@ var _ = Describe("KnativeService", Ordered, Label("knative"), func() {
 	})
 
 	It("running", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "running", "testdata/knative/running.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "running", "testdata/knative/running.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})

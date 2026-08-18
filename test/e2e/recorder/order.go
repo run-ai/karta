@@ -10,9 +10,9 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// observedOrderErr checks the observed states are a legal walk of the journey: required steps appear in
+// validateObservedOrder checks the observed states are a legal walk of the journey: required steps appear in
 // order ending at want; Optional or recurring states may be absent; anything else fails.
-func observedOrderErr(declared []journeyStep, observed []kartav1alpha1.ResourceStatus, want kartav1alpha1.ResourceStatus) error {
+func validateObservedOrder(declared []journeyStep, observed []kartav1alpha1.ResourceStatus, want kartav1alpha1.ResourceStatus) error {
 	obs := slices.Compact(slices.Clone(observed)) // collapse consecutive repeats
 	if len(obs) == 0 {
 		return fmt.Errorf("no states observed")

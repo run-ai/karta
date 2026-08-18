@@ -26,29 +26,37 @@ var _ = Describe("Pod (built-in)", Ordered, Label("pod", "builtin"), func() {
 	})
 
 	It("happy", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "happy", "testdata/pod/happy.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "happy", "testdata/pod/happy.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("completed", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "completed", "testdata/pod/completed.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "completed", "testdata/pod/completed.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus),
+			recorder.Reaches(kartav1alpha1.CompletedStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("failed", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "failed", "testdata/pod/failed.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "failed", "testdata/pod/failed.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus),
+			recorder.Reaches(kartav1alpha1.FailedStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("initializing", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "initializing", "testdata/pod/initializing.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Run(ctx)
+			Through(recorder.Reaches(kartav1alpha1.InitializingStatus)).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})

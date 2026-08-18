@@ -13,8 +13,8 @@ reads each state the same way. No Ginkgo or Gomega; failures come back as errors
 - doc.go: the package comment.
 - recorder.go: setup and engine. Cluster, Config, Fixture, Recorder, New, AddState,
   SetTimeout; Run drives a flow, Save writes the recording.
-- flow.go: the authoring API. NewFlow and the journey chain (Reaches, OptionalReaches,
-  At, When, Do), plus the state and action vocabulary (StateCheck, classify, Action).
+- flow.go: the authoring API. NewFlow, Through, and the Step builders (Reaches, Optional,
+  When, Do), plus the state and action vocabulary (StateCheck, classify, Action).
 - observation.go: one live run. The watch loop (follow, startWatch), recording each frame
   (record, keep), checkpoint actions (advanceCheckpoint, performAction), and watch
   recovery (reconnect, refetch).
@@ -29,9 +29,10 @@ reads each state the same way. No Ginkgo or Gomega; failures come back as errors
 ## Flow of a run
 
 ```go
-out, err := recorder.NewFlow(rec, "scaled", "testdata/deployment/running.yaml").
-    At(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(3)).
-    At(kartav1alpha1.RunningStatus).When(ReplicasReady(3)).Run(ctx)
+out, err := recorder.NewFlow(rec, "scaled", "testdata/deployment/running.yaml").Through(
+    recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(3)),
+    recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(3)),
+).Run(ctx)
 ```
 
 1. Run creates the workload from the manifest (recorder.go).

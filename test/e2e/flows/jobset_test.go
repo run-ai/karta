@@ -28,37 +28,54 @@ var _ = Describe("JobSet", Ordered, Label("jobset"), func() {
 	})
 
 	It("running", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "running", "testdata/jobset/running.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "running", "testdata/jobset/running.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("completed", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "completed", "testdata/jobset/completed.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).OptionalReaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "completed", "testdata/jobset/completed.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus),
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.CompletedStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("failed", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "failed", "testdata/jobset/failed.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).OptionalReaches(kartav1alpha1.RunningStatus).OptionalReaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "failed", "testdata/jobset/failed.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.FailedStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("resumed", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "resumed", "testdata/jobset/resumed.yaml").
-			OptionalReaches(kartav1alpha1.InitializingStatus).At(kartav1alpha1.SuspendedStatus).Do(Resume()).
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).OptionalReaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "resumed", "testdata/jobset/resumed.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.SuspendedStatus).Do(Resume()),
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus),
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.CompletedStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("suspended", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "suspended", "testdata/jobset/suspended.yaml").
-			OptionalReaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.SuspendedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "suspended", "testdata/jobset/suspended.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.SuspendedStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})

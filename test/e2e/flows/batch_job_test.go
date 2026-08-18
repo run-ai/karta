@@ -28,56 +28,70 @@ var _ = Describe("BatchJob (built-in)", Ordered, Label("batch-job", "builtin"), 
 	})
 
 	It("running", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "running", "testdata/batch-job/running.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "running", "testdata/batch-job/running.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("completed", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "completed", "testdata/batch-job/completed.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).
-			Reaches(kartav1alpha1.InitializingStatus). // active-not-ready dip as the pod terminates
-			Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "completed", "testdata/batch-job/completed.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus),
+			recorder.Reaches(kartav1alpha1.InitializingStatus), // active-not-ready dip as the pod terminates
+			recorder.Reaches(kartav1alpha1.CompletedStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("failed", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "failed", "testdata/batch-job/failed.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.FailedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "failed", "testdata/batch-job/failed.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.FailedStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("resumed", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "resumed", "testdata/batch-job/resumed.yaml").
-			At(kartav1alpha1.SuspendedStatus).Do(Resume()).
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.CompletedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "resumed", "testdata/batch-job/resumed.yaml").Through(
+			recorder.Reaches(kartav1alpha1.SuspendedStatus).Do(Resume()),
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus),
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.CompletedStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("degraded", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "degraded", "testdata/batch-job/degraded.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.RunningStatus).Reaches(kartav1alpha1.DegradedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "degraded", "testdata/batch-job/degraded.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.RunningStatus),
+			recorder.Reaches(kartav1alpha1.DegradedStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("suspended", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "suspended", "testdata/batch-job/suspended.yaml").
-			Reaches(kartav1alpha1.SuspendedStatus).Run(ctx)
+			Through(recorder.Reaches(kartav1alpha1.SuspendedStatus)).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
 
 	It("scaled", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "scaled", "testdata/batch-job/scaled.yaml").
-			OptionalReaches(kartav1alpha1.InitializingStatus).
-			At(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "ready")).Do(ScaleParallelism(3)).
-			At(kartav1alpha1.RunningStatus).When(IntEq(3, "status", "ready")).Do(ScaleParallelism(1)).
-			At(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "ready")).Run(ctx)
+		out, err := recorder.NewFlow(rec, "scaled", "testdata/batch-job/scaled.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "ready")).Do(ScaleParallelism(3)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).When(IntEq(3, "status", "ready")).Do(ScaleParallelism(1)),
+			recorder.Reaches(kartav1alpha1.RunningStatus).When(IntEq(1, "status", "ready")),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})

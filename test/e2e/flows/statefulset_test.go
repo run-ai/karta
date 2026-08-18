@@ -24,16 +24,18 @@ var _ = Describe("StatefulSet (built-in)", Ordered, Label("statefulset", "builti
 			AddState(kartav1alpha1.DegradedStatus, ReplicasDegraded())
 	})
 
-	// A StatefulSet takes transient Initializing/Degraded dips while scaling; the OptionalReaches steps declare them
+	// A StatefulSet takes transient Initializing/Degraded dips while scaling; the Optional steps declare them
 	// so the order check tolerates them, and the recorder only stops at the ReplicasReady gates.
 	It("scaled", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "scaled", "testdata/statefulset/running.yaml").
-			OptionalReaches(kartav1alpha1.InitializingStatus).
-			At(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(3)).
-			OptionalReaches(kartav1alpha1.InitializingStatus).OptionalReaches(kartav1alpha1.DegradedStatus).
-			At(kartav1alpha1.RunningStatus).When(ReplicasReady(3)).Do(ScaleReplicas(1)).
-			OptionalReaches(kartav1alpha1.InitializingStatus).
-			At(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Run(ctx)
+		out, err := recorder.NewFlow(rec, "scaled", "testdata/statefulset/running.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(3)),
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.DegradedStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(3)).Do(ScaleReplicas(1)),
+			recorder.Reaches(kartav1alpha1.InitializingStatus).Optional(),
+			recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(1)),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
@@ -41,8 +43,10 @@ var _ = Describe("StatefulSet (built-in)", Ordered, Label("statefulset", "builti
 	// 3 replicas + hostname antiAffinity on 2 nodes: one stays pending, so readyReplicas settles below
 	// replicas with updatedReplicas == replicas, read as Degraded.
 	It("degraded", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "degraded", "testdata/statefulset/degraded.yaml").
-			Reaches(kartav1alpha1.InitializingStatus).Reaches(kartav1alpha1.DegradedStatus).Run(ctx)
+		out, err := recorder.NewFlow(rec, "degraded", "testdata/statefulset/degraded.yaml").Through(
+			recorder.Reaches(kartav1alpha1.InitializingStatus),
+			recorder.Reaches(kartav1alpha1.DegradedStatus),
+		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
 		Expect(err).To(Succeed())
 	})
