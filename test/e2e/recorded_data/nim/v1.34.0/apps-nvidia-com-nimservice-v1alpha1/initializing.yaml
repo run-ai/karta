@@ -4,11 +4,11 @@ events:
     apiVersion: apps.nvidia.com/v1alpha1
     kind: NIMService
     metadata:
-      creationTimestamp: "2026-08-12T18:41:37Z"
+      creationTimestamp: "2026-08-18T12:39:12Z"
       generation: 1
       name: karta-e2e-nim-initializing
-      namespace: test-x9zjw
-      uid: 67e5f7b5-7633-483b-bc4a-def2d69b6156
+      namespace: test-8m4bc
+      uid: 29f41728-6685-4b9c-a511-8f7e083b4ae9
     spec:
       authSecret: ngc-secret
       env:
@@ -29,6 +29,7 @@ events:
           create: true
           size: 1Gi
           volumeAccessMode: ReadWriteOnce
+  resourceVersion: "15079"
   state: Initializing
 flow: initializing
 kartaFile: docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml

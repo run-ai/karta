@@ -4,13 +4,13 @@ events:
     apiVersion: ray.io/v1
     kind: RayJob
     metadata:
-      creationTimestamp: "2026-08-12T18:38:32Z"
+      creationTimestamp: "2026-08-18T12:33:52Z"
       finalizers:
       - ray.io/rayjob-finalizer
       generation: 2
       name: karta-e2e-rayjob-suspended
-      namespace: test-x9zjw
-      uid: 39a1f268-395a-4816-a4a4-8c393fe5df76
+      namespace: test-8m4bc
+      uid: ba0fb506-d176-46e9-bb51-31cff3ef6c72
     spec:
       backoffLimit: 0
       entrypoint: python -c "print(1)"
@@ -53,19 +53,20 @@ events:
       submissionMode: K8sJobMode
       suspend: true
       ttlSecondsAfterFinished: 0
+  resourceVersion: "11827"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: ray.io/v1
     kind: RayJob
     metadata:
-      creationTimestamp: "2026-08-12T18:38:32Z"
+      creationTimestamp: "2026-08-18T12:33:52Z"
       finalizers:
       - ray.io/rayjob-finalizer
       generation: 2
       name: karta-e2e-rayjob-suspended
-      namespace: test-x9zjw
-      uid: 39a1f268-395a-4816-a4a4-8c393fe5df76
+      namespace: test-8m4bc
+      uid: ba0fb506-d176-46e9-bb51-31cff3ef6c72
     spec:
       backoffLimit: 0
       entrypoint: python -c "print(1)"
@@ -111,8 +112,8 @@ events:
     status:
       failed: 0
       jobDeploymentStatus: Initializing
-      jobId: karta-e2e-rayjob-suspended-d7hsq
-      rayClusterName: karta-e2e-rayjob-suspended-42wvr
+      jobId: karta-e2e-rayjob-suspended-npmjl
+      rayClusterName: karta-e2e-rayjob-suspended-vskpq
       rayClusterStatus:
         desiredCPU: "0"
         desiredGPU: "0"
@@ -120,21 +121,22 @@ events:
         desiredTPU: "0"
         head: {}
       rayJobInfo: {}
-      startTime: "2026-08-12T18:38:32Z"
+      startTime: "2026-08-18T12:33:52Z"
       succeeded: 0
+  resourceVersion: "11830"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: ray.io/v1
     kind: RayJob
     metadata:
-      creationTimestamp: "2026-08-12T18:38:32Z"
+      creationTimestamp: "2026-08-18T12:33:52Z"
       finalizers:
       - ray.io/rayjob-finalizer
       generation: 2
       name: karta-e2e-rayjob-suspended
-      namespace: test-x9zjw
-      uid: 39a1f268-395a-4816-a4a4-8c393fe5df76
+      namespace: test-8m4bc
+      uid: ba0fb506-d176-46e9-bb51-31cff3ef6c72
     spec:
       backoffLimit: 0
       entrypoint: python -c "print(1)"
@@ -180,8 +182,8 @@ events:
     status:
       failed: 0
       jobDeploymentStatus: Suspending
-      jobId: karta-e2e-rayjob-suspended-d7hsq
-      rayClusterName: karta-e2e-rayjob-suspended-42wvr
+      jobId: karta-e2e-rayjob-suspended-npmjl
+      rayClusterName: karta-e2e-rayjob-suspended-vskpq
       rayClusterStatus:
         desiredCPU: "0"
         desiredGPU: "0"
@@ -189,8 +191,9 @@ events:
         desiredTPU: "0"
         head: {}
       rayJobInfo: {}
-      startTime: "2026-08-12T18:38:32Z"
+      startTime: "2026-08-18T12:33:52Z"
       succeeded: 0
+  resourceVersion: "11835"
   state: Suspended
 flow: suspended
 kartaFile: docs/catalog/ray-io-rayjob-v1.yaml

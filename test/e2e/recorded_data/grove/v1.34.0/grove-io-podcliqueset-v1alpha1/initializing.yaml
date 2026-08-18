@@ -4,11 +4,11 @@ events:
     apiVersion: grove.io/v1alpha1
     kind: PodCliqueSet
     metadata:
-      creationTimestamp: "2026-08-12T18:40:34Z"
+      creationTimestamp: "2026-08-18T12:41:14Z"
       generation: 1
       name: karta-e2e-grove-initializing
-      namespace: test-x9zjw
-      uid: edb9d957-19c1-4cf0-bf05-425093d2fe33
+      namespace: test-8m4bc
+      uid: bcb821d6-5f58-4069-8e56-2541b9d3731b
     spec:
       replicas: 1
       template:
@@ -36,6 +36,7 @@ events:
         headlessServiceConfig:
           publishNotReadyAddresses: true
         terminationDelay: 4h0m0s
+  resourceVersion: "16650"
   state: Initializing
 flow: initializing
 kartaFile: docs/catalog/grove-io-podcliqueset-v1alpha1.yaml

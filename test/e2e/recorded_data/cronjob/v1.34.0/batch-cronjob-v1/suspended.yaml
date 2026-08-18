@@ -4,11 +4,11 @@ events:
     apiVersion: batch/v1
     kind: CronJob
     metadata:
-      creationTimestamp: "2026-08-12T18:39:00Z"
+      creationTimestamp: "2026-08-18T12:37:00Z"
       generation: 1
       name: karta-e2e-cronjob-suspended
-      namespace: test-x9zjw
-      uid: e3029134-9c5c-407d-8ce5-0237affbbc35
+      namespace: test-8m4bc
+      uid: 977fbc85-c404-4416-8f50-3574dd27733a
     spec:
       concurrencyPolicy: Allow
       failedJobsHistoryLimit: 1
@@ -39,6 +39,7 @@ events:
       successfulJobsHistoryLimit: 3
       suspend: true
     status: {}
+  resourceVersion: "13724"
   state: Suspended
 flow: suspended
 kartaFile: docs/catalog/batch-cronjob-v1.yaml

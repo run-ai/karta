@@ -4,11 +4,11 @@ events:
     apiVersion: leaderworkerset.x-k8s.io/v1
     kind: LeaderWorkerSet
     metadata:
-      creationTimestamp: "2026-08-12T18:39:56Z"
+      creationTimestamp: "2026-08-18T12:34:17Z"
       generation: 1
       name: karta-e2e-lws
-      namespace: test-x9zjw
-      uid: 0cc0fea0-a6b5-4d9b-82d3-569a3539a71f
+      namespace: test-8m4bc
+      uid: 4458b256-bb00-4596-a2f6-e109b1270510
     spec:
       leaderWorkerTemplate:
         leaderTemplate:
@@ -51,23 +51,24 @@ events:
       startupPolicy: LeaderCreated
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:39:56Z"
+      - lastTransitionTime: "2026-08-18T12:34:17Z"
         message: Replicas are progressing
         reason: GroupsProgressing
         status: "True"
         type: Progressing
       hpaPodSelector: leaderworkerset.sigs.k8s.io/name=karta-e2e-lws,leaderworkerset.sigs.k8s.io/worker-index=0
+  resourceVersion: "12130"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: leaderworkerset.x-k8s.io/v1
     kind: LeaderWorkerSet
     metadata:
-      creationTimestamp: "2026-08-12T18:39:56Z"
+      creationTimestamp: "2026-08-18T12:34:17Z"
       generation: 1
       name: karta-e2e-lws
-      namespace: test-x9zjw
-      uid: 0cc0fea0-a6b5-4d9b-82d3-569a3539a71f
+      namespace: test-8m4bc
+      uid: 4458b256-bb00-4596-a2f6-e109b1270510
     spec:
       leaderWorkerTemplate:
         leaderTemplate:
@@ -110,24 +111,25 @@ events:
       startupPolicy: LeaderCreated
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:39:56Z"
+      - lastTransitionTime: "2026-08-18T12:34:17Z"
         message: Replicas are progressing
         reason: GroupsProgressing
         status: "True"
         type: Progressing
       hpaPodSelector: leaderworkerset.sigs.k8s.io/name=karta-e2e-lws,leaderworkerset.sigs.k8s.io/worker-index=0
       updatedReplicas: 1
+  resourceVersion: "12141"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: leaderworkerset.x-k8s.io/v1
     kind: LeaderWorkerSet
     metadata:
-      creationTimestamp: "2026-08-12T18:39:56Z"
+      creationTimestamp: "2026-08-18T12:34:17Z"
       generation: 1
       name: karta-e2e-lws
-      namespace: test-x9zjw
-      uid: 0cc0fea0-a6b5-4d9b-82d3-569a3539a71f
+      namespace: test-8m4bc
+      uid: 4458b256-bb00-4596-a2f6-e109b1270510
     spec:
       leaderWorkerTemplate:
         leaderTemplate:
@@ -170,7 +172,7 @@ events:
       startupPolicy: LeaderCreated
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:39:56Z"
+      - lastTransitionTime: "2026-08-18T12:34:17Z"
         message: Replicas are progressing
         reason: GroupsProgressing
         status: "True"
@@ -178,17 +180,18 @@ events:
       hpaPodSelector: leaderworkerset.sigs.k8s.io/name=karta-e2e-lws,leaderworkerset.sigs.k8s.io/worker-index=0
       replicas: 1
       updatedReplicas: 1
+  resourceVersion: "12147"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: leaderworkerset.x-k8s.io/v1
     kind: LeaderWorkerSet
     metadata:
-      creationTimestamp: "2026-08-12T18:39:56Z"
+      creationTimestamp: "2026-08-18T12:34:17Z"
       generation: 1
       name: karta-e2e-lws
-      namespace: test-x9zjw
-      uid: 0cc0fea0-a6b5-4d9b-82d3-569a3539a71f
+      namespace: test-8m4bc
+      uid: 4458b256-bb00-4596-a2f6-e109b1270510
     spec:
       leaderWorkerTemplate:
         leaderTemplate:
@@ -231,12 +234,12 @@ events:
       startupPolicy: LeaderCreated
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:39:56Z"
+      - lastTransitionTime: "2026-08-18T12:34:17Z"
         message: Replicas are progressing
         reason: GroupsProgressing
         status: "False"
         type: Progressing
-      - lastTransitionTime: "2026-08-12T18:39:57Z"
+      - lastTransitionTime: "2026-08-18T12:34:18Z"
         message: All replicas are ready
         reason: AllGroupsReady
         status: "True"
@@ -245,6 +248,7 @@ events:
       readyReplicas: 1
       replicas: 1
       updatedReplicas: 1
+  resourceVersion: "12172"
   state: Running
 flow: running
 kartaFile: docs/catalog/leaderworkerset-x-k8s-io-leaderworkerset-v1.yaml

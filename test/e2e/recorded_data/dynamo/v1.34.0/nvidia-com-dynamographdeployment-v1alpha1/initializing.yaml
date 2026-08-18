@@ -6,11 +6,11 @@ events:
     metadata:
       annotations:
         nvidia.com/dynamo-operator-origin-version: 1.2.1
-      creationTimestamp: "2026-08-12T18:42:00Z"
+      creationTimestamp: "2026-08-18T12:30:45Z"
       generation: 1
       name: karta-e2e-dynamo-initializing
-      namespace: test-x9zjw
-      uid: 04e931fa-f2d8-4996-a524-6bd95e9b98bd
+      namespace: test-8m4bc
+      uid: c0865f0b-eb17-49df-b5f6-c481c47843b5
     spec:
       services:
         Frontend:
@@ -43,6 +43,7 @@ events:
               workingDir: /workspace
           replicas: 1
           subComponentType: decode
+  resourceVersion: "9667"
   state: Initializing
 flow: initializing
 kartaFile: docs/catalog/nvidia-com-dynamographdeployment-v1alpha1.yaml

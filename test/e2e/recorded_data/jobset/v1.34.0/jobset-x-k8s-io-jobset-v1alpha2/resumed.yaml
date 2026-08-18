@@ -4,11 +4,11 @@ events:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-12T18:36:44Z"
+      creationTimestamp: "2026-08-18T12:30:00Z"
       generation: 1
       name: karta-e2e-jobset-resumed
-      namespace: test-x9zjw
-      uid: 5787c288-c728-4206-b175-f58d66b906e1
+      namespace: test-8m4bc
+      uid: 86983e4e-83e7-4848-9f00-910898418dd4
     spec:
       network:
         enableDNSHostnames: true
@@ -52,7 +52,7 @@ events:
       suspend: true
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:36:44Z"
+      - lastTransitionTime: "2026-08-18T12:30:00Z"
         message: jobset is suspended
         reason: SuspendedJobs
         status: "True"
@@ -65,6 +65,7 @@ events:
         succeeded: 0
         suspended: 0
       restarts: 0
+  resourceVersion: "9068"
   state: Suspended
 - action:
     name: Resume
@@ -80,11 +81,11 @@ events:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-12T18:36:44Z"
+      creationTimestamp: "2026-08-18T12:30:00Z"
       generation: 1
       name: karta-e2e-jobset-resumed
-      namespace: test-x9zjw
-      uid: 5787c288-c728-4206-b175-f58d66b906e1
+      namespace: test-8m4bc
+      uid: 86983e4e-83e7-4848-9f00-910898418dd4
     spec:
       network:
         enableDNSHostnames: true
@@ -128,7 +129,7 @@ events:
       suspend: true
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:36:44Z"
+      - lastTransitionTime: "2026-08-18T12:30:00Z"
         message: jobset is suspended
         reason: SuspendedJobs
         status: "True"
@@ -141,17 +142,18 @@ events:
         succeeded: 0
         suspended: 1
       restarts: 0
+  resourceVersion: "9070"
   state: Suspended
 - kind: STATE
   object:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-12T18:36:44Z"
+      creationTimestamp: "2026-08-18T12:30:00Z"
       generation: 2
       name: karta-e2e-jobset-resumed
-      namespace: test-x9zjw
-      uid: 5787c288-c728-4206-b175-f58d66b906e1
+      namespace: test-8m4bc
+      uid: 86983e4e-83e7-4848-9f00-910898418dd4
     spec:
       network:
         enableDNSHostnames: true
@@ -195,7 +197,7 @@ events:
       suspend: false
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:36:44Z"
+      - lastTransitionTime: "2026-08-18T12:30:00Z"
         message: jobset is suspended
         reason: SuspendedJobs
         status: "True"
@@ -208,17 +210,18 @@ events:
         succeeded: 0
         suspended: 1
       restarts: 0
+  resourceVersion: "9071"
   state: Suspended
 - kind: STATE
   object:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-12T18:36:44Z"
+      creationTimestamp: "2026-08-18T12:30:00Z"
       generation: 2
       name: karta-e2e-jobset-resumed
-      namespace: test-x9zjw
-      uid: 5787c288-c728-4206-b175-f58d66b906e1
+      namespace: test-8m4bc
+      uid: 86983e4e-83e7-4848-9f00-910898418dd4
     spec:
       network:
         enableDNSHostnames: true
@@ -262,7 +265,7 @@ events:
       suspend: false
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:36:45Z"
+      - lastTransitionTime: "2026-08-18T12:30:00Z"
         message: jobset is resumed
         reason: ResumeJobs
         status: "False"
@@ -275,17 +278,18 @@ events:
         succeeded: 0
         suspended: 1
       restarts: 0
+  resourceVersion: "9073"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-12T18:36:44Z"
+      creationTimestamp: "2026-08-18T12:30:00Z"
       generation: 2
       name: karta-e2e-jobset-resumed
-      namespace: test-x9zjw
-      uid: 5787c288-c728-4206-b175-f58d66b906e1
+      namespace: test-8m4bc
+      uid: 86983e4e-83e7-4848-9f00-910898418dd4
     spec:
       network:
         enableDNSHostnames: true
@@ -329,7 +333,7 @@ events:
       suspend: false
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:36:45Z"
+      - lastTransitionTime: "2026-08-18T12:30:00Z"
         message: jobset is resumed
         reason: ResumeJobs
         status: "False"
@@ -342,17 +346,18 @@ events:
         succeeded: 0
         suspended: 0
       restarts: 0
+  resourceVersion: "9076"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-12T18:36:44Z"
+      creationTimestamp: "2026-08-18T12:30:00Z"
       generation: 2
       name: karta-e2e-jobset-resumed
-      namespace: test-x9zjw
-      uid: 5787c288-c728-4206-b175-f58d66b906e1
+      namespace: test-8m4bc
+      uid: 86983e4e-83e7-4848-9f00-910898418dd4
     spec:
       network:
         enableDNSHostnames: true
@@ -396,7 +401,7 @@ events:
       suspend: false
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:36:45Z"
+      - lastTransitionTime: "2026-08-18T12:30:00Z"
         message: jobset is resumed
         reason: ResumeJobs
         status: "False"
@@ -409,17 +414,18 @@ events:
         succeeded: 0
         suspended: 0
       restarts: 0
+  resourceVersion: "9082"
   state: Running
 - kind: STATE
   object:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-12T18:36:44Z"
+      creationTimestamp: "2026-08-18T12:30:00Z"
       generation: 2
       name: karta-e2e-jobset-resumed
-      namespace: test-x9zjw
-      uid: 5787c288-c728-4206-b175-f58d66b906e1
+      namespace: test-8m4bc
+      uid: 86983e4e-83e7-4848-9f00-910898418dd4
     spec:
       network:
         enableDNSHostnames: true
@@ -463,7 +469,7 @@ events:
       suspend: false
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:36:45Z"
+      - lastTransitionTime: "2026-08-18T12:30:00Z"
         message: jobset is resumed
         reason: ResumeJobs
         status: "False"
@@ -476,17 +482,18 @@ events:
         succeeded: 0
         suspended: 0
       restarts: 0
+  resourceVersion: "9164"
   state: Running
 - kind: STATE
   object:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-12T18:36:44Z"
+      creationTimestamp: "2026-08-18T12:30:00Z"
       generation: 2
       name: karta-e2e-jobset-resumed
-      namespace: test-x9zjw
-      uid: 5787c288-c728-4206-b175-f58d66b906e1
+      namespace: test-8m4bc
+      uid: 86983e4e-83e7-4848-9f00-910898418dd4
     spec:
       network:
         enableDNSHostnames: true
@@ -530,7 +537,7 @@ events:
       suspend: false
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:36:45Z"
+      - lastTransitionTime: "2026-08-18T12:30:00Z"
         message: jobset is resumed
         reason: ResumeJobs
         status: "False"
@@ -543,17 +550,18 @@ events:
         succeeded: 0
         suspended: 0
       restarts: 0
+  resourceVersion: "9266"
   state: Running
 - kind: STATE
   object:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-12T18:36:44Z"
+      creationTimestamp: "2026-08-18T12:30:00Z"
       generation: 2
       name: karta-e2e-jobset-resumed
-      namespace: test-x9zjw
-      uid: 5787c288-c728-4206-b175-f58d66b906e1
+      namespace: test-8m4bc
+      uid: 86983e4e-83e7-4848-9f00-910898418dd4
     spec:
       network:
         enableDNSHostnames: true
@@ -597,7 +605,7 @@ events:
       suspend: false
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:36:45Z"
+      - lastTransitionTime: "2026-08-18T12:30:00Z"
         message: jobset is resumed
         reason: ResumeJobs
         status: "False"
@@ -610,17 +618,18 @@ events:
         succeeded: 0
         suspended: 0
       restarts: 0
+  resourceVersion: "9276"
   state: Running
 - kind: STATE
   object:
     apiVersion: jobset.x-k8s.io/v1alpha2
     kind: JobSet
     metadata:
-      creationTimestamp: "2026-08-12T18:36:44Z"
+      creationTimestamp: "2026-08-18T12:30:00Z"
       generation: 2
       name: karta-e2e-jobset-resumed
-      namespace: test-x9zjw
-      uid: 5787c288-c728-4206-b175-f58d66b906e1
+      namespace: test-8m4bc
+      uid: 86983e4e-83e7-4848-9f00-910898418dd4
     spec:
       network:
         enableDNSHostnames: true
@@ -664,12 +673,12 @@ events:
       suspend: false
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:36:45Z"
+      - lastTransitionTime: "2026-08-18T12:30:00Z"
         message: jobset is resumed
         reason: ResumeJobs
         status: "False"
         type: Suspended
-      - lastTransitionTime: "2026-08-12T18:37:07Z"
+      - lastTransitionTime: "2026-08-18T12:30:23Z"
         message: jobset completed successfully
         reason: AllJobsCompleted
         status: "True"
@@ -683,6 +692,7 @@ events:
         suspended: 0
       restarts: 0
       terminalState: Completed
+  resourceVersion: "9280"
   state: Completed
 flow: resumed
 kartaFile: docs/catalog/jobset-x-k8s-io-jobset-v1alpha2.yaml

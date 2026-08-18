@@ -4,16 +4,16 @@ events:
     apiVersion: batch/v1
     kind: Job
     metadata:
-      creationTimestamp: "2026-08-12T18:43:32Z"
+      creationTimestamp: "2026-08-18T12:39:36Z"
       generation: 1
       labels:
-        batch.kubernetes.io/controller-uid: 6a834248-a375-4cf4-bc93-ba37c61abdf4
+        batch.kubernetes.io/controller-uid: 0b58d157-dd73-4598-8ee4-52484958ad36
         batch.kubernetes.io/job-name: karta-e2e-job-running
-        controller-uid: 6a834248-a375-4cf4-bc93-ba37c61abdf4
+        controller-uid: 0b58d157-dd73-4598-8ee4-52484958ad36
         job-name: karta-e2e-job-running
       name: karta-e2e-job-running
-      namespace: test-x9zjw
-      uid: 6a834248-a375-4cf4-bc93-ba37c61abdf4
+      namespace: test-8m4bc
+      uid: 0b58d157-dd73-4598-8ee4-52484958ad36
     spec:
       backoffLimit: 0
       completionMode: NonIndexed
@@ -23,14 +23,14 @@ events:
       podReplacementPolicy: TerminatingOrFailed
       selector:
         matchLabels:
-          batch.kubernetes.io/controller-uid: 6a834248-a375-4cf4-bc93-ba37c61abdf4
+          batch.kubernetes.io/controller-uid: 0b58d157-dd73-4598-8ee4-52484958ad36
       suspend: false
       template:
         metadata:
           labels:
-            batch.kubernetes.io/controller-uid: 6a834248-a375-4cf4-bc93-ba37c61abdf4
+            batch.kubernetes.io/controller-uid: 0b58d157-dd73-4598-8ee4-52484958ad36
             batch.kubernetes.io/job-name: karta-e2e-job-running
-            controller-uid: 6a834248-a375-4cf4-bc93-ba37c61abdf4
+            controller-uid: 0b58d157-dd73-4598-8ee4-52484958ad36
             job-name: karta-e2e-job-running
         spec:
           containers:
@@ -64,25 +64,26 @@ events:
     status:
       active: 1
       ready: 0
-      startTime: "2026-08-12T18:43:32Z"
+      startTime: "2026-08-18T12:39:36Z"
       terminating: 0
       uncountedTerminatedPods: {}
+  resourceVersion: "15540"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: batch/v1
     kind: Job
     metadata:
-      creationTimestamp: "2026-08-12T18:43:32Z"
+      creationTimestamp: "2026-08-18T12:39:36Z"
       generation: 1
       labels:
-        batch.kubernetes.io/controller-uid: 6a834248-a375-4cf4-bc93-ba37c61abdf4
+        batch.kubernetes.io/controller-uid: 0b58d157-dd73-4598-8ee4-52484958ad36
         batch.kubernetes.io/job-name: karta-e2e-job-running
-        controller-uid: 6a834248-a375-4cf4-bc93-ba37c61abdf4
+        controller-uid: 0b58d157-dd73-4598-8ee4-52484958ad36
         job-name: karta-e2e-job-running
       name: karta-e2e-job-running
-      namespace: test-x9zjw
-      uid: 6a834248-a375-4cf4-bc93-ba37c61abdf4
+      namespace: test-8m4bc
+      uid: 0b58d157-dd73-4598-8ee4-52484958ad36
     spec:
       backoffLimit: 0
       completionMode: NonIndexed
@@ -92,14 +93,14 @@ events:
       podReplacementPolicy: TerminatingOrFailed
       selector:
         matchLabels:
-          batch.kubernetes.io/controller-uid: 6a834248-a375-4cf4-bc93-ba37c61abdf4
+          batch.kubernetes.io/controller-uid: 0b58d157-dd73-4598-8ee4-52484958ad36
       suspend: false
       template:
         metadata:
           labels:
-            batch.kubernetes.io/controller-uid: 6a834248-a375-4cf4-bc93-ba37c61abdf4
+            batch.kubernetes.io/controller-uid: 0b58d157-dd73-4598-8ee4-52484958ad36
             batch.kubernetes.io/job-name: karta-e2e-job-running
-            controller-uid: 6a834248-a375-4cf4-bc93-ba37c61abdf4
+            controller-uid: 0b58d157-dd73-4598-8ee4-52484958ad36
             job-name: karta-e2e-job-running
         spec:
           containers:
@@ -133,9 +134,10 @@ events:
     status:
       active: 1
       ready: 1
-      startTime: "2026-08-12T18:43:32Z"
+      startTime: "2026-08-18T12:39:36Z"
       terminating: 0
       uncountedTerminatedPods: {}
+  resourceVersion: "15594"
   state: Running
 flow: running
 kartaFile: docs/catalog/batch-job-v1.yaml

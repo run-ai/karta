@@ -4,11 +4,11 @@ events:
     apiVersion: batch/v1
     kind: CronJob
     metadata:
-      creationTimestamp: "2026-08-12T18:38:57Z"
+      creationTimestamp: "2026-08-18T12:36:02Z"
       generation: 1
       name: karta-e2e-cronjob-running
-      namespace: test-x9zjw
-      uid: a799703a-d0f4-4247-bbe8-2d89ceab6142
+      namespace: test-8m4bc
+      uid: e200e284-7710-454d-8d9b-3a2499ac1d70
     spec:
       concurrencyPolicy: Allow
       failedJobsHistoryLimit: 1
@@ -42,11 +42,12 @@ events:
       active:
       - apiVersion: batch/v1
         kind: Job
-        name: karta-e2e-cronjob-running-29775999
-        namespace: test-x9zjw
-        resourceVersion: "19640"
-        uid: 8a69f513-f365-4d1c-b354-8cda35fae756
-      lastScheduleTime: "2026-08-12T18:39:00Z"
+        name: karta-e2e-cronjob-running-29784277
+        namespace: test-8m4bc
+        resourceVersion: "13711"
+        uid: 08bfd067-15d8-47e2-a58b-5d6513930e1d
+      lastScheduleTime: "2026-08-18T12:37:00Z"
+  resourceVersion: "13713"
   state: Running
 flow: running
 kartaFile: docs/catalog/batch-cronjob-v1.yaml

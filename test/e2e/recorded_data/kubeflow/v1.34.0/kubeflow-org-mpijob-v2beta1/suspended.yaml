@@ -4,11 +4,11 @@ events:
     apiVersion: kubeflow.org/v2beta1
     kind: MPIJob
     metadata:
-      creationTimestamp: "2026-08-12T18:37:18Z"
+      creationTimestamp: "2026-08-18T12:30:56Z"
       generation: 1
       name: karta-e2e-mpi-suspended
-      namespace: test-x9zjw
-      uid: abd93ee0-eb79-4973-b226-eb1085350de7
+      namespace: test-8m4bc
+      uid: 379fa2c4-f0d0-4bdb-a4a6-27dfe5edee7a
     spec:
       launcherCreationPolicy: AtStartup
       mpiImplementation: OpenMPI
@@ -48,27 +48,28 @@ events:
       sshAuthMountPath: /root/.ssh
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:37:18Z"
-        lastUpdateTime: "2026-08-12T18:37:18Z"
-        message: MPIJob test-x9zjw/karta-e2e-mpi-suspended is created.
+      - lastTransitionTime: "2026-08-18T12:30:56Z"
+        lastUpdateTime: "2026-08-18T12:30:56Z"
+        message: MPIJob test-8m4bc/karta-e2e-mpi-suspended is created.
         reason: MPIJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-08-12T18:37:18Z"
-        lastUpdateTime: "2026-08-12T18:37:18Z"
+      - lastTransitionTime: "2026-08-18T12:30:56Z"
+        lastUpdateTime: "2026-08-18T12:30:56Z"
         message: MPIJob suspended
         reason: MPIJobSuspended
         status: "True"
         type: Suspended
-      - lastTransitionTime: "2026-08-12T18:37:18Z"
-        lastUpdateTime: "2026-08-12T18:37:18Z"
-        message: MPIJob test-x9zjw/karta-e2e-mpi-suspended is suspended.
+      - lastTransitionTime: "2026-08-18T12:30:56Z"
+        lastUpdateTime: "2026-08-18T12:30:56Z"
+        message: MPIJob test-8m4bc/karta-e2e-mpi-suspended is suspended.
         reason: MPIJobSuspended
         status: "False"
         type: Running
       replicaStatuses:
         Launcher: {}
         Worker: {}
+  resourceVersion: "9979"
   state: Suspended
 flow: suspended
 kartaFile: docs/catalog/kubeflow-org-mpijob-v2beta1.yaml

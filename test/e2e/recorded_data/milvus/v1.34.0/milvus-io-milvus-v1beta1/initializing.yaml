@@ -4,11 +4,11 @@ events:
     apiVersion: milvus.io/v1beta1
     kind: Milvus
     metadata:
-      creationTimestamp: "2026-08-12T18:36:12Z"
+      creationTimestamp: "2026-08-18T12:32:39Z"
       generation: 1
       name: karta-e2e-milvus-initializing
-      namespace: test-x9zjw
-      uid: 9ef226ef-d0ec-47c2-b8ed-4a4dd8c82d8f
+      namespace: test-8m4bc
+      uid: 526f93d3-a6e1-4ae5-9f18-38bd3cf18a9a
     spec:
       components:
         image: milvusdb/milvus:v0.0.0-nonexistent
@@ -28,6 +28,7 @@ events:
           external: true
           type: MinIO
       mode: standalone
+  resourceVersion: "11025"
   state: Initializing
 flow: initializing
 kartaFile: docs/catalog/milvus-io-milvus-v1beta1.yaml

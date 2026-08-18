@@ -4,11 +4,11 @@ events:
     apiVersion: kubeflow.org/v1
     kind: PyTorchJob
     metadata:
-      creationTimestamp: "2026-08-12T18:43:06Z"
+      creationTimestamp: "2026-08-18T12:29:25Z"
       generation: 1
       name: karta-e2e-pytorch-suspended
-      namespace: test-x9zjw
-      uid: cc528f4f-560c-4b5b-af74-d97388e5ba3b
+      namespace: test-8m4bc
+      uid: 9d5f034f-0ae1-42a8-ae67-dc9d5dea2d9d
     spec:
       pytorchReplicaSpecs:
         Master:
@@ -31,18 +31,19 @@ events:
         suspend: true
     status:
       conditions:
-      - lastTransitionTime: "2026-08-12T18:43:06Z"
-        lastUpdateTime: "2026-08-12T18:43:06Z"
+      - lastTransitionTime: "2026-08-18T12:29:25Z"
+        lastUpdateTime: "2026-08-18T12:29:25Z"
         message: PyTorchJob karta-e2e-pytorch-suspended is created.
         reason: PyTorchJobCreated
         status: "True"
         type: Created
-      - lastTransitionTime: "2026-08-12T18:43:06Z"
-        lastUpdateTime: "2026-08-12T18:43:06Z"
+      - lastTransitionTime: "2026-08-18T12:29:25Z"
+        lastUpdateTime: "2026-08-18T12:29:25Z"
         message: PyTorchJob karta-e2e-pytorch-suspended is suspended.
         reason: PyTorchJobSuspended
         status: "True"
         type: Suspended
+  resourceVersion: "8648"
   state: Suspended
 flow: suspended
 kartaFile: docs/catalog/kubeflow-org-pytorchjob-v1.yaml

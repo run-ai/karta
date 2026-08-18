@@ -4,11 +4,11 @@ events:
     apiVersion: batch/v1
     kind: CronJob
     metadata:
-      creationTimestamp: "2026-08-12T18:38:57Z"
+      creationTimestamp: "2026-08-18T12:36:02Z"
       generation: 1
       name: karta-e2e-cronjob
-      namespace: test-x9zjw
-      uid: adba05bc-9e98-4086-8ba9-f3b690bd6939
+      namespace: test-8m4bc
+      uid: 601b3398-4070-4c27-a139-5dc120c78d1d
     spec:
       concurrencyPolicy: Allow
       failedJobsHistoryLimit: 1
@@ -39,6 +39,7 @@ events:
       successfulJobsHistoryLimit: 3
       suspend: false
     status: {}
+  resourceVersion: "13251"
   state: Initializing
 flow: initializing
 kartaFile: docs/catalog/batch-cronjob-v1.yaml

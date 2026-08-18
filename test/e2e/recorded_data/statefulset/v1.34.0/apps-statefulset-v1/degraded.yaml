@@ -4,11 +4,11 @@ events:
     apiVersion: apps/v1
     kind: StatefulSet
     metadata:
-      creationTimestamp: "2026-08-12T18:33:35Z"
+      creationTimestamp: "2026-08-18T12:35:59Z"
       generation: 1
       name: karta-e2e-sts-degraded
-      namespace: test-x9zjw
-      uid: cb058c72-237f-4e7b-ad02-d1ec73f21730
+      namespace: test-8m4bc
+      uid: 89761d5b-4f7f-4966-9613-235430a87d50
     spec:
       persistentVolumeClaimRetentionPolicy:
         whenDeleted: Retain
@@ -62,17 +62,18 @@ events:
       observedGeneration: 1
       replicas: 0
       updateRevision: karta-e2e-sts-degraded-5fb8d9544d
+  resourceVersion: "13201"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: apps/v1
     kind: StatefulSet
     metadata:
-      creationTimestamp: "2026-08-12T18:33:35Z"
+      creationTimestamp: "2026-08-18T12:35:59Z"
       generation: 1
       name: karta-e2e-sts-degraded
-      namespace: test-x9zjw
-      uid: cb058c72-237f-4e7b-ad02-d1ec73f21730
+      namespace: test-8m4bc
+      uid: 89761d5b-4f7f-4966-9613-235430a87d50
     spec:
       persistentVolumeClaimRetentionPolicy:
         whenDeleted: Retain
@@ -128,17 +129,18 @@ events:
       replicas: 3
       updateRevision: karta-e2e-sts-degraded-5fb8d9544d
       updatedReplicas: 3
+  resourceVersion: "13210"
   state: Initializing
 - kind: STATE
   object:
     apiVersion: apps/v1
     kind: StatefulSet
     metadata:
-      creationTimestamp: "2026-08-12T18:33:35Z"
+      creationTimestamp: "2026-08-18T12:35:59Z"
       generation: 1
       name: karta-e2e-sts-degraded
-      namespace: test-x9zjw
-      uid: cb058c72-237f-4e7b-ad02-d1ec73f21730
+      namespace: test-8m4bc
+      uid: 89761d5b-4f7f-4966-9613-235430a87d50
     spec:
       persistentVolumeClaimRetentionPolicy:
         whenDeleted: Retain
@@ -195,6 +197,7 @@ events:
       replicas: 3
       updateRevision: karta-e2e-sts-degraded-5fb8d9544d
       updatedReplicas: 3
+  resourceVersion: "13225"
   state: Degraded
 flow: degraded
 kartaFile: docs/catalog/apps-statefulset-v1.yaml
