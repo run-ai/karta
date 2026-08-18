@@ -6,8 +6,8 @@
 // Command wasm is a placeholder WebAssembly module proving the
 // make plugin-wasm build pipeline end-to-end. The real Karta engine
 // bindings (tree building, pod attribution, status evaluation) are added
-// once RUN-42193 wires pkg/tree, pkg/resource, and pkg/status into this
-// module.
+// in follow-up work that wires pkg/tree, pkg/resource, and pkg/status
+// into this module.
 package main
 
 import "syscall/js"

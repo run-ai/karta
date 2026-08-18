@@ -10,7 +10,7 @@ workload trees: the components, instances, and normalized status of any
 workload described by a Karta definition (`kartas.run.ai`). Currently this
 is a placeholder setup, a `/karta/workloads` route and a WASM engine
 exporting only `kartaVersion`. The real tree visualization and engine
-bindings land in follow-up work (RUN-42193).
+bindings land in follow-up work.
 
 ## How the WASM engine is built and loaded
 
