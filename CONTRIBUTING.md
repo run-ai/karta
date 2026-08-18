@@ -116,7 +116,7 @@ Commit messages follow [Conventional Commits v1.0.0](https://www.conventionalcom
 Types: `feat`, `fix`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`. When picking a scope, match an existing one from `git log`. Combine the format with the DCO sign-off described above:
 
 ```bash
-git commit -s -m "fix(jq): reject expressions that exceed the evaluation depth limit"
+git commit -s -m "fix(api): validate status mapping expressions before applying them"
 ```
 
 ### Making Changes
