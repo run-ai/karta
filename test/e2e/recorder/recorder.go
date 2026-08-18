@@ -92,7 +92,7 @@ func (r *Recorder) SetTimeout(d time.Duration) *Recorder {
 }
 
 // Run creates the workload, drives it through the journey, and returns the recording of what it observed;
-// pass it to Save to persist. On a flow-level failure the recording is still returned (succeeded:false).
+// pass it to Save to persist. On a flow-level failure the recording is still returned with result.succeeded false.
 func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 	if len(f.journey) == 0 {
 		return nil, fmt.Errorf("flow %s declares no stops", f.name)
@@ -107,12 +107,17 @@ func (f *Flow) Run(ctx context.Context) (*Recording, error) {
 	defer cancel()
 
 	obs := f.observe(flowCtx, workload)
-	orderErr := validateObservedOrder(f.journey, obs.states(), f.want())
-	out := f.buildRecording(obs, obs.failure == "" && orderErr == nil)
+	out := f.buildRecording(obs)
 	if obs.failure != "" {
+		out.Result = Result{Succeeded: false, FailureMessage: obs.failure}
 		return out, errors.New(obs.failure)
 	}
-	return out, orderErr
+	if orderErr := validateObservedOrder(f.journey, obs.states(), f.want()); orderErr != nil {
+		out.Result = Result{Succeeded: false, FailureMessage: orderErr.Error()}
+		return out, orderErr
+	}
+	out.Result = Result{Succeeded: true}
+	return out, nil
 }
 
 // createWorkload reads the flow's workload manifest and creates it on the cluster in the recorder's namespace.
@@ -158,16 +163,21 @@ func (f *Flow) observe(ctx context.Context, workload *unstructured.Unstructured)
 }
 
 // buildRecording assembles the observed run into a Recording: a STATE event per distinct CR, and an ACTION
-// event after a state where the flow performed one. Save fills in the catalog fields (Operator, Version, ...).
-func (f *Flow) buildRecording(obs *observation, succeeded bool) *Recording {
+// event after a state where the flow performed one. Run fills in the Result, Save the catalog fields.
+func (f *Flow) buildRecording(obs *observation) *Recording {
 	out := &Recording{
 		SchemaVersion: schemaVersion,
 		Flow:          f.name,
 		Want:          string(f.want()),
-		Succeeded:     succeeded,
 	}
 	for _, snap := range obs.snapshots {
-		out.Events = append(out.Events, Event{Kind: EventState, State: string(snap.state), StaleObservedGeneration: snap.staleObservedGeneration, Object: stripVolatileFields(snap.cr)})
+		out.Events = append(out.Events, Event{
+			Kind:                    EventState,
+			State:                   string(snap.state),
+			StaleObservedGeneration: snap.staleObservedGeneration,
+			ResourceVersion:         snap.cr.GetResourceVersion(),
+			Object:                  stripVolatileFields(snap.cr),
+		})
 		if snap.action != nil {
 			out.Events = append(out.Events, Event{Kind: EventAction, Action: snap.action})
 		}
@@ -176,7 +186,7 @@ func (f *Flow) buildRecording(obs *observation, succeeded bool) *Recording {
 }
 
 // Save stamps fx onto rec and writes it under <OutputDir>/<operator>/<version>/<kartaName>/<flow>.yaml,
-// returning the path. A failed run is saved too (succeeded:false); a nil recording is a no-op.
+// returning the path. A failed run is saved too (result.succeeded false and the reason in result.failureMessage); a nil recording is a no-op.
 func (r *Recorder) Save(fx Fixture, rec *Recording) (string, error) {
 	if rec == nil {
 		return "", nil

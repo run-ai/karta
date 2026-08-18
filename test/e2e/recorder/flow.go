@@ -34,7 +34,7 @@ func (f *Flow) Through(steps ...Step) *Flow {
 	return f
 }
 
-// Step is one declared stop, built with Reaches and refined with Optional, When, and Do.
+// Step is one declared stop, built with Reaches and refined with Optional, With, and Do.
 type Step struct {
 	step journeyStep
 }
@@ -47,8 +47,9 @@ func Reaches(state kartav1alpha1.ResourceStatus) Step {
 // Optional marks a stop the workload may skip; the order check tolerates its absence.
 func (s Step) Optional() Step { s.step.Optional = true; return s }
 
-// When gates the stop on a predicate over the workload's own fields.
-func (s Step) When(gate StateCheck) Step { s.step.ActionPredicate = gate; return s }
+// With gates the stop on a predicate over the workload's own fields: the stop is reached once the state
+// matches and the predicate holds.
+func (s Step) With(gate StateCheck) Step { s.step.ActionPredicate = gate; return s }
 
 // Do attaches an action performed once the stop is reached.
 func (s Step) Do(action *Action) Step { s.step.Action = action; return s }

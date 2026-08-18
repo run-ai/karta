@@ -23,10 +23,16 @@ type Recording struct {
 	KartaName     string  `json:"kartaName"`
 	Flow          string  `json:"flow"`
 	Want          string  `json:"want,omitempty"`
-	Succeeded     bool    `json:"succeeded"`
+	Result        Result  `json:"result"`
 	KartaFile     string  `json:"kartaFile"` // repo-relative path to the Karta definition
 	Events        []Event `json:"events"`
 	Path          string  `json:"-"` // where the run was written; set by the recorder, not serialized
+}
+
+// Result is how the run ended: whether it succeeded, and why not when it did not.
+type Result struct {
+	Succeeded      bool   `json:"succeeded"`
+	FailureMessage string `json:"failureMessage,omitempty"`
 }
 
 const (
@@ -34,13 +40,15 @@ const (
 	EventAction = "ACTION"
 )
 
-// Event is one entry in the stream: a STATE event carries the full object and its own-fields state; an
-// ACTION event carries the mutation the flow performed to drive the next transition. StaleObservedGeneration marks a
-// frame captured before the controller observed the spec: recorded, but outside the order-checked walk.
+// Event is one entry in the stream: a STATE event carries the full object, its own-fields state, and the
+// resourceVersion it was captured at; an ACTION event carries the mutation the flow performed to drive the
+// next transition. StaleObservedGeneration marks a frame captured before the controller observed the spec:
+// recorded, but outside the order-checked walk.
 type Event struct {
 	Kind                    string          `json:"kind"`
 	State                   string          `json:"state,omitempty"`
 	StaleObservedGeneration bool            `json:"staleObservedGeneration,omitempty"`
+	ResourceVersion         string          `json:"resourceVersion,omitempty"`
 	Object                  map[string]any  `json:"object,omitempty"`
 	Action                  *RecordedAction `json:"action,omitempty"`
 }

@@ -14,10 +14,10 @@ reads each state the same way. No Ginkgo or Gomega; failures come back as errors
 - recorder.go: setup and engine. Cluster, Config, Fixture, Recorder, New, AddState,
   SetTimeout; Run drives a flow, Save writes the recording.
 - flow.go: the authoring API. NewFlow, Through, and the Step builders (Reaches, Optional,
-  When, Do), plus the state and action vocabulary (StateCheck, classify, Action).
+  With, Do), plus the state and action vocabulary (StateCheck, classify, Action).
 - observation.go: one live run. The watch loop (follow, startWatch), recording each frame
-  (record, keep), checkpoint actions (advanceCheckpoint, performAction), and watch
-  recovery (reconnect, refetch).
+  (record, keep), and step actions (advanceStep, performAction). A watch that cannot
+  resume fails the run.
 - cr.go: helpers over an unstructured CR. stripVolatileFields, isWorkloadObserved,
   blankWithGVK, dumpStatus.
 - order.go: the invariant. observedOrderErr checks the observed states are a legal walk
@@ -30,8 +30,8 @@ reads each state the same way. No Ginkgo or Gomega; failures come back as errors
 
 ```go
 out, err := recorder.NewFlow(rec, "scaled", "testdata/deployment/running.yaml").Through(
-    recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(1)).Do(ScaleReplicas(3)),
-    recorder.Reaches(kartav1alpha1.RunningStatus).When(ReplicasReady(3)),
+    recorder.Reaches(kartav1alpha1.RunningStatus).With(ReplicasReady(1)).Do(ScaleReplicas(3)),
+    recorder.Reaches(kartav1alpha1.RunningStatus).With(ReplicasReady(3)),
 ).Run(ctx)
 ```
 

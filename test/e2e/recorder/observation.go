@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,8 +43,8 @@ type snapshot struct {
 	staleObservedGeneration bool // the controller had not observed the spec yet; recorded, but never judged
 }
 
-// follow watches the workload until the flow finishes or fails, recording each CR it sees. It reconnects
-// when the apiserver drops a stale watch, and sets failure on timeout or an unrecoverable error.
+// follow watches the workload until the flow finishes or fails, recording each CR it sees. A watch that
+// cannot resume fails the run.
 func (o *observation) follow(ctx context.Context) {
 	watcher, err := o.flow.startWatch(ctx, o.workload)
 	if err != nil {
@@ -64,10 +63,11 @@ func (o *observation) follow(ctx context.Context) {
 		case event, open := <-watcher.ResultChan():
 			switch {
 			case !open:
-				var stop bool
-				if watcher, stop = o.reconnect(ctx, watcher, lastWatchErr); stop {
-					return
-				}
+				// The RetryWatcher resumes transient drops itself; it gives up only when it cannot resume
+				// from its position (410 Gone, the history was compacted). Fail fast and re-record.
+				o.failure = fmt.Sprintf("watch lost its position and cannot resume; last watch error: %v; observed %v; re-record the flow\nlast-seen status:\n%s",
+					lastWatchErr, o.states(), dumpStatus(o.lastSeen))
+				return
 			case event.Type == watch.Error:
 				lastWatchErr = apierrors.FromObject(event.Object)
 			default:
@@ -145,7 +145,7 @@ func (o *observation) keep(cr *unstructured.Unstructured, state kartav1alpha1.Re
 	o.snapshots = append(o.snapshots, snapshot{state: state, cr: cr.DeepCopy(), staleObservedGeneration: !observed})
 }
 
-// advanceStep performs the next checkpoint's action if the workload just reached its state and gate, then
+// advanceStep performs the next pending step's action if the workload just reached its state and gate, then
 // drops it from pending. It reports whether the action failed, which stops the run.
 func (o *observation) advanceStep(ctx context.Context, state kartav1alpha1.ResourceStatus, cr *unstructured.Unstructured) (actionFailed bool) {
 	next := o.pending
@@ -195,57 +195,6 @@ func (o *observation) recordAction(action *RecordedAction) {
 // hasReachedTerminal reports whether state is the flow's terminal state and no action steps remain.
 func (o *observation) hasReachedTerminal(state kartav1alpha1.ResourceStatus) bool {
 	return state == o.flow.want() && len(o.pending) == 0
-}
-
-// reconnect handles a dropped watch: it re-fetches the workload for a fresh resourceVersion, records that
-// state, and opens a new watch. It returns the new watcher, or stop=true when the run must end - failure was
-// set, or the re-fetched state already finished the flow.
-func (o *observation) reconnect(ctx context.Context, closed watch.Interface, lastWatchErr error) (watch.Interface, bool) {
-	// The RetryWatcher gave up, typically "too old resource version" after the object sat idle while etcd
-	// compacted its history. If the flow's context is already done, give up too.
-	if ctx.Err() != nil {
-		o.failure = fmt.Sprintf("watch closed before reaching %q; observed %v; last watch error: %v\nlast-seen status:\n%s",
-			o.flow.want(), o.states(), lastWatchErr, dumpStatus(o.lastSeen))
-		return nil, true
-	}
-	closed.Stop()
-
-	current, failure := o.refetch(ctx)
-	if failure != "" {
-		o.failure = failure
-		return nil, true
-	}
-	o.workload.SetResourceVersion(current.GetResourceVersion())
-	if o.record(ctx, current) {
-		return nil, true
-	}
-	fresh, err := o.flow.startWatch(ctx, o.workload)
-	if err != nil {
-		o.failure = err.Error()
-		return nil, true
-	}
-	return fresh, false
-}
-
-// refetch fetches the workload's current object after a watch drop, retrying transient control-plane blips (a
-// heavy operator can briefly reject the Get while its authorizer reloads). It returns the object to resume
-// from, or a non-empty failure message when it must give up: the workload is gone, or the context ended.
-func (o *observation) refetch(ctx context.Context) (*unstructured.Unstructured, string) {
-	current := blankWithGVK(o.workload)
-	for {
-		err := o.flow.client().Get(ctx, client.ObjectKeyFromObject(o.workload), current)
-		if err == nil {
-			return current, ""
-		}
-		if apierrors.IsNotFound(err) {
-			return nil, fmt.Sprintf("workload gone during flow (re-fetch 404); observed %v", o.states())
-		}
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Sprintf("re-fetch after watch closed kept failing: %v; observed %v", err, o.states())
-		case <-time.After(2 * time.Second):
-		}
-	}
 }
 
 // states is the ordered sequence of observed-frame states - the walk the order check validates.
