@@ -103,6 +103,22 @@ steps on every pull request. Running `make check` and `make lint` locally first
 is the fastest way to catch issues before pushing. If you only need a quick test
 pass, `make test` runs the tests and mock generation on their own.
 
+### Commit Messages
+
+Commit messages follow [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/):
+
+```text
+<type>(<scope>): <short description>
+
+[optional body]
+```
+
+Types: `feat`, `fix`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`. When picking a scope, match an existing one from `git log`. Combine the format with the DCO sign-off described above:
+
+```bash
+git commit -s -m "fix(jq): reject expressions that exceed the evaluation depth limit"
+```
+
 ### Making Changes
 
 1. Fork the repository

@@ -242,6 +242,8 @@ See [ADOPTERS.md](ADOPTERS.md) for the full list of adopters. If you use Karta, 
 
 ## Documentation
 
+- [Roadmap](ROADMAP.md) - Where Karta is headed, in Now / Next / Later horizons
+- [Changelog](CHANGELOG.md) - Notable changes per release
 - [Technical Guide](docs/Technical%20Guide.md) - Full Karta spec, path syntax (jq), validation rules
 - [Webhook Certificates](docs/Webhook%20Certificates.md) - Webhook cert modes (auto self-signed or manual) and how to wire cert-manager
 - [Karta definitions](docs/catalog/) - Real-world Karta definitions for common workload types
