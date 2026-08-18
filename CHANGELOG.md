@@ -5,7 +5,7 @@
 
 Notable changes per release. [GitHub Releases](https://github.com/run-ai/karta/releases) are the canonical record and carry the full notes and artifacts; this file is the in-repo summary. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely. Versioning is pre-1.0: minor versions may include breaking changes, see each entry.
 
-## [v0.2.3] - 2026-08-17
+## v0.2.3 - 2026-08-17
 
 ### Added
 
@@ -13,7 +13,7 @@ Notable changes per release. [GitHub Releases](https://github.com/run-ai/karta/r
 
 [Full changelog](https://github.com/run-ai/karta/compare/v0.2.2...v0.2.3)
 
-## [v0.2.2] - 2026-07-23
+## v0.2.2 - 2026-07-23
 
 ### Fixed
 
@@ -21,7 +21,7 @@ Notable changes per release. [GitHub Releases](https://github.com/run-ai/karta/r
 
 [Full changelog](https://github.com/run-ai/karta/compare/v0.2.1...v0.2.2)
 
-## [v0.2.1] - 2026-07-20
+## v0.2.1 - 2026-07-20
 
 ### Fixed
 
@@ -29,7 +29,7 @@ Notable changes per release. [GitHub Releases](https://github.com/run-ai/karta/r
 
 [Full changelog](https://github.com/run-ai/karta/compare/v0.2.0...v0.2.1)
 
-## [v0.2.0] - 2026-07-15
+## v0.2.0 - 2026-07-15
 
 Extends Karta from a CRD and Go library into an optional runnable system. No breaking API changes.
 
@@ -38,7 +38,7 @@ Extends Karta from a CRD and Go library into an optional runnable system. No bre
 - Controller/operator: reconcile core, operator Helm chart, and container images. Karta can now run as a controller rather than only being a CRD plus library (#77, #97, #91).
 - `WorkloadTree`: the raw component hierarchy of a workload (desired structure, scale, specs, status) produced by the library, giving clients a single shared tree to traverse and render (#87).
 - New pod-grouping API: `gangScheduling.podGroup` with subgroups and topology constraints for scheduler integrations (#145).
-- Larger catalog of built-in workload definitions under `docs/catalog/`.
+- Larger catalog of built-in workload definitions under `docs/catalog/` (#155).
 
 ### Deprecated
 
@@ -46,7 +46,7 @@ Extends Karta from a CRD and Go library into an optional runnable system. No bre
 
 [Full changelog](https://github.com/run-ai/karta/compare/v0.1.1...v0.2.0)
 
-## [v0.1.1] - 2026-06-01
+## v0.1.1 - 2026-06-01
 
 ### Changed
 
@@ -54,7 +54,7 @@ Extends Karta from a CRD and Go library into an optional runnable system. No bre
 
 [Full changelog](https://github.com/run-ai/karta/compare/v0.1.0...v0.1.1)
 
-## [v0.1.0] - 2026-05-12
+## v0.1.0 - 2026-05-12
 
 ### Changed
 
