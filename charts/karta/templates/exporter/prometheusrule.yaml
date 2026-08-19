@@ -1,0 +1,72 @@
+{{- if and .Values.exporter.enabled .Values.exporter.prometheusRule.enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") -}}
+{{- $rule := .Values.exporter.prometheusRule -}}
+{{- $join := $rule.joinLabels | join ", " -}}
+{{/*
+Every aggregation level is computed from the raw per-pod join, never from
+another recorded average, so pod-weighted results stay correct. The max by()
+on the info side keeps the join evaluating when a deleted and recreated pod
+briefly leaves two identity series with the same name. Sentinel-attributed
+pods stay in workload-level aggregates but are excluded from component and
+component-instance levels.
+*/}}
+{{- $levels := list
+  (dict "suffix" "workload" "groupLeft" "workload, workload_kind, workload_group" "selector" "")
+  (dict "suffix" "component" "groupLeft" "workload, workload_kind, workload_group, component" "selector" "{component!=\"<unknown>\"}")
+  (dict "suffix" "component_instance" "groupLeft" "workload, workload_kind, workload_group, component, component_instance" "selector" "{component!=\"<unknown>\",component_instance!=\"<unknown>\"}")
+-}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "karta.exporter.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "karta.exporter.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: karta-exporter.rules
+      interval: {{ $rule.interval }}
+      rules:
+        {{- range $level := $levels }}
+        {{- $info := printf "max by (%s, %s) (karta_pod_workload_info%s)" $join $level.groupLeft $level.selector }}
+        {{- $joinClause := printf "* on (%s) group_left (%s) %s" $join $level.groupLeft $info }}
+        - record: karta:gpu_utilization:{{ $level.suffix }}
+          expr: |
+            avg by (namespace, {{ $level.groupLeft }}) (
+              {{ $rule.gpuUtilizationMetric }}
+              {{ $joinClause }}
+            )
+        - record: karta:gpu_memory_used_bytes:{{ $level.suffix }}
+          expr: |
+            sum by (namespace, {{ $level.groupLeft }}) (
+              ({{ $rule.gpuMemoryUsedMetric }} * 1048576)
+              {{ $joinClause }}
+            )
+        - record: karta:gpu_memory_total_bytes:{{ $level.suffix }}
+          expr: |
+            sum by (namespace, {{ $level.groupLeft }}) (
+              (({{ $rule.gpuMemoryUsedMetric }} + {{ $rule.gpuMemoryFreeMetric }}) * 1048576)
+              {{ $joinClause }}
+            )
+        - record: karta:cpu_usage_cores:{{ $level.suffix }}
+          expr: |
+            sum by (namespace, {{ $level.groupLeft }}) (
+              rate(container_cpu_usage_seconds_total{container!=""}[{{ $rule.cpuRateWindow }}])
+              {{ $joinClause }}
+            )
+        - record: karta:memory_working_set_bytes:{{ $level.suffix }}
+          expr: |
+            sum by (namespace, {{ $level.groupLeft }}) (
+              container_memory_working_set_bytes{container!=""}
+              {{ $joinClause }}
+            )
+        {{- end }}
+        # Attribution health: the fraction of GPU series that join the
+        # identity series. A drop below 1 means a label mismatch between
+        # the telemetry source and the exporter; alert on it.
+        - record: karta:join_coverage:ratio
+          expr: |
+            count({{ $rule.gpuUtilizationMetric }} * on ({{ $join }}) group_left ()
+              max by ({{ $join }}) (karta_pod_workload_info))
+            /
+            count({{ $rule.gpuUtilizationMetric }})
+{{- end }}

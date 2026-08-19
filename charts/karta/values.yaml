@@ -115,3 +115,107 @@ crdUpgrader:
     limits:
       cpu: 200m
       memory: 128Mi
+
+# Karta metrics exporter. Publishes pod-to-workload attribution, normalized
+# workload status, and replica series. The bundled recording rules join them
+# with existing DCGM and cadvisor series into the karta:* aggregate names.
+exporter:
+  enabled: false
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/run-ai/karta/karta-exporter
+    # When empty, falls back to .Chart.AppVersion.
+    tag: ""
+    pullPolicy: IfNotPresent
+
+  ports:
+    metrics: 8080
+
+  # The exporter caches pods trimmed to metadata, spec.nodeName, and
+  # status.phase. Set true only for custom Kartas whose pod selectors read
+  # other pod fields.
+  fullPodCache: false
+
+  # Extra flags appended after the chart's default args.
+  extraArgs: []
+
+  podAnnotations: {}
+
+  serviceAccount:
+    create: true
+    # Only used when create: false.
+    name: ""
+
+  rbac:
+    # Workload and child kinds the exporter may read, rendered into the base
+    # ClusterRole (no wildcards). Defaults cover common built-in catalog
+    # kinds. For anything else, either extend this list or create a
+    # ClusterRole labeled karta.run.ai/exporter-rbac: "true"; the bound role
+    # aggregates it automatically.
+    workloadRules:
+      - apiGroups: ["batch"]
+        resources: ["jobs", "cronjobs"]
+      - apiGroups: ["apps"]
+        resources: ["deployments", "statefulsets", "replicasets"]
+      - apiGroups: ["jobset.x-k8s.io"]
+        resources: ["jobsets"]
+      - apiGroups: ["kubeflow.org"]
+        resources: ["pytorchjobs", "mpijobs"]
+      - apiGroups: ["ray.io"]
+        resources: ["rayclusters", "rayjobs", "rayservices"]
+      - apiGroups: ["leaderworkerset.x-k8s.io"]
+        resources: ["leaderworkersets"]
+
+  serviceMonitor:
+    # Requires the prometheus-operator CRDs.
+    enabled: false
+    interval: 30s
+    # The exposition grows with pod count; 10s is too tight on large clusters.
+    scrapeTimeout: 25s
+
+  prometheusRule:
+    # Rendered only when the prometheus-operator CRDs are installed.
+    # The karta:* record names are part of the exporter's metric contract.
+    enabled: true
+    interval: 30s
+    # Source metric names and join labels, adjustable without a release when
+    # a relabeling scheme renames them (e.g. pod -> exported_pod).
+    gpuUtilizationMetric: DCGM_FI_DEV_GPU_UTIL
+    gpuMemoryUsedMetric: DCGM_FI_DEV_FB_USED
+    gpuMemoryFreeMetric: DCGM_FI_DEV_FB_FREE
+    joinLabels: ["namespace", "pod"]
+    cpuRateWindow: 5m
+
+  networkPolicy:
+    # The metrics endpoint serves cluster-wide workload identity
+    # unauthenticated; restrict who can reach it.
+    enabled: false
+    # Optional namespaceSelector for allowed scrapers, e.g.
+    # matchLabels: {kubernetes.io/metadata.name: monitoring}
+    allowedNamespaceSelector: {}
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 0
+    seccompProfile:
+      type: RuntimeDefault
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

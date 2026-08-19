@@ -174,9 +174,19 @@ helm-lint: ## Lint the helm chart
 CRD_CONFIGMAP_MAX_BYTES ?= 1000000
 
 .PHONY: helm-validate
-helm-validate: ## Validate the chart renders and the CRD ConfigMap fits in etcd
+helm-validate: exporter-rules-test ## Validate the chart renders and the CRD ConfigMap fits in etcd
 	helm template $(KARTA_CHART_DIR)
 	@set -e; tmp=$$(mktemp); trap 'rm -f "$$tmp"' EXIT; helm template $(KARTA_CHART_DIR) -s templates/hooks/pre/crd-upgrader-configmap.yaml > "$$tmp"; s=$$(wc -c < "$$tmp"); echo "crd-upgrader ConfigMap: $$s bytes (max $(CRD_CONFIGMAP_MAX_BYTES))"; test $$s -le $(CRD_CONFIGMAP_MAX_BYTES) || { echo "error: CRD ConfigMap is $$s bytes, over the $(CRD_CONFIGMAP_MAX_BYTES) limit; it must fit in a single ~1 MiB etcd object"; exit 1; }
+
+.PHONY: exporter-rules-test
+exporter-rules-test: ## Render the chart's recording rules and run the promtool unit tests
+	@command -v promtool >/dev/null 2>&1 || { echo "promtool not found, skipping recording-rule tests"; exit 0; }
+	@set -e; \
+	mkdir -p exporter/test/rules/.rendered; \
+	helm template rules-test $(KARTA_CHART_DIR) --set exporter.enabled=true --api-versions monitoring.coreos.com/v1 \
+		| python3 hack/extract-prometheus-rules.py > exporter/test/rules/.rendered/karta-rules.yaml; \
+	promtool check rules exporter/test/rules/.rendered/karta-rules.yaml; \
+	cd exporter/test/rules && promtool test rules tests.yaml
 
 ##@ Air-gap
 

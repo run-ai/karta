@@ -69,3 +69,29 @@ must match the --webhook-service-name flag passed to the operator.
 {{- define "karta.webhook.validatingConfigName" -}}
 {{- printf "%s-validating" (include "karta.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{/*
+Exporter resource names and labels. The exporter is a separate workload with
+its own ServiceAccount; it never shares the operator's RBAC.
+*/}}
+{{- define "karta.exporter.fullname" -}}
+{{- printf "%s-exporter" .Chart.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "karta.exporter.labels" -}}
+{{ include "karta.labels" . }}
+app.kubernetes.io/component: exporter
+{{- end -}}
+
+{{- define "karta.exporter.selectorLabels" -}}
+{{ include "karta.selectorLabels" . }}
+app.kubernetes.io/component: exporter
+{{- end -}}
+
+{{- define "karta.exporter.serviceAccountName" -}}
+{{- if .Values.exporter.serviceAccount.create -}}
+{{- include "karta.exporter.fullname" . -}}
+{{- else -}}
+{{- required "exporter.serviceAccount.name is required when exporter.serviceAccount.create is false" .Values.exporter.serviceAccount.name -}}
+{{- end -}}
+{{- end -}}

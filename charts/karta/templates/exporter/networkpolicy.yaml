@@ -1,0 +1,29 @@
+{{- if and .Values.exporter.enabled .Values.exporter.networkPolicy.enabled -}}
+{{/*
+The metrics endpoint serves cluster-wide workload identity unauthenticated.
+This policy limits ingress to the metrics port, optionally to a namespace
+selector (e.g. the monitoring namespace).
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "karta.exporter.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "karta.exporter.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "karta.exporter.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: metrics
+          protocol: TCP
+      {{- with .Values.exporter.networkPolicy.allowedNamespaceSelector }}
+      from:
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+      {{- end }}
+{{- end }}

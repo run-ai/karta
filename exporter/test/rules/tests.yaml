@@ -1,0 +1,102 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+#
+# promtool unit tests for the recording rules shipped by the Helm chart.
+# The rules file is rendered from the chart by `make exporter-rules-test`
+# (root Makefile), so template drift is caught here.
+#
+# Scenario: a JobSet "llm" with a prefill instance (one pod, 8 GPUs at 90)
+# and a decode instance (one pod, 1 GPU at 0), plus one unattributed pod.
+# The decode pod carries two identity series (delete/recreate overlap) to
+# prove the max by() join guard keeps the rules evaluating.
+
+rule_files:
+  - .rendered/karta-rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+  - interval: 30s
+    input_series:
+      # prefill: one pod, 8 GPUs at 90 percent
+      - series: 'DCGM_FI_DEV_GPU_UTIL{namespace="team-a", pod="llm-prefill-0-0", gpu="0"}'
+        values: '90x10'
+      - series: 'DCGM_FI_DEV_GPU_UTIL{namespace="team-a", pod="llm-prefill-0-0", gpu="1"}'
+        values: '90x10'
+      - series: 'DCGM_FI_DEV_GPU_UTIL{namespace="team-a", pod="llm-prefill-0-0", gpu="2"}'
+        values: '90x10'
+      - series: 'DCGM_FI_DEV_GPU_UTIL{namespace="team-a", pod="llm-prefill-0-0", gpu="3"}'
+        values: '90x10'
+      - series: 'DCGM_FI_DEV_GPU_UTIL{namespace="team-a", pod="llm-prefill-0-0", gpu="4"}'
+        values: '90x10'
+      - series: 'DCGM_FI_DEV_GPU_UTIL{namespace="team-a", pod="llm-prefill-0-0", gpu="5"}'
+        values: '90x10'
+      - series: 'DCGM_FI_DEV_GPU_UTIL{namespace="team-a", pod="llm-prefill-0-0", gpu="6"}'
+        values: '90x10'
+      - series: 'DCGM_FI_DEV_GPU_UTIL{namespace="team-a", pod="llm-prefill-0-0", gpu="7"}'
+        values: '90x10'
+      # decode: one pod, 1 GPU, idle
+      - series: 'DCGM_FI_DEV_GPU_UTIL{namespace="team-a", pod="llm-decode-0-0", gpu="0"}'
+        values: '0x10'
+      # GPU memory for the decode pod: 1000 MiB used, 3000 MiB free
+      - series: 'DCGM_FI_DEV_FB_USED{namespace="team-a", pod="llm-decode-0-0", gpu="0"}'
+        values: '1000x10'
+      - series: 'DCGM_FI_DEV_FB_FREE{namespace="team-a", pod="llm-decode-0-0", gpu="0"}'
+        values: '3000x10'
+      # a pod no Karta describes: must stay out of every karta:* aggregate
+      - series: 'DCGM_FI_DEV_GPU_UTIL{namespace="team-b", pod="stray-0", gpu="0"}'
+        values: '50x10'
+
+      # identity series from the exporter
+      - series: 'karta_pod_workload_info{namespace="team-a", pod="llm-prefill-0-0", uid="p1", workload="llm", workload_kind="JobSet", workload_group="jobset.x-k8s.io", component="replicatedjob", component_instance="prefill", replica=""}'
+        values: '1x10'
+      # decode pod overlap: recreated pod, two uids alive in the same scrape
+      - series: 'karta_pod_workload_info{namespace="team-a", pod="llm-decode-0-0", uid="p2", workload="llm", workload_kind="JobSet", workload_group="jobset.x-k8s.io", component="replicatedjob", component_instance="decode", replica=""}'
+        values: '1x10'
+      - series: 'karta_pod_workload_info{namespace="team-a", pod="llm-decode-0-0", uid="p2-recreated", workload="llm", workload_kind="JobSet", workload_group="jobset.x-k8s.io", component="replicatedjob", component_instance="decode", replica=""}'
+        values: '1x10'
+
+    promql_expr_test:
+      # REQ-1: workload-level utilization is pod-weighted from the raw join,
+      # never an average of instance averages (which would be 45 here).
+      - expr: karta:gpu_utilization:workload
+        eval_time: 2m
+        exp_samples:
+          - labels: 'karta:gpu_utilization:workload{namespace="team-a", workload="llm", workload_kind="JobSet", workload_group="jobset.x-k8s.io"}'
+            value: 80
+
+      # REQ-2b / UC-2: the prefill and decode imbalance is directly visible.
+      - expr: karta:gpu_utilization:component_instance
+        eval_time: 2m
+        exp_samples:
+          - labels: 'karta:gpu_utilization:component_instance{namespace="team-a", workload="llm", workload_kind="JobSet", workload_group="jobset.x-k8s.io", component="replicatedjob", component_instance="decode"}'
+            value: 0
+          - labels: 'karta:gpu_utilization:component_instance{namespace="team-a", workload="llm", workload_kind="JobSet", workload_group="jobset.x-k8s.io", component="replicatedjob", component_instance="prefill"}'
+            value: 90
+
+      # REQ-2a: component level (single component here, so it matches the
+      # workload number).
+      - expr: karta:gpu_utilization:component
+        eval_time: 2m
+        exp_samples:
+          - labels: 'karta:gpu_utilization:component{namespace="team-a", workload="llm", workload_kind="JobSet", workload_group="jobset.x-k8s.io", component="replicatedjob"}'
+            value: 80
+
+      # REQ-3: used and allocated GPU memory in bytes (used + free = 4000 MiB).
+      - expr: karta:gpu_memory_used_bytes:component_instance{component_instance="decode"}
+        eval_time: 2m
+        exp_samples:
+          - labels: 'karta:gpu_memory_used_bytes:component_instance{namespace="team-a", workload="llm", workload_kind="JobSet", workload_group="jobset.x-k8s.io", component="replicatedjob", component_instance="decode"}'
+            value: 1048576000
+      - expr: karta:gpu_memory_total_bytes:component_instance{component_instance="decode"}
+        eval_time: 2m
+        exp_samples:
+          - labels: 'karta:gpu_memory_total_bytes:component_instance{namespace="team-a", workload="llm", workload_kind="JobSet", workload_group="jobset.x-k8s.io", component="replicatedjob", component_instance="decode"}'
+            value: 4194304000
+
+      # Attribution health: 9 of 10 GPU series join (the stray pod does not).
+      - expr: karta:join_coverage:ratio
+        eval_time: 2m
+        exp_samples:
+          - labels: 'karta:join_coverage:ratio{}'
+            value: 0.9
