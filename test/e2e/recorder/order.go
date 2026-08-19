@@ -10,69 +10,58 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// validateObservedOrder checks the observed states are a legal walk of the journey: required steps appear in
-// order ending at want; Optional or recurring states may be absent; anything else fails.
-func validateObservedOrder(declared []journeyStep, observed []kartav1alpha1.ResourceStatus, want kartav1alpha1.ResourceStatus) error {
-	obs := slices.Compact(slices.Clone(observed)) // collapse consecutive repeats
-	if len(obs) == 0 {
-		return fmt.Errorf("no states observed")
-	}
-	skippable := skippableSteps(declared)
-
-	// walk the observed states through the declared journey, skipping steps that may be absent
-	declaredIdx := 0
-	for _, state := range obs {
-		for declaredIdx < len(declared) && declared[declaredIdx].State != state {
-			if !skippable[declaredIdx] {
-				return fmt.Errorf("required state %q not observed before %q; journey %v, observed %v",
-					declared[declaredIdx].State, state, journeyStates(declared), obs)
-			}
-			declaredIdx++
-		}
-		if declaredIdx == len(declared) {
-			if slices.ContainsFunc(declared, func(s journeyStep) bool { return s.State == state }) {
-				return fmt.Errorf("state %q observed out of journey %v; observed %v", state, journeyStates(declared), obs)
-			}
-			return fmt.Errorf("observed undeclared state %q; journey %v, observed %v", state, journeyStates(declared), obs)
-		}
-		declaredIdx++
+// validateObservedOrder checks that observed is a legal walk of the journey:
+//
+//  1. Consecutive duplicate observations collapse to one visit; an empty
+//     observation list always fails.
+//  2. The last observed state must equal want, the declared terminal.
+//  3. The collapsed walk must be the journey with zero or more absent-allowed
+//     steps removed, in order, nothing extra. A step is allowed to be absent
+//     when it is Optional, or when its state already appears earlier in the
+//     journey: the recorder collapses duplicates, so a declared revisit can
+//     merge into the earlier visit and can never be demanded.
+//
+// Example: journey [Init, Running, Init, Completed] accepts observed
+// [Init, Running, Completed], the declared dip back to Init may be missed;
+// journey [Init, Running, Completed] rejects it, the dip was never declared.
+func validateObservedOrder(journey []journeyStep, observed []kartav1alpha1.ResourceStatus, wantTerminal kartav1alpha1.ResourceStatus) error {
+	journeyStates := make([]kartav1alpha1.ResourceStatus, len(journey))
+	for i, step := range journey {
+		journeyStates[i] = step.State
 	}
 
-	// any required steps left after the walk were never observed
-	for ; declaredIdx < len(declared); declaredIdx++ {
-		if !skippable[declaredIdx] {
-			return fmt.Errorf("required state %q not observed; journey %v, observed %v",
-				declared[declaredIdx].State, journeyStates(declared), obs)
+	// Collapse consecutive duplicate observations: dwelling in a state is one visit.
+	var visits []kartav1alpha1.ResourceStatus
+	for _, state := range observed {
+		if len(visits) == 0 || visits[len(visits)-1] != state {
+			visits = append(visits, state)
 		}
 	}
+	if len(visits) == 0 {
+		return fmt.Errorf("no states observed, want journey %v", journeyStates)
+	}
+	if lastVisit := visits[len(visits)-1]; lastVisit != wantTerminal {
+		return fmt.Errorf("last observed state is %q, want terminal %q (journey %v, observed %v)", lastVisit, wantTerminal, journeyStates, visits)
+	}
 
-	if last := obs[len(obs)-1]; last != want {
-		return fmt.Errorf("terminal must be %q, observed %q; sequence %v", want, last, obs)
+	// Match the journey against the visits, in order: every journey step either matches the next
+	// unmatched visit, or must be allowed to be absent from the walk.
+	nextUnmatchedVisit := 0
+	for stepIndex, step := range journey {
+		stepMatchesNextVisit := nextUnmatchedVisit < len(visits) && visits[nextUnmatchedVisit] == step.State
+		stateDeclaredEarlier := slices.Contains(journeyStates[:stepIndex], step.State)
+
+		switch {
+		case stepMatchesNextVisit:
+			nextUnmatchedVisit++
+		case step.Optional || stateDeclaredEarlier:
+			// Allowed to be absent: a declared revisit merges into the earlier visit.
+		default:
+			return fmt.Errorf("required state %q missing or out of order (journey %v, observed %v)", step.State, journeyStates, visits)
+		}
+	}
+	if nextUnmatchedVisit < len(visits) {
+		return fmt.Errorf("observed state %q is not part of the journey here (journey %v, observed %v)", visits[nextUnmatchedVisit], journeyStates, visits)
 	}
 	return nil
-}
-
-// skippableSteps marks each declared step that may be absent from the observed run: an Optional step, or one
-// whose state recurs earlier (compaction collapses a repeated Running from a scale, or an Initializing dip,
-// into one, so the later occurrences can never be observed on their own).
-func skippableSteps(declared []journeyStep) []bool {
-	skippable := make([]bool, len(declared))
-	for i, s := range declared {
-		skippable[i] = s.Optional
-		for j := 0; j < i; j++ {
-			if declared[j].State == s.State {
-				skippable[i] = true
-				break
-			}
-		}
-	}
-	return skippable
-}
-
-func journeyStates(steps []journeyStep) []kartav1alpha1.ResourceStatus {
-	out := make([]kartav1alpha1.ResourceStatus, len(steps))
-	for i, s := range steps {
-		out[i] = s.State
-	}
-	return out
 }
