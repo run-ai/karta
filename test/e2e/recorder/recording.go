@@ -29,10 +29,11 @@ type Recording struct {
 	Path          string  `json:"-"` // where the run was written; set by the recorder, not serialized
 }
 
-// Result is how the run ended: whether it succeeded, and why not when it did not.
+// Result is how the run ended: whether it succeeded, and everything that went wrong when it did not - the
+// watch, the order check, or cleanup.
 type Result struct {
-	Succeeded      bool   `json:"succeeded"`
-	FailureMessage string `json:"failureMessage,omitempty"`
+	Succeeded bool     `json:"succeeded"`
+	Failures  []string `json:"failures,omitempty"`
 }
 
 const (
