@@ -66,6 +66,13 @@ type Operation struct {
 	Payload   map[string]any `json:"payload"`
 }
 
+// Reader walks a recording's STATE events (Next, then State/Object); ACTION events are skipped.
+type Reader struct {
+	rec         Recording
+	stateEvents []Event
+	pos         int
+}
+
 // states is the ordered own-fields states the recording passed through (STATE events only).
 func (r Recording) states() []string {
 	var out []string
@@ -105,13 +112,6 @@ func loadRecording(path string) (Recording, error) {
 		return r, fmt.Errorf("%s: %w", path, err)
 	}
 	return r, nil
-}
-
-// Reader walks a recording's STATE events (Next, then State/Object); ACTION events are skipped.
-type Reader struct {
-	rec         Recording
-	stateEvents []Event
-	pos         int
 }
 
 func OpenRecording(path string) (*Reader, error) {

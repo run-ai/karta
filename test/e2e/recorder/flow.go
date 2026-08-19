@@ -12,11 +12,6 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// NewFlow starts a flow seeded from a manifest (path relative to test/e2e); declare its journey with Through.
-func NewFlow(r *Recorder, name, manifest string) *Flow {
-	return &Flow{rec: r, name: name, manifest: manifest}
-}
-
 // Flow is a workload journey recorded for testing: the workload manifest plus the ordered stops the workload
 // must reach.
 type Flow struct {
@@ -26,33 +21,10 @@ type Flow struct {
 	journey  []journeyStep
 }
 
-// Through declares the ordered stops of the journey.
-func (f *Flow) Through(steps ...Step) *Flow {
-	for _, s := range steps {
-		f.journey = append(f.journey, s.step)
-	}
-	return f
-}
-
 // Step is one declared stop, built with Reaches and refined with Optional, With, and Do.
 type Step struct {
 	step journeyStep
 }
-
-// Reaches declares a stop the workload must pass through.
-func Reaches(state kartav1alpha1.ResourceStatus) Step {
-	return Step{step: journeyStep{State: state}}
-}
-
-// Optional marks a stop the workload may skip; the order check tolerates its absence.
-func (s Step) Optional() Step { s.step.Optional = true; return s }
-
-// With gates the stop on a predicate over the workload's own fields: the stop is reached once the state
-// matches and the predicate holds.
-func (s Step) With(gate StateCheck) Step { s.step.ActionPredicate = gate; return s }
-
-// Do attaches an action performed once the stop is reached.
-func (s Step) Do(action *Action) Step { s.step.Action = action; return s }
 
 // journeyStep is one stop on a journey. State borrows Karta's ResourceStatus as the shared vocabulary so the
 // replay compares one-to-one; the value is judged from the workload's own fields, never from Karta.
@@ -86,6 +58,39 @@ type Action struct {
 	Patch []byte
 }
 
+// NewFlow starts a flow seeded from a manifest (path relative to test/e2e); declare its journey with Through.
+func NewFlow(r *Recorder, name, manifest string) *Flow {
+	return &Flow{rec: r, name: name, manifest: manifest}
+}
+
+// Through declares the ordered stops of the journey.
+func (f *Flow) Through(steps ...Step) *Flow {
+	for _, s := range steps {
+		f.journey = append(f.journey, s.step)
+	}
+	return f
+}
+
+// Reaches declares a stop the workload must pass through.
+func Reaches(state kartav1alpha1.ResourceStatus) Step {
+	return Step{step: journeyStep{State: state}}
+}
+
+// Optional marks a stop the workload may skip; the order check tolerates its absence.
+func (s Step) Optional() Step { s.step.Optional = true; return s }
+
+// With gates the stop on a predicate over the workload's own fields: the stop is reached once the state
+// matches and the predicate holds.
+func (s Step) With(gate StateCheck) Step { s.step.ActionPredicate = gate; return s }
+
+// Do attaches an action performed once the stop is reached.
+func (s Step) Do(action *Action) Step { s.step.Action = action; return s }
+
+func (f *Flow) want() kartav1alpha1.ResourceStatus { return f.journey[len(f.journey)-1].State }
+
+func (f *Flow) client() client.Client { return f.rec.config.Cluster.Client }
+func (f *Flow) log() io.Writer        { return f.rec.config.Log }
+
 // classify returns the furthest-along state the workload matches, judged from its own fields; states are
 // declared least- to most-advanced, so the walk runs from the end.
 func classify(cr *unstructured.Unstructured, states []namedState) kartav1alpha1.ResourceStatus {
@@ -96,8 +101,3 @@ func classify(cr *unstructured.Unstructured, states []namedState) kartav1alpha1.
 	}
 	return ""
 }
-
-func (f *Flow) want() kartav1alpha1.ResourceStatus { return f.journey[len(f.journey)-1].State }
-
-func (f *Flow) client() client.Client { return f.rec.config.Cluster.Client }
-func (f *Flow) log() io.Writer        { return f.rec.config.Log }
