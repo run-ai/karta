@@ -47,6 +47,7 @@ Use `Makefile` to build, test, lint, and generate code (e.g. `make test`, `make 
 ### Naming and Go patterns
 
 - Files `snake_case.go`; types `PascalCase`; interfaces `-er` suffix or `Interface`; boolean predicates use `is`/`has`/`should` prefix.
+- File layout: types, consts, and vars first, functions after, in rough call order. The main type leads, and a type is declared right below its first user (never after a function that uses it).
 - `context.Context` first parameter; pointer receivers for state-mutating methods; constructors return interface types when an interface exists; wrap errors with `%w`; do not log and return the same error.
 - Test files live next to the code (`*_test.go` in the same package).
 - Prefer idiomatic go and effective go best practices (switch/case blocks, sentinel error types etc) 
