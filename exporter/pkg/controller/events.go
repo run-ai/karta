@@ -234,6 +234,7 @@ func (c *Controller) onPodDelete(obj any) {
 	}
 
 	c.store.DeletePod(pod.UID)
+	c.index.DeleteObject(pod.UID)
 	c.index.ForgetPending(pod.Namespace + "/" + pod.Name)
 	c.markEvent()
 }
@@ -254,8 +255,17 @@ func (c *Controller) attributePodByKey(podKey string) {
 // stores the attribution. Pods that do not belong to a described workload
 // are removed from the store; pods blocked on a not-yet-observed owner are
 // parked and retried when that owner shows up.
+// The pod itself is fed into the owner index first: pods can be middle
+// owners in real chains (a LeaderWorkerSet worker StatefulSet is owned by
+// its leader pod), and other pods may be parked waiting for this one.
 func (c *Controller) attributePod(pod *corev1.Pod) {
 	podKey := pod.Namespace + "/" + pod.Name
+
+	for _, waitingKey := range c.index.UpsertObject(pod.UID, pod.OwnerReferences) {
+		if waitingKey != podKey {
+			defer c.attributePodByKey(waitingKey)
+		}
+	}
 
 	result := c.index.RootFor(pod.OwnerReferences, c.registry.IsRoot)
 	switch result.Outcome {

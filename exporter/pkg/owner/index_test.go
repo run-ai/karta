@@ -92,6 +92,20 @@ var _ = Describe("Index", func() {
 		Expect(result.Outcome).To(Equal(OutcomeDepthExceeded))
 	})
 
+	It("walks through a pod acting as a middle owner (the LeaderWorkerSet chain)", func() {
+		lwsGroupKind := schema.GroupKind{Group: "leaderworkerset.x-k8s.io", Kind: "LeaderWorkerSet"}
+		isLWSRoot := func(groupKind schema.GroupKind) bool { return groupKind == lwsGroupKind }
+
+		index.UpsertObject("leader-sts", []metav1.OwnerReference{ref("leaderworkerset.x-k8s.io/v1", "LeaderWorkerSet", "serve", "lws-1")})
+		index.UpsertObject("leader-pod", []metav1.OwnerReference{ref("apps/v1", "StatefulSet", "serve", "leader-sts")})
+		index.UpsertObject("worker-sts", []metav1.OwnerReference{ref("", "Pod", "serve-0", "leader-pod")})
+
+		result := index.RootFor([]metav1.OwnerReference{ref("apps/v1", "StatefulSet", "serve-0", "worker-sts")}, isLWSRoot)
+
+		Expect(result.Outcome).To(Equal(OutcomeFound))
+		Expect(result.Root.UID).To(Equal(types.UID("lws-1")))
+	})
+
 	It("forgets pending pods on pod deletion", func() {
 		index.MarkPending("job-1", "team-a/prefill-0")
 		index.ForgetPending("team-a/prefill-0")
