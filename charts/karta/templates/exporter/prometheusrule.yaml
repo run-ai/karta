@@ -60,13 +60,15 @@ spec:
               {{ $joinClause }}
             )
         {{- end }}
-        # Attribution health: the fraction of GPU series that join the
-        # identity series. A drop below 1 means a label mismatch between
-        # the telemetry source and the exporter; alert on it.
+        # Attribution health: the fraction of pod-attributed GPU series that
+        # join the identity series. Free GPUs carry no pod label and are not
+        # attribution failures, so they are excluded from both sides. A drop
+        # below 1 means a label mismatch between the telemetry source and the
+        # exporter; alert on it.
         - record: karta:join_coverage:ratio
           expr: |
-            count({{ $rule.gpuUtilizationMetric }} * on ({{ $join }}) group_left ()
+            count({{ $rule.gpuUtilizationMetric }}{pod!=""} * on ({{ $join }}) group_left ()
               max by ({{ $join }}) (karta_pod_workload_info))
             /
-            count({{ $rule.gpuUtilizationMetric }})
+            count({{ $rule.gpuUtilizationMetric }}{pod!=""})
 {{- end }}
