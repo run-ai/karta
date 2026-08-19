@@ -180,8 +180,10 @@ helm-validate: exporter-rules-test ## Validate the chart renders and the CRD Con
 
 .PHONY: exporter-rules-test
 exporter-rules-test: ## Render the chart's recording rules and run the promtool unit tests
-	@command -v promtool >/dev/null 2>&1 || { echo "promtool not found, skipping recording-rule tests"; exit 0; }
 	@set -e; \
+	if ! command -v promtool >/dev/null 2>&1; then \
+		echo "promtool not found, skipping recording-rule tests"; exit 0; \
+	fi; \
 	mkdir -p exporter/test/rules/.rendered; \
 	helm template rules-test $(KARTA_CHART_DIR) --set exporter.enabled=true --api-versions monitoring.coreos.com/v1 \
 		| python3 hack/extract-prometheus-rules.py > exporter/test/rules/.rendered/karta-rules.yaml; \
