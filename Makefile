@@ -54,11 +54,12 @@ generate-mocks: ## Generate mocks using go generate
 .PHONY: test
 test: generate-mocks ## Run tests with mock generation
 	go test ./...
+	go -C test/e2e test ./recorder/...
 
 .PHONY: test-replay
-test-replay: ## Offline tests of the e2e module: recorder unit tests + replay golden (the cluster-driven flows are compile-checked only)
+test-replay: ## Replay the recorded fixtures through Karta (the cluster-driven flows are compile-checked only)
 	go -C test/e2e build ./...
-	go -C test/e2e test $$(cd test/e2e && go list ./... | grep -v '/flows$$')
+	go -C test/e2e test ./replay_tests/...
 
 lint-go: golangci-lint
 	echo "Running golangci linter"
