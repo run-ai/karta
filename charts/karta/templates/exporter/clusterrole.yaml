@@ -15,7 +15,11 @@ aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         karta.run.ai/exporter-rbac: "true"
-rules: []
+{{/*
+No rules field here: the RBAC aggregation controller owns .rules on an
+aggregated ClusterRole, and rendering it makes every helm upgrade conflict
+with that controller.
+*/}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
