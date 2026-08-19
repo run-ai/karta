@@ -37,14 +37,6 @@ type journeyStep struct {
 	Optional        bool // a transient step the workload may miss; the order check tolerates its absence
 }
 
-// StateCheck recognises a state from the workload's own fields, never from Karta.
-type StateCheck func(*unstructured.Unstructured) bool
-
-type namedState struct {
-	Name  kartav1alpha1.ResourceStatus
-	Match StateCheck
-}
-
 type ActionType string
 
 const (
@@ -56,6 +48,14 @@ const (
 type Action struct {
 	Type  ActionType
 	Patch []byte
+}
+
+// StateCheck recognises a state from the workload's own fields, never from Karta.
+type StateCheck func(*unstructured.Unstructured) bool
+
+type namedState struct {
+	Name  kartav1alpha1.ResourceStatus
+	Match StateCheck
 }
 
 // NewFlow starts a flow seeded from a manifest (path relative to test/e2e); declare its journey with Through.
