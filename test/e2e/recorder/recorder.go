@@ -177,8 +177,10 @@ func (f *Flow) deleteWorkload(ctx context.Context, workload *unstructured.Unstru
 func (f *Flow) observe(ctx context.Context, workload *unstructured.Unstructured) *observation {
 	o := &observation{flow: f, workload: workload, pending: actionSteps(f.journey)}
 
-	// A workload already at its terminal state when Create returns never produces a watch event (the watch
-	// replays only newer resourceVersions), so record it straight from the create response.
+	// A workload whose terminal state is already visible in the create response may never produce a watch
+	// event at all: a suspended CronJob never schedules, so its controller never writes status, and a watch
+	// (which replays only events after the create) would wait for the timeout. Record the create response
+	// directly instead.
 	if isWorkloadObserved(workload) && o.hasReachedTerminal(classify(workload, f.rec.states)) {
 		o.record(ctx, workload)
 		return o
