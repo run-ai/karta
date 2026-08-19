@@ -118,6 +118,7 @@ func (c *Controller) processWorkload(obj any, forceReattribute bool) {
 	previous, hadPrevious := c.store.Workload(u.GetUID())
 
 	record, err := state.Build(context.Background(), entry, u, u.GetUID(), ref)
+	record.Generation = u.GetGeneration()
 	if err != nil {
 		c.attributionErrors.WithLabelValues(collector.ReasonStatusEval).Inc()
 		c.logger.Warn("workload state evaluation failed", "workload", ref.Namespace+"/"+ref.Name, "kind", ref.Kind, "error", err)

@@ -12,11 +12,12 @@ import (
 // Metric names exposed to consumers. These names, together with the label
 // names below, are Karta's public metric contract: additive-only changes.
 const (
-	MetricPodWorkloadInfo   = "karta_pod_workload_info"
-	MetricWorkloadInfo      = "karta_workload_info"
-	MetricWorkloadStatus    = "karta_workload_status"
-	MetricComponentReplicas = "karta_workload_component_replicas"
-	MetricComponentPods     = "karta_workload_component_pods"
+	MetricPodWorkloadInfo    = "karta_pod_workload_info"
+	MetricWorkloadInfo       = "karta_workload_info"
+	MetricWorkloadStatus     = "karta_workload_status"
+	MetricComponentReplicas  = "karta_workload_component_replicas"
+	MetricComponentPods      = "karta_workload_component_pods"
+	MetricWorkloadGeneration = "karta_workload_generation"
 )
 
 // Self-observability metric names. Not part of the consumer contract.

@@ -34,6 +34,7 @@ type WorkloadRecord struct {
 	UID        types.UID
 	Ref        WorkloadRef
 	Karta      string
+	Generation int64
 	HasStatus  bool
 	Phases     []v1alpha1.ResourceStatus
 	Components []ComponentState

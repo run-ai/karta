@@ -32,6 +32,7 @@ type Collector struct {
 	workloadStatusDesc    *prometheus.Desc
 	componentReplicasDesc *prometheus.Desc
 	componentPodsDesc     *prometheus.Desc
+	generationDesc        *prometheus.Desc
 	workloadsDesc         *prometheus.Desc
 	unattributedDesc      *prometheus.Desc
 	kartasDesc            *prometheus.Desc
@@ -56,6 +57,9 @@ func New(s *store.Store, options Options) *Collector {
 		componentPodsDesc: prometheus.NewDesc(MetricComponentPods,
 			"Observed pod count per component instance, broken down by pod phase.",
 			append(append([]string{}, workloadLabels...), LabelComponent, LabelComponentInstance, LabelPhase), nil),
+		generationDesc: prometheus.NewDesc(MetricWorkloadGeneration,
+			"The workload's metadata.generation. A step change marks a spec change.",
+			workloadLabels, nil),
 		workloadsDesc: prometheus.NewDesc(MetricExporterWorkloads,
 			"Number of Karta-described workloads currently tracked.", nil, nil),
 		unattributedDesc: prometheus.NewDesc(MetricExporterUnattributedPods,
@@ -71,6 +75,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.workloadStatusDesc
 	ch <- c.componentReplicasDesc
 	ch <- c.componentPodsDesc
+	ch <- c.generationDesc
 	ch <- c.workloadsDesc
 	ch <- c.unattributedDesc
 	ch <- c.kartasDesc
@@ -90,6 +95,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		ref := workload.Ref
 		ch <- prometheus.MustNewConstMetric(c.workloadInfoDesc, prometheus.GaugeValue, 1,
 			ref.Namespace, ref.Name, ref.Kind, ref.Group, ref.Version, workload.Karta)
+		ch <- prometheus.MustNewConstMetric(c.generationDesc, prometheus.GaugeValue, float64(workload.Generation),
+			ref.Namespace, ref.Name, ref.Kind, ref.Group)
 
 		if workload.HasStatus {
 			matched := make(map[string]struct{}, len(workload.Phases))

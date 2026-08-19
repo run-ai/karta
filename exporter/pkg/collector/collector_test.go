@@ -39,6 +39,9 @@ karta_workload_component_pods{component="replicatedjob",component_instance="pref
 # TYPE karta_workload_component_replicas gauge
 karta_workload_component_replicas{component="replicatedjob",component_instance="decode",namespace="team-a",workload="llm",workload_group="jobset.x-k8s.io",workload_kind="JobSet"} 1
 karta_workload_component_replicas{component="replicatedjob",component_instance="prefill",namespace="team-a",workload="llm",workload_group="jobset.x-k8s.io",workload_kind="JobSet"} 2
+# HELP karta_workload_generation The workload's metadata.generation. A step change marks a spec change.
+# TYPE karta_workload_generation gauge
+karta_workload_generation{namespace="team-a",workload="llm",workload_group="jobset.x-k8s.io",workload_kind="JobSet"} 3
 # HELP karta_workload_info Identity and provenance of a Karta-described workload. Value is always 1.
 # TYPE karta_workload_info gauge
 karta_workload_info{karta="jobset-x-k8s-io-jobset-v1alpha2",namespace="team-a",workload="llm",workload_group="jobset.x-k8s.io",workload_kind="JobSet",workload_version="v1alpha2"} 1
@@ -60,11 +63,12 @@ func fixtureStore() *store.Store {
 	ref := store.WorkloadRef{Namespace: "team-a", Name: "llm", Group: "jobset.x-k8s.io", Version: "v1alpha2", Kind: "JobSet"}
 
 	s.UpsertWorkload(store.WorkloadRecord{
-		UID:       "w1",
-		Ref:       ref,
-		Karta:     "jobset-x-k8s-io-jobset-v1alpha2",
-		HasStatus: true,
-		Phases:    []v1alpha1.ResourceStatus{v1alpha1.RunningStatus},
+		UID:        "w1",
+		Ref:        ref,
+		Karta:      "jobset-x-k8s-io-jobset-v1alpha2",
+		Generation: 3,
+		HasStatus:  true,
+		Phases:     []v1alpha1.ResourceStatus{v1alpha1.RunningStatus},
 		Components: []store.ComponentState{
 			{Component: "replicatedjob", Instance: "prefill", Replicas: ptr.To(int32(2))},
 			{Component: "replicatedjob", Instance: "decode", Replicas: ptr.To(int32(1))},
@@ -88,6 +92,7 @@ var _ = Describe("Collector", func() {
 		MetricWorkloadStatus,
 		MetricComponentReplicas,
 		MetricComponentPods,
+		MetricWorkloadGeneration,
 	}
 
 	It("renders the exact metric contract from a snapshot", func() {
