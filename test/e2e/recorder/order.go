@@ -31,7 +31,7 @@ func validateObservedOrder(journey []journeyStep, observed []kartav1alpha1.Resou
 	}
 
 	// Collapse consecutive duplicate observations: dwelling in a state is one visit.
-	var visits []kartav1alpha1.ResourceStatus
+	visits := make([]kartav1alpha1.ResourceStatus, 0, len(observed))
 	for _, state := range observed {
 		if len(visits) == 0 || visits[len(visits)-1] != state {
 			visits = append(visits, state)
@@ -41,7 +41,8 @@ func validateObservedOrder(journey []journeyStep, observed []kartav1alpha1.Resou
 		return fmt.Errorf("no states observed, want journey %v", journeyStates)
 	}
 	if lastVisit := visits[len(visits)-1]; lastVisit != wantTerminal {
-		return fmt.Errorf("last observed state is %q, want terminal %q (journey %v, observed %v)", lastVisit, wantTerminal, journeyStates, visits)
+		return fmt.Errorf("last observed state is %q, want terminal %q (journey %v, observed %v)",
+			lastVisit, wantTerminal, journeyStates, visits)
 	}
 
 	// Match the journey against the visits, in order: every journey step either matches the next
@@ -57,11 +58,13 @@ func validateObservedOrder(journey []journeyStep, observed []kartav1alpha1.Resou
 		case step.Optional || stateDeclaredEarlier:
 			// Allowed to be absent: a declared revisit merges into the earlier visit.
 		default:
-			return fmt.Errorf("required state %q missing or out of order (journey %v, observed %v)", step.State, journeyStates, visits)
+			return fmt.Errorf("required state %q missing or out of order (journey %v, observed %v)",
+				step.State, journeyStates, visits)
 		}
 	}
 	if nextUnmatchedVisit < len(visits) {
-		return fmt.Errorf("observed state %q is not part of the journey here (journey %v, observed %v)", visits[nextUnmatchedVisit], journeyStates, visits)
+		return fmt.Errorf("observed state %q is not part of the journey here (journey %v, observed %v)",
+			visits[nextUnmatchedVisit], journeyStates, visits)
 	}
 	return nil
 }
