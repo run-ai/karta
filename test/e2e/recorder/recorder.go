@@ -185,7 +185,7 @@ func (f *Flow) observe(ctx context.Context, workload *unstructured.Unstructured)
 		o.record(ctx, workload)
 		return o
 	}
-	o.follow(ctx)
+	o.watchAndAct(ctx)
 	return o
 }
 

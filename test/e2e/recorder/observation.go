@@ -43,9 +43,9 @@ type snapshot struct {
 	staleObservedGeneration bool // the controller had not observed the spec yet; recorded, but never judged
 }
 
-// follow watches the workload until the flow finishes or fails, recording each CR it sees. A watch that
-// cannot resume fails the run.
-func (o *observation) follow(ctx context.Context) {
+// watchAndAct watches the workload until the flow finishes or fails, recording each CR it sees and acting
+// on the journey steps as they are reached. A watch that cannot resume fails the run.
+func (o *observation) watchAndAct(ctx context.Context) {
 	watcher, err := o.flow.startWatch(ctx, o.workload)
 	if err != nil {
 		o.failure = err.Error()
