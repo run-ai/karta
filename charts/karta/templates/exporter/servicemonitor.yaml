@@ -13,6 +13,10 @@ spec:
   endpoints:
     - port: metrics
       path: /metrics
+      # The identity series carry namespace and pod labels of the attributed
+      # pods; without honor_labels Prometheus would overwrite them with the
+      # exporter's own target labels and every join would silently miss.
+      honorLabels: true
       # The exposition grows with pod count; the default 10s scrape timeout
       # is too tight on large clusters.
       interval: {{ .Values.exporter.serviceMonitor.interval }}
