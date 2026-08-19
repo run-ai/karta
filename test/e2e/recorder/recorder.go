@@ -92,28 +92,45 @@ func (r *Recorder) SetTimeout(d time.Duration) *Recorder {
 }
 
 // Run creates the workload, drives it through the journey, and returns the recording of what it observed;
-// pass it to Save to persist. On a flow-level failure the recording is still returned with result.succeeded false.
-func (f *Flow) Run(ctx context.Context) (*Recording, error) {
+// pass it to Save to persist. On any failure the recording is still returned, with the reasons collected in
+// result.failures.
+func (f *Flow) Run(ctx context.Context) (out *Recording, err error) {
 	if len(f.journey) == 0 {
 		return nil, fmt.Errorf("flow %s declares no stops", f.name)
 	}
-	workload, err := f.createWorkload(ctx)
-	if err != nil {
-		return nil, err
+	workload, createErr := f.createWorkload(ctx)
+	if createErr != nil {
+		return nil, createErr
 	}
-	defer f.deleteWorkload(ctx, workload)
+	// A cleanup failure is recorded and fails the run: a leaked workload leaves the namespace dirty for the
+	// flows after this one.
+	defer func() {
+		deleteErr := f.deleteWorkload(ctx, workload)
+		if deleteErr == nil {
+			return
+		}
+		msg := fmt.Sprintf("cleanup: delete %s/%s failed: %v", workload.GetNamespace(), workload.GetName(), deleteErr)
+		fmt.Fprintf(f.log(), "%s\n", msg)
+		if out != nil {
+			out.Result.Succeeded = false
+			out.Result.Failures = append(out.Result.Failures, msg)
+		}
+		if err == nil {
+			err = errors.New(msg)
+		}
+	}()
 
 	flowCtx, cancel := context.WithTimeout(ctx, f.rec.timeout)
 	defer cancel()
 
 	obs := f.observe(flowCtx, workload)
-	out := f.buildRecording(obs)
+	out = f.buildRecording(obs)
 	if obs.failure != "" {
-		out.Result = Result{Succeeded: false, FailureMessage: obs.failure}
+		out.Result = Result{Failures: []string{obs.failure}}
 		return out, errors.New(obs.failure)
 	}
 	if orderErr := validateObservedOrder(f.journey, obs.states(), f.want()); orderErr != nil {
-		out.Result = Result{Succeeded: false, FailureMessage: orderErr.Error()}
+		out.Result = Result{Failures: []string{orderErr.Error()}}
 		return out, orderErr
 	}
 	out.Result = Result{Succeeded: true}
@@ -137,13 +154,21 @@ func (f *Flow) createWorkload(ctx context.Context) (*unstructured.Unstructured, 
 	return workload, nil
 }
 
-// deleteWorkload removes the workload. It runs on a fresh, bounded context so cleanup still happens after
-// the flow's own context was cancelled; a failed delete is logged, not fatal.
-func (f *Flow) deleteWorkload(ctx context.Context, workload *unstructured.Unstructured) {
+// deleteWorkload removes the workload, retrying transient failures. It runs on a fresh, bounded context so
+// cleanup still happens after the flow's own context was cancelled; NotFound counts as deleted.
+func (f *Flow) deleteWorkload(ctx context.Context, workload *unstructured.Unstructured) error {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 	defer cancel()
-	if err := f.client().Delete(ctx, workload); err != nil && !apierrors.IsNotFound(err) {
-		fmt.Fprintf(f.log(), "cleanup: delete %s/%s failed: %v\n", workload.GetNamespace(), workload.GetName(), err)
+	for {
+		err := f.client().Delete(ctx, workload)
+		if err == nil || apierrors.IsNotFound(err) {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return err
+		case <-time.After(2 * time.Second):
+		}
 	}
 }
 
@@ -186,7 +211,7 @@ func (f *Flow) buildRecording(obs *observation) *Recording {
 }
 
 // Save stamps fx onto rec and writes it under <OutputDir>/<operator>/<version>/<kartaName>/<flow>.yaml,
-// returning the path. A failed run is saved too (result.succeeded false and the reason in result.failureMessage); a nil recording is a no-op.
+// returning the path. A failed run is saved too (result.succeeded false and the reasons in result.failures); a nil recording is a no-op.
 func (r *Recorder) Save(fx Fixture, rec *Recording) (string, error) {
 	if rec == nil {
 		return "", nil

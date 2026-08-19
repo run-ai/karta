@@ -22,7 +22,7 @@ func TestRecordingRoundTrips(t *testing.T) {
 		KartaName:     "batch-job-v1",
 		Flow:          "resumed",
 		Want:          string(v1alpha1.CompletedStatus),
-		Result:        Result{Succeeded: false, FailureMessage: "watch lost its position"},
+		Result:        Result{Failures: []string{"watch lost its position"}},
 		Events: []Event{
 			{Kind: EventState, State: "Suspended", ResourceVersion: "101", Object: map[string]interface{}{
 				"kind": "Job", "metadata": map[string]interface{}{"name": "j"},
@@ -63,7 +63,7 @@ func TestRecordingRoundTrips(t *testing.T) {
 	if got.Events[0].StaleObservedGeneration || !got.Events[2].StaleObservedGeneration {
 		t.Errorf("staleObservedGeneration flag did not round-trip: %v, %v", got.Events[0].StaleObservedGeneration, got.Events[2].StaleObservedGeneration)
 	}
-	if got.Result.Succeeded || got.Result.FailureMessage != "watch lost its position" || got.Events[0].ResourceVersion != "101" {
+	if got.Result.Succeeded || len(got.Result.Failures) != 1 || got.Result.Failures[0] != "watch lost its position" || got.Events[0].ResourceVersion != "101" {
 		t.Errorf("result/resourceVersion did not round-trip: %+v, %q", got.Result, got.Events[0].ResourceVersion)
 	}
 	if v, ok := act.Operation.Payload["spec"].(map[string]interface{})["suspend"]; !ok || v != false {
