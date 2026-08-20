@@ -58,13 +58,13 @@ func (o *observation) watchAndAct(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			o.failure = fmt.Sprintf("did not reach %q within %s; observed %v\nlast-seen status:\n%s",
-				o.flow.want(), o.flow.rec.timeout, o.states(), dumpStatus(o.lastSeen))
+				o.flow.terminalState(), o.flow.rec.timeout, o.states(), dumpStatus(o.lastSeen))
 			return
 		case event, open := <-watcher.ResultChan():
 			switch {
 			case !open:
 				// The RetryWatcher resumes transient drops itself; it gives up only when it cannot resume
-				// from its position (410 Gone, the history was compacted). Fail fast and re-record.
+				// from its position (410 Gone, the history was compacted). Fail fast; a human re-records.
 				o.failure = fmt.Sprintf("watch lost its position and cannot resume; last watch error: %v; observed %v; re-record the flow\nlast-seen status:\n%s",
 					lastWatchErr, o.states(), dumpStatus(o.lastSeen))
 				return
@@ -73,7 +73,9 @@ func (o *observation) watchAndAct(ctx context.Context) {
 			default:
 				cr, ok := event.Object.(*unstructured.Unstructured)
 				if !ok {
-					continue // a bookmark carries no workload object
+					o.failure = fmt.Sprintf("watch delivered a %T instead of the workload; observed %v",
+						event.Object, o.states())
+					return
 				}
 				if o.record(ctx, cr) {
 					return
@@ -96,12 +98,8 @@ func (f *Flow) startWatch(ctx context.Context, workload *unstructured.Unstructur
 	}
 
 	startRV := workload.GetResourceVersion()
-	if startRV == "" { // Create was a no-op (the object already existed); fetch a current RV to start from
-		current := blankWithGVK(workload)
-		if err := f.client().Get(ctx, client.ObjectKeyFromObject(workload), current); err != nil {
-			return nil, fmt.Errorf("get %s for watch resource version: %w", workload.GetName(), err)
-		}
-		startRV = current.GetResourceVersion()
+	if startRV == "" {
+		return nil, fmt.Errorf("workload %s has no resourceVersion to watch from", workload.GetName())
 	}
 
 	return watchtools.NewRetryWatcherWithContext(ctx, startRV, &cache.ListWatch{
@@ -123,13 +121,14 @@ func (o *observation) record(ctx context.Context, cr *unstructured.Unstructured)
 		// check and the run is saved for triage, rather than skipping it silently.
 		state = kartav1alpha1.UndefinedStatus
 	}
-	observed := isWorkloadObserved(cr)
+	observed := hasObservedCurrentGeneration(cr)
 	o.keep(cr, state, observed)
 	if !observed {
 		return false
 	}
-	if o.advanceStep(ctx, state, cr) {
-		return true // the action failed; stop and report it
+	if err := o.advanceStep(ctx, state, cr); err != nil {
+		o.failure = err.Error()
+		return true
 	}
 	return o.hasReachedTerminal(state)
 }
@@ -146,24 +145,23 @@ func (o *observation) keep(cr *unstructured.Unstructured, state kartav1alpha1.Re
 }
 
 // advanceStep performs the next pending step's action if the workload just reached its state and gate, then
-// drops it from pending. It reports whether the action failed, which stops the run.
-func (o *observation) advanceStep(ctx context.Context, state kartav1alpha1.ResourceStatus, cr *unstructured.Unstructured) (actionFailed bool) {
+// drops it from pending. A failed action is returned as the error and ends the run.
+func (o *observation) advanceStep(ctx context.Context, state kartav1alpha1.ResourceStatus, cr *unstructured.Unstructured) error {
 	next := o.pending
 	reached := len(next) > 0 && state == next[0].State &&
-		(next[0].ActionPredicate == nil || next[0].ActionPredicate(cr))
+		(next[0].ReachedWhen == nil || next[0].ReachedWhen(cr))
 	if !reached {
-		return false
+		return nil
 	}
 	if next[0].Action != nil {
 		action, err := o.flow.performAction(ctx, o.workload, next[0].Action)
 		if err != nil {
-			o.failure = err.Error()
-			return true
+			return err
 		}
 		o.recordAction(action)
 	}
 	o.pending = next[1:]
-	return false
+	return nil
 }
 
 // performAction performs the action's operation on the workload and returns the recorded operation. The
@@ -194,7 +192,7 @@ func (o *observation) recordAction(action *RecordedAction) {
 
 // hasReachedTerminal reports whether state is the flow's terminal state and no action steps remain.
 func (o *observation) hasReachedTerminal(state kartav1alpha1.ResourceStatus) bool {
-	return state == o.flow.want() && len(o.pending) == 0
+	return state == o.flow.terminalState() && len(o.pending) == 0
 }
 
 // states is the ordered sequence of observed-frame states - the walk the order check validates.

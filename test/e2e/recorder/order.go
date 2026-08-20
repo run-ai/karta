@@ -14,7 +14,7 @@ import (
 //
 //  1. Consecutive duplicate observations collapse to one visit; an empty
 //     observation list always fails.
-//  2. The last observed state must equal want, the declared terminal.
+//  2. The last observed state must equal the expected terminal.
 //  3. The collapsed walk must be the journey with zero or more absent-allowed
 //     steps removed, in order, nothing extra. A step is allowed to be absent
 //     when it is Optional, or when its state already appears earlier in the
@@ -24,10 +24,13 @@ import (
 // Example: journey [Init, Running, Init, Completed] accepts observed
 // [Init, Running, Completed], the declared dip back to Init may be missed;
 // journey [Init, Running, Completed] rejects it, the dip was never declared.
-func validateObservedOrder(journey []journeyStep, observed []kartav1alpha1.ResourceStatus, wantTerminal kartav1alpha1.ResourceStatus) error {
+func validateObservedOrder(journey []journeyStep, observed []kartav1alpha1.ResourceStatus, expectedTerminal kartav1alpha1.ResourceStatus) error {
 	journeyStates := make([]kartav1alpha1.ResourceStatus, len(journey))
 	for i, step := range journey {
 		journeyStates[i] = step.State
+	}
+	if len(observed) == 0 {
+		return fmt.Errorf("no states observed (journey %v)", journeyStates)
 	}
 
 	// Collapse consecutive duplicate observations: dwelling in a state is one visit.
@@ -37,12 +40,9 @@ func validateObservedOrder(journey []journeyStep, observed []kartav1alpha1.Resou
 			visits = append(visits, state)
 		}
 	}
-	if len(visits) == 0 {
-		return fmt.Errorf("no states observed, want journey %v", journeyStates)
-	}
-	if lastVisit := visits[len(visits)-1]; lastVisit != wantTerminal {
-		return fmt.Errorf("last observed state is %q, want terminal %q (journey %v, observed %v)",
-			lastVisit, wantTerminal, journeyStates, visits)
+	if lastVisit := visits[len(visits)-1]; lastVisit != expectedTerminal {
+		return fmt.Errorf("last observed state is %q, expected terminal %q (journey %v, observed %v)",
+			lastVisit, expectedTerminal, journeyStates, visits)
 	}
 
 	// Match the journey against the visits, in order: every journey step either matches the next

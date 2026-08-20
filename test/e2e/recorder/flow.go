@@ -12,7 +12,7 @@ import (
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// Flow is a workload journey recorded for testing: the workload manifest plus the ordered stops the workload
+// Flow is a workload journey recorded for testing: the workload manifest plus the ordered steps the workload
 // must reach.
 type Flow struct {
 	rec      *Recorder
@@ -21,20 +21,20 @@ type Flow struct {
 	journey  []journeyStep
 }
 
-// Step is one declared stop, built with Reaches and refined with Optional, With, and Do.
+// Step is one declared journey step, built with Reaches and refined with Optional, With, and Do.
 type Step struct {
 	step journeyStep
 }
 
-// journeyStep is one stop on a journey. State borrows Karta's ResourceStatus as the shared vocabulary so the
+// journeyStep is one step of a journey. State borrows Karta's ResourceStatus as the shared vocabulary so the
 // replay compares one-to-one; the value is judged from the workload's own fields, never from Karta.
-// ActionPredicate lets the same state appear more than once (a scale flow is Running at 1, 3, then 1): the
+// ReachedWhen lets the same state appear more than once (a scale flow is Running at 1, 3, then 1): the
 // step is reached only once the predicate holds, performing its action.
 type journeyStep struct {
-	State           kartav1alpha1.ResourceStatus
-	Action          *Action
-	ActionPredicate StateCheck
-	Optional        bool // a transient step the workload may miss; the order check tolerates its absence
+	State       kartav1alpha1.ResourceStatus
+	Action      *Action
+	ReachedWhen StateCheck
+	Optional    bool // a transient step the workload may miss; the order check tolerates its absence
 }
 
 type ActionType string
@@ -63,7 +63,7 @@ func NewFlow(r *Recorder, name, manifest string) *Flow {
 	return &Flow{rec: r, name: name, manifest: manifest}
 }
 
-// Through declares the ordered stops of the journey.
+// Through declares the ordered steps of the journey.
 func (f *Flow) Through(steps ...Step) *Flow {
 	for _, s := range steps {
 		f.journey = append(f.journey, s.step)
@@ -71,29 +71,29 @@ func (f *Flow) Through(steps ...Step) *Flow {
 	return f
 }
 
-// Reaches declares a stop the workload must pass through.
+// Reaches declares a step the workload must pass through.
 func Reaches(state kartav1alpha1.ResourceStatus) Step {
 	return Step{step: journeyStep{State: state}}
 }
 
-// Optional marks a stop the workload may skip; the order check tolerates its absence.
+// Optional marks a step the workload may skip; the order check tolerates its absence.
 func (s Step) Optional() Step { s.step.Optional = true; return s }
 
-// With gates the stop on a predicate over the workload's own fields: the stop is reached once the state
+// With gates the step on a predicate over the workload's own fields: the step is reached once the state
 // matches and the predicate holds.
-func (s Step) With(gate StateCheck) Step { s.step.ActionPredicate = gate; return s }
+func (s Step) With(gate StateCheck) Step { s.step.ReachedWhen = gate; return s }
 
-// Do attaches an action performed once the stop is reached.
+// Do attaches an action performed once the step is reached.
 func (s Step) Do(action *Action) Step { s.step.Action = action; return s }
 
-func (f *Flow) want() kartav1alpha1.ResourceStatus { return f.journey[len(f.journey)-1].State }
+func (f *Flow) terminalState() kartav1alpha1.ResourceStatus { return f.journey[len(f.journey)-1].State }
 
 func (f *Flow) client() client.Client { return f.rec.config.Cluster.Client }
 func (f *Flow) log() io.Writer        { return f.rec.config.Log }
 
-// classify returns the furthest-along state the workload matches, judged from its own fields; states are
-// declared least- to most-advanced, so the walk runs from the end.
+// classify returns the furthest-along state the workload matches, judged from its own fields.
 func classify(cr *unstructured.Unstructured, states []namedState) kartav1alpha1.ResourceStatus {
+	// States are declared least- to most-advanced, so the walk runs from the end.
 	for i := len(states) - 1; i >= 0; i-- {
 		if states[i].Match(cr) {
 			return states[i].Name
