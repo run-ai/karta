@@ -6,7 +6,8 @@
 Drives a workload on a live cluster through a declared flow and records every distinct CR
 it passes through into a YAML fixture. State is judged from the workload's own fields,
 never from Karta, so the offline replay can feed the fixture through Karta and check it
-reads each state the same way. No Ginkgo or Gomega; failures come back as errors.
+reads each state the same way. The recorder source pulls in no test framework; failures
+come back as errors. The unit tests are Ginkgo, like the rest of the repo.
 
 ## Files
 
@@ -18,13 +19,14 @@ reads each state the same way. No Ginkgo or Gomega; failures come back as errors
 - observation.go: one live run. The watch loop (watchAndAct, startWatch), recording each frame
   (record, keep), and step actions (advanceStep, performAction). A watch that cannot
   resume fails the run.
-- cr.go: helpers over an unstructured CR. stripVolatileFields, isWorkloadObserved,
+- cr.go: helpers over an unstructured CR. stripVolatileFields, hasObservedCurrentGeneration,
   blankWithGVK, dumpStatus.
 - order.go: the invariant. validateObservedOrder checks the observed states are a legal
   walk of the declared journey.
 - recording.go: the on-disk format (Recording, Event, RecordedAction) and the Reader that
   walks a saved recording back for the replay.
-- recorder_internal_test.go, recording_internal_test.go: offline unit tests, no cluster.
+- suite_test.go, recorder_internal_test.go, recording_internal_test.go: offline Ginkgo
+  unit tests, no cluster.
 
 ## Flow of a run
 
@@ -41,9 +43,9 @@ out, err := recorder.NewFlow(rec, "scaled", "testdata/deployment/running.yaml").
 3. Every distinct frame is kept, volatile metadata stripped. A frame whose controller has
    not observed the spec yet (observedGeneration < generation) is kept marked
    staleObservedGeneration.
-4. Once an observed frame reaches the next declared stop, its action is performed; the run
+4. Once an observed frame reaches the next declared step, its action is performed; the run
    ends at the declared terminal state or on timeout.
-5. observedOrderErr checks the observed states walked the declared journey (order.go).
+5. validateObservedOrder checks the observed states walked the declared journey (order.go).
 6. Save stamps the Fixture and writes the recording, passed or failed, under
    outputDir/operator/version/kartaName/flow.yaml (recording.go).
 
@@ -53,7 +55,7 @@ Karta, asserting each state matches.
 ## Entities
 
 - Recorder: per workload type. Cluster access, the state predicates, the timeout.
-- Flow: one journey to record. A workload manifest plus the ordered stops it must reach.
+- Flow: one journey to record. A workload manifest plus the ordered steps it must reach.
 - Fixture: the catalog identity a recording is saved under.
 - Recording: the on-disk result. A STATE event per distinct CR, an ACTION event per patch.
 - Reader: walks a saved Recording back for the replay tests.

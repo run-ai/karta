@@ -25,9 +25,9 @@ func stripVolatileFields(cr *unstructured.Unstructured) map[string]any {
 	return stripped
 }
 
-// isWorkloadObserved reports whether the workload's controller has observed its current spec
+// hasObservedCurrentGeneration reports whether the workload's controller has observed its current spec
 // (status.observedGeneration >= metadata.generation); workloads without observedGeneration count as observed.
-func isWorkloadObserved(cr *unstructured.Unstructured) bool {
+func hasObservedCurrentGeneration(cr *unstructured.Unstructured) bool {
 	observed, hasObserved, _ := unstructured.NestedInt64(cr.Object, "status", "observedGeneration")
 	if !hasObserved {
 		return true

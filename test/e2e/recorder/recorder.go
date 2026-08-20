@@ -23,6 +23,9 @@ import (
 // defaultTimeout bounds one flow's Run when Config.Timeout is unset.
 const defaultTimeout = 3 * time.Minute
 
+// cleanupTimeout bounds deleteWorkload's retries after the flow's own context ended.
+const cleanupTimeout = 30 * time.Second
+
 // Cluster is how the recorder reaches Kubernetes.
 type Cluster struct {
 	Client    client.Client
@@ -96,7 +99,7 @@ func (r *Recorder) SetTimeout(d time.Duration) *Recorder {
 // result.failures.
 func (f *Flow) Run(ctx context.Context) (out *Recording, err error) {
 	if len(f.journey) == 0 {
-		return nil, fmt.Errorf("flow %s declares no stops", f.name)
+		return nil, fmt.Errorf("flow %s declares no steps", f.name)
 	}
 	workload, createErr := f.createWorkload(ctx)
 	if createErr != nil {
@@ -129,7 +132,7 @@ func (f *Flow) Run(ctx context.Context) (out *Recording, err error) {
 		out.Result = Result{Failures: []string{obs.failure}}
 		return out, errors.New(obs.failure)
 	}
-	if orderErr := validateObservedOrder(f.journey, obs.states(), f.want()); orderErr != nil {
+	if orderErr := validateObservedOrder(f.journey, obs.states(), f.terminalState()); orderErr != nil {
 		out.Result = Result{Failures: []string{orderErr.Error()}}
 		return out, orderErr
 	}
@@ -157,7 +160,7 @@ func (f *Flow) createWorkload(ctx context.Context) (*unstructured.Unstructured, 
 // deleteWorkload removes the workload, retrying transient failures. It runs on a fresh, bounded context so
 // cleanup still happens after the flow's own context was cancelled; NotFound counts as deleted.
 func (f *Flow) deleteWorkload(ctx context.Context, workload *unstructured.Unstructured) error {
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), cleanupTimeout)
 	defer cancel()
 	for {
 		err := f.client().Delete(ctx, workload)
@@ -181,7 +184,7 @@ func (f *Flow) observe(ctx context.Context, workload *unstructured.Unstructured)
 	// event at all: a suspended CronJob never schedules, so its controller never writes status, and a watch
 	// (which replays only events after the create) would wait for the timeout. Record the create response
 	// directly instead.
-	if isWorkloadObserved(workload) && o.hasReachedTerminal(classify(workload, f.rec.states)) {
+	if hasObservedCurrentGeneration(workload) && o.hasReachedTerminal(classify(workload, f.rec.states)) {
 		o.record(ctx, workload)
 		return o
 	}
@@ -195,7 +198,7 @@ func (f *Flow) buildRecording(obs *observation) *Recording {
 	out := &Recording{
 		SchemaVersion: schemaVersion,
 		Flow:          f.name,
-		Want:          string(f.want()),
+		Want:          string(f.terminalState()),
 	}
 	for _, snap := range obs.snapshots {
 		out.Events = append(out.Events, Event{
@@ -219,7 +222,7 @@ func (r *Recorder) Save(fx Fixture, rec *Recording) (string, error) {
 		return "", nil
 	}
 	if fx.Operator == "" || fx.Version == "" || fx.KartaName == "" || fx.KartaFile == "" {
-		panic("recorder: Save needs a non-empty Fixture Operator, Version, KartaName, and KartaFile")
+		return "", fmt.Errorf("save %s: Fixture needs a non-empty Operator, Version, KartaName, and KartaFile", rec.Flow)
 	}
 	rec.Operator = fx.Operator
 	rec.Version = fx.Version
@@ -234,12 +237,12 @@ func (r *Recorder) Save(fx Fixture, rec *Recording) (string, error) {
 	return rec.Path, nil
 }
 
-// actionSteps filters the journey to the stops the recorder must reach and act on in order: those carrying an action or
-// an action predicate. Plain stops between them are recorded as they pass but are not acted on.
+// actionSteps filters the journey to the steps the recorder must reach and act on in order: those carrying an
+// action or a ReachedWhen gate. Plain steps between them are recorded as they pass but are not acted on.
 func actionSteps(journey []journeyStep) []journeyStep {
 	var out []journeyStep
 	for _, step := range journey {
-		if step.Action != nil || step.ActionPredicate != nil {
+		if step.Action != nil || step.ReachedWhen != nil {
 			out = append(out, step)
 		}
 	}
