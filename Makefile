@@ -158,7 +158,7 @@ cli-lint: golangci-lint ## Lint the CLI module.
 	cd cli && $(GOLANGCI_LINT) run -c $(PROJECT_DIR)/.golangci.yml
 
 .PHONY: check
-check: download-dependencies validate test cli-test cli-lint cli-verify-version
+check: download-dependencies validate verify-recordings test cli-test cli-lint cli-verify-version
 
 ##@ Helm
 
@@ -205,6 +205,29 @@ image-lock-test: ## Run the image-lock generator unit tests
 # Cluster name for the e2e targets. Override to run isolated clusters in parallel,
 # e.g. make e2e-up CLUSTER_NAME=shard-a WORKLOADS="jobset kuberay"
 CLUSTER_NAME ?= karta-e2e
+# record-e2e records whatever cluster kubectl currently points at - a kind cluster from
+# e2e-up or any cluster of your own (it only needs Karta installed). Only a named kind
+# cluster (CLUSTER_NAME=...) switches to its own kubeconfig file, matching hack/e2e/up.sh,
+# so parallel clusters do not race on the shared current-context.
+ifneq ($(CLUSTER_NAME),karta-e2e)
+E2E_KUBECONFIG := KUBECONFIG=$(HOME)/.kube/kind-$(CLUSTER_NAME).kubeconfig
+endif
+# Overall go-test timeout for the online suite; override for a quick subset, e.g. E2E_TIMEOUT=10m.
+E2E_TIMEOUT ?= 30m
+
+# Select cases by operator with the same WORKLOADS list as e2e-up: record-e2e WORKLOADS="batch-job"
+# records just the batch-job case (a comma is OR in ginkgo label filters). E2E_LABELS overrides it
+# with a raw ginkgo label expression.
+empty :=
+space := $(empty) $(empty)
+comma := ,
+E2E_LABELS ?= $(subst $(space),$(comma),$(strip $(filter-out all,$(WORKLOADS))))
+
+# FLOW="scaled" narrows a record to one flow by name (focuses the spec with that title);
+# without WORKLOADS it matches that flow name across all workload types.
+ifneq ($(strip $(FLOW)),)
+E2E_FOCUS := $(strip $(FLOW))
+endif
 
 # Pick which operators to install:
 #   make e2e-up                          # everything
@@ -216,6 +239,19 @@ e2e-up: ## Provision a kind cluster + operators (WORKLOADS="jobset kuberay" for 
 .PHONY: e2e-down
 e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)
 	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/down.sh
+
+.PHONY: record-e2e
+# The recorder's own unit tests run first: they take a second, and a broken recorder
+# should fail here rather than minutes into a live cluster run.
+record-e2e: ## Record the fixtures against the current cluster - kind from e2e-up or your own (WORKLOADS="pod" a subset, FLOW="happy" one flow, CLUSTER_NAME for a named kind cluster)
+	cd test/e2e && go test -count=1 ./recorder
+	cd test/e2e && CLUSTER_NAME=$(CLUSTER_NAME) $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) ./flows $(if $(E2E_FOCUS)$(E2E_LABELS),-args $(if $(E2E_FOCUS),-ginkgo.focus="$(E2E_FOCUS)") $(if $(E2E_LABELS),-ginkgo.label-filter="$(E2E_LABELS)"))
+
+.PHONY: verify-recordings
+verify-recordings: ## Fail if any recorded fixture ended with succeeded false (re-record it clean before pushing)
+	@bad=$$(grep -rlE '^  succeeded: false' test/e2e/recorded_data --include='*.yaml' 2>/dev/null); \
+	if [ -n "$$bad" ]; then echo "recordings that did not succeed:"; echo "$$bad"; exit 1; fi; \
+	echo "all recordings succeeded"
 
 # The e2e shell scripts to shellcheck: the provisioner, teardown, the shared
 # helpers, and every per-operator install.sh/verify.sh.

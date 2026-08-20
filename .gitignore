@@ -29,3 +29,4 @@ config/crd/_.yaml
 
 # built imagelock tool binary
 /hack/imagelock/imagelock
+hack/e2e/operators/.installed-versions*
