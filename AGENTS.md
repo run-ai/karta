@@ -89,21 +89,7 @@ Use `Makefile` to build, test, lint, and generate code (e.g. `make test`, `make 
 
 ## Commits and Pull Requests
 
-Conventional Commits v1.0.0:
-
-```text
-<type>(<scope>): <short description>
-
-[optional body]
-```
-
-Types: `feat`, `fix`, `refactor`, `docs`, `test`, `build`, `ci`, `chore`.
-
-Sign off every commit with `-s` (DCO v1.1, real name required):
-
-```bash
-git commit -s -m "feat(cli): add tree alignment"
-```
+Commit messages follow Conventional Commits v1.0.0 with a DCO sign-off (`git commit -s`, real name required). The format, allowed types, and scope conventions are documented in `CONTRIBUTING.md` under Commit Messages; that section is the single source of truth. Do not restate the format here.
 
 Use the PR template at `.github/PULL_REQUEST_TEMPLATE.md`. Required: link to an open issue, run `make check`, add or update tests (or explain why none).
 
