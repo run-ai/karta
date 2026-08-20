@@ -3,7 +3,9 @@
 
 # Changelog
 
-Notable changes per release. [GitHub Releases](https://github.com/run-ai/karta/releases) are the canonical record and carry the full notes and artifacts; this file is the in-repo summary. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely. Versioning is pre-1.0: minor versions may include breaking changes, see each entry.
+Notable changes per release. This file is the in-repo source of record: a release's entry is added here before the tag is pushed (see [RELEASE.md](RELEASE.md)), and the [GitHub Release](https://github.com/run-ai/karta/releases) body is written from it, so tagged source archives carry their own entry. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely. Versioning is pre-1.0: minor versions may include breaking changes, see each entry.
+
+Entries through v0.2.3 were backfilled from the published GitHub release notes when this file was introduced.
 
 ## v0.2.3 - 2026-08-17
 
