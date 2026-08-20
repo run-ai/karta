@@ -4,87 +4,173 @@
 package recorder
 
 import (
-	"reflect"
-	"testing"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	kartav1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 )
 
-// Plain unit tests for the pure recorder helpers; no cluster (RunSpecs is not invoked).
+// Offline specs for the pure recorder helpers; no cluster.
 
-func TestAddStateRejectsEmptyName(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Error("AddState with an empty name did not panic")
+var (
+	initializing = kartav1alpha1.InitializingStatus
+	running      = kartav1alpha1.RunningStatus
+	completed    = kartav1alpha1.CompletedStatus
+	failed       = kartav1alpha1.FailedStatus
+)
+
+var _ = Describe("builder guards", func() {
+	It("panics when New has an empty Config.OutputDir", func() {
+		Expect(func() { New(Config{}) }).To(Panic())
+	})
+
+	It("panics when AddState has an empty name", func() {
+		Expect(func() { (&Recorder{}).AddState("", nil) }).To(Panic())
+	})
+
+	It("panics when AddState has a nil predicate", func() {
+		Expect(func() { (&Recorder{}).AddState("Running", nil) }).To(Panic())
+	})
+
+	It("panics when SetTimeout is not positive", func() {
+		Expect(func() { (&Recorder{}).SetTimeout(0) }).To(Panic())
+		Expect(func() { (&Recorder{}).SetTimeout(-time.Second) }).To(Panic())
+	})
+})
+
+var _ = Describe("Save", func() {
+	It("rejects an incomplete fixture", func() {
+		r := New(Config{OutputDir: "out"})
+		for _, fx := range []Fixture{
+			{Version: "v", KartaName: "n", KartaFile: "f"},
+			{Operator: "op", KartaName: "n", KartaFile: "f"},
+			{Operator: "op", Version: "v", KartaFile: "f"},
+			{Operator: "op", Version: "v", KartaName: "n"},
+		} {
+			path, err := r.Save(fx, &Recording{Flow: "flow"})
+			Expect(err).To(HaveOccurred())
+			Expect(path).To(BeEmpty())
 		}
-	}()
-	(&Recorder{}).AddState("", nil)
-}
+	})
 
-func TestSetTimeoutRejectsNonPositive(t *testing.T) {
-	for _, d := range []time.Duration{0, -time.Second} {
-		func(d time.Duration) {
-			defer func() {
-				if recover() == nil {
-					t.Errorf("SetTimeout(%s) did not panic", d)
-				}
-			}()
-			(&Recorder{}).SetTimeout(d)
-		}(d)
-	}
-}
+	It("ignores a nil recording", func() {
+		fx := Fixture{Operator: "op", Version: "v", KartaName: "n", KartaFile: "f"}
+		path, err := New(Config{OutputDir: "out"}).Save(fx, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(path).To(BeEmpty())
+	})
+})
 
-func TestAddStateRejectsNilMatch(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Error("AddState with a nil predicate did not panic")
+var _ = Describe("classify", func() {
+	It("keeps the furthest-along state the workload matches", func() {
+		states := []namedState{
+			{Name: running, Match: intAtLeast(1, "status", "active")},
+			{Name: completed, Match: condTrue("Complete")},
 		}
-	}()
-	(&Recorder{}).AddState("Running", nil)
-}
-
-func TestNewRejectsEmptyOutputDir(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Error("New with an empty Config.OutputDir did not panic")
-		}
-	}()
-	New(Config{})
-}
-
-func TestSaveValidatesFixture(t *testing.T) {
-	r := New(Config{OutputDir: "out"})
-	cases := []struct {
-		name string
-		fx   Fixture
-	}{
-		{"empty operator", Fixture{Version: "v", KartaName: "n", KartaFile: "f"}},
-		{"empty version", Fixture{Operator: "op", KartaName: "n", KartaFile: "f"}},
-		{"empty kartaName", Fixture{Operator: "op", Version: "v", KartaFile: "f"}},
-		{"empty kartaFile", Fixture{Operator: "op", Version: "v", KartaName: "n"}},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			defer func() {
-				if recover() == nil {
-					t.Error("Save did not panic on an incomplete fixture")
-				}
-			}()
-			r.Save(c.fx, &Recording{Flow: "flow"})
+		Expect(classify(objWithStatus(map[string]any{"active": int64(1)}), states)).To(Equal(running))
+		both := objWithStatus(map[string]any{
+			"active":     int64(1),
+			"conditions": []any{map[string]any{"type": "Complete", "status": "True"}},
 		})
-	}
-}
+		Expect(classify(both, states)).To(Equal(completed))
+		Expect(classify(objWithStatus(map[string]any{}), states)).To(BeEmpty())
+	})
+})
 
-func TestSaveIgnoresNilRecording(t *testing.T) {
-	fx := Fixture{Operator: "op", Version: "v", KartaName: "n", KartaFile: "f"}
-	path, err := New(Config{OutputDir: "out"}).Save(fx, nil)
-	if err != nil || path != "" {
-		t.Errorf("Save(fx, nil) = (%q, %v), want empty path and nil error", path, err)
+var _ = Describe("the recorded walk", func() {
+	// A Running -> byte-identical Initializing dip survives dedup, and the strict order check flags it
+	// unless the journey declares the dip.
+	It("keeps a backwards dip and the order check flags it unless declared", func() {
+		states := []namedState{
+			{Name: initializing, Match: intAtLeast(1, "status", "active")},
+			{Name: running, Match: intAtLeast(1, "status", "ready")},
+			{Name: completed, Match: condTrue("Complete")},
+		}
+		initCR := func() *unstructured.Unstructured {
+			return objWithStatus(map[string]any{"active": int64(1), "ready": int64(0)})
+		}
+		seq := []*unstructured.Unstructured{
+			initCR(),
+			objWithStatus(map[string]any{"active": int64(1), "ready": int64(1)}),
+			initCR(),
+			objWithStatus(map[string]any{"conditions": []any{map[string]any{"type": "Complete", "status": "True"}}}),
+		}
+
+		o := &observation{}
+		for _, cr := range seq {
+			o.keep(cr, classify(cr, states), true)
+		}
+
+		Expect(o.states()).To(Equal([]kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}))
+		Expect(validateObservedOrder(steps(initializing, running, completed), o.states(), completed)).
+			To(HaveOccurred(), "strict journey should reject the undeclared Running -> Initializing dip")
+		Expect(validateObservedOrder(steps(initializing, running, initializing, completed), o.states(), completed)).
+			To(Succeed(), "declaring the Initializing revisit should accept the dip")
+	})
+
+	// A frame whose controller has not observed the spec yet is recorded for fidelity but stays out of the
+	// order-checked walk.
+	It("keeps a stale frame out of the judged walk", func() {
+		o := &observation{}
+		o.keep(objWithStatus(map[string]any{"active": int64(1)}), initializing, true)
+		o.keep(objWithStatus(map[string]any{"active": int64(2)}), initializing, false)
+
+		Expect(o.snapshots).To(HaveLen(2))
+		Expect(o.snapshots[1].staleObservedGeneration).To(BeTrue())
+		Expect(o.states()).To(HaveLen(1))
+	})
+})
+
+var _ = DescribeTable("validateObservedOrder",
+	func(journey []journeyStep, observed []kartav1alpha1.ResourceStatus, ok bool) {
+		err := validateObservedOrder(journey, observed, terminal(journey))
+		if ok {
+			Expect(err).NotTo(HaveOccurred())
+		} else {
+			Expect(err).To(HaveOccurred())
+		}
+	},
+	Entry("exact walk", steps(initializing, running, completed), visits(initializing, running, completed), true),
+	Entry("skip a required step fails", steps(initializing, running, completed), visits(initializing, completed), false),
+	Entry("skip an optional step is ok",
+		[]journeyStep{{State: initializing}, {State: running, Optional: true}, {State: completed}},
+		visits(initializing, completed), true),
+	Entry("undeclared state fails", steps(initializing, running), visits(initializing, failed), false),
+	Entry("repeat dip missed is ok", steps(initializing, running, initializing, completed),
+		visits(initializing, running, completed), true),
+	Entry("optional dip missed is ok",
+		[]journeyStep{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}},
+		visits(initializing, running, completed), true),
+	Entry("optional dip caught is ok",
+		[]journeyStep{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}},
+		visits(initializing, running, initializing, completed), true),
+	Entry("undeclared dip fails", steps(initializing, running, completed),
+		visits(initializing, running, initializing, completed), false),
+	Entry("wrong terminal fails", steps(initializing, running, completed), visits(initializing, running), false),
+)
+
+var _ = Describe("hasObservedCurrentGeneration", func() {
+	withGen := func(gen int64, observedGen *int64) *unstructured.Unstructured {
+		status := map[string]any{}
+		if observedGen != nil {
+			status["observedGeneration"] = *observedGen
+		}
+		return &unstructured.Unstructured{Object: map[string]any{
+			"metadata": map[string]any{"generation": gen},
+			"status":   status,
+		}}
 	}
-}
+
+	It("compares observedGeneration to generation", func() {
+		two := int64(2)
+		Expect(hasObservedCurrentGeneration(withGen(2, &two))).To(BeTrue(), "observedGeneration == generation is observed")
+		Expect(hasObservedCurrentGeneration(withGen(3, &two))).To(BeFalse(), "observedGeneration < generation is not observed")
+		Expect(hasObservedCurrentGeneration(withGen(2, nil))).To(BeTrue(), "missing observedGeneration counts as observed")
+	})
+})
 
 func objWithStatus(status map[string]any) *unstructured.Unstructured {
 	return &unstructured.Unstructured{Object: map[string]any{"status": status}}
@@ -111,26 +197,6 @@ func condTrue(condType string) StateCheck {
 	}
 }
 
-// TestClassifyPicksMostAdvancedState: classify keeps the furthest state a workload matches.
-func TestClassifyPicksMostAdvancedState(t *testing.T) {
-	running := kartav1alpha1.RunningStatus
-	completed := kartav1alpha1.CompletedStatus
-	states := []namedState{
-		{Name: running, Match: intAtLeast(1, "status", "active")},
-		{Name: completed, Match: condTrue("Complete")},
-	}
-	if got := classify(objWithStatus(map[string]any{"active": int64(1)}), states); got != running {
-		t.Errorf("active=1 -> %q, want %q", got, running)
-	}
-	both := objWithStatus(map[string]any{"active": int64(1), "conditions": []any{map[string]any{"type": "Complete", "status": "True"}}})
-	if got := classify(both, states); got != completed {
-		t.Errorf("Complete=True -> %q, want %q", got, completed)
-	}
-	if got := classify(objWithStatus(map[string]any{}), states); got != "" {
-		t.Errorf("no match -> %q, want empty", got)
-	}
-}
-
 func terminal(journey []journeyStep) kartav1alpha1.ResourceStatus {
 	return journey[len(journey)-1].State
 }
@@ -143,115 +209,6 @@ func steps(states ...kartav1alpha1.ResourceStatus) []journeyStep {
 	return j
 }
 
-// TestRecorderCatchesBackwardsJump: a Running -> byte-identical Initializing dip survives dedup, and the
-// strict order check flags it unless the journey declares the dip.
-func TestRecorderCatchesBackwardsJump(t *testing.T) {
-	initializing := kartav1alpha1.InitializingStatus
-	running := kartav1alpha1.RunningStatus
-	completed := kartav1alpha1.CompletedStatus
-
-	states := []namedState{
-		{Name: initializing, Match: intAtLeast(1, "status", "active")},
-		{Name: running, Match: intAtLeast(1, "status", "ready")},
-		{Name: completed, Match: condTrue("Complete")},
-	}
-	initCR := func() *unstructured.Unstructured {
-		return objWithStatus(map[string]any{"active": int64(1), "ready": int64(0)})
-	}
-	seq := []*unstructured.Unstructured{
-		initCR(),
-		objWithStatus(map[string]any{"active": int64(1), "ready": int64(1)}),
-		initCR(),
-		objWithStatus(map[string]any{"conditions": []any{map[string]any{"type": "Complete", "status": "True"}}}),
-	}
-
-	o := &observation{}
-	for _, cr := range seq {
-		o.keep(cr, classify(cr, states), true)
-	}
-
-	want := []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}
-	if !reflect.DeepEqual(o.states(), want) {
-		t.Fatalf("recorder dropped the return: got %v, want %v", o.states(), want)
-	}
-	if validateObservedOrder(steps(initializing, running, completed), o.states(), completed) == nil {
-		t.Error("strict journey should reject the undeclared Running -> Initializing dip")
-	}
-	if err := validateObservedOrder(steps(initializing, running, initializing, completed), o.states(), completed); err != nil {
-		t.Errorf("declaring the Initializing revisit should accept the dip, got %v", err)
-	}
-}
-
-// TestStaleFramesAreKeptButNotJudged: a frame whose controller has not observed the spec yet is
-// recorded for fidelity but stays out of the order-checked walk.
-func TestStaleFramesAreKeptButNotJudged(t *testing.T) {
-	o := &observation{}
-	o.keep(objWithStatus(map[string]any{"active": int64(1)}), kartav1alpha1.InitializingStatus, true)
-	o.keep(objWithStatus(map[string]any{"active": int64(2)}), kartav1alpha1.InitializingStatus, false)
-
-	if len(o.snapshots) != 2 {
-		t.Fatalf("staleObservedGeneration frame not recorded: %d snapshots", len(o.snapshots))
-	}
-	if !o.snapshots[1].staleObservedGeneration {
-		t.Error("second snapshot should be marked staleObservedGeneration")
-	}
-	if got := o.states(); len(got) != 1 {
-		t.Errorf("staleObservedGeneration frame leaked into the judged walk: %v", got)
-	}
-}
-
-func TestObservedOrder(t *testing.T) {
-	initializing := kartav1alpha1.InitializingStatus
-	running := kartav1alpha1.RunningStatus
-	completed := kartav1alpha1.CompletedStatus
-	failed := kartav1alpha1.FailedStatus
-
-	tests := []struct {
-		name     string
-		journey  []journeyStep
-		observed []kartav1alpha1.ResourceStatus
-		ok       bool
-	}{
-		{"exact", steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
-		{"skip a required step fails", steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, completed}, false},
-		{"skip an optional step is ok", []journeyStep{{State: initializing}, {State: running, Optional: true}, {State: completed}}, []kartav1alpha1.ResourceStatus{initializing, completed}, true},
-		{"undeclared state", steps(initializing, running), []kartav1alpha1.ResourceStatus{initializing, failed}, false},
-		{"repeat dip missed is ok", steps(initializing, running, initializing, completed), []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
-		{"optional dip missed is ok", []journeyStep{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}}, []kartav1alpha1.ResourceStatus{initializing, running, completed}, true},
-		{"optional dip caught is ok", []journeyStep{{State: initializing}, {State: running}, {State: initializing, Optional: true}, {State: completed}}, []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, true},
-		{"undeclared dip fails", steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running, initializing, completed}, false},
-		{"wrong terminal", steps(initializing, running, completed), []kartav1alpha1.ResourceStatus{initializing, running}, false},
-	}
-	for _, c := range tests {
-		err := validateObservedOrder(c.journey, c.observed, terminal(c.journey))
-		if c.ok && err != nil {
-			t.Errorf("%s: want ok, got %v", c.name, err)
-		}
-		if !c.ok && err == nil {
-			t.Errorf("%s: want error, got nil", c.name)
-		}
-	}
-}
-
-func TestWorkloadObserved(t *testing.T) {
-	withGen := func(gen int64, obs *int64) *unstructured.Unstructured {
-		status := map[string]any{}
-		if obs != nil {
-			status["observedGeneration"] = *obs
-		}
-		return &unstructured.Unstructured{Object: map[string]any{
-			"metadata": map[string]any{"generation": gen},
-			"status":   status,
-		}}
-	}
-	two := int64(2)
-	if !isWorkloadObserved(withGen(2, &two)) {
-		t.Error("observedGeneration == generation should be settled")
-	}
-	if isWorkloadObserved(withGen(3, &two)) {
-		t.Error("observedGeneration < generation should NOT be settled")
-	}
-	if !isWorkloadObserved(withGen(2, nil)) {
-		t.Error("missing observedGeneration should be settled")
-	}
+func visits(states ...kartav1alpha1.ResourceStatus) []kartav1alpha1.ResourceStatus {
+	return states
 }
