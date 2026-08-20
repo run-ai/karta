@@ -54,6 +54,7 @@ generate-mocks: ## Generate mocks using go generate
 .PHONY: test
 test: generate-mocks ## Run tests with mock generation
 	go test ./...
+	go -C test/e2e test ./recorder/...
 
 lint-go: golangci-lint
 	echo "Running golangci linter"
