@@ -1,0 +1,394 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 NVIDIA Corporation
+
+package definitions
+
+import (
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	v1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+)
+
+var (
+	deploymentGVK  = schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
+	jobGVK         = schema.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"}
+	podGVK         = schema.GroupVersionKind{Version: "v1", Kind: "Pod"}
+	dynamoAlphaGVK = schema.GroupVersionKind{Group: "nvidia.com", Version: "v1alpha1", Kind: "DynamoGraphDeployment"}
+	dynamoBetaGVK  = schema.GroupVersionKind{Group: "nvidia.com", Version: "v1beta1", Kind: "DynamoGraphDeployment"}
+)
+
+// newKarta builds a minimal indexable Karta claiming gvk as its root component.
+func newKarta(name string, gvk schema.GroupVersionKind) *v1alpha1.Karta {
+	k := newRootlessKarta(name)
+	k.Spec.StructureDefinition.RootComponent.Kind = &v1alpha1.GroupVersionKind{
+		Group:   gvk.Group,
+		Version: gvk.Version,
+		Kind:    gvk.Kind,
+	}
+	return k
+}
+
+// newRootlessKarta builds a Karta whose root component carries no GVK at all.
+func newRootlessKarta(name string) *v1alpha1.Karta {
+	return &v1alpha1.Karta{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: v1alpha1.KartaSpec{
+			StructureDefinition: v1alpha1.StructureDefinition{
+				RootComponent: v1alpha1.ComponentDefinition{Name: "root"},
+			},
+		},
+	}
+}
+
+func namesOf(defs []Definition) []string {
+	out := make([]string, 0, len(defs))
+	for _, def := range defs {
+		out = append(out, def.Karta.Name)
+	}
+	return out
+}
+
+var _ = Describe("Resolver merge and precedence", func() {
+	It("resolves a community definition when no cluster definitions exist", func() {
+		r := New([]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)}, nil)
+
+		def, err := r.Resolve(deploymentGVK)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(def.Karta.Name).To(Equal("community-deployment"))
+		Expect(def.Origin).To(Equal(OriginCommunity))
+	})
+
+	It("resolves a cluster definition when the catalog is empty", func() {
+		r := New(nil, []*v1alpha1.Karta{newKarta("cluster-deployment", deploymentGVK)})
+
+		def, err := r.Resolve(deploymentGVK)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(def.Karta.Name).To(Equal("cluster-deployment"))
+		Expect(def.Origin).To(Equal(OriginCluster))
+	})
+
+	It("unions disjoint sources", func() {
+		r := New(
+			[]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)},
+			[]*v1alpha1.Karta{newKarta("cluster-job", jobGVK)},
+		)
+
+		deployment, err := r.Resolve(deploymentGVK)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(deployment.Origin).To(Equal(OriginCommunity))
+
+		job, err := r.Resolve(jobGVK)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(job.Origin).To(Equal(OriginCluster))
+
+		Expect(namesOf(r.List())).To(Equal([]string{"community-deployment", "cluster-job"}))
+	})
+
+	It("lets a cluster definition override a community one on the same GVK", func() {
+		r := New(
+			[]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)},
+			[]*v1alpha1.Karta{newKarta("cluster-deployment", deploymentGVK)},
+		)
+
+		def, err := r.Resolve(deploymentGVK)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(def.Karta.Name).To(Equal("cluster-deployment"))
+		Expect(def.Origin).To(Equal(OriginCluster))
+	})
+
+	It("returns ErrNotFound for an unknown GVK", func() {
+		r := New([]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)}, nil)
+
+		def, err := r.Resolve(jobGVK)
+		Expect(err).To(MatchError(ErrNotFound))
+		Expect(err.Error()).To(ContainSubstring("batch/v1, Kind=Job"))
+		Expect(def.Karta).To(BeNil())
+	})
+
+	DescribeTable("skips definitions whose root GVK is incomplete",
+		func(karta *v1alpha1.Karta, miss schema.GroupVersionKind) {
+			r := New(nil, []*v1alpha1.Karta{karta})
+
+			Expect(r.List()).To(BeEmpty())
+			Expect(r.Collisions()).To(BeEmpty())
+
+			_, err := r.Resolve(miss)
+			Expect(err).To(MatchError(ErrNotFound))
+		},
+		Entry("nil root kind", newRootlessKarta("no-kind"), schema.GroupVersionKind{}),
+		Entry("empty version",
+			newKarta("no-version", schema.GroupVersionKind{Group: "apps", Kind: "Deployment"}),
+			schema.GroupVersionKind{Group: "apps", Kind: "Deployment"},
+		),
+		Entry("empty kind",
+			newKarta("no-kind-field", schema.GroupVersionKind{Group: "apps", Version: "v1"}),
+			schema.GroupVersionKind{Group: "apps", Version: "v1"},
+		),
+	)
+
+	It("indexes a core-group definition, where an empty group is legitimate", func() {
+		r := New([]*v1alpha1.Karta{newKarta("core-pod-v1", podGVK)}, nil)
+
+		def, err := r.Resolve(podGVK)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(def.Karta.Name).To(Equal("core-pod-v1"))
+	})
+
+	DescribeTable("picks the last name alphabetically regardless of input order",
+		func(cluster []*v1alpha1.Karta) {
+			def, err := New(nil, cluster).Resolve(deploymentGVK)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(def.Karta.Name).To(Equal("zzz-deployment"))
+		},
+		Entry("already sorted", []*v1alpha1.Karta{
+			newKarta("aaa-deployment", deploymentGVK),
+			newKarta("zzz-deployment", deploymentGVK),
+		}),
+		Entry("reversed", []*v1alpha1.Karta{
+			newKarta("zzz-deployment", deploymentGVK),
+			newKarta("aaa-deployment", deploymentGVK),
+		}),
+	)
+
+	It("does not reorder the caller's slice", func() {
+		input := []*v1alpha1.Karta{
+			newKarta("zzz-deployment", deploymentGVK),
+			newKarta("aaa-job", jobGVK),
+		}
+
+		New(nil, input)
+
+		Expect(input[0].Name).To(Equal("zzz-deployment"))
+		Expect(input[1].Name).To(Equal("aaa-job"))
+	})
+})
+
+var _ = Describe("Resolver List", func() {
+	It("lists both same-source claimants of a GVK while Resolve returns one winner", func() {
+		r := New(nil, []*v1alpha1.Karta{
+			newKarta("zzz-deployment", deploymentGVK),
+			newKarta("aaa-deployment", deploymentGVK),
+		})
+
+		Expect(namesOf(r.List())).To(Equal([]string{"aaa-deployment", "zzz-deployment"}))
+
+		def, err := r.Resolve(deploymentGVK)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(def.Karta.Name).To(Equal("zzz-deployment"))
+	})
+
+	It("lists an overridden GVK exactly once, as the cluster definition", func() {
+		r := New(
+			[]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)},
+			[]*v1alpha1.Karta{newKarta("cluster-deployment", deploymentGVK)},
+		)
+
+		list := r.List()
+		Expect(namesOf(list)).To(Equal([]string{"cluster-deployment"}))
+		Expect(list[0].Origin).To(Equal(OriginCluster))
+	})
+
+	It("orders deterministically across reordered input", func() {
+		community := []*v1alpha1.Karta{
+			newKarta("core-pod-v1", podGVK),
+			newKarta("batch-job-v1", jobGVK),
+		}
+		cluster := []*v1alpha1.Karta{
+			newKarta("zzz-deployment", deploymentGVK),
+			newKarta("aaa-deployment", deploymentGVK),
+		}
+		want := []string{"core-pod-v1", "aaa-deployment", "zzz-deployment", "batch-job-v1"}
+
+		Expect(namesOf(New(community, cluster).List())).To(Equal(want))
+
+		reversedCommunity := []*v1alpha1.Karta{community[1], community[0]}
+		reversedCluster := []*v1alpha1.Karta{cluster[1], cluster[0]}
+		Expect(namesOf(New(reversedCommunity, reversedCluster).List())).To(Equal(want))
+	})
+})
+
+var _ = Describe("Resolver Collisions", func() {
+	It("records the winner and the name-sorted shadowed names for two claimants", func() {
+		r := New(nil, []*v1alpha1.Karta{
+			newKarta("zzz-deployment", deploymentGVK),
+			newKarta("aaa-deployment", deploymentGVK),
+		})
+
+		Expect(r.Collisions()).To(Equal([]Collision{{
+			GVK:      deploymentGVK,
+			Winner:   "zzz-deployment",
+			Shadowed: []string{"aaa-deployment"},
+		}}))
+	})
+
+	It("records every shadowed name for three claimants", func() {
+		r := New(nil, []*v1alpha1.Karta{
+			newKarta("mmm-deployment", deploymentGVK),
+			newKarta("zzz-deployment", deploymentGVK),
+			newKarta("aaa-deployment", deploymentGVK),
+		})
+
+		Expect(r.Collisions()).To(Equal([]Collision{{
+			GVK:      deploymentGVK,
+			Winner:   "zzz-deployment",
+			Shadowed: []string{"aaa-deployment", "mmm-deployment"},
+		}}))
+	})
+
+	It("does not record a collision when a cluster definition overrides a community one", func() {
+		r := New(
+			[]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)},
+			[]*v1alpha1.Karta{newKarta("cluster-deployment", deploymentGVK)},
+		)
+
+		Expect(r.Collisions()).To(BeEmpty())
+	})
+
+	It("records nothing when no GVK is claimed twice", func() {
+		r := New(
+			[]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)},
+			[]*v1alpha1.Karta{newKarta("cluster-job", jobGVK)},
+		)
+
+		Expect(r.Collisions()).To(BeEmpty())
+	})
+
+	It("records nothing for definitions skipped for an incomplete root GVK", func() {
+		r := New(nil, []*v1alpha1.Karta{
+			newRootlessKarta("aaa-no-kind"),
+			newRootlessKarta("zzz-no-kind"),
+		})
+
+		Expect(r.Collisions()).To(BeEmpty())
+	})
+
+	It("sorts collisions by GVK", func() {
+		r := New(nil, []*v1alpha1.Karta{
+			newKarta("zzz-job", jobGVK),
+			newKarta("aaa-job", jobGVK),
+			newKarta("zzz-deployment", deploymentGVK),
+			newKarta("aaa-deployment", deploymentGVK),
+		})
+
+		collisions := r.Collisions()
+		Expect(collisions).To(HaveLen(2))
+		Expect(collisions[0].GVK).To(Equal(deploymentGVK))
+		Expect(collisions[1].GVK).To(Equal(jobGVK))
+	})
+})
+
+var _ = Describe("Resolver ByKind", func() {
+	var r *Resolver
+
+	BeforeEach(func() {
+		r = New(
+			[]*v1alpha1.Karta{
+				newKarta("apps-deployment-v1", deploymentGVK),
+				newKarta("batch-job-v1", jobGVK),
+			},
+			[]*v1alpha1.Karta{
+				newKarta("nvidia-com-dynamographdeployment-v1beta1", dynamoBetaGVK),
+				newKarta("nvidia-com-dynamographdeployment-v1alpha1", dynamoAlphaGVK),
+			},
+		)
+	})
+
+	DescribeTable("matches kubectl-style",
+		func(query string, want []string) {
+			Expect(namesOf(r.ByKind(query))).To(Equal(want))
+		},
+		Entry("exact", "Deployment", []string{"apps-deployment-v1"}),
+		Entry("lowercase", "deployment", []string{"apps-deployment-v1"}),
+		Entry("uppercase", "DEPLOYMENT", []string{"apps-deployment-v1"}),
+		Entry("plural", "deployments", []string{"apps-deployment-v1"}),
+		Entry("mixed case plural", "Jobs", []string{"batch-job-v1"}),
+		Entry("a kind covered at two versions", "dynamographdeployment", []string{
+			"nvidia-com-dynamographdeployment-v1alpha1",
+			"nvidia-com-dynamographdeployment-v1beta1",
+		}),
+	)
+
+	It("returns an empty non-nil slice when nothing matches", func() {
+		matches := r.ByKind("StatefulSet")
+		Expect(matches).NotTo(BeNil())
+		Expect(matches).To(BeEmpty())
+	})
+})
+
+var _ = Describe("Resolver ByName", func() {
+	var r *Resolver
+
+	BeforeEach(func() {
+		r = New(
+			[]*v1alpha1.Karta{newKarta("batch-job-v1", jobGVK)},
+			[]*v1alpha1.Karta{
+				newKarta("zzz-deployment", deploymentGVK),
+				newKarta("aaa-deployment", deploymentGVK),
+			},
+		)
+	})
+
+	It("finds a definition by its exact name", func() {
+		def, err := r.ByName("batch-job-v1")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(def.Karta.Name).To(Equal("batch-job-v1"))
+		Expect(def.Origin).To(Equal(OriginCommunity))
+	})
+
+	It("finds a definition that shares its GVK with another", func() {
+		def, err := r.ByName("aaa-deployment")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(def.Karta.Name).To(Equal("aaa-deployment"))
+		Expect(def.Origin).To(Equal(OriginCluster))
+	})
+
+	It("is case-sensitive", func() {
+		def, err := r.ByName("Batch-Job-V1")
+		Expect(err).To(MatchError(ErrNameNotFound))
+		Expect(err.Error()).To(ContainSubstring(`"Batch-Job-V1"`))
+		Expect(def.Karta).To(BeNil())
+	})
+})
+
+var _ = Describe("Resolver deep copies", func() {
+	var r *Resolver
+
+	BeforeEach(func() {
+		r = New([]*v1alpha1.Karta{newKarta("apps-deployment-v1", deploymentGVK)}, nil)
+	})
+
+	It("isolates a Definition returned from List", func() {
+		r.List()[0].Karta.Spec.StructureDefinition.RootComponent.Kind.Kind = "Mutated"
+
+		Expect(r.List()[0].Karta.Spec.StructureDefinition.RootComponent.Kind.Kind).To(Equal("Deployment"))
+	})
+
+	It("isolates a Definition returned from Resolve", func() {
+		def, err := r.Resolve(deploymentGVK)
+		Expect(err).NotTo(HaveOccurred())
+		def.Karta.Name = "mutated"
+
+		again, err := r.Resolve(deploymentGVK)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(again.Karta.Name).To(Equal("apps-deployment-v1"))
+	})
+
+	It("isolates a Definition returned from ByKind", func() {
+		r.ByKind("Deployment")[0].Karta.Spec.StructureDefinition.RootComponent.Name = "mutated"
+
+		Expect(r.ByKind("Deployment")[0].Karta.Spec.StructureDefinition.RootComponent.Name).To(Equal("root"))
+	})
+
+	It("isolates the Shadowed slice returned from Collisions", func() {
+		r := New(nil, []*v1alpha1.Karta{
+			newKarta("zzz-deployment", deploymentGVK),
+			newKarta("aaa-deployment", deploymentGVK),
+		})
+		r.Collisions()[0].Shadowed[0] = "mutated"
+
+		Expect(r.Collisions()[0].Shadowed).To(Equal([]string{"aaa-deployment"}))
+	})
+})
