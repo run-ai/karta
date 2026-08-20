@@ -1,0 +1,49 @@
+events:
+- kind: STATE
+  object:
+    apiVersion: grove.io/v1alpha1
+    kind: PodCliqueSet
+    metadata:
+      creationTimestamp: "2026-08-18T12:41:14Z"
+      generation: 1
+      name: karta-e2e-grove-initializing
+      namespace: test-8m4bc
+      uid: bcb821d6-5f58-4069-8e56-2541b9d3731b
+    spec:
+      replicas: 1
+      template:
+        cliqueStartupType: CliqueStartupTypeAnyOrder
+        cliques:
+        - name: worker
+          spec:
+            minAvailable: 2
+            podSpec:
+              containers:
+              - command:
+                - /bin/sh
+                - -c
+                - echo karta-e2e-grove && sleep infinity
+                image: busybox:99.99.99
+                name: worker
+                resources:
+                  requests:
+                    cpu: 20m
+                    memory: 32Mi
+              restartPolicy: Always
+              terminationGracePeriodSeconds: 30
+            replicas: 2
+            roleName: worker
+        headlessServiceConfig:
+          publishNotReadyAddresses: true
+        terminationDelay: 4h0m0s
+  resourceVersion: "16650"
+  state: Initializing
+flow: initializing
+kartaFile: docs/catalog/grove-io-podcliqueset-v1alpha1.yaml
+kartaName: grove-io-podcliqueset-v1alpha1
+operator: grove
+result:
+  succeeded: true
+schemaVersion: 1
+version: v1.34.0
+want: Initializing

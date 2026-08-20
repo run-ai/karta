@@ -54,6 +54,12 @@ generate-mocks: ## Generate mocks using go generate
 .PHONY: test
 test: generate-mocks ## Run tests with mock generation
 	go test ./...
+	go -C test/e2e test ./recorder/...
+
+.PHONY: test-replay
+test-replay: ## Replay the recorded fixtures through Karta (the cluster-driven flows are compile-checked only)
+	go -C test/e2e build ./...
+	go -C test/e2e test ./replay_tests/...
 
 lint-go: golangci-lint
 	echo "Running golangci linter"
@@ -157,7 +163,7 @@ cli-lint: golangci-lint ## Lint the CLI module.
 	cd cli && $(GOLANGCI_LINT) run -c $(PROJECT_DIR)/.golangci.yml
 
 .PHONY: check
-check: download-dependencies validate test cli-test cli-lint cli-verify-version
+check: download-dependencies validate test test-replay cli-test cli-lint cli-verify-version
 
 ##@ Helm
 
@@ -204,6 +210,24 @@ image-lock-test: ## Run the image-lock generator unit tests
 # Cluster name for the e2e targets. Override to run isolated clusters in parallel,
 # e.g. make e2e-up CLUSTER_NAME=shard-a WORKLOADS="jobset kuberay"
 CLUSTER_NAME ?= karta-e2e
+# A non-default cluster gets its own kubeconfig (matching hack/e2e/up.sh) so parallel
+# clusters do not race on the shared current-context.
+ifneq ($(CLUSTER_NAME),karta-e2e)
+E2E_KUBECONFIG := KUBECONFIG=$(HOME)/.kube/kind-$(CLUSTER_NAME).kubeconfig
+endif
+# Overall go-test timeout for the online suite; override for a quick subset, e.g. E2E_TIMEOUT=10m.
+E2E_TIMEOUT ?= 30m
+
+# Select cases by operator with the same WORKLOADS list as e2e-up: record-e2e WORKLOADS="batch-job"
+# records just the batch-job case. E2E_LABELS overrides it with a raw ginkgo label expression.
+empty :=
+space := $(empty) $(empty)
+E2E_LABELS ?= $(subst $(space), || ,$(strip $(filter-out all,$(WORKLOADS))))
+
+# FLOW="scaled" narrows a record to one flow by name (focuses the spec with that title).
+ifneq ($(strip $(FLOW)),)
+E2E_FOCUS := $(strip $(FLOW))
+endif
 
 # Pick which operators to install:
 #   make e2e-up                          # everything
@@ -215,6 +239,11 @@ e2e-up: ## Provision a kind cluster + operators (WORKLOADS="jobset kuberay" for 
 .PHONY: e2e-down
 e2e-down: ## Tear down the e2e cluster (set CLUSTER_NAME for a named one)
 	CLUSTER_NAME=$(CLUSTER_NAME) ./hack/e2e/down.sh
+
+.PHONY: record-e2e
+record-e2e: ## Drive the e2e suite against a live cluster and record the fixtures (run e2e-up first; WORKLOADS="batch-job" a subset, FLOW="scaled" one flow, CLUSTER_NAME to match)
+	cd test/e2e && go test -count=1 ./recorder
+	cd test/e2e && $(E2E_KUBECONFIG) go test -count=1 -v -timeout $(E2E_TIMEOUT) ./flows $(if $(E2E_FOCUS)$(E2E_LABELS),-args $(if $(E2E_FOCUS),-ginkgo.focus="$(E2E_FOCUS)") $(if $(E2E_LABELS),-ginkgo.label-filter="$(E2E_LABELS)"))
 
 # The e2e shell scripts to shellcheck: the provisioner, teardown, the shared
 # helpers, and every per-operator install.sh/verify.sh.
