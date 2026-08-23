@@ -24,9 +24,6 @@ import (
 
 var GVR = schema.GroupVersionResource{Group: "run.ai", Version: "v1alpha1", Resource: "kartas"}
 
-// Warning is something the caller may want to tell the user about. Load returns
-// these rather than printing, so a command decides whether they belong on stderr
-// as prose, inside a machine-readable document, or nowhere at all.
 type Warning struct {
 	Reason  string
 	Message string
@@ -88,8 +85,6 @@ func classify(err error) (Warning, bool) {
 	default:
 		return Warning{
 			Reason: ReasonUnreachable,
-			// A wrapped client-go error can carry newlines, and a caller printing
-			// one line per warning would emit an unprefixed continuation.
 			Message: strings.Join(strings.Fields(
 				fmt.Sprintf("could not read Karta definitions from the cluster: %v; showing built-in definitions only", err)), " "),
 		}, true
