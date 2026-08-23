@@ -108,14 +108,20 @@ var _ = Describe("Resolver merge and precedence", func() {
 		Expect(def.Karta).To(BeNil())
 	})
 
-	DescribeTable("skips definitions whose root GVK is incomplete",
+	DescribeTable("lists a definition whose root GVK is incomplete but never resolves it",
 		func(karta *v1alpha1.Karta, miss schema.GroupVersionKind) {
 			r := New(nil, []*v1alpha1.Karta{karta})
 
-			Expect(r.List()).To(BeEmpty())
+			// Unusable for lookup, but it exists in the cluster, so an operator has
+			// to be able to see the one they wrote.
+			Expect(namesOf(r.List())).To(Equal([]string{karta.Name}))
 			Expect(r.Collisions()).To(BeEmpty())
 
-			_, err := r.Resolve(miss)
+			byName, err := r.ByName(karta.Name)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(byName.Karta.Name).To(Equal(karta.Name))
+
+			_, err = r.Resolve(miss)
 			Expect(err).To(MatchError(ErrNotFound))
 		},
 		Entry("nil root kind", newRootlessKarta("no-kind"), schema.GroupVersionKind{}),
@@ -218,9 +224,8 @@ var _ = Describe("Resolver Collisions", func() {
 		})
 
 		Expect(r.Collisions()).To(Equal([]Collision{{
-			GVK:      deploymentGVK,
-			Winner:   "zzz-deployment",
-			Shadowed: []string{"aaa-deployment"},
+			GVK:   deploymentGVK,
+			Names: []string{"aaa-deployment", "zzz-deployment"},
 		}}))
 	})
 
@@ -232,9 +237,8 @@ var _ = Describe("Resolver Collisions", func() {
 		})
 
 		Expect(r.Collisions()).To(Equal([]Collision{{
-			GVK:      deploymentGVK,
-			Winner:   "zzz-deployment",
-			Shadowed: []string{"aaa-deployment", "mmm-deployment"},
+			GVK:   deploymentGVK,
+			Names: []string{"aaa-deployment", "mmm-deployment", "zzz-deployment"},
 		}}))
 	})
 
@@ -256,7 +260,7 @@ var _ = Describe("Resolver Collisions", func() {
 		Expect(r.Collisions()).To(BeEmpty())
 	})
 
-	It("records nothing for definitions skipped for an incomplete root GVK", func() {
+	It("records no collision for definitions with an incomplete root GVK", func() {
 		r := New(nil, []*v1alpha1.Karta{
 			newRootlessKarta("aaa-no-kind"),
 			newRootlessKarta("zzz-no-kind"),
@@ -280,7 +284,7 @@ var _ = Describe("Resolver Collisions", func() {
 	})
 })
 
-var _ = Describe("Resolver ByKind", func() {
+var _ = Describe("Resolver ByRootKind", func() {
 	var r *Resolver
 
 	BeforeEach(func() {
@@ -298,7 +302,7 @@ var _ = Describe("Resolver ByKind", func() {
 
 	DescribeTable("matches kubectl-style",
 		func(query string, want []string) {
-			Expect(namesOf(r.ByKind(query))).To(Equal(want))
+			Expect(namesOf(r.ByRootKind(query))).To(Equal(want))
 		},
 		Entry("exact", "Deployment", []string{"apps-deployment-v1"}),
 		Entry("lowercase", "deployment", []string{"apps-deployment-v1"}),
@@ -312,7 +316,7 @@ var _ = Describe("Resolver ByKind", func() {
 	)
 
 	It("returns an empty non-nil slice when nothing matches", func() {
-		matches := r.ByKind("StatefulSet")
+		matches := r.ByRootKind("StatefulSet")
 		Expect(matches).NotTo(BeNil())
 		Expect(matches).To(BeEmpty())
 	})
@@ -353,42 +357,25 @@ var _ = Describe("Resolver ByName", func() {
 	})
 })
 
-var _ = Describe("Resolver deep copies", func() {
+var _ = Describe("Resolver definitions that name no GVK", func() {
 	var r *Resolver
 
 	BeforeEach(func() {
-		r = New([]*v1alpha1.Karta{newKarta("apps-deployment-v1", deploymentGVK)}, nil)
-	})
-
-	It("isolates a Definition returned from List", func() {
-		r.List()[0].Karta.Spec.StructureDefinition.RootComponent.Kind.Kind = "Mutated"
-
-		Expect(r.List()[0].Karta.Spec.StructureDefinition.RootComponent.Kind.Kind).To(Equal("Deployment"))
-	})
-
-	It("isolates a Definition returned from Resolve", func() {
-		def, err := r.Resolve(deploymentGVK)
-		Expect(err).NotTo(HaveOccurred())
-		def.Karta.Name = "mutated"
-
-		again, err := r.Resolve(deploymentGVK)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(again.Karta.Name).To(Equal("apps-deployment-v1"))
-	})
-
-	It("isolates a Definition returned from ByKind", func() {
-		r.ByKind("Deployment")[0].Karta.Spec.StructureDefinition.RootComponent.Name = "mutated"
-
-		Expect(r.ByKind("Deployment")[0].Karta.Spec.StructureDefinition.RootComponent.Name).To(Equal("root"))
-	})
-
-	It("isolates the Shadowed slice returned from Collisions", func() {
-		r := New(nil, []*v1alpha1.Karta{
-			newKarta("zzz-deployment", deploymentGVK),
-			newKarta("aaa-deployment", deploymentGVK),
+		r = New(nil, []*v1alpha1.Karta{
+			newKarta("apps-deployment-v1", deploymentGVK),
+			newRootlessKarta("zzz-rootless"),
+			newRootlessKarta("aaa-rootless"),
 		})
-		r.Collisions()[0].Shadowed[0] = "mutated"
+	})
 
-		Expect(r.Collisions()[0].Shadowed).To(Equal([]string{"aaa-deployment"}))
+	It("lists them after the definitions that do, name-sorted", func() {
+		Expect(namesOf(r.List())).To(Equal([]string{
+			"apps-deployment-v1", "aaa-rootless", "zzz-rootless",
+		}))
+	})
+
+	It("never matches them by kind, since they name none", func() {
+		Expect(namesOf(r.ByRootKind("Deployment"))).To(Equal([]string{"apps-deployment-v1"}))
+		Expect(r.ByRootKind("root")).To(BeEmpty())
 	})
 })

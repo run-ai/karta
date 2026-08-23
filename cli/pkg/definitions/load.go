@@ -11,17 +11,23 @@ import (
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	v1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/catalog"
 )
 
+var GVR = schema.GroupVersionResource{Group: "run.ai", Version: "v1alpha1", Resource: "kartas"}
+
 // Load builds the resolver every CLI command looks definitions up in. It seeds
 // the built-in catalog and then best-effort merges the cluster's Karta
-// definitions on top. A cluster that cannot be reached degrades to the built-in
-// catalog instead of failing the command, so Load returns no error. Warnings go
-// to warnOut, which callers point at stderr so stdout stays parseable.
+// definitions on top.
 func Load(ctx context.Context, rcg genericclioptions.RESTClientGetter, warnOut io.Writer) *Resolver {
 	cluster, err := FetchCluster(ctx, rcg)
 	if err != nil {
@@ -31,26 +37,18 @@ func Load(ctx context.Context, rcg genericclioptions.RESTClientGetter, warnOut i
 
 	resolver := New(catalog.List(), cluster)
 	for _, c := range resolver.Collisions() {
-		// Only cluster definitions can collide here: the built-in catalog rejects
-		// duplicate root GVKs when it is constructed.
-		shadowed := make([]string, 0, len(c.Shadowed))
-		for _, name := range c.Shadowed {
-			shadowed = append(shadowed, fmt.Sprintf("%q", name))
+		names := make([]string, 0, len(c.Names))
+		for _, name := range c.Names {
+			names = append(names, fmt.Sprintf("%q", name))
 		}
-		fmt.Fprintf(warnOut, "warning: %d cluster Karta definitions claim %s; using %q and ignoring %s\n",
-			len(c.Shadowed)+1, c.GVK, c.Winner, strings.Join(shadowed, ", "))
+		fmt.Fprintf(warnOut, "warning: %d cluster Karta definitions claim %s: %s\n",
+			len(c.Names), c.GVK, strings.Join(names, ", "))
 	}
 	return resolver
 }
 
-// classify turns a cluster read failure into either silence or a warning. It is
-// separate from Load because Load builds its own client and cannot be handed a
-// fake, so this is where the degradation behaviour is exercised.
+// classify turns a cluster read failure into either silence or a warning.
 func classify(err error, warnOut io.Writer) {
-	// clientcmd.IsEmptyConfig type-switches on the concrete error and never
-	// unwraps, so it reports false for a cause wrapped with %w. Walk the chain by
-	// hand, otherwise running with no kubeconfig would warn instead of quietly
-	// falling back to the built-in catalog.
 	for cause := err; cause != nil; cause = errors.Unwrap(cause) {
 		if clientcmd.IsEmptyConfig(cause) {
 			return
@@ -67,4 +65,42 @@ func classify(err error, warnOut io.Writer) {
 	default:
 		fmt.Fprintf(warnOut, "warning: could not read Karta definitions from the cluster: %v; showing built-in definitions only\n", err)
 	}
+}
+
+// FetchCluster reads the Karta definitions installed in the cluster that rcg
+// points at. An empty cluster yields an empty result and no error.
+func FetchCluster(ctx context.Context, rcg genericclioptions.RESTClientGetter) ([]*v1alpha1.Karta, error) {
+	cfg, err := rcg.ToRESTConfig()
+	if err != nil {
+		return nil, fmt.Errorf("kubernetes config: %w", err)
+	}
+
+	// Per-config: the global handler would leak to every other client, and its
+	// output would land in the middle of machine-readable stderr.
+	cfg.WarningHandler = rest.NoWarnings{}
+
+	dyn, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("kubernetes dynamic client: %w", err)
+	}
+	return listWithClient(ctx, dyn)
+}
+
+// listWithClient reads every Karta in the cluster through a dynamic client.
+// Kartas are cluster-scoped, so the request carries no namespace and no selector.
+func listWithClient(ctx context.Context, dyn dynamic.Interface) ([]*v1alpha1.Karta, error) {
+	list, err := dyn.Resource(GVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("list Karta definitions: %w", err)
+	}
+
+	kartas := make([]*v1alpha1.Karta, 0, len(list.Items))
+	for i := range list.Items {
+		var karta v1alpha1.Karta
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(list.Items[i].Object, &karta); err != nil {
+			return nil, fmt.Errorf("convert Karta definition %q: %w", list.Items[i].GetName(), err)
+		}
+		kartas = append(kartas, &karta)
+	}
+	return kartas, nil
 }
