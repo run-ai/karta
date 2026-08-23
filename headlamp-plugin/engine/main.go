@@ -3,18 +3,21 @@
 
 //go:build js && wasm
 
-// Command wasm is a placeholder WebAssembly module proving the
-// make plugin-wasm build pipeline end-to-end. The real Karta engine
-// bindings (tree building, pod attribution, status evaluation) are added
-// in follow-up work that wires pkg/tree, pkg/resource, and pkg/status
-// into this module.
 package main
 
 import "syscall/js"
 
 func main() {
-	js.Global().Set("kartaVersion", js.FuncOf(func(js.Value, []js.Value) any {
-		return js.ValueOf("dev")
-	}))
+	registerKartaVersion()
+
+	// Block forever
 	select {}
+}
+
+func registerKartaVersion() {
+	js.Global().Set("kartaVersion", js.FuncOf(kartaVersion))
+}
+
+func kartaVersion(js.Value, []js.Value) any {
+	return js.ValueOf("dev")
 }

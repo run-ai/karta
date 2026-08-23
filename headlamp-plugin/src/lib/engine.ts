@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Loads the Karta WebAssembly module (headlamp-plugin/engine) shipped with the
-// plugin via the "headlamp.extraDist" package.json entries. Evaluation runs
-// fully in the browser, so no operator endpoint or extra RBAC is needed.
+import { ApiProxy } from '@kinvolk/headlamp-plugin/lib';
 
 const PLUGIN_NAME = 'karta';
 
@@ -61,24 +59,37 @@ export function getAppUrl(): string {
   return origin + (baseUrl ? `${baseUrl}/` : '/');
 }
 
+// loadScript injects a <script> tag and lets the browser fetch and execute
+// it, instead of fetching the text and eval-ing it ourselves.
+function loadScript(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`fetch ${src}: failed to load`));
+    document.head.appendChild(script);
+  });
+}
+
 // The plugin bundle is executed from a string, so it cannot learn its own URL
 // from the module system. The backend's plugin listing maps plugin names to
 // their base paths; fall back to the conventional path if it is unavailable.
+// Returned path is relative to getAppUrl(), not an absolute URL — ApiProxy
+// requests resolve it against the app URL themselves.
 async function findPluginBase(): Promise<string> {
-  const appUrl = getAppUrl();
   try {
-    const resp = await fetch(`${appUrl}plugins`);
-    if (resp.ok) {
-      const list = (await resp.json()) as { path?: string; name?: string }[];
-      const entry = list.find(item => item.name === PLUGIN_NAME);
-      if (entry?.path) {
-        return `${appUrl}${entry.path}`;
-      }
+    const list = (await ApiProxy.request('/plugins', {}, false, false)) as {
+      path?: string;
+      name?: string;
+    }[];
+    const entry = list.find(item => item.name === PLUGIN_NAME);
+    if (entry?.path) {
+      return entry.path;
     }
   } catch {
     // Fall through to the conventional path.
   }
-  return `${appUrl}plugins/${PLUGIN_NAME}`;
+  return `plugins/${PLUGIN_NAME}`;
 }
 
 async function waitForExports(timeoutMs: number): Promise<KartaEngine> {
@@ -95,22 +106,23 @@ async function waitForExports(timeoutMs: number): Promise<KartaEngine> {
 async function instantiate(): Promise<KartaEngine> {
   const base = await findPluginBase();
 
-  const execResp = await fetch(`${base}/wasm_exec.js`);
-  if (!execResp.ok) {
-    throw new Error(`fetch wasm_exec.js: HTTP ${execResp.status}`);
-  }
-  // wasm_exec.js is Go's plain-script runtime glue; evaluate it to define the
-  // global Go constructor.
-  new Function(await execResp.text())();
+  // wasm_exec.js must load as a real <script> tag (not fetched as data), so
+  // it needs an absolute URL — getAppUrl() is only needed for this one call.
+  await loadScript(`${getAppUrl()}${base}/wasm_exec.js`);
   if (!window.Go) {
     throw new Error('wasm_exec.js did not define the Go runtime');
   }
 
   const go = new window.Go();
-  const wasmResp = await fetch(`${base}/karta.wasm`);
-  if (!wasmResp.ok) {
-    throw new Error(`fetch karta.wasm: HTTP ${wasmResp.status}`);
-  }
+  // isJSON: false returns the raw Response instead of parsed JSON, which is
+  // what WebAssembly.instantiateStreaming needs below. ApiProxy.request
+  // already rejects on a non-ok response, so no manual .ok check is needed.
+  const wasmResp = (await ApiProxy.request(
+    `/${base}/karta.wasm`,
+    { isJSON: false },
+    false,
+    false
+  )) as Response;
 
   let instance: WebAssembly.Instance;
   try {

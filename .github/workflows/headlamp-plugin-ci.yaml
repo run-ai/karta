@@ -6,16 +6,16 @@ name: Headlamp Plugin
 on:
   push:
     branches: [ main, v0.* ]
-    paths: [ 'headlamp-plugin/**', 'Makefile', '.github/workflows/plugin-ci.yaml' ]
+    paths: [ 'headlamp-plugin/**', 'Makefile', '.github/workflows/headlamp-plugin-ci.yaml' ]
   pull_request:
     branches: [ main, v0.* ]
-    paths: [ 'headlamp-plugin/**', 'Makefile', '.github/workflows/plugin-ci.yaml' ]
+    paths: [ 'headlamp-plugin/**', 'Makefile', '.github/workflows/headlamp-plugin-ci.yaml' ]
 
 permissions:
   contents: read
 
 jobs:
-  plugin-ci:
+  headlamp-plugin-ci:
     name: Build
     runs-on: ubuntu-latest
     steps:
@@ -34,5 +34,5 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Build plugin
-        run: make plugin-build
+      - name: Build Headlamp plugin
+        run: make headlamp-plugin-build

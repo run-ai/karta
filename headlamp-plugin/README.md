@@ -26,15 +26,15 @@ for the details.
 Requires Node.js >= 22, npm, and Go (for the WebAssembly build).
 
 ```bash
-make plugin-wasm   # from the repository root; builds engine/karta.wasm + engine/wasm_exec.js
+make headlamp-plugin-wasm   # from the repository root; builds engine/karta.wasm + engine/wasm_exec.js
 npm install
 npm start
 ```
 
 `npm start` watches `src/` and rebuilds the plugin bundle on change, copying
 it (plus whatever is currently in `engine/`) into Headlamp's plugin
-directory. It does not watch Go source or rerun `make plugin-wasm` for
-you, after editing `engine/main.go`, rerun `make plugin-wasm` from the
+directory. It does not watch Go source or rerun `make headlamp-plugin-wasm` for
+you, after editing `engine/main.go`, rerun `make headlamp-plugin-wasm` from the
 repository root, then save any file under `src/` (or restart `npm start`) to
 pick up the new binary.
 
@@ -55,12 +55,12 @@ npm run test
 
 ## CI
 
-`.github/workflows/plugin-ci.yaml` runs on push/PR to `main`/`v0.*`, gated to
+`.github/workflows/headlamp-plugin-ci.yaml` runs on push/PR to `main`/`v0.*`, gated to
 changes under `headlamp-plugin/**` or the root `Makefile`. It runs
-`make plugin-build` from the repository root, which is:
+`make headlamp-plugin-build` from the repository root, which is:
 
 ```bash
-make plugin-wasm   # go build the WASM module
+make headlamp-plugin-wasm   # go build the WASM module
 npm ci
 npm run lint
 npm run tsc

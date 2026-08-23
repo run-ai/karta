@@ -55,14 +55,14 @@ generate-mocks: ## Generate mocks using go generate
 test: generate-mocks ## Run tests with mock generation
 	go test ./...
 
-.PHONY: plugin-wasm
-plugin-wasm: ## Build the Headlamp plugin WebAssembly module
+.PHONY: headlamp-plugin-wasm
+headlamp-plugin-wasm: ## Build the Headlamp plugin WebAssembly module
 	cd headlamp-plugin/engine && GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o karta.wasm .
 	rm -f headlamp-plugin/engine/wasm_exec.js
 	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" headlamp-plugin/engine/wasm_exec.js
 
-.PHONY: plugin-build
-plugin-build: plugin-wasm ## Build the Headlamp plugin (requires Node.js >= 22)
+.PHONY: headlamp-plugin-build
+headlamp-plugin-build: headlamp-plugin-wasm ## Build the Headlamp plugin (requires Node.js >= 22)
 	npm --prefix headlamp-plugin ci
 	npm --prefix headlamp-plugin run lint
 	npm --prefix headlamp-plugin run tsc
@@ -136,7 +136,8 @@ generate-licenses: go-licence-detector ## Regenerate NOTICE and THIRD_PARTY_LICE
 	echo "Generating NOTICE and THIRD_PARTY_LICENSES files from current dependencies using go-licence-detector"; \
 	go mod download -json > $(LOCALBIN)/root-deps.json; \
 	(cd cli && go mod download -json) > $(LOCALBIN)/cli-deps.json; \
-	python3 hack/merge-go-deps.py $(LOCALBIN)/root-deps.json $(LOCALBIN)/cli-deps.json > $(LOCALBIN)/deps.json; \
+	(cd headlamp-plugin/engine && go mod download -json) > $(LOCALBIN)/headlamp-plugin-engine-deps.json; \
+	python3 hack/merge-go-deps.py $(LOCALBIN)/root-deps.json $(LOCALBIN)/cli-deps.json $(LOCALBIN)/headlamp-plugin-engine-deps.json > $(LOCALBIN)/deps.json; \
 	$(GO_LICENCE_DETECTOR) -in $(LOCALBIN)/deps.json \
 		-noticeTemplate=hack/licenses/notice.tpl \
 		-noticeOut=NOTICE \
