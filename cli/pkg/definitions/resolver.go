@@ -23,6 +23,10 @@ const (
 	OriginCluster   Origin = "cluster"
 )
 
+var ErrNotFound = errors.New("definitions: no Karta definition for GVK")
+
+var ErrNameNotFound = errors.New("definitions: no Karta definition named")
+
 // Definition is a Karta together with the source it was read from.
 type Definition struct {
 	Karta  *v1alpha1.Karta
@@ -36,18 +40,11 @@ type Collision struct {
 	Names []string // metadata.names claiming this GVK, name-sorted
 }
 
-var ErrNotFound = errors.New("definitions: no Karta definition for GVK")
-
-var ErrNameNotFound = errors.New("definitions: no Karta definition named")
-
 // Resolver is an immutable lookup over the merged community and cluster definitions.
 type Resolver struct {
-	effective map[schema.GroupVersionKind]Definition
-
-	listing map[schema.GroupVersionKind][]Definition
-
-	ordered []Definition
-
+	effective  map[schema.GroupVersionKind]Definition
+	listing    map[schema.GroupVersionKind][]Definition
+	ordered    []Definition
 	collisions []Collision
 }
 
