@@ -39,7 +39,7 @@ Boundaries for anything touching credentials or security-relevant configuration:
 - Never commit credentials of any kind: API keys, tokens, kubeconfig files, certificates, private keys, registry passwords. This applies to test fixtures and examples too.
 - Use placeholder values in examples and fixtures. Never paste command output that may embed real cluster endpoints, node names, or internal hostnames.
 - Code that needs a secret reads it from an environment variable or a mounted Kubernetes Secret. Document the variable name, never a value.
-- Do not add new scripts or workflow steps that download and execute unpinned remote code. The golangci-lint installer already invoked by the Makefile is the sanctioned exception; pinning it is welcome as a separate change.
+- Do not add scripts or workflow steps that download and execute remote code. Install tools through the Go module proxy (`go install <module>@<version>`) or another checksum-verified path, as the Makefiles do.
 - Do not weaken webhook TLS or RBAC defaults in the Helm chart to simplify local development. Use the documented certificate modes instead (`docs/Webhook Certificates.md`).
 - A secret committed by mistake is not fixed by a follow-up commit. History must be rewritten and the credential rotated. Report it per `SECURITY.md`.
 
