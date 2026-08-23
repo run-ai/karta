@@ -144,6 +144,9 @@ func (r *Resolver) ByRootKind(kind string) []Definition {
 	out := make([]Definition, 0)
 	for _, def := range r.ordered {
 		root := strings.ToLower(catalog.RootKey(def.Karta).Kind)
+		if root == "" {
+			continue
+		}
 		if root == query || root == singular || root == plural {
 			out = append(out, def)
 		}

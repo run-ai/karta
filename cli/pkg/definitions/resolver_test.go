@@ -378,4 +378,9 @@ var _ = Describe("Resolver definitions that name no GVK", func() {
 		Expect(namesOf(r.ByRootKind("Deployment"))).To(Equal([]string{"apps-deployment-v1"}))
 		Expect(r.ByRootKind("root")).To(BeEmpty())
 	})
+
+	It("never matches them for a query that trims to empty", func() {
+		Expect(r.ByRootKind("s")).To(BeEmpty())
+		Expect(r.ByRootKind("")).To(BeEmpty())
+	})
 })
