@@ -76,12 +76,6 @@ func kartaListJSON(names ...string) string {
 }
 
 var _ = Describe("classify", func() {
-	var warn *bytes.Buffer
-
-	BeforeEach(func() {
-		warn = &bytes.Buffer{}
-	})
-
 	It("stays silent for a wrapped empty-config error from the real FetchCluster", func() {
 		_, err := FetchCluster(context.Background(), noKubeconfigGetter())
 		Expect(err).To(HaveOccurred())
@@ -91,8 +85,8 @@ var _ = Describe("classify", func() {
 		Expect(clientcmd.IsEmptyConfig(err)).To(BeFalse())
 		Expect(clientcmd.IsEmptyConfig(errors.Unwrap(err))).To(BeTrue())
 
-		classify(err, warn)
-		Expect(warn.String()).To(BeEmpty())
+		_, ok := classify(err)
+		Expect(ok).To(BeFalse())
 	})
 
 	It("warns when an explicit kubeconfig path does not exist", func() {
@@ -103,59 +97,58 @@ var _ = Describe("classify", func() {
 		_, err := FetchCluster(context.Background(), flags)
 		Expect(err).To(HaveOccurred())
 
-		classify(err, warn)
-		Expect(warn.String()).To(HavePrefix("warning:"))
-		Expect(warn.String()).To(ContainSubstring("missing-kubeconfig"))
+		got, ok := classify(err)
+		Expect(ok).To(BeTrue())
+		Expect(got.Reason).To(Equal(ReasonUnreachable))
+		Expect(got.Message).To(ContainSubstring("missing-kubeconfig"))
 	})
 
 	It("stays silent when the Karta CRD is not installed", func() {
 		err := fmt.Errorf("list Karta definitions: %w", apierrors.NewNotFound(kartasResource, ""))
 
-		classify(err, warn)
-		Expect(warn.String()).To(BeEmpty())
+		_, ok := classify(err)
+		Expect(ok).To(BeFalse())
 	})
 
 	It("warns and names the resource when listing is forbidden", func() {
 		err := fmt.Errorf("list Karta definitions: %w",
 			apierrors.NewForbidden(kartasResource, "", errors.New("RBAC: access denied")))
 
-		classify(err, warn)
-		Expect(warn.String()).To(HavePrefix("warning:"))
-		Expect(warn.String()).To(ContainSubstring("kartas.run.ai"))
-		Expect(warn.String()).To(ContainSubstring("list"))
+		got, ok := classify(err)
+		Expect(ok).To(BeTrue())
+		Expect(got.Reason).To(Equal(ReasonForbidden))
+		Expect(got.Message).To(ContainSubstring("kartas.run.ai"))
+		Expect(got.Message).To(ContainSubstring("list"))
 	})
 
 	It("warns with the cause for any other failure", func() {
 		err := fmt.Errorf("list Karta definitions: %w", errors.New("connection refused"))
 
-		classify(err, warn)
-		Expect(warn.String()).To(HavePrefix("warning:"))
-		Expect(warn.String()).To(ContainSubstring("connection refused"))
+		got, ok := classify(err)
+		Expect(ok).To(BeTrue())
+		Expect(got.Reason).To(Equal(ReasonUnreachable))
+		Expect(got.Message).To(ContainSubstring("connection refused"))
 	})
 
 	It("never leaks apimachinery no-match wording", func() {
 		err := fmt.Errorf("list Karta definitions: %w", apierrors.NewNotFound(kartasResource, ""))
 
-		classify(err, warn)
-		Expect(warn.String()).NotTo(ContainSubstring("no matches for kind"))
+		got, _ := classify(err)
+		Expect(got.Message).NotTo(ContainSubstring("no matches for kind"))
 	})
 })
 
 var _ = Describe("Load", func() {
-	var (
-		ctx  context.Context
-		warn *bytes.Buffer
-	)
+	var ctx context.Context
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		warn = &bytes.Buffer{}
 	})
 
 	It("falls back to the built-in catalog when no cluster is reachable", func() {
-		resolver := Load(ctx, noKubeconfigGetter(), warn)
+		resolver, warnings := Load(ctx, noKubeconfigGetter())
 
-		Expect(warn.String()).To(BeEmpty())
+		Expect(warnings).To(BeEmpty())
 
 		list := resolver.List()
 		Expect(list).To(HaveLen(len(catalog.List())))
@@ -173,9 +166,9 @@ var _ = Describe("Load", func() {
 		}))
 		DeferCleanup(server.Close)
 
-		resolver := Load(ctx, serverConfigGetter(server), warn)
+		resolver, warnings := Load(ctx, serverConfigGetter(server))
 
-		Expect(warn.String()).To(BeEmpty())
+		Expect(warnings).To(BeEmpty())
 		Expect(requestPaths).To(Equal([]string{"/apis/run.ai/v1alpha1/kartas"}))
 
 		def, err := resolver.Resolve(deploymentGVK)
@@ -192,9 +185,11 @@ var _ = Describe("Load", func() {
 			}))
 			DeferCleanup(server.Close)
 
-			resolver := Load(ctx, serverConfigGetter(server), warn)
+			resolver, warnings := Load(ctx, serverConfigGetter(server))
 
-			Expect(warn.String()).To(Equal(want))
+			Expect(warnings).To(HaveLen(1))
+			Expect(warnings[0].Reason).To(Equal(ReasonCollision))
+			Expect(warnings[0].Message).To(Equal(want))
 
 			def, err := resolver.Resolve(deploymentGVK)
 			Expect(err).NotTo(HaveOccurred())
@@ -202,13 +197,13 @@ var _ = Describe("Load", func() {
 		},
 		Entry("two claimants",
 			[]string{"aaa-deployment", "zzz-deployment"},
-			"warning: 2 cluster Karta definitions claim apps/v1, Kind=Deployment: "+
-				`"aaa-deployment", "zzz-deployment"`+"\n",
+			"2 cluster Karta definitions claim apps/v1, Kind=Deployment: "+
+				`"aaa-deployment", "zzz-deployment"`,
 		),
 		Entry("four claimants",
 			[]string{"zzz-deployment", "aaa-deployment", "ccc-deployment", "bbb-deployment"},
-			"warning: 4 cluster Karta definitions claim apps/v1, Kind=Deployment: "+
-				`"aaa-deployment", "bbb-deployment", "ccc-deployment", "zzz-deployment"`+"\n",
+			"4 cluster Karta definitions claim apps/v1, Kind=Deployment: "+
+				`"aaa-deployment", "bbb-deployment", "ccc-deployment", "zzz-deployment"`,
 		),
 	)
 })

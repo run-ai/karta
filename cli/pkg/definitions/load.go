@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -25,13 +24,30 @@ import (
 
 var GVR = schema.GroupVersionResource{Group: "run.ai", Version: "v1alpha1", Resource: "kartas"}
 
+// Warning is something the caller may want to tell the user about. Load returns
+// these rather than printing, so a command decides whether they belong on stderr
+// as prose, inside a machine-readable document, or nowhere at all.
+type Warning struct {
+	Reason  string
+	Message string
+}
+
+const (
+	ReasonCollision   = "collision"
+	ReasonForbidden   = "forbidden"
+	ReasonUnreachable = "unreachable"
+)
+
 // Load builds the resolver every CLI command looks definitions up in. It seeds
 // the built-in catalog and then best-effort merges the cluster's Karta
 // definitions on top.
-func Load(ctx context.Context, rcg genericclioptions.RESTClientGetter, warnOut io.Writer) *Resolver {
+func Load(ctx context.Context, rcg genericclioptions.RESTClientGetter) (*Resolver, []Warning) {
 	cluster, err := FetchCluster(ctx, rcg)
+	var warnings []Warning
 	if err != nil {
-		classify(err, warnOut)
+		if w, ok := classify(err); ok {
+			warnings = append(warnings, w)
+		}
 		cluster = nil
 	}
 
@@ -41,17 +57,20 @@ func Load(ctx context.Context, rcg genericclioptions.RESTClientGetter, warnOut i
 		for _, name := range c.Names {
 			names = append(names, fmt.Sprintf("%q", name))
 		}
-		fmt.Fprintf(warnOut, "warning: %d cluster Karta definitions claim %s: %s\n",
-			len(c.Names), c.GVK, strings.Join(names, ", "))
+		warnings = append(warnings, Warning{
+			Reason: ReasonCollision,
+			Message: fmt.Sprintf("%d cluster Karta definitions claim %s: %s",
+				len(c.Names), c.GVK, strings.Join(names, ", ")),
+		})
 	}
-	return resolver
+	return resolver, warnings
 }
 
 // classify turns a cluster read failure into either silence or a warning.
-func classify(err error, warnOut io.Writer) {
+func classify(err error) (Warning, bool) {
 	for cause := err; cause != nil; cause = errors.Unwrap(cause) {
 		if clientcmd.IsEmptyConfig(cause) {
-			return
+			return Warning{}, false
 		}
 	}
 
@@ -59,11 +78,21 @@ func classify(err error, warnOut io.Writer) {
 	case apierrors.IsNotFound(err):
 		// The Karta CRD is not installed, which is the expected out-of-the-box
 		// state and not worth telling the user about.
+		return Warning{}, false
 	case apierrors.IsForbidden(err):
-		fmt.Fprintln(warnOut, "warning: not allowed to list kartas.run.ai; showing built-in definitions only. "+
-			"Ask a cluster administrator for \"list\" permission on kartas.run.ai to include cluster definitions.")
+		return Warning{
+			Reason: ReasonForbidden,
+			Message: "not allowed to list kartas.run.ai; showing built-in definitions only. " +
+				"Ask a cluster administrator for \"list\" permission on kartas.run.ai to include cluster definitions.",
+		}, true
 	default:
-		fmt.Fprintf(warnOut, "warning: could not read Karta definitions from the cluster: %v; showing built-in definitions only\n", err)
+		return Warning{
+			Reason: ReasonUnreachable,
+			// A wrapped client-go error can carry newlines, and a caller printing
+			// one line per warning would emit an unprefixed continuation.
+			Message: strings.Join(strings.Fields(
+				fmt.Sprintf("could not read Karta definitions from the cluster: %v; showing built-in definitions only", err)), " "),
+		}, true
 	}
 }
 
