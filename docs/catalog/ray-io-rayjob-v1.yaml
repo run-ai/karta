@@ -22,7 +22,9 @@ spec:
           messageFieldName: message
         statusMappings:
           initializing:
-            - byPhase: PENDING
+            - byExpression:
+                expression: (.status.jobStatus // "") == "PENDING" and (.status.jobDeploymentStatus // "") != "Suspended" and (.status.jobDeploymentStatus // "") != "Suspending"
+                expectedResult: "true"
             - byExpression:
                 expression: (.status.jobStatus // "") == "" and (.status.jobDeploymentStatus // "") != "Suspended" and (.status.jobDeploymentStatus // "") != "Suspending"
                 expectedResult: "true"
