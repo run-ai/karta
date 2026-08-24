@@ -92,6 +92,20 @@ func PhaseEq(want string, path ...string) recorder.StateCheck {
 	}
 }
 
+// PhaseAny matches when the string at the path equals any of wants (some operators map one state from
+// several phase strings).
+func PhaseAny(wants []string, path ...string) recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		got, _, _ := unstructured.NestedString(u.Object, path...)
+		for _, w := range wants {
+			if got == w {
+				return true
+			}
+		}
+		return false
+	}
+}
+
 func IntAtLeast(n int64, path ...string) recorder.StateCheck {
 	return func(u *unstructured.Unstructured) bool {
 		got, found, err := unstructured.NestedInt64(u.Object, path...)
@@ -250,5 +264,21 @@ func JobsetInitializing() recorder.StateCheck {
 			}
 		}
 		return true
+	}
+}
+
+// RayJobInitializing matches a RayJob before its job runs: jobStatus PENDING, or empty while the RayJob
+// brings up its cluster and it is not suspended (jobDeploymentStatus Initializing/Running, or empty).
+func RayJobInitializing() recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		js, _, _ := unstructured.NestedString(u.Object, "status", "jobStatus")
+		if js == "PENDING" {
+			return true
+		}
+		if js != "" {
+			return false
+		}
+		ds, _, _ := unstructured.NestedString(u.Object, "status", "jobDeploymentStatus")
+		return ds != "Suspended" && ds != "Suspending"
 	}
 }
