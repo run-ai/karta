@@ -29,7 +29,7 @@ var _ = Describe("Karta reads the recorded state", func() {
 	recordings, _ := filepath.Glob(recordedGlob)
 	if len(recordings) == 0 {
 		It("has recordings to replay", func() {
-			Skip("no recordings under test/e2e/recorded_data; run make record-e2e")
+			Fail("no recordings under test/e2e/recorded_data; run make record-e2e")
 		})
 		return
 	}
@@ -40,7 +40,10 @@ var _ = Describe("Karta reads the recorded state", func() {
 			r, err := recorder.OpenRecording(path)
 			Expect(err).NotTo(HaveOccurred())
 
-			kartaYAML, err := os.ReadFile(filepath.Join(repoRoot, r.Recording().KartaFile))
+			name := filepath.Base(r.Recording().KartaFile)
+			Expect(name).To(MatchRegexp(`^[a-zA-Z0-9._-]+\.yaml$`),
+				"recording %q names a suspicious KartaFile %q", path, r.Recording().KartaFile)
+			kartaYAML, err := os.ReadFile(filepath.Join(repoRoot, "docs", "catalog", name))
 			Expect(err).NotTo(HaveOccurred())
 			karta := &kartav1alpha1.Karta{}
 			Expect(yaml.Unmarshal(kartaYAML, karta)).To(Succeed())
