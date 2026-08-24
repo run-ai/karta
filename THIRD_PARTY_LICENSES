@@ -38,12 +38,12 @@ For complete license texts, please refer to the source repositories or the LICEN
 
 ### k8s.io/api
 - Name: k8s.io/api
-- Version: v0.36.3
+- Version: v0.36.4
 - License: Apache-2.0
 
 ### k8s.io/apimachinery
 - Name: k8s.io/apimachinery
-- Version: v0.36.3
+- Version: v0.36.4
 - License: Apache-2.0
 
 ### k8s.io/utils
@@ -123,7 +123,7 @@ For complete license texts, please refer to the source repositories or the LICEN
 
 ### golang.org/x/mod
 - Name: golang.org/x/mod
-- Version: v0.36.0
+- Version: v0.37.0
 - License: BSD-3-Clause
 
 ### golang.org/x/net
@@ -143,12 +143,12 @@ For complete license texts, please refer to the source repositories or the LICEN
 
 ### golang.org/x/text
 - Name: golang.org/x/text
-- Version: v0.38.0
+- Version: v0.39.0
 - License: BSD-3-Clause
 
 ### golang.org/x/tools
 - Name: golang.org/x/tools
-- Version: v0.45.0
+- Version: v0.47.0
 - License: BSD-3-Clause
 
 ### gopkg.in/inf.v0
@@ -193,12 +193,12 @@ For complete license texts, please refer to the source repositories or the LICEN
 
 ### k8s.io/cli-runtime
 - Name: k8s.io/cli-runtime
-- Version: v0.36.3
+- Version: v0.36.4
 - License: Apache-2.0
 
 ### k8s.io/client-go
 - Name: k8s.io/client-go
-- Version: v0.36.3
+- Version: v0.36.4
 - License: Apache-2.0
 
 ### github.com/Azure/go-ansiterm
