@@ -1,0 +1,68 @@
+events:
+- kind: STATE
+  object:
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      annotations:
+        deployment.kubernetes.io/revision: "1"
+      creationTimestamp: "2026-08-18T12:39:16Z"
+      generation: 1
+      name: karta-e2e-deploy-initializing
+      namespace: test-8m4bc
+      uid: 7a7ad163-8296-44dd-89b8-a492f49e52c1
+    spec:
+      progressDeadlineSeconds: 600
+      replicas: 1
+      revisionHistoryLimit: 10
+      selector:
+        matchLabels:
+          app: karta-e2e-deploy-initializing
+      strategy:
+        rollingUpdate:
+          maxSurge: 25%
+          maxUnavailable: 25%
+        type: RollingUpdate
+      template:
+        metadata:
+          labels:
+            app: karta-e2e-deploy-initializing
+        spec:
+          containers:
+          - command:
+            - sh
+            - -c
+            - sleep infinity
+            image: busybox:99.99.99
+            imagePullPolicy: IfNotPresent
+            name: worker
+            resources:
+              requests:
+                cpu: 20m
+                memory: 32Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: Always
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+    status:
+      conditions:
+      - lastTransitionTime: "2026-08-18T12:39:16Z"
+        lastUpdateTime: "2026-08-18T12:39:16Z"
+        message: Created new replica set "karta-e2e-deploy-initializing-5f5996cdc5"
+        reason: NewReplicaSetCreated
+        status: "True"
+        type: Progressing
+  resourceVersion: "15213"
+  state: Initializing
+flow: initializing
+kartaFile: docs/catalog/apps-deployment-v1.yaml
+kartaName: apps-deployment-v1
+operator: deployment
+result:
+  succeeded: true
+schemaVersion: 1
+version: v1.34.0
+want: Initializing
