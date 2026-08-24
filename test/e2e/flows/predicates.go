@@ -57,6 +57,20 @@ func CondFalse(condType string) recorder.StateCheck {
 	}
 }
 
+// CondStatus matches when a condition of condType is present with the given status. Useful for the
+// "Unknown" status a workload reports while it is still reconciling (Knative Ready=Unknown while deploying).
+func CondStatus(condType, status string) recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		conds, _, _ := unstructured.NestedSlice(u.Object, "status", "conditions")
+		for _, c := range conds {
+			if m, ok := c.(map[string]any); ok && m["type"] == condType && m["status"] == status {
+				return true
+			}
+		}
+		return false
+	}
+}
+
 // CondNotTrue matches when no condition of condType is present with status True (absent or non-True). A
 // just-created Deployment is Progressing with no Available condition yet, still initializing.
 func CondNotTrue(condType string) recorder.StateCheck {
