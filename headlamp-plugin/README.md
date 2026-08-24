@@ -55,8 +55,8 @@ npm run test
 
 ## CI
 
-`.github/workflows/headlamp-plugin-ci.yaml` runs on push/PR to `main`/`v0.*`, gated to
-changes under `headlamp-plugin/**` or the root `Makefile`. It runs
+The `headlamp-plugin-ci` job in `.github/workflows/ci.yaml` runs on every
+push/PR to `main`/`v0.*`, regardless of which files changed. It runs
 `make headlamp-plugin-build` from the repository root, which is:
 
 ```bash
