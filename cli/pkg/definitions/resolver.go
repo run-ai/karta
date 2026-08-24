@@ -27,6 +27,14 @@ var ErrNotFound = errors.New("definitions: no Karta definition for GVK")
 
 var ErrNameNotFound = errors.New("definitions: no Karta definition named")
 
+var ErrAmbiguous = errors.New("definitions: more than one Karta definition for GVK")
+
+// mappable reports the root GVK a definition can be looked up by.
+func mappable(d Definition) (schema.GroupVersionKind, bool) {
+	gvk := catalog.RootKey(d.Karta)
+	return gvk, gvk.Version != "" && gvk.Kind != ""
+}
+
 // Definition is a Karta together with the source it was read from.
 type Definition struct {
 	Karta  *v1alpha1.Karta
@@ -42,32 +50,26 @@ type Collision struct {
 
 // Resolver is an immutable lookup over the merged community and cluster definitions.
 type Resolver struct {
-	effective  map[schema.GroupVersionKind]Definition
-	listing    map[schema.GroupVersionKind][]Definition
-	ordered    []Definition
-	collisions []Collision
+	ordered []Definition
 }
 
 // New merges community and cluster definitions into a Resolver. Community is
 // indexed first so a cluster definition overrides a community one claiming the
 // same root GVK.
 func New(community, cluster []*v1alpha1.Karta) *Resolver {
-	r := &Resolver{
-		effective: make(map[schema.GroupVersionKind]Definition, len(community)+len(cluster)),
-		listing:   make(map[schema.GroupVersionKind][]Definition, len(community)+len(cluster)),
-	}
-	unmapped := r.index(community, OriginCommunity)
-	unmapped = append(unmapped, r.index(cluster, OriginCluster)...)
-	slices.SortFunc(r.collisions, func(a, b Collision) int {
-		return strings.Compare(a.GVK.String(), b.GVK.String())
-	})
+	r := &Resolver{}
+	// Keyed only while merging: a later source replaces an earlier one wholesale
+	// for a GVK, which is what makes cluster take precedence over the catalog.
+	listing := make(map[schema.GroupVersionKind][]Definition, len(community)+len(cluster))
+	unmapped := index(listing, community, OriginCommunity)
+	unmapped = append(unmapped, index(listing, cluster, OriginCluster)...)
 
-	gvks := slices.SortedFunc(maps.Keys(r.listing), func(a, b schema.GroupVersionKind) int {
+	gvks := slices.SortedFunc(maps.Keys(listing), func(a, b schema.GroupVersionKind) int {
 		return strings.Compare(a.String(), b.String())
 	})
-	r.ordered = make([]Definition, 0, len(r.listing)+len(unmapped))
+	r.ordered = make([]Definition, 0, len(listing)+len(unmapped))
 	for _, gvk := range gvks {
-		r.ordered = append(r.ordered, r.listing[gvk]...)
+		r.ordered = append(r.ordered, listing[gvk]...)
 	}
 	slices.SortFunc(unmapped, func(a, b Definition) int {
 		return strings.Compare(a.Karta.Name, b.Karta.Name)
@@ -78,7 +80,7 @@ func New(community, cluster []*v1alpha1.Karta) *Resolver {
 
 // index adds one source to the resolver. Sorting by name keeps the outcome
 // deterministic.
-func (r *Resolver) index(kartas []*v1alpha1.Karta, origin Origin) []Definition {
+func index(listing map[schema.GroupVersionKind][]Definition, kartas []*v1alpha1.Karta, origin Origin) []Definition {
 	sorted := slices.Clone(kartas)
 	slices.SortFunc(sorted, func(a, b *v1alpha1.Karta) int {
 		return strings.Compare(a.Name, b.Name)
@@ -87,42 +89,42 @@ func (r *Resolver) index(kartas []*v1alpha1.Karta, origin Origin) []Definition {
 	var unmapped []Definition
 	claimed := make(map[schema.GroupVersionKind][]Definition, len(sorted))
 	for _, karta := range sorted {
-		root := karta.Spec.StructureDefinition.RootComponent.Kind
-		// A zero GVK cannot serve as a map key, so an incomplete root is set aside
-		// rather than indexed. Group may be empty for core workloads such as Pod.
-		if root == nil || root.Version == "" || root.Kind == "" {
-			unmapped = append(unmapped, Definition{Karta: karta, Origin: origin})
+		def := Definition{Karta: karta, Origin: origin}
+		gvk, ok := mappable(def)
+		if !ok {
+			unmapped = append(unmapped, def)
 			continue
 		}
-		gvk := catalog.RootKey(karta)
-		def := Definition{Karta: karta, Origin: origin}
-
-		r.effective[gvk] = def
 		claimed[gvk] = append(claimed[gvk], def)
 	}
 
 	for gvk, defs := range claimed {
 		// Assignment, not append: this source replaces an earlier one for the GVK.
-		r.listing[gvk] = defs
-		if len(defs) < 2 {
-			continue
-		}
-		names := make([]string, 0, len(defs))
-		for _, def := range defs {
-			names = append(names, def.Karta.Name)
-		}
-		r.collisions = append(r.collisions, Collision{GVK: gvk, Names: names})
+		listing[gvk] = defs
 	}
 	return unmapped
 }
 
-// Resolve returns the definition that wins for gvk, or ErrNotFound.
+// Resolve returns the one definition covering gvk.
 func (r *Resolver) Resolve(gvk schema.GroupVersionKind) (Definition, error) {
-	def, ok := r.effective[gvk]
-	if !ok {
-		return Definition{}, fmt.Errorf("%w: %s", ErrNotFound, gvk)
+	var defs []Definition
+	for _, def := range r.ordered {
+		if root, ok := mappable(def); ok && root == gvk {
+			defs = append(defs, def)
+		}
 	}
-	return def, nil
+	switch len(defs) {
+	case 0:
+		return Definition{}, fmt.Errorf("%w: %s", ErrNotFound, gvk)
+	case 1:
+		return defs[0], nil
+	default:
+		names := make([]string, 0, len(defs))
+		for _, def := range defs {
+			names = append(names, fmt.Sprintf("%q", def.Karta.Name))
+		}
+		return Definition{}, fmt.Errorf("%w: %s: %s", ErrAmbiguous, gvk, strings.Join(names, ", "))
+	}
 }
 
 // List returns every visible definition sorted by GVK then name, one entry per
@@ -140,10 +142,11 @@ func (r *Resolver) ByRootKind(kind string) []Definition {
 
 	out := make([]Definition, 0)
 	for _, def := range r.ordered {
-		root := strings.ToLower(catalog.RootKey(def.Karta).Kind)
-		if root == "" {
+		gvk, ok := mappable(def)
+		if !ok {
 			continue
 		}
+		root := strings.ToLower(gvk.Kind)
 		if root == query || root == singular || root == plural {
 			out = append(out, def)
 		}
@@ -165,5 +168,25 @@ func (r *Resolver) ByName(name string) (Definition, error) {
 // Collisions returns root GVKs claimed by more than one definition from the same
 // source.
 func (r *Resolver) Collisions() []Collision {
-	return r.collisions
+	var out []Collision
+	var run schema.GroupVersionKind
+	var names []string
+	flush := func() {
+		if len(names) > 1 {
+			out = append(out, Collision{GVK: run, Names: names})
+		}
+		names = nil
+	}
+	for _, def := range r.ordered {
+		gvk, ok := mappable(def)
+		if !ok || gvk != run {
+			flush()
+			run = gvk
+		}
+		if ok {
+			names = append(names, def.Karta.Name)
+		}
+	}
+	flush()
+	return out
 }

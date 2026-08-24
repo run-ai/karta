@@ -143,11 +143,14 @@ var _ = Describe("Resolver merge and precedence", func() {
 		Expect(def.Karta.Name).To(Equal("core-pod-v1"))
 	})
 
-	DescribeTable("picks the last name alphabetically regardless of input order",
+	DescribeTable("refuses to resolve a GVK claimed more than once, whatever the input order",
 		func(cluster []*v1alpha1.Karta) {
 			def, err := New(nil, cluster).Resolve(deploymentGVK)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(def.Karta.Name).To(Equal("zzz-deployment"))
+			Expect(err).To(MatchError(ErrAmbiguous))
+			// Naming both is what lets a user fix it; picking one would hide it.
+			Expect(err.Error()).To(ContainSubstring(`"aaa-deployment"`))
+			Expect(err.Error()).To(ContainSubstring(`"zzz-deployment"`))
+			Expect(def.Karta).To(BeNil())
 		},
 		Entry("already sorted", []*v1alpha1.Karta{
 			newKarta("aaa-deployment", deploymentGVK),
@@ -173,7 +176,7 @@ var _ = Describe("Resolver merge and precedence", func() {
 })
 
 var _ = Describe("Resolver List", func() {
-	It("lists both same-source claimants of a GVK while Resolve returns one winner", func() {
+	It("lists both same-source claimants of a GVK while Resolve refuses it", func() {
 		r := New(nil, []*v1alpha1.Karta{
 			newKarta("zzz-deployment", deploymentGVK),
 			newKarta("aaa-deployment", deploymentGVK),
@@ -181,9 +184,8 @@ var _ = Describe("Resolver List", func() {
 
 		Expect(namesOf(r.List())).To(Equal([]string{"aaa-deployment", "zzz-deployment"}))
 
-		def, err := r.Resolve(deploymentGVK)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(def.Karta.Name).To(Equal("zzz-deployment"))
+		_, err := r.Resolve(deploymentGVK)
+		Expect(err).To(MatchError(ErrAmbiguous))
 	})
 
 	It("lists an overridden GVK exactly once, as the cluster definition", func() {

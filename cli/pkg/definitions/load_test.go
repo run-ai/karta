@@ -79,6 +79,8 @@ var _ = Describe("classify", func() {
 	It("stays silent for a wrapped empty-config error from the real FetchCluster", func() {
 		_, err := FetchCluster(context.Background(), noKubeconfigGetter())
 		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("kubernetes config"))
+		Expect(err.Error()).To(ContainSubstring("no configuration has been provided"))
 
 		// The wrapping is exactly what defeats clientcmd.IsEmptyConfig, so classify
 		// has to unwrap before it can recognise the offline case.
@@ -96,6 +98,8 @@ var _ = Describe("classify", func() {
 
 		_, err := FetchCluster(context.Background(), flags)
 		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("kubernetes config"))
+		Expect(err.Error()).To(ContainSubstring("missing-kubeconfig"))
 
 		got, ok := classify(err)
 		Expect(ok).To(BeTrue())
@@ -191,9 +195,8 @@ var _ = Describe("Load", func() {
 			Expect(warnings[0].Reason).To(Equal(ReasonCollision))
 			Expect(warnings[0].Message).To(Equal(want))
 
-			def, err := resolver.Resolve(deploymentGVK)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(def.Karta.Name).To(Equal("zzz-deployment"))
+			_, err := resolver.Resolve(deploymentGVK)
+			Expect(err).To(MatchError(ErrAmbiguous))
 		},
 		Entry("two claimants",
 			[]string{"aaa-deployment", "zzz-deployment"},
