@@ -1,0 +1,42 @@
+events:
+- kind: STATE
+  object:
+    apiVersion: apps.nvidia.com/v1alpha1
+    kind: NIMService
+    metadata:
+      creationTimestamp: "2026-08-18T12:39:12Z"
+      generation: 1
+      name: karta-e2e-nim-initializing
+      namespace: test-8m4bc
+      uid: 29f41728-6685-4b9c-a511-8f7e083b4ae9
+    spec:
+      authSecret: ngc-secret
+      env:
+      - name: NIM_REQUEST_LATENCY
+        value: "2"
+      expose:
+        service:
+          port: 8000
+          type: ClusterIP
+      image:
+        pullPolicy: IfNotPresent
+        repository: nonexistent-nim
+        tag: bad
+      inferencePlatform: standalone
+      replicas: 1
+      storage:
+        pvc:
+          create: true
+          size: 1Gi
+          volumeAccessMode: ReadWriteOnce
+  resourceVersion: "15079"
+  state: Initializing
+flow: initializing
+kartaFile: docs/catalog/apps-nvidia-com-nimservice-v1alpha1.yaml
+kartaName: apps-nvidia-com-nimservice-v1alpha1
+operator: nim
+result:
+  succeeded: true
+schemaVersion: 1
+version: v1.34.0
+want: Initializing
