@@ -56,6 +56,11 @@ test: generate-mocks ## Run tests with mock generation
 	go test ./...
 	go -C test/e2e test ./recorder/...
 
+.PHONY: test-replay
+test-replay: ## Replay the recorded fixtures through Karta offline (no cluster)
+	go -C test/e2e build ./...
+	go -C test/e2e test ./replay_tests/...
+
 lint-go: golangci-lint
 	echo "Running golangci linter"
 	$(GOLANGCI_LINT) run -v -c .golangci.yml
@@ -158,7 +163,7 @@ cli-lint: golangci-lint ## Lint the CLI module.
 	cd cli && $(GOLANGCI_LINT) run -c $(PROJECT_DIR)/.golangci.yml
 
 .PHONY: check
-check: download-dependencies validate verify-recordings test cli-test cli-lint cli-verify-version
+check: download-dependencies validate verify-recordings test test-replay cli-test cli-lint cli-verify-version
 
 ##@ Helm
 
