@@ -107,11 +107,13 @@ var _ = Describe("classify", func() {
 		Expect(got.Message).To(ContainSubstring("missing-kubeconfig"))
 	})
 
-	It("stays silent when the Karta CRD is not installed", func() {
+	It("warns when the Karta CRD is not installed", func() {
 		err := fmt.Errorf("list Karta definitions: %w", apierrors.NewNotFound(kartasResource, ""))
 
-		_, ok := classify(err)
-		Expect(ok).To(BeFalse())
+		got, ok := classify(err)
+		Expect(ok).To(BeTrue())
+		Expect(got.Reason).To(Equal(ReasonNoCRD))
+		Expect(got.Message).To(ContainSubstring("kartas.run.ai"))
 	})
 
 	It("warns and names the resource when listing is forbidden", func() {

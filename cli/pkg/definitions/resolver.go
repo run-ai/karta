@@ -44,7 +44,7 @@ type Collision struct {
 
 // Resolver is an immutable lookup over the merged community and cluster definitions.
 type Resolver struct {
-	ordered []Definition
+	definitions []Definition
 }
 
 // New merges community and cluster definitions into a Resolver. Community is
@@ -59,14 +59,14 @@ func New(community, cluster []*v1alpha1.Karta) *Resolver {
 	gvks := slices.SortedFunc(maps.Keys(listing), func(a, b schema.GroupVersionKind) int {
 		return strings.Compare(a.String(), b.String())
 	})
-	r.ordered = make([]Definition, 0, len(listing)+len(unmapped))
+	r.definitions = make([]Definition, 0, len(listing)+len(unmapped))
 	for _, gvk := range gvks {
-		r.ordered = append(r.ordered, listing[gvk]...)
+		r.definitions = append(r.definitions, listing[gvk]...)
 	}
 	slices.SortFunc(unmapped, func(a, b Definition) int {
 		return strings.Compare(a.Karta.Name, b.Karta.Name)
 	})
-	r.ordered = append(r.ordered, unmapped...)
+	r.definitions = append(r.definitions, unmapped...)
 	return r
 }
 
@@ -106,7 +106,7 @@ func index(listing map[schema.GroupVersionKind][]Definition, kartas []*v1alpha1.
 // Resolve returns the one definition covering gvk.
 func (r *Resolver) Resolve(gvk schema.GroupVersionKind) (Definition, error) {
 	var defs []Definition
-	for _, def := range r.ordered {
+	for _, def := range r.definitions {
 		if root, ok := mappable(def); ok && root == gvk {
 			defs = append(defs, def)
 		}
@@ -128,7 +128,7 @@ func (r *Resolver) Resolve(gvk schema.GroupVersionKind) (Definition, error) {
 // List returns every visible definition sorted by GVK then name, one entry per
 // claimant, with definitions that name no GVK last.
 func (r *Resolver) List() []Definition {
-	return r.ordered
+	return r.definitions
 }
 
 // ByRootKind matches the Kind segment of a GVK, not a lookup of its own: callers
@@ -139,7 +139,7 @@ func (r *Resolver) ByRootKind(kind string) []Definition {
 	plural := query + "s"
 
 	out := make([]Definition, 0)
-	for _, def := range r.ordered {
+	for _, def := range r.definitions {
 		gvk, ok := mappable(def)
 		if !ok {
 			continue
@@ -155,7 +155,7 @@ func (r *Resolver) ByRootKind(kind string) []Definition {
 // ByName returns the definition called name, matched exactly: names are
 // identifiers copied from list output.
 func (r *Resolver) ByName(name string) (Definition, error) {
-	for _, def := range r.ordered {
+	for _, def := range r.definitions {
 		if def.Karta.Name == name {
 			return def, nil
 		}
@@ -175,7 +175,7 @@ func (r *Resolver) Collisions() []Collision {
 		}
 		names = nil
 	}
-	for _, def := range r.ordered {
+	for _, def := range r.definitions {
 		gvk, ok := mappable(def)
 		if !ok || gvk != run {
 			flush()

@@ -31,6 +31,7 @@ type Warning struct {
 
 const (
 	ReasonCollision   = "collision"
+	ReasonNoCRD       = "no_crd"
 	ReasonForbidden   = "forbidden"
 	ReasonUnreachable = "unreachable"
 )
@@ -73,9 +74,10 @@ func classify(err error) (Warning, bool) {
 
 	switch {
 	case apierrors.IsNotFound(err):
-		// The Karta CRD is not installed, which is the expected out-of-the-box
-		// state and not worth telling the user about.
-		return Warning{}, false
+		return Warning{
+			Reason:  ReasonNoCRD,
+			Message: "the kartas.run.ai CRD is not installed; showing built-in definitions only",
+		}, true
 	case apierrors.IsForbidden(err):
 		return Warning{
 			Reason: ReasonForbidden,
