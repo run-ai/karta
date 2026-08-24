@@ -25,13 +25,13 @@ var _ = Describe("Pod (built-in)", Ordered, Label("pod", "builtin"), func() {
 			AddState(kartav1alpha1.FailedStatus, PhaseEq("Failed", "status", "phase"))
 	})
 
-	It("happy", func(ctx SpecContext) {
-		out, err := recorder.NewFlow(rec, "happy", "testdata/pod/happy.yaml").Through(
+	It("running", func(ctx SpecContext) {
+		out, err := recorder.NewFlow(rec, "running", "testdata/pod/running.yaml").Through(
 			recorder.Reaches(kartav1alpha1.InitializingStatus),
 			recorder.Reaches(kartav1alpha1.RunningStatus),
 		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
-		Expect(err).To(Succeed())
+		Expect(err).NotTo(HaveOccurred(), "run pod flow running")
 	})
 
 	It("completed", func(ctx SpecContext) {
@@ -41,7 +41,7 @@ var _ = Describe("Pod (built-in)", Ordered, Label("pod", "builtin"), func() {
 			recorder.Reaches(kartav1alpha1.CompletedStatus),
 		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
-		Expect(err).To(Succeed())
+		Expect(err).NotTo(HaveOccurred(), "run pod flow completed")
 	})
 
 	It("failed", func(ctx SpecContext) {
@@ -51,13 +51,13 @@ var _ = Describe("Pod (built-in)", Ordered, Label("pod", "builtin"), func() {
 			recorder.Reaches(kartav1alpha1.FailedStatus),
 		).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
-		Expect(err).To(Succeed())
+		Expect(err).NotTo(HaveOccurred(), "run pod flow failed")
 	})
 
 	It("initializing", func(ctx SpecContext) {
 		out, err := recorder.NewFlow(rec, "initializing", "testdata/pod/initializing.yaml").
 			Through(recorder.Reaches(kartav1alpha1.InitializingStatus)).Run(ctx)
 		Expect(rec.Save(fx, out)).Error().NotTo(HaveOccurred())
-		Expect(err).To(Succeed())
+		Expect(err).NotTo(HaveOccurred(), "run pod flow initializing")
 	})
 })

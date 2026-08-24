@@ -32,7 +32,7 @@ func installKarta(ctx context.Context, kartaFile, kartaName string) {
 
 	Eventually(func(g Gomega) {
 		got := &kartav1alpha1.Karta{}
-		g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: kartaName}, got)).To(Succeed())
+		g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: karta.GetName()}, got)).To(Succeed())
 		g.Expect(apimeta.IsStatusConditionTrue(got.Status.Conditions, "Ready")).To(BeTrue(), "Ready")
 	}, time.Minute, 2*time.Second).Should(Succeed())
 }

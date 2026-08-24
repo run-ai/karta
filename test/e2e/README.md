@@ -18,7 +18,7 @@ can be checked against real data.
 make e2e-up                                  # provision kind + operators (hack/e2e)
 make record-e2e                              # record against the current cluster
 make record-e2e WORKLOADS="pod"              # one workload type
-make record-e2e WORKLOADS="pod" FLOW="happy" # one flow of one type
+make record-e2e WORKLOADS="pod" FLOW="running" # one flow of one type
 KUBECONFIG=/path/to/your.kubeconfig \
   make record-e2e WORKLOADS="pod"            # any cluster, not only kind
 ```

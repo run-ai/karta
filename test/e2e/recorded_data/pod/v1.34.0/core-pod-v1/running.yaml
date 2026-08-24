@@ -634,7 +634,7 @@ events:
       startTime: "2026-08-18T12:37:29Z"
   resourceVersion: "14230"
   state: Running
-flow: happy
+flow: running
 kartaFile: docs/catalog/core-pod-v1.yaml
 kartaName: core-pod-v1
 operator: pod
