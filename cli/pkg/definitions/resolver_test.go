@@ -18,6 +18,7 @@ var (
 	podGVK         = schema.GroupVersionKind{Version: "v1", Kind: "Pod"}
 	dynamoAlphaGVK = schema.GroupVersionKind{Group: "nvidia.com", Version: "v1alpha1", Kind: "DynamoGraphDeployment"}
 	dynamoBetaGVK  = schema.GroupVersionKind{Group: "nvidia.com", Version: "v1beta1", Kind: "DynamoGraphDeployment"}
+	milvusGVK      = schema.GroupVersionKind{Group: "milvus.io", Version: "v1beta1", Kind: "Milvus"}
 )
 
 // newKarta builds a minimal indexable Karta claiming gvk as its root component.
@@ -298,6 +299,7 @@ var _ = Describe("Resolver ByRootKind", func() {
 			[]*v1alpha1.Karta{
 				newKarta("nvidia-com-dynamographdeployment-v1beta1", dynamoBetaGVK),
 				newKarta("nvidia-com-dynamographdeployment-v1alpha1", dynamoAlphaGVK),
+				newKarta("milvus-io-milvus-v1beta1", milvusGVK),
 			},
 		)
 	})
@@ -315,6 +317,11 @@ var _ = Describe("Resolver ByRootKind", func() {
 			"nvidia-com-dynamographdeployment-v1alpha1",
 			"nvidia-com-dynamographdeployment-v1beta1",
 		}),
+		Entry("a kind that itself ends in s", "Milvus", []string{"milvus-io-milvus-v1beta1"}),
+		Entry("its plural", "milvuses", []string{}),
+		// A query one character short of a kind ending in s is a typo, not a
+		// singular, so it must not match.
+		Entry("the query one character short", "milvu", []string{}),
 	)
 
 	It("returns an empty non-nil slice when nothing matches", func() {

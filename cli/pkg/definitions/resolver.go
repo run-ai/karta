@@ -136,7 +136,6 @@ func (r *Resolver) List() []Definition {
 func (r *Resolver) ByRootKind(kind string) []Definition {
 	query := strings.ToLower(kind)
 	singular := strings.TrimSuffix(query, "s")
-	plural := query + "s"
 
 	out := make([]Definition, 0)
 	for _, def := range r.definitions {
@@ -145,7 +144,7 @@ func (r *Resolver) ByRootKind(kind string) []Definition {
 			continue
 		}
 		root := strings.ToLower(gvk.Kind)
-		if root == query || root == singular || root == plural {
+		if root == query || root == singular {
 			out = append(out, def)
 		}
 	}
