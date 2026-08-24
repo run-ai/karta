@@ -1,0 +1,484 @@
+events:
+- kind: STATE
+  object:
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      creationTimestamp: "2026-08-18T12:40:14Z"
+      generation: 1
+      labels:
+        batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+        batch.kubernetes.io/job-name: karta-e2e-job-resumed
+        controller-uid: 6c345d41-2919-429a-8196-137d22043143
+        job-name: karta-e2e-job-resumed
+      name: karta-e2e-job-resumed
+      namespace: test-8m4bc
+      uid: 6c345d41-2919-429a-8196-137d22043143
+    spec:
+      backoffLimit: 0
+      completionMode: NonIndexed
+      completions: 1
+      manualSelector: false
+      parallelism: 1
+      podReplacementPolicy: TerminatingOrFailed
+      selector:
+        matchLabels:
+          batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+      suspend: true
+      template:
+        metadata:
+          labels:
+            batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+            batch.kubernetes.io/job-name: karta-e2e-job-resumed
+            controller-uid: 6c345d41-2919-429a-8196-137d22043143
+            job-name: karta-e2e-job-resumed
+        spec:
+          containers:
+          - command:
+            - sh
+            - -c
+            - sleep 20
+            image: busybox:1.36
+            imagePullPolicy: IfNotPresent
+            name: worker
+            readinessProbe:
+              exec:
+                command:
+                - "true"
+              failureThreshold: 3
+              initialDelaySeconds: 6
+              periodSeconds: 2
+              successThreshold: 1
+              timeoutSeconds: 1
+            resources:
+              requests:
+                cpu: 50m
+                memory: 32Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+    status:
+      conditions:
+      - lastProbeTime: "2026-08-18T12:40:14Z"
+        lastTransitionTime: "2026-08-18T12:40:14Z"
+        message: Job suspended
+        reason: JobSuspended
+        status: "True"
+        type: Suspended
+      ready: 0
+      terminating: 0
+      uncountedTerminatedPods: {}
+  resourceVersion: "15907"
+  state: Suspended
+- action:
+    name: Resume
+    operation:
+      patchType: application/merge-patch+json
+      payload:
+        spec:
+          suspend: false
+      verb: PATCH
+  kind: ACTION
+- kind: STATE
+  object:
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      creationTimestamp: "2026-08-18T12:40:14Z"
+      generation: 2
+      labels:
+        batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+        batch.kubernetes.io/job-name: karta-e2e-job-resumed
+        controller-uid: 6c345d41-2919-429a-8196-137d22043143
+        job-name: karta-e2e-job-resumed
+      name: karta-e2e-job-resumed
+      namespace: test-8m4bc
+      uid: 6c345d41-2919-429a-8196-137d22043143
+    spec:
+      backoffLimit: 0
+      completionMode: NonIndexed
+      completions: 1
+      manualSelector: false
+      parallelism: 1
+      podReplacementPolicy: TerminatingOrFailed
+      selector:
+        matchLabels:
+          batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+      suspend: false
+      template:
+        metadata:
+          labels:
+            batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+            batch.kubernetes.io/job-name: karta-e2e-job-resumed
+            controller-uid: 6c345d41-2919-429a-8196-137d22043143
+            job-name: karta-e2e-job-resumed
+        spec:
+          containers:
+          - command:
+            - sh
+            - -c
+            - sleep 20
+            image: busybox:1.36
+            imagePullPolicy: IfNotPresent
+            name: worker
+            readinessProbe:
+              exec:
+                command:
+                - "true"
+              failureThreshold: 3
+              initialDelaySeconds: 6
+              periodSeconds: 2
+              successThreshold: 1
+              timeoutSeconds: 1
+            resources:
+              requests:
+                cpu: 50m
+                memory: 32Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+    status:
+      conditions:
+      - lastProbeTime: "2026-08-18T12:40:14Z"
+        lastTransitionTime: "2026-08-18T12:40:14Z"
+        message: Job suspended
+        reason: JobSuspended
+        status: "True"
+        type: Suspended
+      ready: 0
+      terminating: 0
+      uncountedTerminatedPods: {}
+  resourceVersion: "15909"
+  state: Suspended
+- kind: STATE
+  object:
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      creationTimestamp: "2026-08-18T12:40:14Z"
+      generation: 2
+      labels:
+        batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+        batch.kubernetes.io/job-name: karta-e2e-job-resumed
+        controller-uid: 6c345d41-2919-429a-8196-137d22043143
+        job-name: karta-e2e-job-resumed
+      name: karta-e2e-job-resumed
+      namespace: test-8m4bc
+      uid: 6c345d41-2919-429a-8196-137d22043143
+    spec:
+      backoffLimit: 0
+      completionMode: NonIndexed
+      completions: 1
+      manualSelector: false
+      parallelism: 1
+      podReplacementPolicy: TerminatingOrFailed
+      selector:
+        matchLabels:
+          batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+      suspend: false
+      template:
+        metadata:
+          labels:
+            batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+            batch.kubernetes.io/job-name: karta-e2e-job-resumed
+            controller-uid: 6c345d41-2919-429a-8196-137d22043143
+            job-name: karta-e2e-job-resumed
+        spec:
+          containers:
+          - command:
+            - sh
+            - -c
+            - sleep 20
+            image: busybox:1.36
+            imagePullPolicy: IfNotPresent
+            name: worker
+            readinessProbe:
+              exec:
+                command:
+                - "true"
+              failureThreshold: 3
+              initialDelaySeconds: 6
+              periodSeconds: 2
+              successThreshold: 1
+              timeoutSeconds: 1
+            resources:
+              requests:
+                cpu: 50m
+                memory: 32Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+    status:
+      active: 1
+      conditions:
+      - lastProbeTime: "2026-08-18T12:40:14Z"
+        lastTransitionTime: "2026-08-18T12:40:14Z"
+        message: Job resumed
+        reason: JobResumed
+        status: "False"
+        type: Suspended
+      ready: 0
+      startTime: "2026-08-18T12:40:14Z"
+      terminating: 0
+      uncountedTerminatedPods: {}
+  resourceVersion: "15913"
+  state: Initializing
+- kind: STATE
+  object:
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      creationTimestamp: "2026-08-18T12:40:14Z"
+      generation: 2
+      labels:
+        batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+        batch.kubernetes.io/job-name: karta-e2e-job-resumed
+        controller-uid: 6c345d41-2919-429a-8196-137d22043143
+        job-name: karta-e2e-job-resumed
+      name: karta-e2e-job-resumed
+      namespace: test-8m4bc
+      uid: 6c345d41-2919-429a-8196-137d22043143
+    spec:
+      backoffLimit: 0
+      completionMode: NonIndexed
+      completions: 1
+      manualSelector: false
+      parallelism: 1
+      podReplacementPolicy: TerminatingOrFailed
+      selector:
+        matchLabels:
+          batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+      suspend: false
+      template:
+        metadata:
+          labels:
+            batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+            batch.kubernetes.io/job-name: karta-e2e-job-resumed
+            controller-uid: 6c345d41-2919-429a-8196-137d22043143
+            job-name: karta-e2e-job-resumed
+        spec:
+          containers:
+          - command:
+            - sh
+            - -c
+            - sleep 20
+            image: busybox:1.36
+            imagePullPolicy: IfNotPresent
+            name: worker
+            readinessProbe:
+              exec:
+                command:
+                - "true"
+              failureThreshold: 3
+              initialDelaySeconds: 6
+              periodSeconds: 2
+              successThreshold: 1
+              timeoutSeconds: 1
+            resources:
+              requests:
+                cpu: 50m
+                memory: 32Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+    status:
+      active: 1
+      conditions:
+      - lastProbeTime: "2026-08-18T12:40:14Z"
+        lastTransitionTime: "2026-08-18T12:40:14Z"
+        message: Job resumed
+        reason: JobResumed
+        status: "False"
+        type: Suspended
+      ready: 1
+      startTime: "2026-08-18T12:40:14Z"
+      terminating: 0
+      uncountedTerminatedPods: {}
+  resourceVersion: "15978"
+  state: Running
+- kind: STATE
+  object:
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      creationTimestamp: "2026-08-18T12:40:14Z"
+      generation: 2
+      labels:
+        batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+        batch.kubernetes.io/job-name: karta-e2e-job-resumed
+        controller-uid: 6c345d41-2919-429a-8196-137d22043143
+        job-name: karta-e2e-job-resumed
+      name: karta-e2e-job-resumed
+      namespace: test-8m4bc
+      uid: 6c345d41-2919-429a-8196-137d22043143
+    spec:
+      backoffLimit: 0
+      completionMode: NonIndexed
+      completions: 1
+      manualSelector: false
+      parallelism: 1
+      podReplacementPolicy: TerminatingOrFailed
+      selector:
+        matchLabels:
+          batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+      suspend: false
+      template:
+        metadata:
+          labels:
+            batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+            batch.kubernetes.io/job-name: karta-e2e-job-resumed
+            controller-uid: 6c345d41-2919-429a-8196-137d22043143
+            job-name: karta-e2e-job-resumed
+        spec:
+          containers:
+          - command:
+            - sh
+            - -c
+            - sleep 20
+            image: busybox:1.36
+            imagePullPolicy: IfNotPresent
+            name: worker
+            readinessProbe:
+              exec:
+                command:
+                - "true"
+              failureThreshold: 3
+              initialDelaySeconds: 6
+              periodSeconds: 2
+              successThreshold: 1
+              timeoutSeconds: 1
+            resources:
+              requests:
+                cpu: 50m
+                memory: 32Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+    status:
+      active: 1
+      conditions:
+      - lastProbeTime: "2026-08-18T12:40:14Z"
+        lastTransitionTime: "2026-08-18T12:40:14Z"
+        message: Job resumed
+        reason: JobResumed
+        status: "False"
+        type: Suspended
+      ready: 0
+      startTime: "2026-08-18T12:40:14Z"
+      terminating: 0
+      uncountedTerminatedPods: {}
+  resourceVersion: "16103"
+  state: Initializing
+- kind: STATE
+  object:
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      creationTimestamp: "2026-08-18T12:40:14Z"
+      generation: 2
+      labels:
+        batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+        batch.kubernetes.io/job-name: karta-e2e-job-resumed
+        controller-uid: 6c345d41-2919-429a-8196-137d22043143
+        job-name: karta-e2e-job-resumed
+      name: karta-e2e-job-resumed
+      namespace: test-8m4bc
+      uid: 6c345d41-2919-429a-8196-137d22043143
+    spec:
+      backoffLimit: 0
+      completionMode: NonIndexed
+      completions: 1
+      manualSelector: false
+      parallelism: 1
+      podReplacementPolicy: TerminatingOrFailed
+      selector:
+        matchLabels:
+          batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+      suspend: false
+      template:
+        metadata:
+          labels:
+            batch.kubernetes.io/controller-uid: 6c345d41-2919-429a-8196-137d22043143
+            batch.kubernetes.io/job-name: karta-e2e-job-resumed
+            controller-uid: 6c345d41-2919-429a-8196-137d22043143
+            job-name: karta-e2e-job-resumed
+        spec:
+          containers:
+          - command:
+            - sh
+            - -c
+            - sleep 20
+            image: busybox:1.36
+            imagePullPolicy: IfNotPresent
+            name: worker
+            readinessProbe:
+              exec:
+                command:
+                - "true"
+              failureThreshold: 3
+              initialDelaySeconds: 6
+              periodSeconds: 2
+              successThreshold: 1
+              timeoutSeconds: 1
+            resources:
+              requests:
+                cpu: 50m
+                memory: 32Mi
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+    status:
+      conditions:
+      - lastProbeTime: "2026-08-18T12:40:14Z"
+        lastTransitionTime: "2026-08-18T12:40:14Z"
+        message: Job resumed
+        reason: JobResumed
+        status: "False"
+        type: Suspended
+      - lastProbeTime: "2026-08-18T12:40:37Z"
+        lastTransitionTime: "2026-08-18T12:40:37Z"
+        message: Reached expected number of succeeded pods
+        reason: CompletionsReached
+        status: "True"
+        type: SuccessCriteriaMet
+      ready: 0
+      startTime: "2026-08-18T12:40:14Z"
+      terminating: 0
+      uncountedTerminatedPods:
+        succeeded:
+        - ad7b0023-11d6-4312-9b39-533b386a556d
+  resourceVersion: "16109"
+  state: Completed
+flow: resumed
+kartaFile: docs/catalog/batch-job-v1.yaml
+kartaName: batch-job-v1
+operator: batch-job
+result:
+  succeeded: true
+schemaVersion: 1
+version: v1.34.0
+want: Completed

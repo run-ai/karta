@@ -35,6 +35,48 @@ func PhaseEq(want string, path ...string) recorder.StateCheck {
 	}
 }
 
+func IntAtLeast(n int64, path ...string) recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		got, found, err := unstructured.NestedInt64(u.Object, path...)
+		return err == nil && found && got >= n
+	}
+}
+
+// IntEq matches when the integer field at the given path is present and exactly n. It gates a scale flow's
+// step for a workload whose readiness count is a single field (Grove reports status.availableReplicas).
+func IntEq(n int64, path ...string) recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		got, found, err := unstructured.NestedInt64(u.Object, path...)
+		return err == nil && found && got == n
+	}
+}
+
+// ReplicasDegraded matches a settled-degraded workload: every desired replica created (updatedReplicas ==
+// spec.replicas) but some not ready (0 < readyReplicas < spec.replicas).
+func ReplicasDegraded() recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		desired, ok, _ := unstructured.NestedInt64(u.Object, "spec", "replicas")
+		if !ok {
+			desired = 1
+		}
+		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
+		updated, _, _ := unstructured.NestedInt64(u.Object, "status", "updatedReplicas")
+		return desired > 0 && updated == desired && ready > 0 && ready < desired
+	}
+}
+
+// JobDegraded matches a parallel Job settled degraded: parallelism > 1, some but not all pods ready, and
+// at least one pod already succeeded or failed - the Job analog of ReplicasDegraded.
+func JobDegraded() recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		par, ok, _ := unstructured.NestedInt64(u.Object, "spec", "parallelism")
+		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "ready")
+		succeeded, _, _ := unstructured.NestedInt64(u.Object, "status", "succeeded")
+		failedN, _, _ := unstructured.NestedInt64(u.Object, "status", "failed")
+		return ok && par > 1 && ready > 0 && ready < par && (succeeded > 0 || failedN > 0)
+	}
+}
+
 // JobsetRunning matches a JobSet with working pods: at least one replicatedJob has active or ready pods and
 // none have failed. Reading either count (not both) keeps the state stable while the controller briefly
 // flaps ready to 0 mid-run.
