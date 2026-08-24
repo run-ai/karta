@@ -258,6 +258,26 @@ func ReplicasInitializing() recorder.StateCheck {
 	}
 }
 
+// AllReplicasAvailable matches when every desired replica is available (status.availableReplicas >=
+// spec.replicas), Karta's Running for a Grove PodCliqueSet. Includes the vacuous spec.replicas == 0 case.
+func AllReplicasAvailable() recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		desired, _, _ := unstructured.NestedInt64(u.Object, "spec", "replicas")
+		avail, _, _ := unstructured.NestedInt64(u.Object, "status", "availableReplicas")
+		return avail >= desired
+	}
+}
+
+// ReplicasComingUp is the initializing counterpart of AllReplicasAvailable: spec.replicas > 0 and not every
+// desired replica is available yet (status.availableReplicas < spec.replicas).
+func ReplicasComingUp() recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		desired, _, _ := unstructured.NestedInt64(u.Object, "spec", "replicas")
+		avail, _, _ := unstructured.NestedInt64(u.Object, "status", "availableReplicas")
+		return desired > 0 && avail < desired
+	}
+}
+
 // CronjobFired matches a CronJob that has scheduled at least once (status.lastScheduleTime set). Karta reads
 // a fired, enabled CronJob as Running (suspended wins via the registry order).
 func CronjobFired() recorder.StateCheck {
