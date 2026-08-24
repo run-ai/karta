@@ -23,17 +23,11 @@ const (
 	OriginCluster   Origin = "cluster"
 )
 
-var ErrNotFound = errors.New("definitions: no Karta definition for GVK")
-
-var ErrNameNotFound = errors.New("definitions: no Karta definition named")
-
-var ErrAmbiguous = errors.New("definitions: more than one Karta definition for GVK")
-
-// mappable reports the root GVK a definition can be looked up by.
-func mappable(d Definition) (schema.GroupVersionKind, bool) {
-	gvk := catalog.RootKey(d.Karta)
-	return gvk, gvk.Version != "" && gvk.Kind != ""
-}
+var (
+	ErrNotFound     = errors.New("definitions: no Karta definition for GVK")
+	ErrNameNotFound = errors.New("definitions: no Karta definition named")
+	ErrAmbiguous    = errors.New("definitions: more than one Karta definition for GVK")
+)
 
 // Definition is a Karta together with the source it was read from.
 type Definition struct {
@@ -58,8 +52,6 @@ type Resolver struct {
 // same root GVK.
 func New(community, cluster []*v1alpha1.Karta) *Resolver {
 	r := &Resolver{}
-	// Keyed only while merging: a later source replaces an earlier one wholesale
-	// for a GVK, which is what makes cluster take precedence over the catalog.
 	listing := make(map[schema.GroupVersionKind][]Definition, len(community)+len(cluster))
 	unmapped := index(listing, community, OriginCommunity)
 	unmapped = append(unmapped, index(listing, cluster, OriginCluster)...)
@@ -76,6 +68,12 @@ func New(community, cluster []*v1alpha1.Karta) *Resolver {
 	})
 	r.ordered = append(r.ordered, unmapped...)
 	return r
+}
+
+// mappable reports the root GVK a definition can be looked up by.
+func mappable(d Definition) (schema.GroupVersionKind, bool) {
+	gvk := catalog.RootKey(d.Karta)
+	return gvk, gvk.Version != "" && gvk.Kind != ""
 }
 
 // index adds one source to the resolver. Sorting by name keeps the outcome
