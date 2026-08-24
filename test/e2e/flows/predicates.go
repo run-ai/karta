@@ -267,6 +267,18 @@ func JobsetInitializing() recorder.StateCheck {
 	}
 }
 
+// RaySuspended matches a RayCluster suspended at creation: spec.suspend is true and status.state is either
+// "suspended" or not yet set (the operator may not have written a state yet).
+func RaySuspended() recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		if suspend, _, _ := unstructured.NestedBool(u.Object, "spec", "suspend"); !suspend {
+			return false
+		}
+		state, found, _ := unstructured.NestedString(u.Object, "status", "state")
+		return !found || state == "" || state == "suspended"
+	}
+}
+
 // RayJobInitializing matches a RayJob before its job runs: jobStatus PENDING, or empty while the RayJob
 // brings up its cluster and it is not suspended (jobDeploymentStatus Initializing/Running, or empty).
 func RayJobInitializing() recorder.StateCheck {
@@ -280,5 +292,18 @@ func RayJobInitializing() recorder.StateCheck {
 		}
 		ds, _, _ := unstructured.NestedString(u.Object, "status", "jobDeploymentStatus")
 		return ds != "Suspended" && ds != "Suspending"
+	}
+}
+
+// RayInitializing matches a RayCluster converging toward ready: not suspended and status.state not yet
+// "ready" or "failed". Covers a fresh provision (state empty) and the resume window where suspend is
+// already false but state still lags at "suspended".
+func RayInitializing() recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		if suspend, _, _ := unstructured.NestedBool(u.Object, "spec", "suspend"); suspend {
+			return false
+		}
+		state, _, _ := unstructured.NestedString(u.Object, "status", "state")
+		return state != "ready" && state != "failed"
 	}
 }
