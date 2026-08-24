@@ -108,6 +108,22 @@ func IntEq(n int64, path ...string) recorder.StateCheck {
 	}
 }
 
+func BoolTrue(path ...string) recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		got, found, err := unstructured.NestedBool(u.Object, path...)
+		return err == nil && found && got
+	}
+}
+
+// Absent matches when the field at the given path is not present (a CronJob that has not scheduled yet
+// has no status.lastScheduleTime).
+func Absent(path ...string) recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		_, found, _ := unstructured.NestedFieldNoCopy(u.Object, path...)
+		return !found
+	}
+}
+
 // ReplicasReady matches a workload settled at exactly n replicas: status.replicas and status.readyReplicas
 // both equal n. It gates a scale flow's step so each replica count is captured only once the controller
 // has finished scaling to it, not mid-rollout.
@@ -160,6 +176,15 @@ func ReplicasInitializing() recorder.StateCheck {
 		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
 		updated, _, _ := unstructured.NestedInt64(u.Object, "status", "updatedReplicas")
 		return desired > 0 && (ready == 0 || ready > desired || updated != desired)
+	}
+}
+
+// CronjobFired matches a CronJob that has scheduled at least once (status.lastScheduleTime set). Karta reads
+// a fired, enabled CronJob as Running (suspended wins via the registry order).
+func CronjobFired() recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		_, scheduled, _ := unstructured.NestedFieldNoCopy(u.Object, "status", "lastScheduleTime")
+		return scheduled
 	}
 }
 
