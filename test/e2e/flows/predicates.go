@@ -119,6 +119,21 @@ func ReplicasReady(n int64) recorder.StateCheck {
 	}
 }
 
+// FullyAvailable matches when every desired replica is created and ready (readyReplicas == updatedReplicas
+// == spec.replicas), Karta's Running for a StatefulSet. Compares to spec.replicas, not the lagging
+// status.replicas, so a gradually-scaled StatefulSet never reads Running mid-ramp.
+func FullyAvailable() recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		desired, ok, _ := unstructured.NestedInt64(u.Object, "spec", "replicas")
+		if !ok {
+			desired = 1 // Karta defaults `.spec.replicas // 1`
+		}
+		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
+		updated, _, _ := unstructured.NestedInt64(u.Object, "status", "updatedReplicas")
+		return desired > 0 && ready == desired && updated == desired
+	}
+}
+
 // ReplicasDegraded matches a settled-degraded workload: every desired replica created (updatedReplicas ==
 // spec.replicas) but some not ready (0 < readyReplicas < spec.replicas).
 func ReplicasDegraded() recorder.StateCheck {
@@ -130,6 +145,21 @@ func ReplicasDegraded() recorder.StateCheck {
 		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
 		updated, _, _ := unstructured.NestedInt64(u.Object, "status", "updatedReplicas")
 		return desired > 0 && updated == desired && ready > 0 && ready < desired
+	}
+}
+
+// ReplicasInitializing matches a StatefulSet still converging: spec.replicas > 0 and either nothing ready
+// (readyReplicas == 0), not all created (updatedReplicas != spec.replicas), or more ready than desired
+// (readyReplicas > spec.replicas, a scale-down still shedding pods).
+func ReplicasInitializing() recorder.StateCheck {
+	return func(u *unstructured.Unstructured) bool {
+		desired, ok, _ := unstructured.NestedInt64(u.Object, "spec", "replicas")
+		if !ok {
+			desired = 1
+		}
+		ready, _, _ := unstructured.NestedInt64(u.Object, "status", "readyReplicas")
+		updated, _, _ := unstructured.NestedInt64(u.Object, "status", "updatedReplicas")
+		return desired > 0 && (ready == 0 || ready > desired || updated != desired)
 	}
 }
 
