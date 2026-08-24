@@ -7,8 +7,8 @@ go 1.26.3
 
 require (
 	github.com/run-ai/karta v0.0.0
-	k8s.io/api v0.36.3
-	k8s.io/apimachinery v0.36.3
+	k8s.io/api v0.36.4
+	k8s.io/apimachinery v0.36.4
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -26,7 +26,7 @@ require (
 	go.uber.org/mock v0.6.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/net v0.56.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260317180543-43fb72c5454a // indirect
