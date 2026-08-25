@@ -304,23 +304,22 @@ var _ = Describe("Resolver ByRootKind", func() {
 		)
 	})
 
-	DescribeTable("matches kubectl-style",
+	DescribeTable("matches the kind exactly, apart from case",
 		func(query string, want []string) {
 			Expect(namesOf(r.ByRootKind(query))).To(Equal(want))
 		},
 		Entry("exact", "Deployment", []string{"apps-deployment-v1"}),
 		Entry("lowercase", "deployment", []string{"apps-deployment-v1"}),
 		Entry("uppercase", "DEPLOYMENT", []string{"apps-deployment-v1"}),
-		Entry("plural", "deployments", []string{"apps-deployment-v1"}),
-		Entry("mixed case plural", "Jobs", []string{"batch-job-v1"}),
+		// A plural needs the real singular name, which only discovery supplies.
+		Entry("plural", "deployments", []string{}),
+		Entry("mixed case plural", "Jobs", []string{}),
 		Entry("a kind covered at two versions", "dynamographdeployment", []string{
 			"nvidia-com-dynamographdeployment-v1alpha1",
 			"nvidia-com-dynamographdeployment-v1beta1",
 		}),
 		Entry("a kind that itself ends in s", "Milvus", []string{"milvus-io-milvus-v1beta1"}),
 		Entry("its plural", "milvuses", []string{}),
-		// A query one character short of a kind ending in s is a typo, not a
-		// singular, so it must not match.
 		Entry("the query one character short", "milvu", []string{}),
 	)
 

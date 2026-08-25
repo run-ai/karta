@@ -131,11 +131,9 @@ func (r *Resolver) List() []Definition {
 	return r.definitions
 }
 
-// ByRootKind matches the Kind segment of a GVK, not a lookup of its own: callers
-// narrow by version and group themselves.
+// ByRootKind matches the Kind segment of a GVK.
 func (r *Resolver) ByRootKind(kind string) []Definition {
 	query := strings.ToLower(kind)
-	singular := strings.TrimSuffix(query, "s")
 
 	out := make([]Definition, 0)
 	for _, def := range r.definitions {
@@ -143,8 +141,7 @@ func (r *Resolver) ByRootKind(kind string) []Definition {
 		if !ok {
 			continue
 		}
-		root := strings.ToLower(gvk.Kind)
-		if root == query || root == singular {
+		if strings.ToLower(gvk.Kind) == query {
 			out = append(out, def)
 		}
 	}
