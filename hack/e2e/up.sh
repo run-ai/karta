@@ -177,6 +177,9 @@ run_operator() {
   # Ungrouped, so the outcome is visible without expanding the group above.
   echo "==> ${name}: ready (install ${idur}s, smoke ${smoke})"
   summary "| :white_check_mark: | ${name} | ${ver} | ${idur}s | ${smoke} |"
+  # The e2e flows file each recording under the installed operator version. Per cluster,
+  # like the kubeconfig, so parallel clusters with different versions cannot mix.
+  echo "${name}=${ver}" >> "${OPERATORS_DIR}/.installed-versions-${CLUSTER_NAME}"
 }
 
 main() {
@@ -229,6 +232,8 @@ main() {
   group "build image + kind cluster"; setup_cluster; endgroup
   group "cert-manager ${CERT_MANAGER_VERSION}"; install_cert_manager; endgroup
   group "fake-gpu-operator ${FAKE_GPU_VERSION}"; install_fake_gpu; endgroup
+  # Fresh provision, fresh version list (gitignored; read by the e2e flows).
+  : > "${OPERATORS_DIR}/.installed-versions-${CLUSTER_NAME}"
   if [ "${#plan[@]}" -gt 0 ]; then
     summary "## E2E install: ${CLUSTER_NAME}"
     summary ""
