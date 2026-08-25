@@ -4,11 +4,11 @@ events:
     apiVersion: batch/v1
     kind: CronJob
     metadata:
-      creationTimestamp: "2026-08-18T12:36:02Z"
+      creationTimestamp: "2026-08-25T11:50:56Z"
       generation: 1
       name: karta-e2e-cronjob
-      namespace: test-8m4bc
-      uid: 601b3398-4070-4c27-a139-5dc120c78d1d
+      namespace: test-crfsr
+      uid: ef0eded3-e735-4b9c-9e0b-fefa407c860e
     spec:
       concurrencyPolicy: Allow
       failedJobsHistoryLimit: 1
@@ -35,11 +35,11 @@ events:
               schedulerName: default-scheduler
               securityContext: {}
               terminationGracePeriodSeconds: 30
-      schedule: 0 0 1 1 *
+      schedule: 0 0 31 2 *
       successfulJobsHistoryLimit: 3
       suspend: false
     status: {}
-  resourceVersion: "13251"
+  resourceVersion: "2325270"
   state: Initializing
 flow: initializing
 kartaFile: docs/catalog/batch-cronjob-v1.yaml

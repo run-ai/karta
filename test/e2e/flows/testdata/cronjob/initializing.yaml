@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2026 NVIDIA Corporation
 #
-# A built-in batch/v1 CronJob with a schedule far in the future (Jan 1), so it never
-# fires during the test and status.lastScheduleTime stays unset. The Karta library
+# A built-in batch/v1 CronJob pinned to Feb 31 - a date that never exists, so it can
+# never fire and status.lastScheduleTime stays unset on any day. The Karta library
 # reads an enabled, never-scheduled CronJob as Initializing.
 apiVersion: batch/v1
 kind: CronJob
@@ -10,7 +10,7 @@ metadata:
   name: karta-e2e-cronjob
   namespace: default
 spec:
-  schedule: "0 0 1 1 *"
+  schedule: "0 0 31 2 *"
   jobTemplate:
     spec:
       template:
