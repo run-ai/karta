@@ -4,22 +4,23 @@
 package definitions
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	k8stesting "k8s.io/client-go/testing"
@@ -33,7 +34,7 @@ import (
 var kartasResource = schema.GroupResource{Group: "run.ai", Resource: "kartas"}
 
 // noKubeconfigGetter is a RESTClientGetter with nothing configured, which is what
-// running without a kubeconfig looks like to FetchCluster.
+// running without a kubeconfig looks like to fetchCluster.
 func noKubeconfigGetter() genericclioptions.RESTClientGetter {
 	return genericclioptions.NewTestConfigFlags().WithClientConfig(
 		clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
@@ -76,8 +77,8 @@ func kartaListJSON(names ...string) string {
 }
 
 var _ = Describe("classify", func() {
-	It("stays silent for a wrapped empty-config error from the real FetchCluster", func() {
-		_, err := FetchCluster(context.Background(), noKubeconfigGetter())
+	It("stays silent for a wrapped empty-config error from the real fetchCluster", func() {
+		_, err := (&loader{}).fetchCluster(context.Background(), noKubeconfigGetter())
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("kubernetes config"))
 		Expect(err.Error()).To(ContainSubstring("no configuration has been provided"))
@@ -96,7 +97,7 @@ var _ = Describe("classify", func() {
 		flags := genericclioptions.NewConfigFlags(false)
 		flags.KubeConfig = &missing
 
-		_, err := FetchCluster(context.Background(), flags)
+		_, err := (&loader{}).fetchCluster(context.Background(), flags)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("kubernetes config"))
 		Expect(err.Error()).To(ContainSubstring("missing-kubeconfig"))
@@ -159,7 +160,7 @@ var _ = Describe("Load", func() {
 		list := resolver.List()
 		Expect(list).To(HaveLen(len(catalog.List())))
 		for _, def := range list {
-			Expect(def.Origin).To(Equal(OriginCommunity))
+			Expect(def.Origin).To(Equal(OriginCatalog))
 		}
 	})
 
@@ -229,22 +230,37 @@ func newFakeDynamic(objects ...runtime.Object) *dynamicfake.FakeDynamicClient {
 	)
 }
 
-// loadFixture reads a "kubectl get -o yaml" style List document into the raw
-// unstructured objects a dynamic client would hand back.
-func loadFixture(name string) []runtime.Object {
+// clusterKartas renders every catalog definition the way the API server hands it
+// back: the typed spec as unstructured, plus the metadata and status only a
+// server sets. It returns the objects to serve and the Kartas they must convert
+// back into, so the whole spec tree is covered rather than a sample of fields.
+func clusterKartas() ([]runtime.Object, []*v1alpha1.Karta) {
 	GinkgoHelper()
 
-	data, err := os.ReadFile(filepath.Join("testdata", name))
-	Expect(err).NotTo(HaveOccurred())
+	stamped := catalog.List()
+	// Local, not UTC: metav1.Time unmarshals to local time, so a UTC stamp would
+	// come back in a different location and defeat the comparison.
+	served := metav1.Date(2026, 1, 15, 10, 0, 0, 0, time.Local)
+	objects := make([]runtime.Object, 0, len(stamped))
+	for i, karta := range stamped {
+		karta.TypeMeta = metav1.TypeMeta{APIVersion: "run.ai/v1alpha1", Kind: "Karta"}
+		karta.UID = types.UID(fmt.Sprintf("4c9f4b6e-9f2e-4b2f-9d3a-%012d", i))
+		karta.ResourceVersion = strconv.Itoa(4711 + i)
+		karta.Generation = 3
+		karta.CreationTimestamp = served
+		karta.Status = v1alpha1.KartaStatus{Conditions: []metav1.Condition{{
+			Type:               "Validated",
+			Status:             metav1.ConditionTrue,
+			Reason:             "SchemaAccepted",
+			LastTransitionTime: served,
+			ObservedGeneration: 3,
+		}}}
 
-	var list unstructured.UnstructuredList
-	Expect(utilyaml.NewYAMLOrJSONDecoder(bytes.NewReader(data), 4096).Decode(&list)).To(Succeed())
-
-	objects := make([]runtime.Object, 0, len(list.Items))
-	for i := range list.Items {
-		objects = append(objects, &list.Items[i])
+		raw, err := runtime.DefaultUnstructuredConverter.ToUnstructured(karta)
+		Expect(err).NotTo(HaveOccurred())
+		objects = append(objects, &unstructured.Unstructured{Object: raw})
 	}
-	return objects
+	return objects, stamped
 }
 
 var _ = Describe("listWithClient", func() {
@@ -255,61 +271,41 @@ var _ = Describe("listWithClient", func() {
 	})
 
 	It("converts the cluster payload into typed Kartas", func() {
-		kartas, err := listWithClient(ctx, newFakeDynamic(loadFixture("kartas-list.yaml")...))
+		objects, want := clusterKartas()
+
+		kartas, err := (&loader{}).listWithClient(ctx, newFakeDynamic(objects...))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(kartas).To(HaveLen(2))
+		Expect(kartas).To(ConsistOf(want))
+	})
 
-		byName := map[string]*v1alpha1.Karta{}
-		for _, k := range kartas {
-			byName[k.Name] = k
-		}
-		Expect(byName).To(HaveKey("cluster-deployment"))
-		Expect(byName).To(HaveKey("cluster-pod"))
+	It("skips a definition it cannot read and keeps the rest", func() {
+		// A field whose type this build does not expect, as CRD schema skew
+		// against a newer operator would produce.
+		skewed := &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "run.ai/v1alpha1", "kind": "Karta",
+			"metadata": map[string]any{"name": "skewed"},
+			"spec": map[string]any{"structureDefinition": map[string]any{
+				"rootComponent": map[string]any{
+					"name": "dep",
+					"kind": map[string]any{"group": "apps", "version": int64(1), "kind": "Deployment"},
+				},
+			}},
+		}}
+		objects, want := clusterKartas()
 
-		deployment := byName["cluster-deployment"]
-		Expect(deployment.Kind).To(Equal("Karta"))
-		Expect(deployment.APIVersion).To(Equal("run.ai/v1alpha1"))
-		Expect(deployment.Generation).To(BeEquivalentTo(3))
-		Expect(deployment.CreationTimestamp.IsZero()).To(BeFalse())
-		Expect(deployment.Labels).To(HaveKeyWithValue("karta.run.ai/kind", "deployment"))
+		l := &loader{}
+		kartas, err := l.listWithClient(ctx, newFakeDynamic(append(objects, skewed)...))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(kartas).To(ConsistOf(want))
 
-		root := deployment.Spec.StructureDefinition.RootComponent
-		Expect(root.Kind).To(Equal(&v1alpha1.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}))
-		Expect(root.SpecDefinition.PodTemplateSpecPath).To(HaveValue(Equal(".spec.template")))
-		Expect(root.ScaleDefinition.ReplicasPath).To(HaveValue(Equal(".spec.replicas")))
-		Expect(root.StatusDefinition.ConditionsDefinition.Path).To(Equal(".status.conditions"))
-		Expect(root.StatusDefinition.StatusMappings.Running).To(HaveLen(1))
-		Expect(root.StatusDefinition.StatusMappings.Running[0].ByConditions[0].Status).To(HaveValue(Equal("True")))
-		Expect(root.StatusDefinition.StatusMappings.Failed[0].ByExpression.ExpectedResult).To(Equal("1"))
-		Expect(root.SuspendDefinition.SuspendActions).To(Equal([]v1alpha1.SuspendAction{{Path: ".spec.replicas", Value: "0"}}))
-
-		children := deployment.Spec.StructureDefinition.ChildComponents
-		Expect(children).To(HaveLen(1))
-		Expect(children[0].OwnerRef).To(HaveValue(Equal("deployment")))
-		Expect(children[0].InstanceIdPath).To(HaveValue(Equal(".metadata.name")))
-		Expect(children[0].PodSelector.ComponentTypeSelector.Value).To(HaveValue(Equal("worker")))
-		Expect(children[0].PodSelector.ReplicaSelector.KeyPath).To(Equal(`.metadata.labels["replica-index"]`))
-
-		Expect(deployment.Spec.StructureDefinition.AdditionalChildKinds).
-			To(Equal([]v1alpha1.GroupVersionKind{{Version: "v1", Kind: "Service"}}))
-
-		podGroup := deployment.Spec.Instructions.GangScheduling.PodGroup
-		Expect(podGroup.Name).To(Equal("deployment-group"))
-		Expect(podGroup.Topology.RequiredTopologyLevel).To(Equal("datacenter"))
-		Expect(podGroup.SubGroups[0].Topology.PreferredTopologyLevel).To(Equal("rack"))
-
-		Expect(deployment.Status.Conditions).To(HaveLen(1))
-		Expect(deployment.Status.Conditions[0].Type).To(Equal("Validated"))
-		Expect(deployment.Status.Conditions[0].LastTransitionTime.IsZero()).To(BeFalse())
-		Expect(deployment.Status.Conditions[0].ObservedGeneration).To(BeEquivalentTo(3))
-
-		pod := byName["cluster-pod"]
-		Expect(pod.Spec.StructureDefinition.RootComponent.Kind.Group).To(BeEmpty())
-		Expect(pod.Spec.StructureDefinition.RootComponent.SpecDefinition.MetadataPath).To(HaveValue(Equal(".metadata")))
+		Expect(l.warnings).To(HaveLen(1))
+		Expect(l.warnings[0].Reason).To(Equal(ReasonInvalid))
+		Expect(l.warnings[0].Message).To(ContainSubstring(`skipping Karta definition "skewed"`))
 	})
 
 	It("issues a cluster-scoped list against the kartas resource", func() {
-		client := newFakeDynamic(loadFixture("kartas-list.yaml")...)
+		objects, _ := clusterKartas()
+		client := newFakeDynamic(objects...)
 
 		var recorded []k8stesting.ListAction
 		client.PrependReactor("list", "*", func(action k8stesting.Action) (bool, runtime.Object, error) {
@@ -317,7 +313,7 @@ var _ = Describe("listWithClient", func() {
 			return false, nil, nil
 		})
 
-		_, err := listWithClient(ctx, client)
+		_, err := (&loader{}).listWithClient(ctx, client)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(recorded).To(HaveLen(1))
@@ -328,7 +324,7 @@ var _ = Describe("listWithClient", func() {
 	})
 
 	It("returns no definitions and no error for an empty cluster", func() {
-		kartas, err := listWithClient(ctx, newFakeDynamic())
+		kartas, err := (&loader{}).listWithClient(ctx, newFakeDynamic())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(kartas).To(BeEmpty())
 	})

@@ -19,8 +19,8 @@ import (
 type Origin string
 
 const (
-	OriginCommunity Origin = "community"
-	OriginCluster   Origin = "cluster"
+	OriginCatalog Origin = "catalog"
+	OriginCluster Origin = "cluster"
 )
 
 var (
@@ -42,18 +42,18 @@ type Collision struct {
 	Names []string // metadata.names claiming this GVK, name-sorted
 }
 
-// Resolver is an immutable lookup over the merged community and cluster definitions.
+// Resolver is an immutable lookup over the merged catalog and cluster definitions.
 type Resolver struct {
 	definitions []Definition
 }
 
-// New merges community and cluster definitions into a Resolver. Community is
-// indexed first so a cluster definition overrides a community one claiming the
+// New merges catalog and cluster definitions into a Resolver. The catalog is
+// indexed first so a cluster definition overrides a catalog one claiming the
 // same root GVK.
-func New(community, cluster []*v1alpha1.Karta) *Resolver {
+func New(catalogKartas, cluster []*v1alpha1.Karta) *Resolver {
 	r := &Resolver{}
-	listing := make(map[schema.GroupVersionKind][]Definition, len(community)+len(cluster))
-	unmapped := index(listing, community, OriginCommunity)
+	listing := make(map[schema.GroupVersionKind][]Definition, len(catalogKartas)+len(cluster))
+	unmapped := index(listing, catalogKartas, OriginCatalog)
 	unmapped = append(unmapped, index(listing, cluster, OriginCluster)...)
 
 	gvks := slices.SortedFunc(maps.Keys(listing), func(a, b schema.GroupVersionKind) int {
@@ -151,12 +151,23 @@ func (r *Resolver) ByRootKind(kind string) []Definition {
 // ByName returns the definition called name, matched exactly: names are
 // identifiers copied from list output.
 func (r *Resolver) ByName(name string) (Definition, error) {
-	for _, def := range r.definitions {
-		if def.Karta.Name == name {
-			return def, nil
+	var catalogMatch *Definition
+	for i := range r.definitions {
+		def := &r.definitions[i]
+		if def.Karta.Name != name {
+			continue
+		}
+		if def.Origin == OriginCluster {
+			return *def, nil
+		}
+		if catalogMatch == nil {
+			catalogMatch = def
 		}
 	}
-	return Definition{}, fmt.Errorf("%w: %q", ErrNameNotFound, name)
+	if catalogMatch == nil {
+		return Definition{}, fmt.Errorf("%w: %q", ErrNameNotFound, name)
+	}
+	return *catalogMatch, nil
 }
 
 // Collisions returns root GVKs claimed by more than one definition from the same
