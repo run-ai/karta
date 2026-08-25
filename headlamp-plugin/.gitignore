@@ -1,6 +1,4 @@
 node_modules/
 dist/
 *.tar.gz
-engine/karta.wasm
-engine/wasm_exec.js
 .eslintcache
