@@ -20,47 +20,9 @@ declare global {
   interface Window {
     Go?: new () => GoRuntime;
     kartaVersion?: VersionFn;
-    /** Set by Electron to the backend server port. */
-    headlampBackendPort?: number;
-    /** Base URL prefix Headlamp was built/served with, e.g. '/headlamp'. */
-    headlampBaseUrl?: string;
-    /** Present when running as the Docker Desktop extension. */
-    ddClient?: unknown;
   }
 }
 
-function isElectron(): boolean {
-  const proc = (window as { process?: { type?: string } }).process;
-  if (typeof proc === 'object' && proc?.type === 'renderer') {
-    return true;
-  }
-  return typeof navigator === 'object' && navigator.userAgent?.includes('Electron');
-}
-
-// getAppUrl mirrors Headlamp's internal helper of the same name, which is not
-// exposed to plugins through pluginLib.
-export function getAppUrl(): string {
-  let backendPort = 4466;
-  let useLocalhost = false;
-
-  if (isElectron()) {
-    if (window.headlampBackendPort) {
-      backendPort = window.headlampBackendPort;
-    }
-    useLocalhost = true;
-  }
-  if (window.ddClient !== undefined) {
-    backendPort = 64446;
-    useLocalhost = true;
-  }
-
-  const origin = useLocalhost ? `http://localhost:${backendPort}` : window.location.origin;
-  const baseUrl = isElectron() ? '' : (window.headlampBaseUrl ?? '');
-  return origin + (baseUrl ? `${baseUrl}/` : '/');
-}
-
-// loadScript injects a <script> tag and lets the browser fetch and execute
-// it, instead of fetching the text and eval-ing it ourselves.
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
@@ -71,11 +33,19 @@ function loadScript(src: string): Promise<void> {
   });
 }
 
-// The plugin bundle is executed from a string, so it cannot learn its own URL
-// from the module system. The backend's plugin listing maps plugin names to
-// their base paths; fall back to the conventional path if it is unavailable.
-// Returned path is relative to getAppUrl(), not an absolute URL — ApiProxy
-// requests resolve it against the app URL themselves.
+// Exported so it can be unit-tested directly, without needing to also mock
+// the rest of instantiate()'s WASM-loading flow.
+export async function loadScriptViaApiProxy(path: string): Promise<void> {
+  const resp = (await ApiProxy.request(path, { isJSON: false }, false, false)) as Response;
+  const text = await resp.text();
+  const blobUrl = URL.createObjectURL(new Blob([text], { type: 'application/javascript' }));
+  try {
+    await loadScript(blobUrl);
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+}
+
 async function findPluginBase(): Promise<string> {
   try {
     const list = (await ApiProxy.request('/plugins', {}, false, false)) as {
@@ -106,17 +76,13 @@ async function waitForExports(timeoutMs: number): Promise<KartaEngine> {
 async function instantiate(): Promise<KartaEngine> {
   const base = await findPluginBase();
 
-  // wasm_exec.js must load as a real <script> tag (not fetched as data), so
-  // it needs an absolute URL — getAppUrl() is only needed for this one call.
-  await loadScript(`${getAppUrl()}${base}/wasm_exec.js`);
+  await loadScriptViaApiProxy(`/${base}/wasm_exec.js`);
   if (!window.Go) {
     throw new Error('wasm_exec.js did not define the Go runtime');
   }
 
   const go = new window.Go();
-  // isJSON: false returns the raw Response instead of parsed JSON, which is
-  // what WebAssembly.instantiateStreaming needs below. ApiProxy.request
-  // already rejects on a non-ok response, so no manual .ok check is needed.
+  
   const wasmResp = (await ApiProxy.request(
     `/${base}/karta.wasm`,
     { isJSON: false },
@@ -134,16 +100,13 @@ async function instantiate(): Promise<KartaEngine> {
     ({ instance } = await WebAssembly.instantiate(buffer, go.importObject));
   }
 
-  // run() resolves only when the Go program exits; the module blocks forever
-  // to keep its exported functions alive.
   go.run(instance);
   return waitForExports(3000);
 }
 
 let enginePromise: Promise<KartaEngine> | null = null;
 
-// getKartaEngine instantiates the module once and reuses it. A load failure
-// is not cached, so a transient fetch error can be retried.
+
 export function getKartaEngine(): Promise<KartaEngine> {
   if (!enginePromise) {
     enginePromise = instantiate().catch(err => {
