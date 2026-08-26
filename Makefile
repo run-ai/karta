@@ -61,14 +61,14 @@ test-replay: ## Replay the recorded fixtures through Karta offline (no cluster)
 	go -C test/e2e build ./...
 	go -C test/e2e test ./replay_tests/...
 
-.PHONY: wasm-engine
-wasm-engine: ## Build the WASM engine module (used by the Headlamp plugin)
-	cd wasm-engine && GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o karta.wasm .
-	rm -f wasm-engine/wasm_exec.js
-	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" wasm-engine/wasm_exec.js
+.PHONY: karta-wasm
+karta-wasm: ## Build the WASM engine module (used by the Headlamp plugin)
+	cd karta-wasm && GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o karta.wasm .
+	rm -f karta-wasm/wasm_exec.js
+	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" karta-wasm/wasm_exec.js
 
 .PHONY: headlamp-plugin-build
-headlamp-plugin-build: wasm-engine ## Build the Headlamp plugin (requires Node.js >= 22)
+headlamp-plugin-build: karta-wasm ## Build the Headlamp plugin (requires Node.js >= 22)
 	npm --prefix headlamp-plugin ci
 	npm --prefix headlamp-plugin run lint
 	npm --prefix headlamp-plugin run tsc
@@ -142,8 +142,8 @@ generate-licenses: go-licence-detector ## Regenerate NOTICE and THIRD_PARTY_LICE
 	echo "Generating NOTICE and THIRD_PARTY_LICENSES files from current dependencies using go-licence-detector"; \
 	go mod download -json > $(LOCALBIN)/root-deps.json; \
 	(cd cli && go mod download -json) > $(LOCALBIN)/cli-deps.json; \
-	(cd wasm-engine && go mod download -json) > $(LOCALBIN)/wasm-engine-deps.json; \
-	python3 hack/merge-go-deps.py $(LOCALBIN)/root-deps.json $(LOCALBIN)/cli-deps.json $(LOCALBIN)/wasm-engine-deps.json > $(LOCALBIN)/deps.json; \
+	(cd karta-wasm && go mod download -json) > $(LOCALBIN)/karta-wasm-deps.json; \
+	python3 hack/merge-go-deps.py $(LOCALBIN)/root-deps.json $(LOCALBIN)/cli-deps.json $(LOCALBIN)/karta-wasm-deps.json > $(LOCALBIN)/deps.json; \
 	$(GO_LICENCE_DETECTOR) -in $(LOCALBIN)/deps.json \
 		-noticeTemplate=hack/licenses/notice.tpl \
 		-noticeOut=NOTICE \
