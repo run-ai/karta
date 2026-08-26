@@ -61,14 +61,14 @@ test-replay: ## Replay the recorded fixtures through Karta offline (no cluster)
 	go -C test/e2e build ./...
 	go -C test/e2e test ./replay_tests/...
 
-.PHONY: headlamp-plugin-wasm
-headlamp-plugin-wasm: ## Build the Headlamp plugin WebAssembly module
+.PHONY: wasm-engine
+wasm-engine: ## Build the WASM engine module (used by the Headlamp plugin)
 	cd wasm-engine && GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o karta.wasm .
 	rm -f wasm-engine/wasm_exec.js
 	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" wasm-engine/wasm_exec.js
 
 .PHONY: headlamp-plugin-build
-headlamp-plugin-build: headlamp-plugin-wasm ## Build the Headlamp plugin (requires Node.js >= 22)
+headlamp-plugin-build: wasm-engine ## Build the Headlamp plugin (requires Node.js >= 22)
 	npm --prefix headlamp-plugin ci
 	npm --prefix headlamp-plugin run lint
 	npm --prefix headlamp-plugin run tsc

@@ -66,6 +66,8 @@ jobs:
   headlamp-plugin-ci:
     name: Headlamp Plugin Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v7

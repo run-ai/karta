@@ -4,6 +4,7 @@
 import { ApiProxy } from '@kinvolk/headlamp-plugin/lib';
 
 const PLUGIN_NAME = 'karta';
+const WASM_EXPORTS_TIMEOUT_MS = 3000;
 
 export type VersionFn = () => string;
 
@@ -62,8 +63,8 @@ async function findPluginBase(): Promise<string> {
   return `plugins/${PLUGIN_NAME}`;
 }
 
-async function waitForExports(timeoutMs: number): Promise<KartaEngine> {
-  const deadline = Date.now() + timeoutMs;
+async function waitForExports(): Promise<KartaEngine> {
+  const deadline = Date.now() + WASM_EXPORTS_TIMEOUT_MS;
   while (Date.now() < deadline) {
     if (typeof window.kartaVersion === 'function') {
       return { version: window.kartaVersion };
@@ -82,7 +83,6 @@ async function instantiate(): Promise<KartaEngine> {
   }
 
   const go = new window.Go();
-  
   const wasmResp = (await ApiProxy.request(
     `/${base}/karta.wasm`,
     { isJSON: false },
@@ -101,11 +101,10 @@ async function instantiate(): Promise<KartaEngine> {
   }
 
   go.run(instance);
-  return waitForExports(3000);
+  return waitForExports();
 }
 
 let enginePromise: Promise<KartaEngine> | null = null;
-
 
 export function getKartaEngine(): Promise<KartaEngine> {
   if (!enginePromise) {
