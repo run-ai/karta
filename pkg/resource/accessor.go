@@ -674,8 +674,7 @@ func match(ctx context.Context, jqRunner execution.Runner, phase *string, condit
 }
 
 func matchByExpression(ctx context.Context, jqRunner execution.Runner, matcher v1alpha1.StatusMatcher) (bool, error) {
-	// Construct a jq expression that compares the result with the expected value
-	comparisonExpr := fmt.Sprintf("(%s) | tostring == \"%s\"", matcher.ByExpression.Expression, matcher.ByExpression.ExpectedResult)
+	comparisonExpr := fmt.Sprintf("(%s) | tostring", matcher.ByExpression.Expression)
 
 	results, err := jqRunner.Evaluate(ctx, comparisonExpr)
 	if err != nil {
@@ -691,13 +690,12 @@ func matchByExpression(ctx context.Context, jqRunner execution.Runner, matcher v
 		return false, nil
 	}
 
-	// The result must be a boolean from the jq comparison expression
-	matched, ok := result.(bool)
+	actual, ok := result.(string)
 	if !ok {
-		return false, fmt.Errorf("expression comparison did not return a boolean, got %T", result)
+		return false, fmt.Errorf("expression result did not convert to a string, got %T", result)
 	}
 
-	return matched, nil
+	return actual == matcher.ByExpression.ExpectedResult, nil
 }
 
 func checkCondition(conditionsMap map[string]Condition, expectedCond v1alpha1.ExpectedCondition) (Condition, bool) {
