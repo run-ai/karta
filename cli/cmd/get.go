@@ -30,9 +30,10 @@ import (
 )
 
 const (
-	flagPhase     = "phase"
-	flagSelector  = "selector"
-	flagChunkSize = "chunk-size"
+	flagPhase         = "phase"
+	flagAllNamespaces = "all-namespaces"
+	flagSelector      = "selector"
+	flagChunkSize     = "chunk-size"
 )
 
 // defaultChunkSize follows the kubectl convention for list page size.
@@ -40,11 +41,20 @@ const defaultChunkSize = 500
 
 // getOptions holds the resolved inputs for one run of the get command.
 type getOptions struct {
-	typeToken string
-	name      string
-	phases    []string
-	selector  string
-	chunkSize int64
+	typeToken     string
+	name          string
+	phases        []string
+	selector      string
+	chunkSize     int64
+	allNamespaces bool
+}
+
+// listNamespace returns the namespace to list in; empty means every namespace.
+func (o *getOptions) listNamespace(resolved string) string {
+	if o.allNamespaces {
+		return ""
+	}
+	return resolved
 }
 
 // newGetCommand builds the "karta get" command: one row per workload root.
@@ -62,6 +72,8 @@ func newGetCommand() *cobra.Command {
 			"ORIGIN of the resolving definition; a NODES column arrives with the describe command.",
 		Example: "  # All JobSets in the current namespace\n" +
 			"  karta get jobset\n\n" +
+			"  # JobSets in every namespace\n" +
+			"  karta get jobset -A\n\n" +
 			"  # Failed JobSets\n" +
 			"  karta get jobset --phase Failed\n\n" +
 			"  # Degraded or failed JobSets matching a selector, as JSON\n" +
@@ -83,6 +95,8 @@ func newGetCommand() *cobra.Command {
 		"Label selector on the workload root, kubectl syntax")
 	cmd.Flags().Int64Var(&opts.chunkSize, flagChunkSize, defaultChunkSize,
 		"API list page size; 0 lists without paging. Bounds memory and API pressure, not time to first row")
+	cmd.Flags().BoolVarP(&opts.allNamespaces, flagAllNamespaces, "A", false,
+		"List across every namespace. -n is ignored when set")
 
 	return cmd
 }
@@ -136,6 +150,11 @@ func runGet(cmd *cobra.Command, opts *getOptions) error {
 		return exitError{code: ExitUsage, err: fmt.Errorf(
 			"--%s cannot be combined with a NAME", flagSelector)}
 	}
+	if opts.allNamespaces && opts.name != "" {
+		return exitError{code: ExitUsage, err: fmt.Errorf(
+			"a workload cannot be fetched by name across all namespaces; drop --%s or the NAME",
+			flagAllNamespaces)}
+	}
 
 	access := clusterAccess()
 
@@ -167,7 +186,7 @@ func runGet(cmd *cobra.Command, opts *getOptions) error {
 		return err
 	}
 
-	views, searched, listWarnings, err := collect(ctx, dyn, mapper, target, namespace, opts)
+	views, searched, listWarnings, err := collect(ctx, dyn, mapper, target, opts.listNamespace(namespace), opts)
 	for _, warning := range listWarnings {
 		fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", warning)
 	}
@@ -175,19 +194,23 @@ func runGet(cmd *cobra.Command, opts *getOptions) error {
 		return err
 	}
 
-	// Newest first, so a freshly submitted workload is at the top.
+	// Newest first, then namespace and name: -A can surface a name more than once.
 	sort.SliceStable(views, func(i, j int) bool {
-		if !views[i].CreatedAt.Equal(views[j].CreatedAt) {
+		switch {
+		case !views[i].CreatedAt.Equal(views[j].CreatedAt):
 			return views[i].CreatedAt.After(views[j].CreatedAt)
+		case views[i].Namespace != views[j].Namespace:
+			return views[i].Namespace < views[j].Namespace
+		default:
+			return views[i].Name < views[j].Name
 		}
-		return views[i].Name < views[j].Name
 	})
 
 	return generator.Render(cmd.OutOrStdout(), cmd.ErrOrStderr(), views, generator.Options{
 		Output:    outputFormat(cmd),
 		Namespace: searched,
-		// An empty namespace means the type is cluster-scoped, so the search
-		// spanned the cluster.
+		// An empty namespace means the search spanned the cluster, whether by
+		// -A or because the type is cluster-scoped.
 		AllNamespaces: searched == "",
 	})
 }

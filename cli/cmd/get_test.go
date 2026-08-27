@@ -342,6 +342,62 @@ func TestGetJSONIsTypedAndAlwaysAnArray(t *testing.T) {
 	}
 }
 
+func TestGetAllNamespacesSpansTheCluster(t *testing.T) {
+	fakeCluster(t, jobSetIn("ml-team", "preprocess", 3), jobSetIn("research", "sweep", 2))
+
+	out, errOut, code := runGetCmd(t, "jobset", "-A")
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d\n%s", code, errOut)
+	}
+	for _, want := range []string{"preprocess", "ml-team", "sweep", "research"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q\n%s", want, out)
+		}
+	}
+}
+
+// Without -A the listing stays in the resolved namespace.
+func TestGetWithoutAllNamespacesStaysScoped(t *testing.T) {
+	fakeCluster(t, jobSetIn("ml-team", "preprocess", 3), jobSetIn("research", "sweep", 2))
+
+	out, _, code := runGetCmd(t, "jobset")
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d", code)
+	}
+	if !strings.Contains(out, "preprocess") {
+		t.Errorf("expected the in-namespace workload\n%s", out)
+	}
+	if strings.Contains(out, "sweep") {
+		t.Errorf("expected other namespaces to be excluded\n%s", out)
+	}
+}
+
+// A name identifies one object in one namespace, so the combination is a usage
+// error rather than a search, matching kubectl.
+func TestGetAllNamespacesRejectsAName(t *testing.T) {
+	fakeCluster(t)
+
+	_, errOut, code := runGetCmd(t, "jobset/preprocess", "-A")
+	if code != ExitUsage {
+		t.Fatalf("expected exit %d, got %d\n%s", ExitUsage, code, errOut)
+	}
+	if !strings.Contains(errOut, "cannot be fetched by name across all namespaces") {
+		t.Errorf("unexpected message: %s", errOut)
+	}
+}
+
+func TestGetAllNamespacesEmptyResultMessage(t *testing.T) {
+	fakeCluster(t)
+
+	_, errOut, code := runGetCmd(t, "jobset", "-A")
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d", code)
+	}
+	if !strings.Contains(errOut, "No workloads found in any namespace.") {
+		t.Errorf("expected the cluster-wide empty notice, got %q", errOut)
+	}
+}
+
 // Lenient matching leans on discovery: the RESTMapper resolves plurals and short
 // names, while the offline fallback is an exact Kind match. A type whose CRD the
 // cluster does not serve must still resolve by its exact Kind.
