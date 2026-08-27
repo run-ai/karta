@@ -4,17 +4,272 @@
 package cmd
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"slices"
+	"strings"
+	"text/tabwriter"
+
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"sigs.k8s.io/yaml"
+
+	"github.com/run-ai/karta/cli/pkg/definitions"
+	"github.com/run-ai/karta/cli/pkg/generator"
+	v1alpha1 "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+	"github.com/run-ai/karta/pkg/catalog"
 )
 
-// newDefinitionsCommand builds the "karta definitions" command tree: inspection
-// of the Karta definitions the CLI understands. Definitions are cluster-scoped,
-// so these commands do not require a namespace.
-func newDefinitionsCommand() *cobra.Command {
-	return &cobra.Command{
+const (
+	flagGroup   = "group"
+	flagKind    = "kind"
+	flagVersion = "version"
+)
+
+// ErrUnsupportedOutput reports a format the root enum accepts but this command
+// cannot render.
+var ErrUnsupportedOutput = errors.New("unsupported output format")
+
+var definitionsOutputs = []generator.Output{
+	generator.OutputTable, generator.OutputJSON, generator.OutputYAML,
+}
+
+func unsupportedOutputError(format generator.Output, allowed []generator.Output) error {
+	names := make([]string, 0, len(allowed))
+	for _, a := range allowed {
+		names = append(names, string(a))
+	}
+	return fmt.Errorf("%w %q: supported formats are %s", ErrUnsupportedOutput, format, strings.Join(names, ", "))
+}
+
+// definitionRow is one row of the table. json and yaml emit the definitions
+// themselves, so this never leaves the process and carries no tags.
+type definitionRow struct {
+	Name       string
+	Kind       string
+	Origin     string
+	Components []string
+}
+
+// newDefinitionsCommand builds the "karta definitions" command. The client getter
+// is a parameter so a test can inject a fake without mutating package state.
+func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Command {
+	var group, kind, version string
+
+	cmd := &cobra.Command{
 		Use:   "definitions",
-		Short: "Inspect the Karta definitions the CLI understands",
-		Args:  usageArgs(cobra.NoArgs),
-		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
+		Short: "List the Karta definitions the CLI understands",
+		Long: "List the Karta definitions the CLI understands, merging the built-in " +
+			"catalog with the Karta definitions installed in the cluster. " +
+			"A cluster definition overrides a catalog one describing the same " +
+			"workload type and is listed once, as cluster. Definitions are not " +
+			"namespaced, and without cluster access the command still lists the " +
+			"catalog definitions. Use --for to narrow the list to the definitions " +
+			"covering one workload type, in which case json and yaml emit the raw " +
+			"definitions instead of list rows.",
+		Example: "  # Everything the CLI understands (catalog + cluster)\n" +
+			"  karta definitions\n" +
+			"\n" +
+			"  # Which definition covers JobSet?\n" +
+			"  karta definitions --for jobset\n" +
+			"\n" +
+			"  # Dump it as applyable YAML\n" +
+			"  karta definitions --for jobset -o yaml",
+		Args: usageArgs(cobra.NoArgs),
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			format, err := supportedOutput(cmd, definitionsOutputs...)
+			if err != nil {
+				return err
+			}
+			// Both validations run before Load: a usage mistake costs no cluster read.
+			filter, err := definitionFilterFrom(cmd, group, kind, version)
+			if err != nil {
+				return err
+			}
+
+			resolver, warnings := definitions.Load(cmd.Context(), rcg)
+			for _, warning := range warnings {
+				fmt.Fprintln(cmd.ErrOrStderr(), warningPrefix+warning.Message)
+			}
+
+			matches := resolver.List()
+			if filter.set {
+				if matches = filter.narrow(matches); len(matches) == 0 {
+					return fmt.Errorf(
+						`no Karta definition covers %q. Run "karta definitions" to see what is available`,
+						filter.String())
+				}
+			}
+
+			if format == generator.OutputTable {
+				return renderDefinitions(cmd.OutOrStdout(), cmd.ErrOrStderr(), definitionRows(matches))
+			}
+			return renderRawDefinitions(cmd.OutOrStdout(), matches, format)
+		},
+	}
+
+	cmd.Flags().StringVar(&group, flagGroup, "", "Show the definitions covering this API group")
+	cmd.Flags().StringVar(&kind, flagKind, "", "Show the definitions covering this kind; needs --"+flagGroup)
+	cmd.Flags().StringVar(&version, flagVersion, "", "Show the definitions covering this version; needs --"+flagKind)
+
+	return cmd
+}
+
+// definitionFilter is the workload type --group, --kind and --version address.
+type definitionFilter struct {
+	group   string
+	kind    string
+	version string
+	set     bool
+}
+
+// definitionFilterFrom rejects a combination that addresses nothing: a kind
+// outside a group would match across unrelated APIs.
+func definitionFilterFrom(cmd *cobra.Command, group, kind, version string) (definitionFilter, error) {
+	groupSet := cmd.Flags().Changed(flagGroup)
+	kindSet := cmd.Flags().Changed(flagKind)
+	versionSet := cmd.Flags().Changed(flagVersion)
+
+	var err error
+	switch {
+	case kindSet && !groupSet:
+		err = fmt.Errorf("--%s needs --%s, for example --%s kubeflow.org --%s PyTorchJob",
+			flagKind, flagGroup, flagGroup, flagKind)
+	case versionSet && !kindSet:
+		err = fmt.Errorf("--%s needs --%s, for example --%s kubeflow.org --%s PyTorchJob --%s v1",
+			flagVersion, flagKind, flagGroup, flagKind, flagVersion)
+	case kindSet && kind == "":
+		err = fmt.Errorf("--%s needs a value, for example --%s PyTorchJob", flagKind, flagKind)
+	case versionSet && version == "":
+		err = fmt.Errorf("--%s needs a value, for example --%s v1", flagVersion, flagVersion)
+	}
+	if err != nil {
+		return definitionFilter{}, usageError(cmd, err)
+	}
+	return definitionFilter{group: group, kind: kind, version: version, set: groupSet}, nil
+}
+
+// narrow returns every definition the filter covers. One kind can be covered at
+// several versions, so a filter stopping short of one matches them all.
+func (f definitionFilter) narrow(defs []definitions.Definition) []definitions.Definition {
+	out := make([]definitions.Definition, 0, len(defs))
+	for _, def := range defs {
+		gvk := catalog.RootKey(def.Karta)
+		// Names no workload type, so no filter covers it.
+		if gvk.Version == "" || gvk.Kind == "" {
+			continue
+		}
+		if gvk.Group != f.group {
+			continue
+		}
+		if f.kind != "" && !strings.EqualFold(gvk.Kind, f.kind) {
+			continue
+		}
+		if f.version != "" && gvk.Version != f.version {
+			continue
+		}
+		out = append(out, def)
+	}
+	return out
+}
+
+// String renders the filter the way apimachinery renders a GVK, trimmed to the
+// segments given.
+func (f definitionFilter) String() string {
+	switch {
+	case f.version != "":
+		return schema.GroupVersionKind{Group: f.group, Version: f.version, Kind: f.kind}.String()
+	case f.kind != "":
+		return fmt.Sprintf("%s, Kind=%s", f.group, f.kind)
+	default:
+		return f.group
+	}
+}
+
+// warningPrefix opens every diagnostic the CLI writes to stderr.
+const warningPrefix = "warning: "
+
+// definitionRows projects definitions into rows sorted by name. Resolver.List
+// sorts by GVK, so display order is set here.
+func definitionRows(defs []definitions.Definition) []definitionRow {
+	rows := make([]definitionRow, 0, len(defs))
+	for _, def := range defs {
+		structure := def.Karta.Spec.StructureDefinition
+		components := make([]string, 0, len(structure.ChildComponents)+1)
+		components = append(components, structure.RootComponent.Name)
+		for _, child := range structure.ChildComponents {
+			components = append(components, child.Name)
+		}
+		rows = append(rows, definitionRow{
+			Name:       def.Karta.Name,
+			Kind:       catalog.RootKey(def.Karta).Kind,
+			Origin:     string(def.Origin),
+			Components: components,
+		})
+	}
+	slices.SortFunc(rows, func(a, b definitionRow) int { return strings.Compare(a.Name, b.Name) })
+	return rows
+}
+
+// renderDefinitions writes the table. The empty note goes to errOut so stdout
+// stays parseable.
+func renderDefinitions(out, errOut io.Writer, rows []definitionRow) error {
+	if len(rows) == 0 {
+		fmt.Fprintln(errOut, "No Karta definitions found.")
+		return nil
+	}
+	w := tabwriter.NewWriter(out, 0, 8, 2, ' ', 0)
+	fmt.Fprintln(w, "NAME\tKIND\tORIGIN\tCOMPONENTS")
+	for _, row := range rows {
+		// Still listed, so its author can see the one they wrote.
+		kind := row.Kind
+		if kind == "" {
+			kind = "<none>"
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+			row.Name, kind, row.Origin, strings.Join(row.Components, ", "))
+	}
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("write definitions table: %w", err)
+	}
+	return nil
+}
+
+// renderRawDefinitions writes the definitions themselves, so "-o yaml" pipes
+// straight into "kubectl apply -f -".
+func renderRawDefinitions(out io.Writer, defs []definitions.Definition, format generator.Output) error {
+	switch format {
+	case generator.OutputJSON:
+		kartas := make([]*v1alpha1.Karta, 0, len(defs))
+		for _, def := range defs {
+			kartas = append(kartas, def.Karta)
+		}
+		encoder := json.NewEncoder(out)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(kartas); err != nil {
+			return fmt.Errorf("encode definitions as json: %w", err)
+		}
+		return nil
+
+	case generator.OutputYAML:
+		docs := make([]string, 0, len(defs))
+		for _, def := range defs {
+			data, err := yaml.Marshal(def.Karta)
+			if err != nil {
+				return fmt.Errorf("encode definition %q as yaml: %w", def.Karta.Name, err)
+			}
+			docs = append(docs, string(data))
+		}
+		// A document stream, not a List object kubectl would need told about.
+		if _, err := io.WriteString(out, strings.Join(docs, "---\n")); err != nil {
+			return fmt.Errorf("write definitions yaml: %w", err)
+		}
+		return nil
+
+	default:
+		return unsupportedOutputError(format, definitionsOutputs)
 	}
 }
