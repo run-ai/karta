@@ -4,7 +4,7 @@
 export { getKartaEngine } from './karta';
 export type { Envelope, KartaEngine } from './karta';
 
-export { attributePods, buildTree, evaluatePhases, listCatalog } from './karta-util';
+export { attributePods, buildTree, evaluatePhases, listCatalog } from './kartaUtil';
 
 export type {
   ComponentNode,

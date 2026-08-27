@@ -15,7 +15,7 @@ const { getKartaEngine } = vi.hoisted(() => ({ getKartaEngine: vi.fn() }));
 vi.mock('./karta', () => ({ getKartaEngine }));
 
 import type { Karta, Pod, Workload } from './karta.types';
-import { attributePods, buildTree, evaluatePhases, listCatalog } from './karta-util';
+import { attributePods, buildTree, evaluatePhases, listCatalog } from './kartaUtil';
 
 const KARTA_WASM_DIR = path.resolve(__dirname, '../../../../karta-wasm');
 const WASM_PATH = path.join(KARTA_WASM_DIR, 'karta.wasm');
