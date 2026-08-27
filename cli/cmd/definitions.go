@@ -7,12 +7,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newDefinitionCommand builds the "karta definition" command tree: inspection
+// newDefinitionsCommand builds the "karta definitions" command tree: inspection
 // of the Karta definitions the CLI understands. Definitions are cluster-scoped,
 // so these commands do not require a namespace.
-func newDefinitionCommand() *cobra.Command {
+func newDefinitionsCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "definition",
+		Use:   "definitions",
 		Short: "Inspect the Karta definitions the CLI understands",
 		Args:  usageArgs(cobra.NoArgs),
 		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Help() },

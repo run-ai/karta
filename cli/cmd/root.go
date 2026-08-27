@@ -66,7 +66,7 @@ func NewRootCommand() *cobra.Command {
 	withConfig(cmd)
 
 	cmd.AddCommand(newWorkloadCommand())
-	cmd.AddCommand(newDefinitionCommand())
+	cmd.AddCommand(newDefinitionsCommand())
 
 	cmd.InitDefaultCompletionCmd()
 	for _, sub := range cmd.Commands() {

@@ -5,8 +5,8 @@ package cmd
 
 import "testing"
 
-func TestDefinitionRejectsArgs(t *testing.T) {
-	_, err := execute(t, "definition", "bogus")
+func TestDefinitionsRejectsArgs(t *testing.T) {
+	_, err := execute(t, "definitions", "bogus")
 	if err == nil {
 		t.Fatal("expected error for unknown argument, got nil")
 	}
