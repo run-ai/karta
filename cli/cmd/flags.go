@@ -17,6 +17,10 @@ const (
 
 var kubeFlags *genericclioptions.ConfigFlags
 
+// clusterAccess resolves the cluster connection commands read through. It is a
+// variable so tests can point the command tree at a fake cluster.
+var clusterAccess = func() genericclioptions.RESTClientGetter { return kubeFlags }
+
 // withOutput registers the -o/--output enum persistent flag on cmd, backed by
 // generator.Output, along with its shell completion.
 func withOutput(cmd *cobra.Command) {
