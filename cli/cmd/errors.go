@@ -25,10 +25,9 @@ func (e exitError) Error() string { return e.err.Error() }
 
 func (e exitError) Unwrap() error { return e.err }
 
-// ExitCode reports the process exit code; main matches the method, not the type.
+// ExitCode lets main match on behaviour rather than the concrete type.
 func (e exitError) ExitCode() int { return e.code }
 
-// UsagePath reports the command whose usage the reader should consult.
 func (e exitError) UsagePath() string { return e.path }
 
 // usageError marks a failure the caller can fix by reinvoking the command.
@@ -36,8 +35,7 @@ func usageError(cmd *cobra.Command, err error) error {
 	return exitError{code: ExitUsage, err: err, path: cmd.CommandPath()}
 }
 
-// usageArgs wraps an argument validator so every command reports a rejected
-// argument the same way.
+// usageArgs gives every command the same reporting for a rejected argument.
 func usageArgs(validate cobra.PositionalArgs) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
 		if err := validate(cmd, args); err != nil {

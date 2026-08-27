@@ -19,11 +19,22 @@ import (
 // would exit with.
 func exitCodeOf(t *testing.T, args ...string) (int, error) {
 	t.Helper()
+	isolateConfig(t)
+	return runRoot(t, args...)
+}
 
-	// The command tree reads config from the environment, which would otherwise
-	// make these depend on the developer's own ~/.karta/config.yaml.
+// isolateConfig points config discovery at an empty environment, so a test does
+// not depend on the developer's own ~/.karta/config.yaml.
+func isolateConfig(t *testing.T) {
+	t.Helper()
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv(configEnvVar, "")
+}
+
+// runRoot executes the command tree and reports the code the binary would exit
+// with, leaving the environment as the caller set it.
+func runRoot(t *testing.T, args ...string) (int, error) {
+	t.Helper()
 
 	root := NewRootCommand()
 	root.SetOut(io.Discard)
@@ -100,16 +111,18 @@ func TestInvalidOutputFromEnvironmentIsAUsageError(t *testing.T) {
 	}
 }
 
-// A bad config file must not stop the reader reaching the help.
+// A bad config file must not stop the reader reaching the help. The config path
+// is set after isolation so it survives into the run.
 func TestBareRootIgnoresConfig(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "config.yaml")
+	isolateConfig(t)
+
+	path := filepath.Join(t.TempDir(), "config.yaml")
 	if err := os.WriteFile(path, []byte("output: bogus\n"), 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
 	t.Setenv(configEnvVar, path)
 
-	if code, err := exitCodeOf(t); err != nil || code != 0 {
+	if code, err := runRoot(t); err != nil || code != 0 {
 		t.Errorf("expected help and a clean exit, got %d (%v)", code, err)
 	}
 }

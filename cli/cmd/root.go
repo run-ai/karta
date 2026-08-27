@@ -25,13 +25,13 @@ func NewRootCommand() *cobra.Command {
 		Long: "Karta gives operators a uniform view of any Kubernetes workload type, " +
 			"built on the Karta abstraction layer. Inspect workloads running in a " +
 			"namespace and the definitions Karta understands.",
-		Version: version.String(),
-		// main prints the error, so it carries the lowercase "error:" prefix
+		Version:      version.String(),
+		SilenceUsage: true,
+		// main prints the error instead, with the lowercase "error:" prefix
 		// rather than Cobra's "Error:".
-		SilenceUsage:  true,
 		SilenceErrors: true,
 		// Cobra applies this default inside the unexported helper that setting
-		// Args below bypasses, leaving it zero and matching nothing.
+		// Args below bypasses. At zero only a prefix typo still matches.
 		SuggestionsMinimumDistance: 2,
 		// Cobra reports an unrecognised subcommand only for a non-runnable
 		// command, and before validating args, so the root runs and rejects it.
