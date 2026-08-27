@@ -34,6 +34,12 @@ var (
 	pytorchGVK    = v1alpha1.GroupVersionKind{Group: "kubeflow.org", Version: "v1", Kind: "PyTorchJob"}
 )
 
+// countingGetter proves a code path never reached the cluster.
+type countingGetter struct {
+	genericclioptions.RESTClientGetter
+	calls int
+}
+
 // noClusterGetter is what running without a kubeconfig looks like. NewConfigFlags
 // cannot stand in for it: it defaults the server to http://localhost:8080, turning
 // "no kubeconfig" into a connection attempt against whatever listens there.
@@ -44,12 +50,6 @@ func noClusterGetter() genericclioptions.RESTClientGetter {
 			&clientcmd.ConfigOverrides{},
 		),
 	)
-}
-
-// countingGetter proves a code path never reached the cluster.
-type countingGetter struct {
-	genericclioptions.RESTClientGetter
-	calls int
 }
 
 func (g *countingGetter) ToRESTConfig() (*rest.Config, error) {

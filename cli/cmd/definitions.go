@@ -39,10 +39,6 @@ const (
 // cannot render.
 var ErrUnsupportedOutput = errors.New("unsupported output format")
 
-var definitionsOutputs = []generator.Output{
-	generator.OutputTable, generator.OutputJSON, generator.OutputYAML,
-}
-
 // definitionRow is one row of the table. json and yaml emit the definitions
 // themselves, so this never leaves the process and carries no tags.
 type definitionRow struct {
@@ -60,6 +56,10 @@ type definitionFilter struct {
 	set     bool
 }
 
+var definitionsOutputs = []generator.Output{
+	generator.OutputTable, generator.OutputJSON, generator.OutputYAML,
+}
+
 // newDefinitionsCommand builds the "karta definitions" command. The client getter
 // is a parameter so a test can inject a fake without mutating package state.
 func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Command {
@@ -73,17 +73,17 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 			"A cluster definition overrides a catalog one describing the same " +
 			"workload type and is listed once, as cluster. Definitions are not " +
 			"namespaced, and without cluster access the command still lists the " +
-			"catalog definitions. Use --for to narrow the list to the definitions " +
-			"covering one workload type, in which case json and yaml emit the raw " +
-			"definitions instead of list rows.",
+			"catalog definitions. Use --group, and optionally --kind and --version, " +
+			"to narrow the list to one workload type. The table is the human view; " +
+			"json and yaml always emit the definitions themselves.",
 		Example: "  # Everything the CLI understands (catalog + cluster)\n" +
 			"  karta definitions\n" +
 			"\n" +
 			"  # Which definition covers JobSet?\n" +
-			"  karta definitions --for jobset\n" +
+			"  karta definitions --group jobset.x-k8s.io --kind JobSet\n" +
 			"\n" +
-			"  # Dump it as applyable YAML\n" +
-			"  karta definitions --for jobset -o yaml",
+			"  # Dump them as applyable YAML\n" +
+			"  karta definitions -o yaml",
 		Args: usageArgs(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			format, err := supportedOutput(cmd, definitionsOutputs)
