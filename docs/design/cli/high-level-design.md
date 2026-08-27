@@ -118,9 +118,10 @@ Key flags:
 - `--phase <Running|Failed|...>` - filter by normalized phase, repeatable
 - `-l, --selector <labels>` - filter by labels (same syntax as `kubectl`)
 - `--chunk-size <n>` - API list page size
+- `-A, --all-namespaces` - list across every namespace
 - `-o <table|wide|json|yaml>` - output format. `-o json` emits the typed `WorkloadView` for scripting and MCP consumers, always as an array so consumers never branch on shape.
 
-Rows are ordered newest first. Counts and GPU are read from the workload spec, so listing costs one API call per type and no pod reads; `wide` adds the ORIGIN of the resolving definition. A NODES column needs live pod data and follows with `karta describe`, which has to build pod matching anyway.
+Rows are ordered newest first, then by namespace and name. Counts and GPU are read from the workload spec, so listing costs one API call per type and no pod reads; `wide` adds the ORIGIN of the resolving definition. A NODES column needs live pod data and follows with `karta describe`, which has to build pod matching anyway.
 
 The cross-type view - every workload Karta covers, in one table, which is the view no native tool provides - is the next step for this command. It needs a rule for which objects are workload roots: the catalog covers Deployment and Pod but not ReplicaSet, so a single-level owner check either floods the table with a Deployment's pods or hides workloads whose controller Karta does not cover.
 
