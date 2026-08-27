@@ -1203,6 +1203,49 @@ var _ = Describe("Accessor", func() {
 				Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus))
 			})
 
+			It("should convert the byExpression result to a string and compare it to the expected value", func() {
+				cases := []struct {
+					name     string
+					expr     string
+					expected string
+					match    bool
+				}{
+					{"string result matches", `.status.phase`, "running", true},
+					{"boolean true becomes the string true", `.status.phase == "running"`, "true", true},
+					{"boolean false becomes the string false", `.status.phase == "failed"`, "false", true},
+					{"number becomes its digits", `.status.conditions | length`, "1", true},
+					{"a different string does not match", `.status.phase`, "stopped", false},
+					{"a value with a quote is compared literally", `.status.phase`, `running "now"`, false},
+				}
+				for _, c := range cases {
+					reactorObject := types.NewReactorObject()
+					reactorObject.Status.Phase = "running"
+					reactorObject.Status.Conditions = []metav1.Condition{{Type: "Ready", Status: metav1.ConditionTrue}}
+					reactorKarta := types.ReactorKarta()
+					reactorKarta.Spec.StructureDefinition.RootComponent.StatusDefinition.StatusMappings = v1alpha1.StatusMappings{
+						Running: []v1alpha1.StatusMatcher{
+							{
+								ByExpression: &v1alpha1.ExpressionMatcher{
+									Expression:     c.expr,
+									ExpectedResult: c.expected,
+								},
+							},
+						},
+					}
+					accessor, reactorComp := accessorForObject(reactorKarta, reactorObject, "reactor")
+
+					result, err := accessor.ExtractStatus(ctx, reactorComp.definition)
+
+					Expect(err).NotTo(HaveOccurred(), c.name)
+					Expect(result).NotTo(BeNil(), c.name)
+					if c.match {
+						Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.RunningStatus), c.name)
+					} else {
+						Expect(result.MatchedStatuses).To(ConsistOf(v1alpha1.UndefinedStatus), c.name)
+					}
+				}
+			})
+
 			It("should match status with ByExpression checking complex conditions", func() {
 				reactorObject := types.NewReactorObject()
 				reactorObject.Status.Phase = "running"

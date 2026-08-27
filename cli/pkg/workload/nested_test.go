@@ -86,7 +86,7 @@ var _ = Describe("Resolve with a multi-instance parent", func() {
 		}}
 
 		view, err := Resolve(context.Background(), obj,
-			definitions.Definition{Karta: nestedKarta(), Origin: definitions.OriginCommunity})
+			definitions.Definition{Karta: nestedKarta(), Origin: definitions.OriginCatalog})
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(components(view)).To(Equal(map[string]int32{"runner": 2}))

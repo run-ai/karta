@@ -53,7 +53,7 @@ var _ = Describe("Resolve", func() {
 		// 1*1 for master plus 8*4 for worker.
 		Expect(view.GPUs).To(BeEquivalentTo(33))
 		Expect(view.Definition).To(Equal("kubeflow-org-pytorchjob-v1"))
-		Expect(view.Origin).To(Equal(string(definitions.OriginCommunity)))
+		Expect(view.Origin).To(Equal(string(definitions.OriginCatalog)))
 	})
 
 	// tree.Build hoists the root's children and drops the root itself, so a

@@ -16,6 +16,11 @@ import (
 // returns nil; a bare parent command would only print help.
 func execute(t *testing.T, args ...string) (string, error) {
 	t.Helper()
+	// Config is read from the environment, so an ambient ~/.karta/config.yaml
+	// would otherwise decide the outcome.
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(configEnvVar, "")
+
 	cmd := NewRootCommand()
 	cmd.AddCommand(&cobra.Command{
 		Use:  "noop",

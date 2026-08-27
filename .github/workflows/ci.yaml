@@ -62,3 +62,27 @@ jobs:
 
       - name: Lint shell scripts
         run: make lint-shell
+
+  headlamp-plugin-ci:
+    name: Headlamp Plugin Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Build Headlamp plugin
+        run: make headlamp-plugin-build
