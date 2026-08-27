@@ -90,8 +90,10 @@ func buildConfig(cmd *cobra.Command) (*Config, error) {
 		return nil, fmt.Errorf("config: %w", err)
 	}
 	if f := cmd.Root().PersistentFlags().Lookup(flagOutput); f != nil {
+		// Reached for a value from config or the environment; the same value
+		// given as a flag is rejected by pflag before this runs.
 		if err := f.Value.Set(cfg.Output); err != nil {
-			return nil, fmt.Errorf("output: %w", err)
+			return nil, usageError(cmd, fmt.Errorf("output: %w", err))
 		}
 	}
 	return &cfg, nil

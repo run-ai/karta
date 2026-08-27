@@ -14,7 +14,7 @@ func newDefinitionCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "definition",
 		Short: "Inspect the Karta definitions the CLI understands",
-		Args:  cobra.NoArgs,
+		Args:  usageArgs(cobra.NoArgs),
 		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
 	}
 }
