@@ -1,0 +1,14 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: embed-svc
+  namespace: ml-team
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: server
+          resources:
+            limits:
+              nvidia.com/gpu: "2"

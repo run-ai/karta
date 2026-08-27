@@ -1,0 +1,13 @@
+apiVersion: milvus.io/v1beta1
+kind: Milvus
+metadata:
+  name: vectors
+  namespace: ml-team
+spec:
+  mode: standalone
+  components:
+    standalone:
+      replicas: 1
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
