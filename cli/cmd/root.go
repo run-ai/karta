@@ -5,6 +5,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 
@@ -22,8 +24,21 @@ func NewRootCommand() *cobra.Command {
 		Long: "Karta gives operators a uniform view of any Kubernetes workload type, " +
 			"built on the Karta abstraction layer. Inspect workloads running in a " +
 			"namespace and the definitions Karta understands.",
-		Version:      version.String(),
-		SilenceUsage: true,
+		Version: version.String(),
+		// main prints the error, so it carries the lowercase "error:" prefix
+		// rather than Cobra's "Error:".
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		// Cobra reports an unrecognised subcommand only for a non-runnable
+		// command, and before validating args, so the root runs and rejects it.
+		Args: func(c *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return nil
+			}
+			return exitError{code: ExitUsage,
+				err: fmt.Errorf("unknown command %q for %q", args[0], c.CommandPath())}
+		},
+		RunE: func(c *cobra.Command, _ []string) error { return c.Help() },
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			if cmd.Name() == cobra.ShellCompRequestCmd {
 				return nil
@@ -35,6 +50,12 @@ func NewRootCommand() *cobra.Command {
 	}
 
 	cmd.SetVersionTemplate("{{.Version}}\n")
+
+	// Subcommands inherit this from the root, so every flag parse failure in the
+	// tree is a usage error without per-command wiring.
+	cmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
+		return exitError{code: ExitUsage, err: err}
+	})
 
 	kubeFlags.AddFlags(cmd.PersistentFlags())
 	withOutput(cmd)

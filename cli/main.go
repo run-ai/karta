@@ -7,14 +7,37 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
+
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/run-ai/karta/cli/cmd"
 )
 
 func main() {
-	// Cobra prints the error to stderr; main only sets the exit code.
-	if err := cmd.NewRootCommand().Execute(); err != nil {
+	// client-go reports a failed discovery round through klog, duplicating a
+	// diagnostic the CLI already surfaces in the middle of machine-readable stderr.
+	utilruntime.ErrorHandlers = nil
+
+	err := cmd.NewRootCommand().Execute()
+	if err == nil {
+		return
+	}
+
+	// The root sets SilenceErrors so the message is printed here instead, with
+	// the lowercase prefix the rest of the CLI's diagnostics use.
+	fmt.Fprintf(os.Stderr, "error: %v\n", err)
+
+	var coded interface{ ExitCode() int }
+	if !errors.As(err, &coded) {
 		os.Exit(1)
 	}
+	// Silencing Cobra also silenced its usage hint, which is the whole value of
+	// distinguishing a usage error.
+	if coded.ExitCode() == cmd.ExitUsage {
+		fmt.Fprintln(os.Stderr, "Run 'karta --help' for usage.")
+	}
+	os.Exit(coded.ExitCode())
 }
