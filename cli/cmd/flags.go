@@ -20,8 +20,6 @@ const (
 	flagOutput = "output"
 )
 
-// ErrOutputFlagUnavailable reports -o/--output missing from a command's scope,
-// a wiring mistake rather than anything a user can cause.
 var ErrOutputFlagUnavailable = errors.New("output flag not available")
 
 var kubeFlags *genericclioptions.ConfigFlags
@@ -52,10 +50,7 @@ func outputFormat(cmd *cobra.Command) (generator.Output, error) {
 	return out.Get(), nil
 }
 
-// supportedOutput rejects a format the caller does not render. The allowed set
-// is a parameter because commands differ. Validating before any cluster read
-// keeps a bad format from costing a round trip.
-func supportedOutput(cmd *cobra.Command, allowed ...generator.Output) (generator.Output, error) {
+func supportedOutput(cmd *cobra.Command, allowed []generator.Output) (generator.Output, error) {
 	format, err := outputFormat(cmd)
 	if err != nil {
 		return "", err

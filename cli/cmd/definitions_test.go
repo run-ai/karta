@@ -46,8 +46,7 @@ func noClusterGetter() genericclioptions.RESTClientGetter {
 	)
 }
 
-// countingGetter records whether anything asked it for a REST config, which is
-// how a spec proves a code path never reached the cluster.
+// countingGetter proves a code path never reached the cluster.
 type countingGetter struct {
 	genericclioptions.RESTClientGetter
 	calls int
@@ -59,7 +58,6 @@ func (g *countingGetter) ToRESTConfig() (*rest.Config, error) {
 }
 
 // kartaListServer answers the Karta list with one definition claiming gvk.
-// Loopback only, and the only way a spec drives the command's own cluster read.
 func kartaListServer(name string, gvk v1alpha1.GroupVersionKind) *httptest.Server {
 	body := fmt.Sprintf(`{"apiVersion":"run.ai/v1alpha1","kind":"KartaList",`+
 		`"metadata":{"resourceVersion":"1"},"items":[`+
@@ -74,7 +72,6 @@ func kartaListServer(name string, gvk v1alpha1.GroupVersionKind) *httptest.Serve
 	}))
 }
 
-// clusterGetter points a client getter at an in-process server.
 func clusterGetter(server *httptest.Server) genericclioptions.RESTClientGetter {
 	api := clientcmdapi.NewConfig()
 	api.Clusters["test"] = &clientcmdapi.Cluster{Server: server.URL}
@@ -86,9 +83,9 @@ func clusterGetter(server *httptest.Server) genericclioptions.RESTClientGetter {
 		WithClientConfig(clientcmd.NewDefaultClientConfig(*api, &clientcmd.ConfigOverrides{}))
 }
 
-// runDefinitions executes the command alone, capturing stdout and stderr
-// separately so specs can assert warnings never land on stdout.
-func runDefinitions(rcg genericclioptions.RESTClientGetter, args ...string) (string, string, error) {
+// runDefinitions captures stdout and stderr separately, so a spec can assert
+// warnings never land on stdout.
+func runDefinitions(rcg genericclioptions.RESTClientGetter, args []string) (string, string, error) {
 	cmd := newDefinitionsCommand(rcg)
 	cmd.SilenceUsage = true
 	cmd.SilenceErrors = true
@@ -106,7 +103,6 @@ func runDefinitions(rcg genericclioptions.RESTClientGetter, args ...string) (str
 	return stdout.String(), stderr.String(), err
 }
 
-// tableNames returns the NAME column of a rendered table, header excluded.
 // exitStatus reports the status a failure produces, the way main classifies it.
 func exitStatus(err error) int {
 	var coded interface{ ExitCode() int }
@@ -129,9 +125,8 @@ func tableNames(table string) []string {
 	return names
 }
 
-// newTestKarta builds a Karta claiming gvk as its root component, which is the
-// minimum the resolver needs to index it.
-func newTestKarta(name string, gvk v1alpha1.GroupVersionKind, root string, children ...string) *v1alpha1.Karta {
+// newTestKarta claims gvk as its root component, the minimum to be indexed.
+func newTestKarta(name string, gvk v1alpha1.GroupVersionKind, root string, children []string) *v1alpha1.Karta {
 	structure := v1alpha1.StructureDefinition{
 		RootComponent: v1alpha1.ComponentDefinition{Name: root, Kind: &gvk},
 	}
@@ -147,20 +142,20 @@ func newTestKarta(name string, gvk v1alpha1.GroupVersionKind, root string, child
 
 var _ = Describe("karta definitions", func() {
 	It("rejects a positional argument", func() {
-		_, _, err := runDefinitions(noClusterGetter(), "bogus")
+		_, _, err := runDefinitions(noClusterGetter(), []string{"bogus"})
 		Expect(err).To(HaveOccurred())
 	})
 
 	Context("without cluster access", func() {
 		It("lists the catalog and exits without error", func() {
-			stdout, _, err := runDefinitions(noClusterGetter())
+			stdout, _, err := runDefinitions(noClusterGetter(), nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stdout).To(ContainSubstring(pytorchDefinition))
 			Expect(stdout).To(ContainSubstring(string(definitions.OriginCatalog)))
 		})
 
 		It("keeps stdout free of warnings", func() {
-			stdout, _, err := runDefinitions(noClusterGetter())
+			stdout, _, err := runDefinitions(noClusterGetter(), nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stdout).NotTo(ContainSubstring("warning"))
 		})
@@ -168,7 +163,7 @@ var _ = Describe("karta definitions", func() {
 
 	Context("table output", func() {
 		It("prints the documented header", func() {
-			stdout, _, err := runDefinitions(noClusterGetter())
+			stdout, _, err := runDefinitions(noClusterGetter(), nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			header := strings.Fields(strings.SplitN(stdout, "\n", 2)[0])
@@ -176,7 +171,7 @@ var _ = Describe("karta definitions", func() {
 		})
 
 		It("sorts rows by name ascending", func() {
-			stdout, _, err := runDefinitions(noClusterGetter())
+			stdout, _, err := runDefinitions(noClusterGetter(), nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			names := tableNames(stdout)
@@ -187,7 +182,7 @@ var _ = Describe("karta definitions", func() {
 
 	Context("machine-readable output", func() {
 		It("emits the definitions themselves, not table rows", func() {
-			stdout, _, err := runDefinitions(noClusterGetter(), "-o", "json")
+			stdout, _, err := runDefinitions(noClusterGetter(), []string{"-o", "json"})
 			Expect(err).NotTo(HaveOccurred())
 
 			var kartas []v1alpha1.Karta
@@ -202,9 +197,9 @@ var _ = Describe("karta definitions", func() {
 		})
 
 		It("emits a yaml document stream of the same definitions", func() {
-			yamlOut, _, err := runDefinitions(noClusterGetter(), "-o", "yaml")
+			yamlOut, _, err := runDefinitions(noClusterGetter(), []string{"-o", "yaml"})
 			Expect(err).NotTo(HaveOccurred())
-			jsonOut, _, err := runDefinitions(noClusterGetter(), "-o", "json")
+			jsonOut, _, err := runDefinitions(noClusterGetter(), []string{"-o", "json"})
 			Expect(err).NotTo(HaveOccurred())
 
 			// A document stream, not a yaml list, so decode document by document.
@@ -219,31 +214,25 @@ var _ = Describe("karta definitions", func() {
 		})
 
 		It("rejects wide, which the root enum accepts for other commands", func() {
-			_, _, err := runDefinitions(noClusterGetter(), "-o", "wide")
+			_, _, err := runDefinitions(noClusterGetter(), []string{"-o", "wide"})
 			Expect(err).To(MatchError(ErrUnsupportedOutput))
 			Expect(err.Error()).To(ContainSubstring("table, json, yaml"))
 		})
 
 		It("rejects an unsupported format before reading the cluster", func() {
 			getter := &countingGetter{RESTClientGetter: noClusterGetter()}
-			_, _, err := runDefinitions(getter, "-o", "wide")
+			_, _, err := runDefinitions(getter, []string{"-o", "wide"})
 			Expect(err).To(MatchError(ErrUnsupportedOutput))
-			// A format the command cannot render must cost no round trip: against
-			// an unreachable cluster the read would stall until it times out and
-			// emit a warning the user can do nothing about.
+			// A format the command cannot render must cost no round trip.
 			Expect(getter.calls).To(BeZero())
 		})
 	})
 })
 
 var _ = Describe("karta definitions against a cluster", func() {
-	// Every other merge spec builds a resolver itself and calls the row builder,
-	// which proves the projection and nothing about the command. The command
-	// builds its own resolver, so only a spec that drives a real cluster read can
-	// show the cluster half of the merge reaches the output at all. Serving a
-	// definition claiming a GVK the built-in catalog already covers pins both
-	// halves at once: the cluster row has to appear and the catalog row it
-	// overrides has to be gone.
+	// Only a spec driving a real cluster read shows the cluster half of the merge
+	// reaching the output. Serving a GVK the catalog already covers pins both
+	// halves: the cluster row appears and the catalog row it overrides is gone.
 	var server *httptest.Server
 
 	BeforeEach(func() {
@@ -265,7 +254,7 @@ var _ = Describe("karta definitions against a cluster", func() {
 	}
 
 	It("lists the cluster definition, as cluster", func() {
-		stdout, _, err := runDefinitions(clusterGetter(server))
+		stdout, _, err := runDefinitions(clusterGetter(server), nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		rows := rowsFrom(stdout)
@@ -275,23 +264,21 @@ var _ = Describe("karta definitions against a cluster", func() {
 	})
 
 	It("drops the catalog definition the cluster one overrides", func() {
-		stdout, _, err := runDefinitions(clusterGetter(server))
+		stdout, _, err := runDefinitions(clusterGetter(server), nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		// Listing the shadowed catalog row alongside the cluster one would tell
-		// the user two definitions cover PyTorchJob when only one ever wins.
 		Expect(rowsFrom(stdout)).NotTo(HaveKey(pytorchDefinition))
 	})
 
 	It("narrows to the cluster definition", func() {
-		stdout, _, err := runDefinitions(clusterGetter(server), "--group", "kubeflow.org", "--kind", "PyTorchJob")
+		stdout, _, err := runDefinitions(clusterGetter(server), []string{"--group", "kubeflow.org", "--kind", "PyTorchJob"})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(tableNames(stdout)).To(Equal([]string{"cluster-pytorch"}))
 		Expect(stdout).To(ContainSubstring(string(definitions.OriginCluster)))
 	})
 
 	It("still lists the catalog definitions the cluster says nothing about", func() {
-		stdout, _, err := runDefinitions(clusterGetter(server))
+		stdout, _, err := runDefinitions(clusterGetter(server), nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		rows := rowsFrom(stdout)
@@ -301,8 +288,7 @@ var _ = Describe("karta definitions against a cluster", func() {
 })
 
 var _ = Describe("a definition that names no workload type", func() {
-	// Valid per the CRD: rootComponent.kind is optional, so a cluster can hold a
-	// Karta the CLI cannot look anything up with. It still has to be visible.
+	// rootComponent.kind is optional per the CRD, so this is valid and must list.
 	rootless := func(name string) *v1alpha1.Karta {
 		return &v1alpha1.Karta{
 			ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -334,8 +320,8 @@ var _ = Describe("a definition that names no workload type", func() {
 var _ = Describe("definitionRows over a merged resolver", func() {
 	It("lists a cluster override of a catalog GVK once, as cluster", func() {
 		resolver := definitions.New(
-			[]*v1alpha1.Karta{newTestKarta("catalog-pytorch", pytorchGVK, "pytorchjob", "master", "worker")},
-			[]*v1alpha1.Karta{newTestKarta("cluster-pytorch", pytorchGVK, "pytorchjob", "runner")},
+			[]*v1alpha1.Karta{newTestKarta("catalog-pytorch", pytorchGVK, "pytorchjob", []string{"master", "worker"})},
+			[]*v1alpha1.Karta{newTestKarta("cluster-pytorch", pytorchGVK, "pytorchjob", []string{"runner"})},
 		)
 
 		Expect(definitionRows(resolver.List())).To(Equal([]definitionRow{{
@@ -348,8 +334,8 @@ var _ = Describe("definitionRows over a merged resolver", func() {
 
 	It("lists every cluster definition claiming one GVK", func() {
 		resolver := definitions.New(nil, []*v1alpha1.Karta{
-			newTestKarta("zulu-job", jobGVK, "job"),
-			newTestKarta("alpha-job", jobGVK, "job"),
+			newTestKarta("zulu-job", jobGVK, "job", nil),
+			newTestKarta("alpha-job", jobGVK, "job", nil),
 		})
 
 		rows := definitionRows(resolver.List())
@@ -363,8 +349,8 @@ var _ = Describe("definitionRows over a merged resolver", func() {
 		// GVK order puts apps/v1 ahead of batch/v1, so the resolver hands over
 		// zulu first and only the row builder can produce name order.
 		resolver := definitions.New([]*v1alpha1.Karta{
-			newTestKarta("zulu", deploymentGVK, "deployment"),
-			newTestKarta("alpha", jobGVK, "job"),
+			newTestKarta("zulu", deploymentGVK, "deployment", nil),
+			newTestKarta("alpha", jobGVK, "job", nil),
 		}, nil)
 
 		Expect(resolver.List()[0].Karta.Name).To(Equal("zulu"))
@@ -411,26 +397,29 @@ const (
 
 var _ = Describe("karta definitions --group --kind --version", func() {
 	DescribeTable("narrows to the definitions the filter covers",
-		func(args []string, expected ...string) {
-			stdout, _, err := runDefinitions(noClusterGetter(), args...)
+		func(args []string, expected []string) {
+			stdout, _, err := runDefinitions(noClusterGetter(), args)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(tableNames(stdout)).To(Equal(expected))
 		},
-		Entry("a group alone", []string{"--group", "jobset.x-k8s.io"}, jobsetDefinition),
-		Entry("a group and kind", []string{"--group", "jobset.x-k8s.io", "--kind", "JobSet"}, jobsetDefinition),
+		Entry("a group alone",
+			[]string{"--group", "jobset.x-k8s.io"}, []string{jobsetDefinition}),
+		Entry("a group and kind",
+			[]string{"--group", "jobset.x-k8s.io", "--kind", "JobSet"}, []string{jobsetDefinition}),
 		Entry("a kind in the user's casing",
-			[]string{"--group", "jobset.x-k8s.io", "--kind", "jobset"}, jobsetDefinition),
-		Entry("a kind covered at two versions", []string{"--group", "nvidia.com", "--kind", "DynamoGraphDeployment"},
-			dynamoV1alpha1Definition, dynamoV1beta1Definition),
+			[]string{"--group", "jobset.x-k8s.io", "--kind", "jobset"}, []string{jobsetDefinition}),
+		Entry("a kind covered at two versions",
+			[]string{"--group", "nvidia.com", "--kind", "DynamoGraphDeployment"},
+			[]string{dynamoV1alpha1Definition, dynamoV1beta1Definition}),
 		Entry("that kind pinned to one version",
 			[]string{"--group", "nvidia.com", "--kind", "DynamoGraphDeployment", "--version", "v1beta1"},
-			dynamoV1beta1Definition),
+			[]string{dynamoV1beta1Definition}),
 		Entry("the core group, which is the empty string",
-			[]string{"--group", "", "--kind", "Pod"}, "core-pod-v1"),
+			[]string{"--group", "", "--kind", "Pod"}, []string{"core-pod-v1"}),
 	)
 
 	It("prints every definition covering a kind rather than picking one", func() {
-		stdout, _, err := runDefinitions(noClusterGetter(), "--group", "nvidia.com", "--kind", "DynamoGraphDeployment")
+		stdout, _, err := runDefinitions(noClusterGetter(), []string{"--group", "nvidia.com", "--kind", "DynamoGraphDeployment"})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(tableNames(stdout)).To(Equal([]string{dynamoV1alpha1Definition, dynamoV1beta1Definition}))
 		Expect(strings.Count(stdout, "DynamoGraphDeployment")).To(Equal(2))
@@ -438,9 +427,8 @@ var _ = Describe("karta definitions --group --kind --version", func() {
 
 	DescribeTable("reports a workload type no definition covers",
 		func(args []string, named string) {
-			stdout, _, err := runDefinitions(noClusterGetter(), args...)
+			stdout, _, err := runDefinitions(noClusterGetter(), args)
 			Expect(err).To(HaveOccurred())
-			// Not a usage error: the flags were well formed, nothing covers them.
 			Expect(exitStatus(err)).To(Equal(ExitError))
 			Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("no Karta definition covers %q", named)))
 			Expect(err.Error()).To(ContainSubstring(`Run "karta definitions" to see what is available`))
@@ -459,7 +447,7 @@ var _ = Describe("karta definitions --group --kind --version", func() {
 	DescribeTable("rejects a filter that addresses nothing",
 		func(args []string, wanted string) {
 			getter := &countingGetter{RESTClientGetter: noClusterGetter()}
-			_, _, err := runDefinitions(getter, args...)
+			_, _, err := runDefinitions(getter, args)
 			Expect(exitStatus(err)).To(Equal(ExitUsage))
 			Expect(err.Error()).To(ContainSubstring(wanted))
 			Expect(getter.calls).To(BeZero())
@@ -475,8 +463,7 @@ var _ = Describe("karta definitions --group --kind --version", func() {
 
 	Context("machine-readable output", func() {
 		It("separates several matches into a yaml document stream", func() {
-			stdout, _, err := runDefinitions(noClusterGetter(),
-				"--group", "nvidia.com", "--kind", "DynamoGraphDeployment", "-o", "yaml")
+			stdout, _, err := runDefinitions(noClusterGetter(), []string{"--group", "nvidia.com", "--kind", "DynamoGraphDeployment", "-o", "yaml"})
 			Expect(err).NotTo(HaveOccurred())
 
 			docs := strings.Split(strings.TrimSpace(stdout), "\n---\n")
@@ -493,7 +480,7 @@ var _ = Describe("karta definitions --group --kind --version", func() {
 		})
 
 		It("emits the raw definitions as a json array", func() {
-			stdout, _, err := runDefinitions(noClusterGetter(), "--group", "jobset.x-k8s.io", "-o", "json")
+			stdout, _, err := runDefinitions(noClusterGetter(), []string{"--group", "jobset.x-k8s.io", "-o", "json"})
 			Expect(err).NotTo(HaveOccurred())
 
 			var kartas []v1alpha1.Karta
@@ -508,8 +495,8 @@ var _ = Describe("karta definitions --group --kind --version", func() {
 var _ = Describe("definitionFilter", func() {
 	It("narrows a kind covered at two versions down to the requested one", func() {
 		defs := definitions.New(nil, []*v1alpha1.Karta{
-			newTestKarta("job-v1", jobGVK, "job"),
-			newTestKarta("job-v2", v1alpha1.GroupVersionKind{Group: "batch", Version: "v2", Kind: "Job"}, "job"),
+			newTestKarta("job-v1", jobGVK, "job", nil),
+			newTestKarta("job-v2", v1alpha1.GroupVersionKind{Group: "batch", Version: "v2", Kind: "Job"}, "job", nil),
 		}).List()
 
 		Expect(definitionFilter{group: "batch", kind: "Job", set: true}.narrow(defs)).To(HaveLen(2))
@@ -522,7 +509,7 @@ var _ = Describe("definitionFilter", func() {
 
 	It("matches a core workload whose root group is empty", func() {
 		defs := definitions.New([]*v1alpha1.Karta{
-			newTestKarta("core-pod", v1alpha1.GroupVersionKind{Version: "v1", Kind: "Pod"}, "pod"),
+			newTestKarta("core-pod", v1alpha1.GroupVersionKind{Version: "v1", Kind: "Pod"}, "pod", nil),
 		}, nil).List()
 
 		Expect(definitionFilter{group: "", kind: "Pod", set: true}.narrow(defs)).To(HaveLen(1))

@@ -29,20 +29,18 @@ const (
 	flagVersion = "version"
 )
 
+const (
+	usageGroup   = "Show the definitions covering this API group"
+	usageKind    = "Show the definitions covering this kind; needs --" + flagGroup
+	usageVersion = "Show the definitions covering this version; needs --" + flagKind
+)
+
 // ErrUnsupportedOutput reports a format the root enum accepts but this command
 // cannot render.
 var ErrUnsupportedOutput = errors.New("unsupported output format")
 
 var definitionsOutputs = []generator.Output{
 	generator.OutputTable, generator.OutputJSON, generator.OutputYAML,
-}
-
-func unsupportedOutputError(format generator.Output, allowed []generator.Output) error {
-	names := make([]string, 0, len(allowed))
-	for _, a := range allowed {
-		names = append(names, string(a))
-	}
-	return fmt.Errorf("%w %q: supported formats are %s", ErrUnsupportedOutput, format, strings.Join(names, ", "))
 }
 
 // definitionRow is one row of the table. json and yaml emit the definitions
@@ -52,6 +50,14 @@ type definitionRow struct {
 	Kind       string
 	Origin     string
 	Components []string
+}
+
+// definitionFilter is the workload type --group, --kind and --version address.
+type definitionFilter struct {
+	group   string
+	kind    string
+	version string
+	set     bool
 }
 
 // newDefinitionsCommand builds the "karta definitions" command. The client getter
@@ -80,11 +86,10 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 			"  karta definitions --for jobset -o yaml",
 		Args: usageArgs(cobra.NoArgs),
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			format, err := supportedOutput(cmd, definitionsOutputs...)
+			format, err := supportedOutput(cmd, definitionsOutputs)
 			if err != nil {
 				return err
 			}
-			// Both validations run before Load: a usage mistake costs no cluster read.
 			filter, err := definitionFilterFrom(cmd, group, kind, version)
 			if err != nil {
 				return err
@@ -92,7 +97,7 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 
 			resolver, warnings := definitions.Load(cmd.Context(), rcg)
 			for _, warning := range warnings {
-				fmt.Fprintln(cmd.ErrOrStderr(), warningPrefix+warning.Message)
+				fmt.Fprintln(cmd.ErrOrStderr(), "warning: "+warning.Message)
 			}
 
 			matches := resolver.List()
@@ -111,19 +116,11 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 		},
 	}
 
-	cmd.Flags().StringVar(&group, flagGroup, "", "Show the definitions covering this API group")
-	cmd.Flags().StringVar(&kind, flagKind, "", "Show the definitions covering this kind; needs --"+flagGroup)
-	cmd.Flags().StringVar(&version, flagVersion, "", "Show the definitions covering this version; needs --"+flagKind)
+	cmd.Flags().StringVar(&group, flagGroup, "", usageGroup)
+	cmd.Flags().StringVar(&kind, flagKind, "", usageKind)
+	cmd.Flags().StringVar(&version, flagVersion, "", usageVersion)
 
 	return cmd
-}
-
-// definitionFilter is the workload type --group, --kind and --version address.
-type definitionFilter struct {
-	group   string
-	kind    string
-	version string
-	set     bool
 }
 
 // definitionFilterFrom rejects a combination that addresses nothing: a kind
@@ -189,9 +186,6 @@ func (f definitionFilter) String() string {
 	}
 }
 
-// warningPrefix opens every diagnostic the CLI writes to stderr.
-const warningPrefix = "warning: "
-
 // definitionRows projects definitions into rows sorted by name. Resolver.List
 // sorts by GVK, so display order is set here.
 func definitionRows(defs []definitions.Definition) []definitionRow {
@@ -238,8 +232,14 @@ func renderDefinitions(out, errOut io.Writer, rows []definitionRow) error {
 	return nil
 }
 
-// renderRawDefinitions writes the definitions themselves, so "-o yaml" pipes
-// straight into "kubectl apply -f -".
+func unsupportedOutputError(format generator.Output, allowed []generator.Output) error {
+	names := make([]string, 0, len(allowed))
+	for _, a := range allowed {
+		names = append(names, string(a))
+	}
+	return fmt.Errorf("%w %q: supported formats are %s", ErrUnsupportedOutput, format, strings.Join(names, ", "))
+}
+
 func renderRawDefinitions(out io.Writer, defs []definitions.Definition, format generator.Output) error {
 	switch format {
 	case generator.OutputJSON:
