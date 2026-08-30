@@ -37,7 +37,12 @@ func main() {
 	// Silencing Cobra also silenced its usage hint, which is the whole value of
 	// distinguishing a usage error.
 	if coded.ExitCode() == cmd.ExitUsage {
-		fmt.Fprintln(os.Stderr, "Run 'karta --help' for usage.")
+		path := "karta"
+		var located interface{ UsagePath() string }
+		if errors.As(err, &located) && located.UsagePath() != "" {
+			path = located.UsagePath()
+		}
+		fmt.Fprintf(os.Stderr, "Run '%s --help' for usage.\n", path)
 	}
 	os.Exit(coded.ExitCode())
 }
