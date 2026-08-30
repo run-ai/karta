@@ -11,56 +11,13 @@ import (
 	"github.com/run-ai/karta/cli/pkg/workload"
 )
 
-func TestComponentsElidesLongLists(t *testing.T) {
-	// Milvus declares eighteen components; a row that printed them all would
-	// push GPU and AGE off screen.
-	many := make([]workload.ComponentView, 0, 18)
-	for _, name := range []string{
-		"standalone", "proxy", "mixcoord", "datanode", "querynode",
-		"streamingnode", "indexnode", "rootcoord",
-	} {
-		many = append(many, workload.ComponentView{Name: name, Replicas: 1})
-	}
-
-	got := components(many)
-	if len(got) > componentsWidth+len(", +8 more") {
-		t.Errorf("cell not elided: %q", got)
-	}
-	if !strings.Contains(got, "more") {
-		t.Errorf("expected an elision marker, got %q", got)
-	}
-	if !strings.HasPrefix(got, "standalone(1)") {
-		t.Errorf("expected the first components to survive, got %q", got)
-	}
-}
-
-func TestComponentsRendersRoleAndCount(t *testing.T) {
-	got := components([]workload.ComponentView{
-		{Name: "master", Replicas: 1},
-		{Name: "worker", Replicas: 4},
-	})
-	if got != "master(1), worker(4)" {
-		t.Errorf("unexpected cell: %q", got)
-	}
-}
-
-// A workload whose definition extracts no pod-bearing component still needs a
-// cell, so the columns stay aligned.
-func TestComponentsWithNone(t *testing.T) {
-	if got := components(nil); got != "<none>" {
-		t.Errorf("unexpected cell: %q", got)
-	}
-}
-
 func TestRenderTableColumns(t *testing.T) {
 	views := []workload.View{{
-		Name:       "preprocess",
-		Namespace:  "ml-team",
-		Kind:       "JobSet",
-		Phases:     []string{"Completed"},
-		GPUs:       0,
-		Origin:     "community",
-		Components: []workload.ComponentView{{Name: "etl", Replicas: 3}},
+		Name:      "preprocess",
+		Namespace: "ml-team",
+		Kind:      "JobSet",
+		Phases:    []string{"Completed"},
+		Origin:    "catalog",
 	}}
 
 	for _, tc := range []struct {
@@ -72,13 +29,13 @@ func TestRenderTableColumns(t *testing.T) {
 		{
 			name:    "default columns",
 			opts:    Options{Output: OutputTable},
-			want:    []string{"NAME", "NAMESPACE", "ml-team", "PHASE", "COMPONENTS", "GPU", "AGE", "etl(3)"},
-			notWant: []string{"ORIGIN"},
+			want:    []string{"NAME", "NAMESPACE", "ml-team", "PHASE", "Completed", "AGE"},
+			notWant: []string{"ORIGIN", "COMPONENTS", "GPU"},
 		},
 		{
 			name: "wide adds ORIGIN",
 			opts: Options{Output: OutputWide},
-			want: []string{"ORIGIN", "community"},
+			want: []string{"ORIGIN", "catalog"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -135,16 +92,5 @@ func TestRenderUnsetAgeIsUnknown(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "<unknown>") {
 		t.Errorf("expected <unknown> for an unset timestamp\n%s", out.String())
-	}
-}
-
-// A multi-instance component takes its name from the instance key, which can
-// outgrow the cell on its own.
-func TestComponentsCapsASingleLongEntry(t *testing.T) {
-	got := components([]workload.ComponentView{
-		{Name: strings.Repeat("very-long-service-name", 4), Replicas: 2},
-	})
-	if len(got) > componentsWidth {
-		t.Errorf("cell exceeds the width budget at %d chars: %q", len(got), got)
 	}
 }
