@@ -17,9 +17,6 @@ import (
 	"github.com/run-ai/karta/pkg/tree"
 )
 
-// undefinedPhase covers both an absent status mapping and one that matched nothing.
-const undefinedPhase = "Undefined"
-
 // View is one workload as Karta resolves it: the root object's identity, the
 // definition that covers it, and its normalized phase.
 type View struct {
@@ -32,6 +29,9 @@ type View struct {
 	Origin     string    `json:"origin"`
 	Phases     []string  `json:"phases"`
 }
+
+// undefinedPhase covers both an absent status mapping and one that matched nothing.
+const undefinedPhase = "Undefined"
 
 // Resolve reads obj through def and returns its view.
 func Resolve(ctx context.Context, obj *unstructured.Unstructured, def definitions.Definition) (*View, error) {
