@@ -213,9 +213,9 @@ var _ = Describe("Resolver List", func() {
 
 		Expect(namesOf(New(catalog, cluster).List())).To(Equal(want))
 
-		reversedCommunity := []*v1alpha1.Karta{catalog[1], catalog[0]}
+		reversedCatalog := []*v1alpha1.Karta{catalog[1], catalog[0]}
 		reversedCluster := []*v1alpha1.Karta{cluster[1], cluster[0]}
-		Expect(namesOf(New(reversedCommunity, reversedCluster).List())).To(Equal(want))
+		Expect(namesOf(New(reversedCatalog, reversedCluster).List())).To(Equal(want))
 	})
 })
 

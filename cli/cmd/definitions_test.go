@@ -147,7 +147,7 @@ func newTestKarta(name string, gvk v1alpha1.GroupVersionKind, root string, child
 	}
 }
 
-var _ = Describe("karta definitions", func() {
+var _ = Describe("kli definitions", func() {
 	It("rejects a positional argument", func() {
 		_, _, err := runDefinitions(noClusterGetter(), []string{"bogus"})
 		Expect(err).To(HaveOccurred())
@@ -236,7 +236,7 @@ var _ = Describe("karta definitions", func() {
 	})
 })
 
-var _ = Describe("karta definitions against a cluster", func() {
+var _ = Describe("kli definitions against a cluster", func() {
 	// Only a spec driving a real cluster read shows the cluster half of the merge
 	// reaching the output. Serving a GVK the catalog already covers pins both
 	// halves: the cluster row appears and the catalog row it overrides is gone.
@@ -390,7 +390,7 @@ const (
 	dynamoV1beta1Definition  = "nvidia-com-dynamographdeployment-v1beta1"
 )
 
-var _ = Describe("karta definitions NAME", func() {
+var _ = Describe("kli definitions NAME", func() {
 	It("narrows the table to the named definition", func() {
 		stdout, _, err := runDefinitions(noClusterGetter(), []string{pytorchDefinition})
 		Expect(err).NotTo(HaveOccurred())
@@ -436,7 +436,7 @@ var _ = Describe("karta definitions NAME", func() {
 		stdout, _, err := runDefinitions(noClusterGetter(), []string{"nosuchname"})
 		Expect(exitStatus(err)).To(Equal(ExitError))
 		Expect(err.Error()).To(ContainSubstring(`no Karta definition named "nosuchname"`))
-		Expect(err.Error()).To(ContainSubstring(`Run "karta definitions" to see what is available`))
+		Expect(err.Error()).To(ContainSubstring(`Run "kli definitions" to see what is available`))
 		Expect(stdout).To(BeEmpty())
 	})
 
@@ -459,7 +459,7 @@ var _ = Describe("karta definitions NAME", func() {
 	})
 })
 
-var _ = Describe("karta definitions --group --kind --version", func() {
+var _ = Describe("kli definitions --group --kind --version", func() {
 	DescribeTable("narrows to the definitions the filter covers",
 		func(args []string, expected []string) {
 			stdout, _, err := runDefinitions(noClusterGetter(), args)
@@ -495,7 +495,7 @@ var _ = Describe("karta definitions --group --kind --version", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(exitStatus(err)).To(Equal(ExitError))
 			Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("no Karta definition covers %q", named)))
-			Expect(err.Error()).To(ContainSubstring(`Run "karta definitions" to see what is available`))
+			Expect(err.Error()).To(ContainSubstring(`Run "kli definitions" to see what is available`))
 			Expect(stdout).To(BeEmpty())
 		},
 		Entry("an unknown group", []string{"--group", "nosuch.io"}, "nosuch.io"),

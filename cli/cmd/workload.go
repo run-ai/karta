@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newWorkloadCommand builds the "karta workload" command tree.
+// newWorkloadCommand builds the "kli workload" command tree.
 func newWorkloadCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "workload",

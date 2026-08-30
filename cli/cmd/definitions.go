@@ -53,7 +53,7 @@ var definitionsOutputs = []generator.Output{
 	generator.OutputTable, generator.OutputJSON, generator.OutputYAML,
 }
 
-// newDefinitionsCommand builds the "karta definitions" command. The client getter
+// newDefinitionsCommand builds the "kli definitions" command. The client getter
 // is a parameter so a test can inject a fake without mutating package state.
 func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Command {
 	var group, kind, version string
@@ -71,16 +71,16 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 			"workload type. The table is the human view; json and yaml always emit " +
 			"the definitions themselves.",
 		Example: "  # Everything the CLI understands (catalog + cluster)\n" +
-			"  karta definitions\n" +
+			"  kli definitions\n" +
 			"\n" +
 			"  # One definition, by the name the list shows\n" +
-			"  karta definitions kubeflow-org-pytorchjob-v1\n" +
+			"  kli definitions kubeflow-org-pytorchjob-v1\n" +
 			"\n" +
 			"  # Which definition covers JobSet?\n" +
-			"  karta definitions --group jobset.x-k8s.io --kind JobSet\n" +
+			"  kli definitions --group jobset.x-k8s.io --kind JobSet\n" +
 			"\n" +
 			"  # Dump them as applyable YAML\n" +
-			"  karta definitions -o yaml",
+			"  kli definitions -o yaml",
 		Args: usageArgs(cobra.MaximumNArgs(1)),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			format, err := supportedOutput(cmd, definitionsOutputs)
@@ -107,7 +107,7 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 				def, err := resolver.ByName(args[0])
 				if err != nil {
 					return fmt.Errorf(
-						`no Karta definition named %q. Run "karta definitions" to see what is available`,
+						`no Karta definition named %q. Run "kli definitions" to see what is available`,
 						args[0])
 				}
 				matches = []definitions.Definition{def}
@@ -115,7 +115,7 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 			case filter.set:
 				if matches = filter.narrow(matches); len(matches) == 0 {
 					return fmt.Errorf(
-						`no Karta definition covers %q. Run "karta definitions" to see what is available`,
+						`no Karta definition covers %q. Run "kli definitions" to see what is available`,
 						filter.String())
 				}
 			}
