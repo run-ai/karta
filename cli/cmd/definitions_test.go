@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -104,6 +105,12 @@ func runDefinitions(rcg genericclioptions.RESTClientGetter, args []string) (stri
 }
 
 // exitStatus reports the status a failure produces, the way main classifies it.
+// unusedTable fails the spec if a machine format reaches the table callback.
+func unusedTable(io.Writer) error {
+	Fail("the table renderer must not run for a machine format")
+	return nil
+}
+
 func exitStatus(err error) int {
 	var coded interface{ ExitCode() int }
 	if errors.As(err, &coded) {
@@ -215,14 +222,14 @@ var _ = Describe("karta definitions", func() {
 
 		It("rejects wide, which the root enum accepts for other commands", func() {
 			_, _, err := runDefinitions(noClusterGetter(), []string{"-o", "wide"})
-			Expect(err).To(MatchError(ErrUnsupportedOutput))
+			Expect(err).To(MatchError(generator.ErrUnsupportedOutput))
 			Expect(err.Error()).To(ContainSubstring("table, json, yaml"))
 		})
 
 		It("rejects an unsupported format before reading the cluster", func() {
 			getter := &countingGetter{RESTClientGetter: noClusterGetter()}
 			_, _, err := runDefinitions(getter, []string{"-o", "wide"})
-			Expect(err).To(MatchError(ErrUnsupportedOutput))
+			Expect(err).To(MatchError(generator.ErrUnsupportedOutput))
 			// A format the command cannot render must cost no round trip.
 			Expect(getter.calls).To(BeZero())
 		})
@@ -308,8 +315,8 @@ var _ = Describe("a definition that names no workload type", func() {
 
 	It("never leaks the table placeholder into a machine format", func() {
 		var stdout bytes.Buffer
-		defs := definitions.New(nil, []*v1alpha1.Karta{rootless("broken-karta")}).List()
-		Expect(renderRawDefinitions(&stdout, defs, generator.OutputJSON)).To(Succeed())
+		kartas := []*v1alpha1.Karta{rootless("broken-karta")}
+		Expect(generator.Render(&stdout, generator.OutputJSON, kartas, unusedTable)).To(Succeed())
 
 		// "<none>" is a column affordance, never part of the data.
 		Expect(stdout.String()).NotTo(ContainSubstring("<none>"))
@@ -370,22 +377,10 @@ var _ = Describe("rendering an empty definition list", func() {
 
 	It("emits an empty json array with no note", func() {
 		var stdout bytes.Buffer
-		Expect(renderRawDefinitions(&stdout, nil, generator.OutputJSON)).To(Succeed())
+		Expect(generator.Render[*v1alpha1.Karta](&stdout, generator.OutputJSON, nil, unusedTable)).To(Succeed())
 		Expect(strings.TrimSpace(stdout.String())).To(Equal("[]"))
 	})
 })
-
-var _ = DescribeTable("rendering an output format the command cannot produce",
-	func(format generator.Output) {
-		var stdout bytes.Buffer
-		err := renderRawDefinitions(&stdout, nil, format)
-		Expect(err).To(MatchError(ErrUnsupportedOutput))
-		Expect(err.Error()).To(ContainSubstring("table, json, yaml"))
-		Expect(stdout.String()).To(BeEmpty())
-	},
-	Entry("wide", generator.OutputWide),
-	Entry("a format outside the enum", generator.Output("toml")),
-)
 
 // Asserted verbatim: only the name tells one definition of a kind from another.
 const (

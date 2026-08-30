@@ -4,8 +4,6 @@
 package cmd
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -15,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"sigs.k8s.io/yaml"
 
 	"github.com/run-ai/karta/cli/pkg/definitions"
 	"github.com/run-ai/karta/cli/pkg/generator"
@@ -34,10 +31,6 @@ const (
 	usageKind    = "Show the definitions covering this kind; needs --" + flagGroup
 	usageVersion = "Show the definitions covering this version; needs --" + flagKind
 )
-
-// ErrUnsupportedOutput reports a format the root enum accepts but this command
-// cannot render.
-var ErrUnsupportedOutput = errors.New("unsupported output format")
 
 // definitionRow is one row of the table. json and yaml emit the definitions
 // themselves, so this never leaves the process and carries no tags.
@@ -109,10 +102,13 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 				}
 			}
 
-			if format == generator.OutputTable {
-				return renderDefinitions(cmd.OutOrStdout(), cmd.ErrOrStderr(), definitionRows(matches))
+			kartas := make([]*v1alpha1.Karta, 0, len(matches))
+			for _, def := range matches {
+				kartas = append(kartas, def.Karta)
 			}
-			return renderRawDefinitions(cmd.OutOrStdout(), matches, format)
+			return generator.Render(cmd.OutOrStdout(), format, kartas, func(out io.Writer) error {
+				return renderDefinitions(out, cmd.ErrOrStderr(), definitionRows(matches))
+			})
 		},
 	}
 
@@ -237,39 +233,5 @@ func unsupportedOutputError(format generator.Output, allowed []generator.Output)
 	for _, a := range allowed {
 		names = append(names, string(a))
 	}
-	return fmt.Errorf("%w %q: supported formats are %s", ErrUnsupportedOutput, format, strings.Join(names, ", "))
-}
-
-func renderRawDefinitions(out io.Writer, defs []definitions.Definition, format generator.Output) error {
-	switch format {
-	case generator.OutputJSON:
-		kartas := make([]*v1alpha1.Karta, 0, len(defs))
-		for _, def := range defs {
-			kartas = append(kartas, def.Karta)
-		}
-		encoder := json.NewEncoder(out)
-		encoder.SetIndent("", "  ")
-		if err := encoder.Encode(kartas); err != nil {
-			return fmt.Errorf("encode definitions as json: %w", err)
-		}
-		return nil
-
-	case generator.OutputYAML:
-		docs := make([]string, 0, len(defs))
-		for _, def := range defs {
-			data, err := yaml.Marshal(def.Karta)
-			if err != nil {
-				return fmt.Errorf("encode definition %q as yaml: %w", def.Karta.Name, err)
-			}
-			docs = append(docs, string(data))
-		}
-		// A document stream, not a List object kubectl would need told about.
-		if _, err := io.WriteString(out, strings.Join(docs, "---\n")); err != nil {
-			return fmt.Errorf("write definitions yaml: %w", err)
-		}
-		return nil
-
-	default:
-		return unsupportedOutputError(format, definitionsOutputs)
-	}
+	return fmt.Errorf("%w %q: supported formats are %s", generator.ErrUnsupportedOutput, format, strings.Join(names, ", "))
 }
