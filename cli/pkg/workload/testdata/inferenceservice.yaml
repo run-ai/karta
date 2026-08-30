@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: embed-svc
+  namespace: ml-team
+spec:
+  predictor:
+    minReplicas: 4
+    model:
+      storageUri: s3://models/embed
+      resources:
+        requests:
+          nvidia.com/gpu: "2"

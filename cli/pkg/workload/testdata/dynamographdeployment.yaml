@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+
+apiVersion: nvidia.com/v1alpha1
+kind: DynamoGraphDeployment
+metadata:
+  name: my-pipeline
+  namespace: ml-team
+spec:
+  services:
+    Frontend:
+      replicas: 2
+      resources:
+        requests:
+          nvidia.com/gpu: "1"
+    PrefillWorker:
+      replicas: 4
+      resources:
+        requests:
+          nvidia.com/gpu: "8"
