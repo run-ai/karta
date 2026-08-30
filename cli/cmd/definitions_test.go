@@ -390,6 +390,75 @@ const (
 	dynamoV1beta1Definition  = "nvidia-com-dynamographdeployment-v1beta1"
 )
 
+var _ = Describe("karta definitions NAME", func() {
+	It("narrows the table to the named definition", func() {
+		stdout, _, err := runDefinitions(noClusterGetter(), []string{pytorchDefinition})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(tableNames(stdout)).To(Equal([]string{pytorchDefinition}))
+	})
+
+	It("emits that definition itself as a json array of one", func() {
+		stdout, _, err := runDefinitions(noClusterGetter(), []string{pytorchDefinition, "-o", "json"})
+		Expect(err).NotTo(HaveOccurred())
+
+		var kartas []v1alpha1.Karta
+		Expect(json.Unmarshal([]byte(stdout), &kartas)).To(Succeed())
+		Expect(kartas).To(HaveLen(1))
+		Expect(kartas[0].Name).To(Equal(pytorchDefinition))
+		Expect(kartas[0].Kind).To(Equal("Karta"))
+	})
+
+	It("emits that definition itself as a single yaml document", func() {
+		stdout, _, err := runDefinitions(noClusterGetter(), []string{pytorchDefinition, "-o", "yaml"})
+		Expect(err).NotTo(HaveOccurred())
+
+		// Separator between documents, so one match carries none and the output
+		// is a bare Karta rather than a list of one.
+		Expect(stdout).NotTo(ContainSubstring("---"))
+
+		var karta v1alpha1.Karta
+		Expect(yaml.Unmarshal([]byte(stdout), &karta)).To(Succeed())
+		Expect(karta.Name).To(Equal(pytorchDefinition))
+		Expect(karta.Kind).To(Equal("Karta"))
+	})
+
+	It("prefers the cluster definition when a name exists in both sources", func() {
+		server := kartaListServer(pytorchDefinition, pytorchGVK)
+		DeferCleanup(server.Close)
+
+		stdout, _, err := runDefinitions(clusterGetter(server), []string{pytorchDefinition})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stdout).To(ContainSubstring(string(definitions.OriginCluster)))
+		Expect(stdout).NotTo(ContainSubstring(string(definitions.OriginCatalog)))
+	})
+
+	It("reports a name no definition carries", func() {
+		stdout, _, err := runDefinitions(noClusterGetter(), []string{"nosuchname"})
+		Expect(exitStatus(err)).To(Equal(ExitError))
+		Expect(err.Error()).To(ContainSubstring(`no Karta definition named "nosuchname"`))
+		Expect(err.Error()).To(ContainSubstring(`Run "karta definitions" to see what is available`))
+		Expect(stdout).To(BeEmpty())
+	})
+
+	DescribeTable("rejects a name given alongside a filter",
+		func(args []string) {
+			getter := &countingGetter{RESTClientGetter: noClusterGetter()}
+			_, _, err := runDefinitions(getter, args)
+			Expect(exitStatus(err)).To(Equal(ExitUsage))
+			Expect(err.Error()).To(ContainSubstring("give one or the other"))
+			Expect(getter.calls).To(BeZero())
+		},
+		Entry("a group", []string{pytorchDefinition, "--group", "kubeflow.org"}),
+		Entry("the core group, which is the empty string",
+			[]string{pytorchDefinition, "--group", ""}),
+	)
+
+	It("rejects a second name", func() {
+		_, _, err := runDefinitions(noClusterGetter(), []string{"one", "two"})
+		Expect(exitStatus(err)).To(Equal(ExitUsage))
+	})
+})
+
 var _ = Describe("karta definitions --group --kind --version", func() {
 	DescribeTable("narrows to the definitions the filter covers",
 		func(args []string, expected []string) {

@@ -59,26 +59,30 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 	var group, kind, version string
 
 	cmd := &cobra.Command{
-		Use:   "definitions",
+		Use:   "definitions [NAME]",
 		Short: "List the Karta definitions the CLI understands",
 		Long: "List the Karta definitions the CLI understands, merging the built-in " +
 			"catalog with the Karta definitions installed in the cluster. " +
 			"A cluster definition overrides a catalog one describing the same " +
 			"workload type and is listed once, as cluster. Definitions are not " +
 			"namespaced, and without cluster access the command still lists the " +
-			"catalog definitions. Use --group, and optionally --kind and --version, " +
-			"to narrow the list to one workload type. The table is the human view; " +
-			"json and yaml always emit the definitions themselves.",
+			"catalog definitions. Give a NAME to address one definition, or use " +
+			"--group, and optionally --kind and --version, to narrow the list to one " +
+			"workload type. The table is the human view; json and yaml always emit " +
+			"the definitions themselves.",
 		Example: "  # Everything the CLI understands (catalog + cluster)\n" +
 			"  karta definitions\n" +
+			"\n" +
+			"  # One definition, by the name the list shows\n" +
+			"  karta definitions kubeflow-org-pytorchjob-v1\n" +
 			"\n" +
 			"  # Which definition covers JobSet?\n" +
 			"  karta definitions --group jobset.x-k8s.io --kind JobSet\n" +
 			"\n" +
 			"  # Dump them as applyable YAML\n" +
 			"  karta definitions -o yaml",
-		Args: usageArgs(cobra.NoArgs),
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		Args: usageArgs(cobra.MaximumNArgs(1)),
+		RunE: func(cmd *cobra.Command, args []string) error {
 			format, err := supportedOutput(cmd, definitionsOutputs)
 			if err != nil {
 				return err
@@ -87,6 +91,10 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 			if err != nil {
 				return err
 			}
+			if len(args) == 1 && filter.set {
+				return usageError(cmd, fmt.Errorf(
+					"a NAME and --%s address the same definition; give one or the other", flagGroup))
+			}
 
 			resolver, warnings := definitions.Load(cmd.Context(), rcg)
 			for _, warning := range warnings {
@@ -94,7 +102,17 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 			}
 
 			matches := resolver.List()
-			if filter.set {
+			switch {
+			case len(args) == 1:
+				def, err := resolver.ByName(args[0])
+				if err != nil {
+					return fmt.Errorf(
+						`no Karta definition named %q. Run "karta definitions" to see what is available`,
+						args[0])
+				}
+				matches = []definitions.Definition{def}
+
+			case filter.set:
 				if matches = filter.narrow(matches); len(matches) == 0 {
 					return fmt.Errorf(
 						`no Karta definition covers %q. Run "karta definitions" to see what is available`,
