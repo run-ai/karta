@@ -27,6 +27,33 @@ const (
 )
 
 const (
+	definitionsUse   = "definitions [NAME]"
+	definitionsShort = "List the Karta definitions the CLI understands"
+
+	definitionsLong = `List the Karta definitions the CLI understands, merging the built-in catalog
+with the Karta definitions installed in the cluster. A cluster definition overrides a
+catalog one describing the same workload type and is listed once, as cluster.
+Definitions are not namespaced, and without cluster access the command still lists the
+catalog definitions.
+
+Give a NAME to address one definition, or use --group, and optionally --kind and
+--version, to narrow the list to one workload type. The table is the human view; json
+and yaml always emit the definitions themselves.`
+
+	definitionsExample = `  # Everything the CLI understands (catalog + cluster)
+  kli definitions
+
+  # One definition, by the name the list shows
+  kli definitions kubeflow-org-pytorchjob-v1
+
+  # Which definition covers JobSet?
+  kli definitions --group jobset.x-k8s.io --kind JobSet
+
+  # Dump them as applyable YAML
+  kli definitions -o yaml`
+)
+
+const (
 	usageGroup   = "Show the definitions covering this API group"
 	usageKind    = "Show the definitions covering this kind; needs --" + flagGroup
 	usageVersion = "Show the definitions covering this version; needs --" + flagKind
@@ -59,29 +86,11 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 	)
 
 	cmd := &cobra.Command{
-		Use:   "definitions [NAME]",
-		Short: "List the Karta definitions the CLI understands",
-		Long: `List the Karta definitions the CLI understands, merging the built-in catalog
-with the Karta definitions installed in the cluster. A cluster definition overrides a
-catalog one describing the same workload type and is listed once, as cluster.
-Definitions are not namespaced, and without cluster access the command still lists the
-catalog definitions.
-
-Give a NAME to address one definition, or use --group, and optionally --kind and
---version, to narrow the list to one workload type. The table is the human view; json
-and yaml always emit the definitions themselves.`,
-		Example: `  # Everything the CLI understands (catalog + cluster)
-  kli definitions
-
-  # One definition, by the name the list shows
-  kli definitions kubeflow-org-pytorchjob-v1
-
-  # Which definition covers JobSet?
-  kli definitions --group jobset.x-k8s.io --kind JobSet
-
-  # Dump them as applyable YAML
-  kli definitions -o yaml`,
-		Args: usageArgs(cobra.MaximumNArgs(1)),
+		Use:     definitionsUse,
+		Short:   definitionsShort,
+		Long:    definitionsLong,
+		Example: definitionsExample,
+		Args:    usageArgs(cobra.MaximumNArgs(1)),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			var err error
 			if format, err = outputFormat(cmd); err != nil {
