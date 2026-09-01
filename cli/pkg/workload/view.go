@@ -29,6 +29,7 @@ const undefinedPhase = "Undefined"
 // View is one workload as Karta resolves it: the root object's identity plus its
 // semantic component breakdown.
 type View struct {
+	UID        string          `json:"-"`
 	Name       string          `json:"name"`
 	Namespace  string          `json:"namespace"`
 	Kind       string          `json:"kind"`
@@ -39,6 +40,9 @@ type View struct {
 	Phases     []string        `json:"phases"`
 	GPUs       int64           `json:"gpus"`
 	Components []ComponentView `json:"components"`
+	// PodStats is populated by the caller after Resolve, once live pods have
+	// been attributed to this workload. Zero value means it was not computed.
+	PodStats PodStats `json:"podStats,omitempty"`
 }
 
 // ComponentView is one pod-bearing component. Name is the instance key for a
@@ -60,6 +64,7 @@ func Resolve(ctx context.Context, obj *unstructured.Unstructured, def definition
 	}
 
 	view := &View{
+		UID:        string(obj.GetUID()),
 		Name:       obj.GetName(),
 		Namespace:  obj.GetNamespace(),
 		Kind:       obj.GetKind(),

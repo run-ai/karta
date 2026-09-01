@@ -12,12 +12,15 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -173,6 +176,12 @@ func runGet(cmd *cobra.Command, opts *getOptions) error {
 	}
 	if err != nil {
 		return err
+	}
+
+	if len(views) > 0 {
+		if podWarning := attributePods(ctx, dyn, mapper, searched, views); podWarning != nil {
+			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", podWarning)
+		}
 	}
 
 	// Newest first, so a freshly submitted workload is at the top.
@@ -459,6 +468,37 @@ var newDynamicClient = func(rcg genericclioptions.RESTClientGetter) (dynamic.Int
 		return nil, fmt.Errorf("kubernetes dynamic client: %w", err)
 	}
 	return client, nil
+}
+
+// podsGVR is the fixed core/v1 Pod resource, which discovery does not need to map.
+var podsGVR = schema.GroupVersionResource{Version: "v1", Resource: "pods"}
+
+// attributePods lists live Pods across namespace (empty means cluster-wide,
+// matching a cluster-scoped root's search) and, for each view, sets PodStats
+// from the pods whose owner-reference chain reaches its root UID. A listing
+// failure degrades to a warning: pod stats are an enrichment, not the result.
+func attributePods(
+	ctx context.Context, dyn dynamic.Interface, mapper meta.RESTMapper, namespace string, views []workload.View,
+) error {
+	list, err := dyn.Resource(podsGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("list pods for pod stats: %w", err)
+	}
+
+	pods := make([]corev1.Pod, 0, len(list.Items))
+	for i := range list.Items {
+		var pod corev1.Pod
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(list.Items[i].Object, &pod); err != nil {
+			return fmt.Errorf("decode pod %s: %w", list.Items[i].GetName(), err)
+		}
+		pods = append(pods, pod)
+	}
+
+	attributor := workload.NewPodAttributor(dyn, mapper)
+	for i := range views {
+		views[i].PodStats = attributor.Attribute(ctx, pods, apitypes.UID(views[i].UID))
+	}
+	return nil
 }
 
 // outputFormat reads the persistent -o flag off the root command.
