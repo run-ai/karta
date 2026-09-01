@@ -93,7 +93,7 @@ and yaml always emit the definitions themselves.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resolver, warnings := definitions.Load(cmd.Context(), rcg)
 			for _, warning := range warnings {
-				fmt.Fprintln(cmd.ErrOrStderr(), "warning: "+warning.Message)
+				cmd.PrintErrln("warning: " + warning.Message)
 			}
 
 			matches := resolver.List()
