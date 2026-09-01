@@ -92,7 +92,8 @@ fmt-lib: ## Format the library module
 .PHONY: fmt-check-lib
 fmt-check-lib: ## Check library formatting without modifying files
 	@set -e; \
-	unformatted="$$(gofmt -l $$(go list -f '{{.Dir}}' ./...))"; \
+	dirs="$$(go list -f '{{.Dir}}' ./...)"; \
+	unformatted="$$(gofmt -l $$dirs)"; \
 	test -z "$$unformatted" || { echo "go fmt required:"; echo "$$unformatted"; exit 1; }
 
 .PHONY: vet-lib
@@ -120,7 +121,9 @@ fmt-cli: ## Format the CLI module
 .PHONY: fmt-check-cli
 fmt-check-cli: ## Check CLI formatting without modifying files
 	@set -e; \
-	cd cli && unformatted="$$(gofmt -l $$(go list -f '{{.Dir}}' ./...))"; \
+	cd cli; \
+	dirs="$$(go list -f '{{.Dir}}' ./...)"; \
+	unformatted="$$(gofmt -l $$dirs)"; \
 	test -z "$$unformatted" || { echo "go fmt required:"; echo "$$unformatted"; exit 1; }
 
 .PHONY: vet-cli
@@ -159,7 +162,9 @@ fmt-operator: ## Format the operator module
 .PHONY: fmt-check-operator
 fmt-check-operator: ## Check operator formatting without modifying files
 	@set -e; \
-	cd operator && unformatted="$$(gofmt -l $$(go list -f '{{.Dir}}' ./...))"; \
+	cd operator; \
+	dirs="$$(go list -f '{{.Dir}}' ./...)"; \
+	unformatted="$$(gofmt -l $$dirs)"; \
 	test -z "$$unformatted" || { echo "go fmt required:"; echo "$$unformatted"; exit 1; }
 
 .PHONY: vet-operator

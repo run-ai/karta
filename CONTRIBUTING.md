@@ -98,10 +98,12 @@ make helm-validate
 ```
 
 `make check` is the complete Go presubmit for the library, the CLI and the
-operator. CI runs it verbatim, so a green `make check` locally means a green CI.
+operator, and CI runs it verbatim. It does not cover the Helm chart, the air-gap
+image lock, or the shell scripts, so run those four targets too before pushing
+if you touched them.
 
 There is one Makefile, at the repository root. Bare targets act on every
-component, and a component prefix narrows them:
+component, and a component suffix narrows them:
 
 ```bash
 make test              # library, CLI and operator

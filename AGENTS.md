@@ -42,9 +42,9 @@ Never do:
 
 One `Makefile` at the repository root is the only one in the repo; there is no per-component Makefile. Use it to build, test, lint, and generate code. `make help` lists everything.
 
-Target naming: a bare action covers all three components (`make test`, `make lint`, `make check`), a component prefix narrows it (`make test-lib`, `make test-cli`, `make check-operator`), and domain targets keep their own names (`make helm-lint`, `make image-lock-test`).
+Target naming follows issue 192: a bare action covers all three components (`make test`, `make lint`, `make check`), the same action for one component takes a component suffix (`make test-lib`, `make test-cli`, `make check-operator`), a target only one component has puts the component first (`make operator-image`, `make lib-manifests`), and domain targets keep their own names (`make helm-lint`, `make image-lock-test`).
 
-`make check` is the full Go presubmit and is exactly what CI runs. `make lint` is read-only; only `make fmt` rewrites files. For a single test use `go test`.
+`make check` is the full Go presubmit and CI runs it verbatim, but CI also runs `helm-lint`, `helm-validate`, `image-lock-verify`, `image-lock-test` and `lint-shell`, so a green `check` alone does not guarantee a green CI. `lint` is read-only; `fmt` and the per-component `fmt-*` targets are the only ones that rewrite files. For a single test use `go test`.
 
 ## Code Style
 

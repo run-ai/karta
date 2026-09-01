@@ -73,7 +73,7 @@ jobs:
 
       - name: Build and push operator image
         run: |
-          make operator-image-buildx-push VERSION=$PACKAGE_VERSION
+          make operator-image-buildx-push VERSION="$PACKAGE_VERSION"
 
       - name: Generate air-gap image lock
         if: github.ref_type == 'tag'
