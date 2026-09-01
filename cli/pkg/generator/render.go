@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/cli-runtime/pkg/printers"
 	"sigs.k8s.io/yaml"
@@ -18,8 +19,13 @@ import (
 )
 
 // componentsWidth caps the COMPONENTS cell so a workload declaring many
-// components cannot push the later columns off screen.
-const componentsWidth = 44
+// components cannot push the later columns off screen. nodesWidth and
+// pendingWidth cap their wide-only columns the same way.
+const (
+	componentsWidth = 44
+	nodesWidth      = 30
+	pendingWidth    = 40
+)
 
 // Options controls how a set of workload views is rendered.
 type Options struct {
@@ -74,7 +80,7 @@ func renderTable(out io.Writer, views []workload.View, opts Options) error {
 
 	headers := []string{"NAME", "NAMESPACE", "PHASE", "COMPONENTS", "PODS", "GPUS", "AGE"}
 	if opts.Output == OutputWide {
-		headers = append(headers, "ORIGIN")
+		headers = append(headers, "CPU", "MEM", "RESTARTS", "NODES", "POD-SPREAD", "PENDING", "ORIGIN")
 	}
 	fmt.Fprintln(writer, strings.Join(headers, "\t"))
 
@@ -88,12 +94,51 @@ func renderTable(out io.Writer, views []workload.View, opts Options) error {
 			age(now, view.CreatedAt),
 		)
 		if opts.Output == OutputWide {
-			cells = append(cells, view.Origin)
+			stats := view.PodStats
+			cells = append(cells,
+				fmt.Sprintf("%dm/%dm", stats.AllocatedCPU, stats.RequestedCPU),
+				fmt.Sprintf("%s/%s", quantity(stats.AllocatedMem), quantity(stats.RequestedMem)),
+				fmt.Sprint(stats.Restarts),
+				truncated(strings.Join(stats.Nodes, ","), nodesWidth),
+				podSpread(stats),
+				truncated(orDash(stats.PendingReason), pendingWidth),
+				view.Origin,
+			)
 		}
 		fmt.Fprintln(writer, strings.Join(cells, "\t"))
 	}
 
 	return writer.Flush()
+}
+
+// quantity renders a byte count the way kubectl does (Ki, Mi, Gi).
+func quantity(bytes int64) string {
+	return resource.NewQuantity(bytes, resource.BinarySI).String()
+}
+
+// podSpread reports the age gap between the oldest and newest attributed pod,
+// a rollout in progress rather than a steady state.
+func podSpread(stats workload.PodStats) string {
+	if stats.PodsTotal == 0 {
+		return "-"
+	}
+	return duration.HumanDuration(stats.NewestPod.Sub(stats.OldestPod))
+}
+
+func orDash(s string) string {
+	if s == "" {
+		return "-"
+	}
+	return s
+}
+
+// truncated elides s past width so a long value cannot push later columns
+// off screen, matching how components() caps the COMPONENTS cell.
+func truncated(s string, width int) string {
+	if len(s) <= width {
+		return s
+	}
+	return s[:width-3] + "..."
 }
 
 // age formats a timestamp, unset for a workload resolved outside a live read.
