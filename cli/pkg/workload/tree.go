@@ -140,22 +140,50 @@ func buildTreeNode(
 	ctx context.Context, node tree.ComponentNode, defs map[string]v1alpha1.ComponentDefinition, pods []corev1.Pod,
 ) (TreeNode, error) {
 	kind := kindOf(node.Kind)
+	def := defs[node.Name]
 
 	if !node.HasPodDefinition {
-		tn := TreeNode{Name: node.Name, Kind: kind}
+		if !isMultiInstance(node.Instances) {
+			tn := TreeNode{Name: node.Name, Kind: kind}
+			for _, inst := range node.Instances {
+				for _, child := range inst.Children {
+					grandchild, err := buildTreeNode(ctx, child, defs, pods)
+					if err != nil {
+						return TreeNode{}, err
+					}
+					tn.Children = append(tn.Children, grandchild)
+					aggregateInto(&tn, grandchild)
+				}
+			}
+			return tn, nil
+		}
+
+		// A multi-instance grouping component (e.g. LWS's replica-keyed
+		// "group") carries no pods of its own, but its ReplicaSelector still
+		// scopes which pods belong to each instance - descendants inherit
+		// that narrowed pod set rather than matching against the whole
+		// workload.
+		parent := TreeNode{Name: node.Name, Kind: kind}
 		for _, inst := range node.Instances {
-			for _, child := range inst.Children {
-				grandchild, err := buildTreeNode(ctx, child, defs, pods)
+			instPods, err := filterByInstance(ctx, def.PodSelector, inst, pods)
+			if err != nil {
+				return TreeNode{}, fmt.Errorf("match pods to instance of %q: %w", node.Name, err)
+			}
+			child := TreeNode{Name: instanceLabel(node.Name, inst), Kind: kind}
+			for _, gc := range inst.Children {
+				grandchild, err := buildTreeNode(ctx, gc, defs, instPods)
 				if err != nil {
 					return TreeNode{}, err
 				}
-				tn.Children = append(tn.Children, grandchild)
+				child.Children = append(child.Children, grandchild)
+				aggregateInto(&child, grandchild)
 			}
+			parent.Children = append(parent.Children, child)
+			aggregateInto(&parent, child)
 		}
-		return tn, nil
+		return parent, nil
 	}
 
-	def := defs[node.Name]
 	matched, err := matchComponentType(ctx, def.PodSelector, pods)
 	if err != nil {
 		return TreeNode{}, fmt.Errorf("match pods to component %q: %w", node.Name, err)
@@ -178,13 +206,19 @@ func buildTreeNode(
 			return TreeNode{}, err
 		}
 		parent.Children = append(parent.Children, child)
-		parent.DesiredReplicas += child.DesiredReplicas
-		parent.CurrentReplicas += child.CurrentReplicas
-		parent.ReadyReplicas += child.ReadyReplicas
-		parent.GPUs += child.GPUs
-		parent.NodeNames = mergeNodeNames(parent.NodeNames, child.NodeNames)
+		aggregateInto(&parent, child)
 	}
 	return parent, nil
+}
+
+// aggregateInto folds child's totals into parent, the roll-up every grouping
+// node (pod-bearing or not) needs when it wraps one or more instances.
+func aggregateInto(parent *TreeNode, child TreeNode) {
+	parent.DesiredReplicas += child.DesiredReplicas
+	parent.CurrentReplicas += child.CurrentReplicas
+	parent.ReadyReplicas += child.ReadyReplicas
+	parent.GPUs += child.GPUs
+	parent.NodeNames = mergeNodeNames(parent.NodeNames, child.NodeNames)
 }
 
 // buildInstanceNode renders the single instance of a pod-bearing component:
