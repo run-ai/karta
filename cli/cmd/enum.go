@@ -57,8 +57,13 @@ func (e *Enum[T]) Allowed() []string {
 }
 
 // NewOutputFlag returns an Enum backing the -o/--output flag, defaulting to
-// table.
-func NewOutputFlag() *Enum[generator.Output] {
-	return NewEnum("output", generator.OutputTable,
-		generator.OutputTable, generator.OutputWide, generator.OutputJSON, generator.OutputYAML)
+// table. A command rendering no extra columns leaves wide out, so the flag
+// rejects it at parse time rather than the command rejecting it later.
+func NewOutputFlag(supportsWide bool) *Enum[generator.Output] {
+	allowed := []generator.Output{generator.OutputTable}
+	if supportsWide {
+		allowed = append(allowed, generator.OutputWide)
+	}
+	allowed = append(allowed, generator.OutputJSON, generator.OutputYAML)
+	return NewEnum("output", generator.OutputTable, allowed...)
 }

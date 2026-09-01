@@ -90,7 +90,7 @@ func runDefinitions(rcg genericclioptions.RESTClientGetter, args []string) (stri
 	cmd := newDefinitionsCommand(rcg)
 	cmd.SilenceUsage = true
 	cmd.SilenceErrors = true
-	withOutput(cmd)
+	cmd.SetFlagErrorFunc(usageError)
 
 	var stdout, stderr bytes.Buffer
 	cmd.SetOut(&stdout)
@@ -222,14 +222,15 @@ var _ = Describe("kli definitions", func() {
 
 		It("rejects wide, which the root enum accepts for other commands", func() {
 			_, _, err := runDefinitions(noClusterGetter(), []string{"-o", "wide"})
-			Expect(err).To(MatchError(generator.ErrUnsupportedOutput))
-			Expect(err.Error()).To(ContainSubstring("table, json, yaml"))
+			Expect(exitStatus(err)).To(Equal(ExitUsage))
+			// The flag lists what this command renders, so wide never parses here.
+			Expect(err.Error()).To(ContainSubstring("must be one of table, json, yaml"))
 		})
 
 		It("rejects an unsupported format before reading the cluster", func() {
 			getter := &countingGetter{RESTClientGetter: noClusterGetter()}
 			_, _, err := runDefinitions(getter, []string{"-o", "wide"})
-			Expect(err).To(MatchError(generator.ErrUnsupportedOutput))
+			Expect(exitStatus(err)).To(Equal(ExitUsage))
 			// A format the command cannot render must cost no round trip.
 			Expect(getter.calls).To(BeZero())
 		})

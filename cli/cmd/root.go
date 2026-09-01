@@ -62,7 +62,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.SetFlagErrorFunc(usageError)
 
 	kubeFlags.AddFlags(cmd.PersistentFlags())
-	withOutput(cmd)
+	withOutput(cmd, cmd.PersistentFlags(), true)
 	withConfig(cmd)
 
 	cmd.AddCommand(newWorkloadCommand())

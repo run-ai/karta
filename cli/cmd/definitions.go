@@ -49,53 +49,48 @@ type definitionFilter struct {
 	set     bool
 }
 
-var definitionsOutputs = []generator.Output{
-	generator.OutputTable, generator.OutputJSON, generator.OutputYAML,
-}
-
 // newDefinitionsCommand builds the "kli definitions" command. The client getter
 // is a parameter so a test can inject a fake without mutating package state.
 func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Command {
 	var group, kind, version string
+	var (
+		format generator.Output
+		filter definitionFilter
+	)
 
 	cmd := &cobra.Command{
 		Use:   "definitions [NAME]",
 		Short: "List the Karta definitions the CLI understands",
-		Long: "List the Karta definitions the CLI understands, merging the built-in " +
-			"catalog with the Karta definitions installed in the cluster. " +
-			"A cluster definition overrides a catalog one describing the same " +
-			"workload type and is listed once, as cluster. Definitions are not " +
-			"namespaced, and without cluster access the command still lists the " +
-			"catalog definitions. Give a NAME to address one definition, or use " +
-			"--group, and optionally --kind and --version, to narrow the list to one " +
-			"workload type. The table is the human view; json and yaml always emit " +
-			"the definitions themselves.",
-		Example: "  # Everything the CLI understands (catalog + cluster)\n" +
-			"  kli definitions\n" +
-			"\n" +
-			"  # One definition, by the name the list shows\n" +
-			"  kli definitions kubeflow-org-pytorchjob-v1\n" +
-			"\n" +
-			"  # Which definition covers JobSet?\n" +
-			"  kli definitions --group jobset.x-k8s.io --kind JobSet\n" +
-			"\n" +
-			"  # Dump them as applyable YAML\n" +
-			"  kli definitions -o yaml",
-		Args: usageArgs(cobra.MaximumNArgs(1)),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			format, err := supportedOutput(cmd, definitionsOutputs)
-			if err != nil {
-				return err
-			}
-			filter, err := definitionFilterFrom(cmd, group, kind, version)
-			if err != nil {
-				return err
-			}
-			if len(args) == 1 && filter.set {
-				return usageError(cmd, fmt.Errorf(
-					"a NAME and --%s address the same definition; give one or the other", flagGroup))
-			}
+		Long: `List the Karta definitions the CLI understands, merging the built-in catalog
+with the Karta definitions installed in the cluster. A cluster definition overrides a
+catalog one describing the same workload type and is listed once, as cluster.
+Definitions are not namespaced, and without cluster access the command still lists the
+catalog definitions.
 
+Give a NAME to address one definition, or use --group, and optionally --kind and
+--version, to narrow the list to one workload type. The table is the human view; json
+and yaml always emit the definitions themselves.`,
+		Example: `  # Everything the CLI understands (catalog + cluster)
+  kli definitions
+
+  # One definition, by the name the list shows
+  kli definitions kubeflow-org-pytorchjob-v1
+
+  # Which definition covers JobSet?
+  kli definitions --group jobset.x-k8s.io --kind JobSet
+
+  # Dump them as applyable YAML
+  kli definitions -o yaml`,
+		Args: usageArgs(cobra.MaximumNArgs(1)),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			var err error
+			if format, err = outputFormat(cmd); err != nil {
+				return err
+			}
+			filter, err = definitionFilterFrom(cmd, args, group, kind, version)
+			return err
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
 			resolver, warnings := definitions.Load(cmd.Context(), rcg)
 			for _, warning := range warnings {
 				fmt.Fprintln(cmd.ErrOrStderr(), "warning: "+warning.Message)
@@ -130,6 +125,7 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 		},
 	}
 
+	withOutput(cmd, cmd.Flags(), false)
 	cmd.Flags().StringVar(&group, flagGroup, "", usageGroup)
 	cmd.Flags().StringVar(&kind, flagKind, "", usageKind)
 	cmd.Flags().StringVar(&version, flagVersion, "", usageVersion)
@@ -138,14 +134,17 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 }
 
 // definitionFilterFrom rejects a combination that addresses nothing: a kind
-// outside a group would match across unrelated APIs.
-func definitionFilterFrom(cmd *cobra.Command, group, kind, version string) (definitionFilter, error) {
+// outside a group would match across unrelated APIs, and a NAME addresses the
+// same definition the flags do.
+func definitionFilterFrom(cmd *cobra.Command, args []string, group, kind, version string) (definitionFilter, error) {
 	groupSet := cmd.Flags().Changed(flagGroup)
 	kindSet := cmd.Flags().Changed(flagKind)
 	versionSet := cmd.Flags().Changed(flagVersion)
 
 	var err error
 	switch {
+	case len(args) == 1 && groupSet:
+		err = fmt.Errorf("a NAME and --%s address the same definition; give one or the other", flagGroup)
 	case kindSet && !groupSet:
 		err = fmt.Errorf("--%s needs --%s, for example --%s kubeflow.org --%s PyTorchJob",
 			flagKind, flagGroup, flagGroup, flagKind)
@@ -244,12 +243,4 @@ func renderDefinitions(out, errOut io.Writer, rows []definitionRow) error {
 		return fmt.Errorf("write definitions table: %w", err)
 	}
 	return nil
-}
-
-func unsupportedOutputError(format generator.Output, allowed []generator.Output) error {
-	names := make([]string, 0, len(allowed))
-	for _, a := range allowed {
-		names = append(names, string(a))
-	}
-	return fmt.Errorf("%w %q: supported formats are %s", generator.ErrUnsupportedOutput, format, strings.Join(names, ", "))
 }
