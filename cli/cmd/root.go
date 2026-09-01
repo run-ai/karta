@@ -60,6 +60,7 @@ func NewRootCommand() *cobra.Command {
 	kubeFlags.AddFlags(cmd.PersistentFlags())
 	withOutput(cmd)
 	withConfig(cmd)
+	withColor(cmd)
 
 	cmd.AddCommand(newGetCommand())
 	cmd.AddCommand(newDefinitionCommand())

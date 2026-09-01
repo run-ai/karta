@@ -13,6 +13,7 @@ import (
 const (
 	flagConfig = "config"
 	flagOutput = "output"
+	flagColor  = "color"
 )
 
 var kubeFlags *genericclioptions.ConfigFlags
@@ -37,4 +38,22 @@ func withOutput(cmd *cobra.Command) {
 func withConfig(cmd *cobra.Command) {
 	cmd.PersistentFlags().String(flagConfig, "",
 		"Path to the config file (default $KARTA_CONFIG or $HOME/.karta/config.yaml)")
+}
+
+// withColor registers the --color persistent flag on cmd.
+func withColor(cmd *cobra.Command) {
+	cmd.PersistentFlags().String(flagColor, "auto", "Colorize output: auto, always, never")
+	cobra.CheckErr(cmd.RegisterFlagCompletionFunc(flagColor,
+		func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+			return []string{"auto", "always", "never"}, cobra.ShellCompDirectiveNoFileComp
+		}))
+}
+
+// colorFlag reads the persistent --color flag off the root command.
+func colorFlag(cmd *cobra.Command) string {
+	flag := cmd.Root().PersistentFlags().Lookup(flagColor)
+	if flag == nil {
+		return "auto"
+	}
+	return flag.Value.String()
 }

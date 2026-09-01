@@ -18,15 +18,29 @@ import (
 
 	"github.com/run-ai/karta/cli/pkg/definitions"
 	"github.com/run-ai/karta/cli/pkg/generator"
+	"github.com/run-ai/karta/cli/pkg/physical"
 	"github.com/run-ai/karta/cli/pkg/workload"
 	"github.com/run-ai/karta/pkg/catalog"
 )
+
+const (
+	flagPhysical      = "physical"
+	flagTopologyLabel = "topology-label"
+)
+
+// treeOptions holds the tree-specific flags, alongside the shared TYPE/NAME
+// parsing getOptions already provides.
+type treeOptions struct {
+	getOptions
+	physical       bool
+	topologyLabels []string
+}
 
 // newTreeCommand builds the "karta tree" command: one workload rendered as a
 // hierarchical tree, with live pods attributed to the component and instance
 // they actually belong to.
 func newTreeCommand() *cobra.Command {
-	opts := &getOptions{}
+	opts := &treeOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "tree TYPE/NAME",
@@ -35,9 +49,9 @@ func newTreeCommand() *cobra.Command {
 			"with live pods attributed to the component and instance they belong to via the " +
 			"definition's own PodSelector.",
 		Example: "  karta tree pytorchjob/my-job\n" +
-			"  karta tree jobset my-job -n team-nlp",
+			"  karta tree jobset my-job -n team-nlp --physical",
 		Args: func(_ *cobra.Command, args []string) error {
-			if err := parseArgs(opts, args); err != nil {
+			if err := parseArgs(&opts.getOptions, args); err != nil {
 				return exitError{code: ExitUsage, err: err}
 			}
 			if opts.name == "" {
@@ -50,10 +64,15 @@ func newTreeCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&opts.physical, flagPhysical, false,
+		"resolve the physical layer: node health, topology domain, and per-device identity where DRA is in use")
+	cmd.Flags().StringSliceVar(&opts.topologyLabels, flagTopologyLabel, nil,
+		"node labels that name a topology domain, tried in order (default nvidia.com/gpu.clique, topology.kubernetes.io/zone)")
+
 	return cmd
 }
 
-func runTree(cmd *cobra.Command, opts *getOptions) error {
+func runTree(cmd *cobra.Command, opts *treeOptions) error {
 	ctx := cmd.Context()
 	access := clusterAccess()
 
@@ -80,7 +99,7 @@ func runTree(cmd *cobra.Command, opts *getOptions) error {
 		return err
 	}
 
-	target, err := resolveTarget(opts, resolver, mapper)
+	target, err := resolveTarget(&opts.getOptions, resolver, mapper)
 	if err != nil {
 		return err
 	}
@@ -102,7 +121,29 @@ func runTree(cmd *cobra.Command, opts *getOptions) error {
 		return fmt.Errorf("resolve tree: %w", err)
 	}
 
-	return generator.Tree(cmd.OutOrStdout(), view)
+	if opts.physical {
+		snap := physical.Resolve(ctx, dyn, mapper, attributed, physical.Options{TopologyLabels: opts.topologyLabels})
+		for _, warning := range snap.Warnings {
+			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", warning)
+		}
+		workload.EnrichTree(view, snap)
+	}
+
+	return generator.Tree(cmd.OutOrStdout(), view, resolveStyle(cmd))
+}
+
+// resolveStyle turns --color into a generator.Style: auto detects a TTY,
+// always/never force it either way regardless of an invalid value, which
+// falls back to auto.
+func resolveStyle(cmd *cobra.Command) generator.Style {
+	switch colorFlag(cmd) {
+	case "always":
+		return generator.ForceStyle()
+	case "never":
+		return generator.PlainStyle()
+	default:
+		return generator.AutoStyle(cmd.OutOrStdout())
+	}
 }
 
 // getOne fetches the single named object for target, matching the error

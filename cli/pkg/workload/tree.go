@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/run-ai/karta/cli/pkg/definitions"
+	"github.com/run-ai/karta/cli/pkg/physical"
 	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/resource"
 	"github.com/run-ai/karta/pkg/tree"
@@ -32,6 +33,9 @@ type TreeView struct {
 // TreeNode is one component (or, for a multi-instance component, one
 // instance) in the tree. A pure grouping component has no pod-bearing
 // content of its own: Replicas is 0 and Pods is empty, only Children matter.
+//
+// DeviceCount, DegradedNodes and Domains stay zero unless Enrich has run, so
+// a logical-only render is unaffected.
 type TreeNode struct {
 	Name            string
 	Kind            string
@@ -42,6 +46,18 @@ type TreeNode struct {
 	NodeNames       []string
 	Pods            []PodNode
 	Children        []TreeNode
+
+	// DeviceCount is the number of individually-identified DRA devices held
+	// across this component's pods. It differs from GPUs, which is the
+	// requested count off the pod spec: GPUs is what was asked for,
+	// DeviceCount is what was actually allocated and can be named.
+	DeviceCount int
+	// DegradedNodes lists nodes under this component that are NotReady or cordoned.
+	DegradedNodes []string
+	// Domains lists the distinct topology domains this component's pods span.
+	// More than one entry on a gang-scheduled component means the collective
+	// crosses a domain boundary.
+	Domains []string
 }
 
 // PodNode is one live pod attributed to a TreeNode.
@@ -51,6 +67,15 @@ type PodNode struct {
 	Ready bool
 	Node  string
 	GPUs  int64
+
+	// NodeCondition is "NotReady", "cordoned", or "" when the node is healthy
+	// or was not resolved.
+	NodeCondition string
+	// Domain is the topology domain of the pod's node, when labelled.
+	Domain string
+	// Devices are the DRA devices allocated to this pod, empty on clusters
+	// without DRA.
+	Devices []physical.Device
 }
 
 // ResolveTree builds obj's tree through def, attributing pods (already
@@ -317,3 +342,89 @@ func filterByInstance(
 	}
 	return matched, nil
 }
+
+// EnrichTree folds a physical snapshot into an already-built TreeView,
+// annotating pods with their node condition, topology domain, and allocated
+// devices, then rolling those up to each component.
+//
+// It is a separate pass rather than a ResolveTree parameter so a caller with
+// no node read permission, or one that only wants the logical tree, is
+// unaffected.
+func EnrichTree(view *TreeView, snap *physical.Snapshot) {
+	if view == nil || snap == nil {
+		return
+	}
+	for i := range view.Nodes {
+		enrichNode(&view.Nodes[i], view.Namespace, snap)
+	}
+}
+
+// enrichNode annotates one node and returns the GPU count it recovered from
+// DRA, so parents can fold it into their own roll-up.
+func enrichNode(n *TreeNode, namespace string, snap *physical.Snapshot) int64 {
+	degraded := map[string]struct{}{}
+	domains := map[string]struct{}{}
+	deviceCount := 0
+	var gpuDelta int64
+
+	for i := range n.Pods {
+		pod := &n.Pods[i]
+		if facts, ok := snap.NodeFor(pod.Node); ok {
+			pod.NodeCondition = facts.Condition()
+			pod.Domain = facts.Domain
+			if !facts.Healthy() {
+				degraded[facts.Name] = struct{}{}
+			}
+			if facts.Domain != "" {
+				domains[facts.Domain] = struct{}{}
+			}
+		}
+		pod.Devices = snap.DevicesFor(namespace, pod.Name)
+		deviceCount += len(pod.Devices)
+
+		// A DRA pod requests devices through spec.resourceClaims, not through
+		// the nvidia.com/gpu extended resource, so the spec-derived count is
+		// zero for every GPU workload on a DRA cluster. The allocation
+		// result is the only truthful count available in that case.
+		if pod.GPUs == 0 && len(pod.Devices) > 0 {
+			pod.GPUs = int64(len(pod.Devices))
+			gpuDelta += pod.GPUs
+		}
+	}
+
+	for i := range n.Children {
+		child := &n.Children[i]
+		gpuDelta += enrichNode(child, namespace, snap)
+		deviceCount += child.DeviceCount
+		for _, name := range child.DegradedNodes {
+			degraded[name] = struct{}{}
+		}
+		for _, domain := range child.Domains {
+			domains[domain] = struct{}{}
+		}
+	}
+
+	n.GPUs += gpuDelta
+	n.DeviceCount = deviceCount
+	n.DegradedNodes = sortedSetKeys(degraded)
+	n.Domains = sortedSetKeys(domains)
+	return gpuDelta
+}
+
+func sortedSetKeys(m map[string]struct{}) []string {
+	if len(m) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	slices.Sort(out)
+	return out
+}
+
+// SplitAcrossDomains reports whether a node's pods landed in more than one
+// topology domain. For a gang-scheduled component this is the interesting
+// case: the workload is running, every pod is Ready, and the logical view
+// looks perfect, while the collective is crossing a domain boundary.
+func SplitAcrossDomains(n TreeNode) bool { return len(n.Domains) > 1 }
