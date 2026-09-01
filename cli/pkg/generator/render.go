@@ -72,7 +72,7 @@ func marshal(out io.Writer, views []workload.View, format Output) error {
 func renderTable(out io.Writer, views []workload.View, opts Options) error {
 	writer := printers.GetNewTabWriter(out)
 
-	headers := []string{"NAME", "NAMESPACE", "PHASE", "COMPONENTS", "PODS", "GPU-REQ", "GPU-ALLOC", "AGE"}
+	headers := []string{"NAME", "NAMESPACE", "PHASE", "COMPONENTS", "PODS", "GPUS", "AGE"}
 	if opts.Output == OutputWide {
 		headers = append(headers, "ORIGIN")
 	}
@@ -84,8 +84,7 @@ func renderTable(out io.Writer, views []workload.View, opts Options) error {
 			strings.Join(view.Phases, ","),
 			components(view.Components),
 			fmt.Sprintf("%d/%d", view.PodStats.PodsRunning, view.PodStats.PodsTotal),
-			fmt.Sprint(view.GPUs),
-			fmt.Sprint(view.PodStats.AllocatedGPUs),
+			fmt.Sprintf("%d/%d", view.PodStats.AllocatedGPUs, view.GPUs),
 			age(now, view.CreatedAt),
 		)
 		if opts.Output == OutputWide {
