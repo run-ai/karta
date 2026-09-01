@@ -67,18 +67,25 @@ func NewPodAttributor(dyn dynamic.Interface, mapper meta.RESTMapper) *PodAttribu
 	return &PodAttributor{dyn: dyn, mapper: mapper, cache: map[ownerKey]*unstructured.Unstructured{}}
 }
 
+// Filter returns the pods whose owner-reference chain reaches rootUID. pods
+// may span namespaces, as in a cluster-wide search.
+func (a *PodAttributor) Filter(ctx context.Context, pods []corev1.Pod, rootUID types.UID) []corev1.Pod {
+	var matched []corev1.Pod
+	for i := range pods {
+		if a.belongsTo(ctx, pods[i].OwnerReferences, pods[i].Namespace, rootUID, 0) {
+			matched = append(matched, pods[i])
+		}
+	}
+	return matched
+}
+
 // Attribute reports pod counts and allocated GPUs for the pods whose
 // owner-reference chain reaches rootUID. pods may span namespaces, as in a
 // cluster-wide search.
 func (a *PodAttributor) Attribute(ctx context.Context, pods []corev1.Pod, rootUID types.UID) PodStats {
 	var stats PodStats
 	var nodes []string
-	for i := range pods {
-		pod := &pods[i]
-		if !a.belongsTo(ctx, pod.OwnerReferences, pod.Namespace, rootUID, 0) {
-			continue
-		}
-
+	for _, pod := range a.Filter(ctx, pods, rootUID) {
 		stats.PodsTotal++
 		stats.RequestedCPU += podResource(pod.Spec, corev1.ResourceCPU)
 		stats.RequestedMem += podResource(pod.Spec, corev1.ResourceMemory)

@@ -63,6 +63,7 @@ func NewRootCommand() *cobra.Command {
 
 	cmd.AddCommand(newGetCommand())
 	cmd.AddCommand(newDefinitionCommand())
+	cmd.AddCommand(newTreeCommand())
 
 	cmd.InitDefaultCompletionCmd()
 	for _, sub := range cmd.Commands() {
