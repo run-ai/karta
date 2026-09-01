@@ -5,6 +5,7 @@ package generator
 
 import (
 	"bytes"
+	"slices"
 	"strings"
 	"testing"
 
@@ -20,22 +21,32 @@ func TestRenderTableColumns(t *testing.T) {
 		Origin:    "catalog",
 	}}
 
+	// Asserting the split cells rather than a substring of the whole table pins
+	// the column set and its order. A substring check cannot: "NAME" is a
+	// substring of "NAMESPACE", so it passes whether or not the column is there.
 	for _, tc := range []struct {
 		name    string
 		opts    Options
-		want    []string
-		notWant []string
+		headers []string
+		row     []string
 	}{
 		{
 			name:    "default columns",
 			opts:    Options{Output: OutputTable},
-			want:    []string{"NAME", "NAMESPACE", "ml-team", "PHASE", "Completed", "AGE"},
-			notWant: []string{"ORIGIN", "COMPONENTS", "GPU"},
+			headers: []string{"NAME", "NAMESPACE", "PHASE", "AGE"},
+			row:     []string{"preprocess", "ml-team", "Completed", "<unknown>"},
 		},
 		{
-			name: "wide adds ORIGIN",
-			opts: Options{Output: OutputWide},
-			want: []string{"ORIGIN", "catalog"},
+			name:    "the zero value renders the default table",
+			opts:    Options{},
+			headers: []string{"NAME", "NAMESPACE", "PHASE", "AGE"},
+			row:     []string{"preprocess", "ml-team", "Completed", "<unknown>"},
+		},
+		{
+			name:    "wide adds ORIGIN",
+			opts:    Options{Output: OutputWide},
+			headers: []string{"NAME", "NAMESPACE", "PHASE", "AGE", "ORIGIN"},
+			row:     []string{"preprocess", "ml-team", "Completed", "<unknown>", "catalog"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -43,17 +54,32 @@ func TestRenderTableColumns(t *testing.T) {
 			if err := Render(&out, &errOut, views, tc.opts); err != nil {
 				t.Fatalf("render: %v", err)
 			}
-			for _, want := range tc.want {
-				if !strings.Contains(out.String(), want) {
-					t.Errorf("missing %q\n%s", want, out.String())
-				}
+
+			lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
+			if len(lines) != 2 {
+				t.Fatalf("expected a header and one row, got %d lines:\n%s", len(lines), out.String())
 			}
-			for _, notWant := range tc.notWant {
-				if strings.Contains(out.String(), notWant) {
-					t.Errorf("unexpected %q\n%s", notWant, out.String())
-				}
+			// The tab writer pads with spaces, and no cell contains one.
+			if got := strings.Fields(lines[0]); !slices.Equal(got, tc.headers) {
+				t.Errorf("headers: got %v, want %v", got, tc.headers)
+			}
+			if got := strings.Fields(lines[1]); !slices.Equal(got, tc.row) {
+				t.Errorf("row: got %v, want %v", got, tc.row)
 			}
 		})
+	}
+}
+
+// The flag layer rejects an unknown format, so a programmatic caller passing one
+// must not silently fall through to a table.
+func TestRenderRejectsAnUnknownFormat(t *testing.T) {
+	var out, errOut bytes.Buffer
+	err := Render(&out, &errOut, []workload.View{{Name: "x"}}, Options{Output: "bogus"})
+	if err == nil {
+		t.Fatal("expected an error for an unsupported output format")
+	}
+	if out.Len() != 0 {
+		t.Errorf("expected no output, got %q", out.String())
 	}
 }
 
