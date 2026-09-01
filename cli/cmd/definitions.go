@@ -81,7 +81,7 @@ type definitionFilter struct {
 func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Command {
 	var group, kind, version string
 	var (
-		format generator.Output
+		output *Enum[generator.Output]
 		filter definitionFilter
 	)
 
@@ -93,9 +93,6 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 		Args:    usageArgs(cobra.MaximumNArgs(1)),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			var err error
-			if format, err = outputFormat(cmd); err != nil {
-				return err
-			}
 			filter, err = definitionFilterFrom(cmd, args, group, kind, version)
 			return err
 		},
@@ -128,13 +125,13 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 			for _, def := range matches {
 				kartas = append(kartas, def.Karta)
 			}
-			return generator.Render(cmd.OutOrStdout(), format, kartas, func(out io.Writer) error {
+			return generator.Render(cmd.OutOrStdout(), output.Get(), kartas, func(out io.Writer) error {
 				return renderDefinitions(out, cmd.ErrOrStderr(), definitionRows(matches))
 			})
 		},
 	}
 
-	withOutput(cmd, cmd.Flags(), false)
+	output = withOutput(cmd, cmd.Flags(), false)
 	cmd.Flags().StringVar(&group, flagGroup, "", usageGroup)
 	cmd.Flags().StringVar(&kind, flagKind, "", usageKind)
 	cmd.Flags().StringVar(&version, flagVersion, "", usageVersion)
