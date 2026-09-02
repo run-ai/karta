@@ -53,7 +53,7 @@ IMAGE          ?= $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 CONTAINER_TOOL ?= docker
 BUILD_ARGS     ?=
 
-# Architectures for operator-build-all and operator-image-buildx-push.
+# Architectures for build-operator-all and operator-image-buildx-push.
 PLATFORMS ?= linux/amd64 linux/arm64
 
 empty :=
@@ -178,17 +178,17 @@ vet-operator: ## go vet the operator module
 lint-operator: golangci-lint ## Lint the operator module
 	cd operator && $(GOLANGCI_LINT) run $(GOLANGCI_LINT_FLAGS) -c $(PROJECT_DIR)/.golangci.yml
 
-.PHONY: operator-test-unit
-operator-test-unit: ## Run the operator unit tests (no envtest binaries required)
+.PHONY: test-operator-unit
+test-operator-unit: ## Run the operator unit tests (no envtest binaries required)
 	cd operator && go test -coverprofile=cover-unit.out ./pkg/... ./cmd/...
 
-.PHONY: operator-test-integration
-operator-test-integration: envtest ## Run the operator envtest suite (downloads control-plane binaries)
+.PHONY: test-operator-integration
+test-operator-integration: envtest ## Run the operator envtest suite (downloads control-plane binaries)
 	cd operator && KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
 		go test -coverprofile=cover-integration.out ./test/integration/...
 
 .PHONY: test-operator
-test-operator: operator-test-unit operator-test-integration ## Run the operator unit and envtest suites
+test-operator: test-operator-unit test-operator-integration ## Run the operator unit and envtest suites
 
 .PHONY: check-operator
 check-operator: fmt-check-operator vet-operator lint-operator test-operator ## Full operator presubmit
@@ -197,16 +197,16 @@ check-operator: fmt-check-operator vet-operator lint-operator test-operator ## F
 build-operator: $(LOCALBIN) ## Build the karta-operator binary for the host OS/arch
 	cd operator && go build -trimpath $(LDFLAGS) -o $(LOCALBIN)/karta-operator ./cmd
 
-.PHONY: operator-build-linux-amd64
-operator-build-linux-amd64: $(LOCALBIN) ## Cross-compile the operator for linux/amd64
+.PHONY: build-operator-linux-amd64
+build-operator-linux-amd64: $(LOCALBIN) ## Cross-compile the operator for linux/amd64
 	cd operator && GOOS=linux GOARCH=amd64 go build -trimpath $(LDFLAGS) -o $(LOCALBIN)/karta-operator-amd64 ./cmd
 
-.PHONY: operator-build-linux-arm64
-operator-build-linux-arm64: $(LOCALBIN) ## Cross-compile the operator for linux/arm64
+.PHONY: build-operator-linux-arm64
+build-operator-linux-arm64: $(LOCALBIN) ## Cross-compile the operator for linux/arm64
 	cd operator && GOOS=linux GOARCH=arm64 go build -trimpath $(LDFLAGS) -o $(LOCALBIN)/karta-operator-arm64 ./cmd
 
-.PHONY: operator-build-all
-operator-build-all: operator-build-linux-amd64 operator-build-linux-arm64 ## Cross-compile the operator for all supported platforms
+.PHONY: build-operator-all
+build-operator-all: build-operator-linux-amd64 build-operator-linux-arm64 ## Cross-compile the operator for all supported platforms
 
 # The image targets pass GO_LDFLAGS in, so the symbol path lives only here.
 # The build context is the repository root, because the replace directive in

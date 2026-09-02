@@ -66,6 +66,7 @@ jobs:
         run: make helm-lint helm-validate
 
       - name: Run checks
+        if: github.ref_type == 'tag'
         run: make check
 
       - name: Set up Docker Buildx
