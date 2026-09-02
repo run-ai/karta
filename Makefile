@@ -21,12 +21,6 @@ KARTA_CHART_DIR := $(PROJECT_DIR)/charts/karta
 KARTA_CRDS_DIR := $(KARTA_CHART_DIR)/crds
 HELM_CHART_VERSION ?= 0.0.1
 
-# Tool binaries, all installed into the single LOCALBIN.
-CONTROLLER_GEN      ?= $(LOCALBIN)/controller-gen
-GOLANGCI_LINT       ?= $(LOCALBIN)/golangci-lint
-GO_LICENCE_DETECTOR ?= $(LOCALBIN)/go-licence-detector
-ENVTEST             ?= $(LOCALBIN)/setup-envtest
-
 # Tool versions. Override on the command line, e.g.
 #   make lint GOLANGCI_LINT_VERSION=v2.13.0
 GOLANGCI_LINT_VERSION       ?= v2.12.2
@@ -35,6 +29,15 @@ GO_LICENCE_DETECTOR_VERSION ?= v0.10.0
 ENVTEST_VERSION             ?= release-0.23
 # Kubernetes control-plane (apiserver, etcd, kubectl) version envtest downloads.
 ENVTEST_K8S_VERSION         ?= 1.31.0
+
+# Tool binaries, all installed into the single LOCALBIN. The version is part of
+# the filename, and therefore part of make's target name, so bumping a version
+# above asks for a path that does not exist yet and the tool is reinstalled. An
+# unversioned name lets an old binary satisfy a new pin without a word.
+CONTROLLER_GEN      ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
+GOLANGCI_LINT       ?= $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
+GO_LICENCE_DETECTOR ?= $(LOCALBIN)/go-licence-detector-$(GO_LICENCE_DETECTOR_VERSION)
+ENVTEST             ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 
 GOLANGCI_LINT_FLAGS ?= $(if $(VERBOSE),-v)
 
@@ -422,42 +425,38 @@ $(LOCALBIN):
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
-$(CONTROLLER_GEN): $(LOCALBIN)
-	@[ -f "$(CONTROLLER_GEN)" ] || { \
-	set -e; \
-	echo "Downloading controller-gen@$(CONTROLLER_TOOLS_VERSION)" ;\
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION) ;\
-	}
+$(CONTROLLER_GEN): | $(LOCALBIN)
+	@set -e; \
+	echo "Downloading controller-gen@$(CONTROLLER_TOOLS_VERSION)"; \
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION); \
+	mv $(LOCALBIN)/controller-gen $@
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
-$(GOLANGCI_LINT): $(LOCALBIN)
-	@[ -f "$(GOLANGCI_LINT)" ] || { \
-	set -e; \
+$(GOLANGCI_LINT): | $(LOCALBIN)
+	@set -e; \
 	echo "Downloading golangci-lint@$(GOLANGCI_LINT_VERSION)"; \
 	tmp=$$(mktemp); \
 	trap 'rm -f "$$tmp"' EXIT; \
 	curl -sSfL --proto '=https' --proto-redir '=https' --tlsv1.2 https://golangci-lint.run/install.sh -o "$$tmp"; \
 	sh "$$tmp" -b $(LOCALBIN) $(GOLANGCI_LINT_VERSION); \
-	}
+	mv $(LOCALBIN)/golangci-lint $@
 
 .PHONY: go-licence-detector
 go-licence-detector: $(GO_LICENCE_DETECTOR) ## Download go-licence-detector locally if necessary.
-$(GO_LICENCE_DETECTOR): $(LOCALBIN)
-	@[ -f "$(GO_LICENCE_DETECTOR)" ] || { \
-	set -e; \
-	echo "Downloading go-licence-detector@$(GO_LICENCE_DETECTOR_VERSION)" ;\
-	GOBIN=$(LOCALBIN) go install go.elastic.co/go-licence-detector@$(GO_LICENCE_DETECTOR_VERSION) ;\
-	}
+$(GO_LICENCE_DETECTOR): | $(LOCALBIN)
+	@set -e; \
+	echo "Downloading go-licence-detector@$(GO_LICENCE_DETECTOR_VERSION)"; \
+	GOBIN=$(LOCALBIN) go install go.elastic.co/go-licence-detector@$(GO_LICENCE_DETECTOR_VERSION); \
+	mv $(LOCALBIN)/go-licence-detector $@
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
-$(ENVTEST): $(LOCALBIN)
-	@[ -f "$(ENVTEST)" ] || { \
-	set -e; \
-	echo "Downloading setup-envtest@$(ENVTEST_VERSION)" ;\
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION) ;\
-	}
+$(ENVTEST): | $(LOCALBIN)
+	@set -e; \
+	echo "Downloading setup-envtest@$(ENVTEST_VERSION)"; \
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION); \
+	mv $(LOCALBIN)/setup-envtest $@
 
 ##@ Help
 
