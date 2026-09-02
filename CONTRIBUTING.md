@@ -88,20 +88,33 @@ cd karta
 # 2. Build the packages (uses the Go version pinned in go.mod)
 go build ./...
 
-# 3. Run the full check pipeline (codegen, manifests, licenses, and tests) -
-#    this is the same target CI runs
+# 3. Run the full check pipeline (fmt, vet, lint, codegen, manifests,
+#    licenses, and tests for every component) - the same target CI runs
 make check
 
-# 4. Lint the Go code and the Helm chart
-make lint
+# 4. Lint the Helm chart
 make helm-lint
 make helm-validate
 ```
 
-CI runs `make check` along with `golangci-lint` and the Helm `lint`/`validate`
-steps on every pull request. Running `make check` and `make lint` locally first
-is the fastest way to catch issues before pushing. If you only need a quick test
-pass, `make test` runs the tests and mock generation on their own.
+`make check` is the complete Go presubmit for the library, the CLI and the
+operator, and CI runs it verbatim. CI covers the Helm chart, the air-gap image
+lock and the shell scripts in separate steps, so run those four targets too
+before pushing if you touched them.
+
+There is one Makefile, at the repository root. Bare targets act on every
+component, and a component suffix narrows them:
+
+```bash
+make test              # library, CLI and operator
+make test-cli          # just the CLI
+make check-operator    # just the operator, the full fmt/vet/lint/test set
+make help              # every target, grouped
+```
+
+`make lint` never rewrites your files. `make fmt` and the per-component
+`fmt-lib`, `fmt-cli` and `fmt-operator` targets are the only ones that reformat,
+and nothing depends on them.
 
 ### Making Changes
 
