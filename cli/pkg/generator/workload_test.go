@@ -34,6 +34,11 @@ func cells(out string) [][]string {
 	return rows
 }
 
+// failingWriter stands in for a closed or full stderr.
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("closed") }
+
 var _ = Describe("RenderWorkloads", func() {
 	DescribeTable("renders the table a format asks for",
 		func(opts Options, headers, row []string) {
@@ -95,6 +100,14 @@ var _ = Describe("RenderWorkloads", func() {
 				Options{Output: OutputTable, AllNamespaces: true})).To(Succeed())
 
 			Expect(errOut.String()).To(ContainSubstring("No workloads found in any namespace."))
+		})
+
+		// A caller has to be told when the notice never reached the terminal.
+		It("reports a failure to write the notice", func() {
+			var out bytes.Buffer
+			err := RenderWorkloads(&out, failingWriter{}, nil, Options{Namespace: "ml-team"})
+
+			Expect(err).To(MatchError(ContainSubstring("write empty-result notice")))
 		})
 
 		// Machine output carries the result alone, so a consumer parsing stdout

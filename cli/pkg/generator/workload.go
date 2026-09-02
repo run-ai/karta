@@ -37,10 +37,13 @@ func RenderWorkloads(out, errOut io.Writer, views []workload.View, opts Options)
 
 	return Render(out, format, views, func(w io.Writer) error {
 		if len(views) == 0 {
+			notice := fmt.Sprintf("No workloads found in namespace %s.", opts.Namespace)
 			if opts.AllNamespaces {
-				fmt.Fprintln(errOut, "No workloads found in any namespace.")
-			} else {
-				fmt.Fprintf(errOut, "No workloads found in namespace %s.\n", opts.Namespace)
+				notice = "No workloads found in any namespace."
+			}
+			// On an empty result the notice is the whole output; no flush rechecks it.
+			if _, err := fmt.Fprintln(errOut, notice); err != nil {
+				return fmt.Errorf("write empty-result notice: %w", err)
 			}
 			return nil
 		}
