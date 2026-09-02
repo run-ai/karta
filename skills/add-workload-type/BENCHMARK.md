@@ -9,8 +9,8 @@ Evals: 1, 2, 3 from `evals/evals.json` (3 runs each per configuration, 18 runs t
 
 Each eval prompt was run by an agent with the skill available and by a baseline
 agent without it. Both configurations had full repository access. Every produced
-definition was checked with `hack/karta-verify` and a jq audit script rather than
-by inspection.
+definition was checked with `hack/karta-verify` and by querying the produced YAML
+for the asserted paths, rather than by inspection.
 
 ## Summary
 
@@ -76,7 +76,7 @@ serve. It has not been run, and its expectations carry no measured counts.
 ## Notes
 
 The pass-rate delta was zero under the assertions in force when this run
-executed. Those assertions were rewritten afterwards, and the revised set scores
+executed. Those assertions were rewritten afterward, and the revised set scores
 the same artifacts at +0.44. See the revised assertions section above. The
 summary table reports the original grading, so it understates the difference.
 
@@ -124,7 +124,7 @@ step doing real work, and no current assertion credits it.
 Every skill-guided run that reached validation reported that the step 6 command
 failed and worked around it with `-mod=readonly`:
 
-```
+```text
 go: inconsistent vendoring in <repo>:
 	github.com/onsi/ginkgo/v2@v2.32.1: is explicitly required in go.mod, but not marked as explicit in vendor/modules.txt
 ```
@@ -141,7 +141,21 @@ figures above for both configurations.
 
 ## Reproducing
 
-1. Run each prompt in `evals/evals.json` with and without the skill available.
+1. Run the eval 1, 2 and 3 prompts from `evals/evals.json` with and without the
+   skill available, 3 runs each. Eval 4 is documented but was not run and is not
+   part of these figures.
 2. Grade each run against its `expectations` list.
-3. Validate every produced definition: `go run ./hack/karta-verify --karta <file>`.
-4. Aggregate the per-run results into this summary.
+3. Validate every produced definition, and exercise it against a real CR with
+   predictions written before the run:
+
+   ```sh
+   go run ./hack/karta-verify --karta <definition> \
+     --workload <cr> --predict <predictions> --strict
+   ```
+
+   `--karta` alone only validates the definition. `--workload`, `--predict` and
+   `--strict` are what make the predict-then-run discriminators observable;
+   without them a run cannot fail the way the benchmark records.
+4. Confirm each asserted path resolves in the produced YAML, rather than reading
+   it by eye.
+5. Aggregate the per-run results into this summary.
