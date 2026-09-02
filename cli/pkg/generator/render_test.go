@@ -1,122 +1,86 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package generator
+package generator_test
 
 import (
 	"bytes"
-	"slices"
+	"errors"
+	"io"
 	"strings"
-	"testing"
 
-	"github.com/run-ai/karta/cli/pkg/workload"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/run-ai/karta/cli/pkg/generator"
 )
 
-func TestRenderTableColumns(t *testing.T) {
-	views := []workload.View{{
-		Name:      "preprocess",
-		Namespace: "ml-team",
-		Kind:      "JobSet",
-		Phases:    []string{"Completed"},
-		Origin:    "catalog",
-	}}
+type item struct {
+	Name string `json:"name"`
+}
 
-	// Asserting the split cells rather than a substring of the whole table pins
-	// the column set and its order. A substring check cannot: "NAME" is a
-	// substring of "NAMESPACE", so it passes whether or not the column is there.
-	for _, tc := range []struct {
-		name    string
-		opts    Options
-		headers []string
-		row     []string
-	}{
-		{
-			name:    "default columns",
-			opts:    Options{Output: OutputTable},
-			headers: []string{"NAME", "NAMESPACE", "PHASE", "AGE"},
-			row:     []string{"preprocess", "ml-team", "Completed", "<unknown>"},
+var items = []item{{Name: "alpha"}, {Name: "beta"}}
+
+// unusedTable fails the spec if a machine format reaches the table callback.
+func unusedTable(io.Writer) error {
+	Fail("the table callback must not run for a machine format")
+	return nil
+}
+
+var _ = Describe("Render", func() {
+	DescribeTable("hands the human formats to the table callback",
+		func(format generator.Output) {
+			var out bytes.Buffer
+			called := false
+			Expect(generator.Render(&out, format, items, func(w io.Writer) error {
+				called = true
+				_, err := io.WriteString(w, "TABLE")
+				return err
+			})).To(Succeed())
+
+			Expect(called).To(BeTrue())
+			Expect(out.String()).To(Equal("TABLE"))
 		},
-		{
-			name:    "the zero value renders the default table",
-			opts:    Options{},
-			headers: []string{"NAME", "NAMESPACE", "PHASE", "AGE"},
-			row:     []string{"preprocess", "ml-team", "Completed", "<unknown>"},
-		},
-		{
-			name:    "wide adds ORIGIN",
-			opts:    Options{Output: OutputWide},
-			headers: []string{"NAME", "NAMESPACE", "PHASE", "AGE", "ORIGIN"},
-			row:     []string{"preprocess", "ml-team", "Completed", "<unknown>", "catalog"},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			var out, errOut bytes.Buffer
-			if err := Render(&out, &errOut, views, tc.opts); err != nil {
-				t.Fatalf("render: %v", err)
-			}
+		Entry("table", generator.OutputTable),
+		// wide reaches the callback so a command that renders extra columns can.
+		// One that cannot must reject wide before calling Render.
+		Entry("wide", generator.OutputWide),
+	)
 
-			lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
-			if len(lines) != 2 {
-				t.Fatalf("expected a header and one row, got %d lines:\n%s", len(lines), out.String())
-			}
-			// The tab writer pads with spaces, and no cell contains one.
-			if got := strings.Fields(lines[0]); !slices.Equal(got, tc.headers) {
-				t.Errorf("headers: got %v, want %v", got, tc.headers)
-			}
-			if got := strings.Fields(lines[1]); !slices.Equal(got, tc.row) {
-				t.Errorf("row: got %v, want %v", got, tc.row)
-			}
-		})
-	}
-}
+	It("returns what the table callback returns", func() {
+		boom := errors.New("boom")
+		err := generator.Render(io.Discard, generator.OutputTable, items,
+			func(io.Writer) error { return boom })
+		Expect(err).To(MatchError(boom))
+	})
 
-// The flag layer rejects an unknown format, so a programmatic caller passing one
-// must not silently fall through to a table.
-func TestRenderRejectsAnUnknownFormat(t *testing.T) {
-	var out, errOut bytes.Buffer
-	err := Render(&out, &errOut, []workload.View{{Name: "x"}}, Options{Output: "bogus"})
-	if err == nil {
-		t.Fatal("expected an error for an unsupported output format")
-	}
-	if out.Len() != 0 {
-		t.Errorf("expected no output, got %q", out.String())
-	}
-}
+	It("encodes json through the json tags", func() {
+		var out bytes.Buffer
+		Expect(generator.Render(&out, generator.OutputJSON, items, unusedTable)).To(Succeed())
+		Expect(out.String()).To(ContainSubstring(`"name": "alpha"`))
+	})
 
-// The empty notice must not reach stdout, where it would corrupt a pipe.
-func TestRenderEmptyGoesToStderr(t *testing.T) {
-	var out, errOut bytes.Buffer
-	if err := Render(&out, &errOut, nil, Options{Output: OutputTable, Namespace: "ml-team"}); err != nil {
-		t.Fatalf("render: %v", err)
-	}
-	if out.Len() != 0 {
-		t.Errorf("expected empty stdout, got %q", out.String())
-	}
-	if !strings.Contains(errOut.String(), "No workloads found in namespace ml-team.") {
-		t.Errorf("unexpected stderr: %q", errOut.String())
-	}
-}
+	It("emits an empty json array for no items, not null", func() {
+		var out bytes.Buffer
+		Expect(generator.Render[item](&out, generator.OutputJSON, nil, unusedTable)).To(Succeed())
+		Expect(strings.TrimSpace(out.String())).To(Equal("[]"))
+	})
 
-func TestRenderYAMLIsAlwaysASequence(t *testing.T) {
-	var out, errOut bytes.Buffer
-	if err := Render(&out, &errOut, nil, Options{Output: OutputYAML}); err != nil {
-		t.Fatalf("render: %v", err)
-	}
-	if strings.TrimSpace(out.String()) != "[]" {
-		t.Errorf("expected an empty sequence, got %q", out.String())
-	}
-	if errOut.Len() != 0 {
-		t.Errorf("machine output must not carry the empty notice, got %q", errOut.String())
-	}
-}
+	It("emits yaml as a document stream, not a list", func() {
+		var out bytes.Buffer
+		Expect(generator.Render(&out, generator.OutputYAML, items, unusedTable)).To(Succeed())
 
-func TestRenderUnsetAgeIsUnknown(t *testing.T) {
-	var out, errOut bytes.Buffer
-	views := []workload.View{{Name: "offline", Namespace: "ml-team"}}
-	if err := Render(&out, &errOut, views, Options{Output: OutputTable}); err != nil {
-		t.Fatalf("render: %v", err)
-	}
-	if !strings.Contains(out.String(), "<unknown>") {
-		t.Errorf("expected <unknown> for an unset timestamp\n%s", out.String())
-	}
-}
+		// Separator between documents, so two documents carry one separator.
+		Expect(strings.Count(out.String(), "\n---\n")).To(Equal(1))
+		Expect(strings.Split(out.String(), "\n---\n")).To(HaveLen(2))
+		Expect(out.String()).NotTo(ContainSubstring("- name:"))
+	})
+
+	It("names the format it cannot render", func() {
+		var out bytes.Buffer
+		err := generator.Render(&out, generator.Output("toml"), items, unusedTable)
+		Expect(err).To(MatchError(generator.ErrUnsupportedOutput))
+		Expect(err.Error()).To(ContainSubstring(`"toml"`))
+		Expect(out.String()).To(BeEmpty())
+	})
+})

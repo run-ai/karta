@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-// Command karta is the Karta CLI: workload-aware visibility for any Kubernetes
+// Command kli is the Karta CLI: workload-aware visibility for any Kubernetes
 // workload type. It builds on the Karta abstraction layer to list and describe
 // workloads and the definitions Karta understands.
 package main
@@ -37,7 +37,7 @@ func main() {
 	// Silencing Cobra also silenced its usage hint, which is the whole value of
 	// distinguishing a usage error.
 	if coded.ExitCode() == cmd.ExitUsage {
-		path := "karta"
+		path := "kli"
 		var located interface{ UsagePath() string }
 		if errors.As(err, &located) && located.UsagePath() != "" {
 			path = located.UsagePath()
