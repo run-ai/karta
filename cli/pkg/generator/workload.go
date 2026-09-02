@@ -71,7 +71,10 @@ func renderWorkloadTable(out io.Writer, views []workload.View, format Output) er
 		fmt.Fprintln(writer, strings.Join(cells, "\t"))
 	}
 
-	return writer.Flush()
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("write workloads table: %w", err)
+	}
+	return nil
 }
 
 // age formats a timestamp, unset for a workload resolved outside a live read.

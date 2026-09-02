@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package generator_test
+package generator
 
 import (
 	"bytes"
@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/run-ai/karta/cli/pkg/generator"
 	"github.com/run-ai/karta/cli/pkg/workload"
 )
 
@@ -37,24 +36,24 @@ func cells(out string) [][]string {
 
 var _ = Describe("RenderWorkloads", func() {
 	DescribeTable("renders the table a format asks for",
-		func(opts generator.Options, headers, row []string) {
+		func(opts Options, headers, row []string) {
 			var out, errOut bytes.Buffer
-			Expect(generator.RenderWorkloads(&out, &errOut, views, opts)).To(Succeed())
+			Expect(RenderWorkloads(&out, &errOut, views, opts)).To(Succeed())
 
 			Expect(cells(out.String())).To(Equal([][]string{headers, row}))
 			Expect(errOut.Len()).To(BeZero())
 		},
 		Entry("the default columns",
-			generator.Options{Output: generator.OutputTable},
+			Options{Output: OutputTable},
 			[]string{"NAME", "NAMESPACE", "PHASE", "AGE"},
 			[]string{"preprocess", "ml-team", "Completed", "<unknown>"}),
 		// Options{} has to stay usable, since table is the flag's default too.
 		Entry("the zero value, as the default table",
-			generator.Options{},
+			Options{},
 			[]string{"NAME", "NAMESPACE", "PHASE", "AGE"},
 			[]string{"preprocess", "ml-team", "Completed", "<unknown>"}),
 		Entry("wide, which adds ORIGIN",
-			generator.Options{Output: generator.OutputWide},
+			Options{Output: OutputWide},
 			[]string{"NAME", "NAMESPACE", "PHASE", "AGE", "ORIGIN"},
 			[]string{"preprocess", "ml-team", "Completed", "<unknown>", "catalog"}),
 	)
@@ -63,8 +62,8 @@ var _ = Describe("RenderWorkloads", func() {
 	// saturate to the age of the zero time.
 	It("reports an unset timestamp as unknown", func() {
 		var out, errOut bytes.Buffer
-		Expect(generator.RenderWorkloads(&out, &errOut,
-			[]workload.View{{Name: "offline"}}, generator.Options{})).To(Succeed())
+		Expect(RenderWorkloads(&out, &errOut,
+			[]workload.View{{Name: "offline"}}, Options{})).To(Succeed())
 
 		Expect(out.String()).To(ContainSubstring("<unknown>"))
 	})
@@ -73,9 +72,9 @@ var _ = Describe("RenderWorkloads", func() {
 	// means a programmatic caller passed it; a table would misrepresent the ask.
 	It("rejects a format that is set but unrecognized", func() {
 		var out, errOut bytes.Buffer
-		err := generator.RenderWorkloads(&out, &errOut, views, generator.Options{Output: "bogus"})
+		err := RenderWorkloads(&out, &errOut, views, Options{Output: "bogus"})
 
-		Expect(errors.Is(err, generator.ErrUnsupportedOutput)).To(BeTrue())
+		Expect(errors.Is(err, ErrUnsupportedOutput)).To(BeTrue())
 		Expect(out.Len()).To(BeZero())
 	})
 
@@ -83,8 +82,8 @@ var _ = Describe("RenderWorkloads", func() {
 		// The notice must not reach stdout, where it would corrupt a pipe.
 		It("reports the namespace on stderr and exits cleanly", func() {
 			var out, errOut bytes.Buffer
-			Expect(generator.RenderWorkloads(&out, &errOut, nil,
-				generator.Options{Output: generator.OutputTable, Namespace: "ml-team"})).To(Succeed())
+			Expect(RenderWorkloads(&out, &errOut, nil,
+				Options{Output: OutputTable, Namespace: "ml-team"})).To(Succeed())
 
 			Expect(out.Len()).To(BeZero())
 			Expect(errOut.String()).To(ContainSubstring("No workloads found in namespace ml-team."))
@@ -92,8 +91,8 @@ var _ = Describe("RenderWorkloads", func() {
 
 		It("drops the namespace when every namespace was searched", func() {
 			var out, errOut bytes.Buffer
-			Expect(generator.RenderWorkloads(&out, &errOut, nil,
-				generator.Options{Output: generator.OutputTable, AllNamespaces: true})).To(Succeed())
+			Expect(RenderWorkloads(&out, &errOut, nil,
+				Options{Output: OutputTable, AllNamespaces: true})).To(Succeed())
 
 			Expect(errOut.String()).To(ContainSubstring("No workloads found in any namespace."))
 		})
@@ -102,8 +101,8 @@ var _ = Describe("RenderWorkloads", func() {
 		// never has to strip a human message.
 		It("stays out of the machine formats", func() {
 			var out, errOut bytes.Buffer
-			Expect(generator.RenderWorkloads(&out, &errOut, nil,
-				generator.Options{Output: generator.OutputJSON, Namespace: "ml-team"})).To(Succeed())
+			Expect(RenderWorkloads(&out, &errOut, nil,
+				Options{Output: OutputJSON, Namespace: "ml-team"})).To(Succeed())
 
 			Expect(strings.TrimSpace(out.String())).To(Equal("[]"))
 			Expect(errOut.Len()).To(BeZero())
