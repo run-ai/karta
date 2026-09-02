@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: llama-finetune
+  namespace: ml-team
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              resources:
+                requests:
+                  nvidia.com/gpu: "1"
+    Worker:
+      replicas: 4
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              resources:
+                requests:
+                  nvidia.com/gpu: "8"

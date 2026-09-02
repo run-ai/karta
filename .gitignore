@@ -29,3 +29,9 @@ config/crd/_.yaml
 
 # built imagelock tool binary
 /hack/imagelock/imagelock
+
+# Generated WASM engine build artifacts (make headlamp-plugin-wasm)
+/wasm-engine/karta.wasm
+/wasm-engine/wasm_exec.js
+
+hack/e2e/operators/.installed-versions*

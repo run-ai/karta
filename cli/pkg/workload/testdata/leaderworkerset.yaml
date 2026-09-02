@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2026 NVIDIA Corporation
+
+apiVersion: leaderworkerset.x-k8s.io/v1
+kind: LeaderWorkerSet
+metadata:
+  name: serve-llm
+  namespace: ml-team
+spec:
+  replicas: 2
+  leaderWorkerTemplate:
+    size: 4
+    leaderTemplate:
+      spec:
+        containers:
+          - name: leader
+            resources:
+              requests:
+                nvidia.com/gpu: "1"
+    workerTemplate:
+      spec:
+        containers:
+          - name: worker
+            resources:
+              requests:
+                nvidia.com/gpu: "8"

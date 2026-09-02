@@ -41,13 +41,6 @@ of the roadmap is itself public and reviewable.
 
 **Theme: make Karta a standalone, shippable project with first-class visibility tooling.**
 
-- **Karta controller / operator.** A standalone controller that reconciles Karta
-  resources and the workloads they describe — today the core processing lives in
-  the Go library only. This is the foundational piece that turns Karta from a
-  library into a deployable project.
-  Tracked by [#34](https://github.com/run-ai/karta/issues/34) (epic) and
-  [#35](https://github.com/run-ai/karta/issues/35) (design), with task issues
-  #67–#72 (core logic, conditions, packaging, end-to-end tests).
 - **Validated, non-rotting examples.** Automated tests that check the bundled
   Karta definitions against the upstream CRDs they target, so the
   [`docs/catalog/`](docs/catalog/) set stays correct as upstream APIs evolve.
@@ -124,6 +117,10 @@ it stay vendor-neutral and broadly adoptable.
 Completed milestones, most recent first. The GitHub issue is the permanent record;
 this section is a quick reference for what has already shipped.
 
+- Karta controller / operator: standalone controller that reconciles Karta
+  resources and the workloads they describe, turning Karta from a Go library
+  into a deployable project
+  ([#34](https://github.com/run-ai/karta/issues/34), Aug 2026).
 - Helm chart / CRD upgrade hook: Helm chart hardening and CRD upgrader hook
   shipped ([#43](https://github.com/run-ai/karta/issues/43), Aug 2026).
 
