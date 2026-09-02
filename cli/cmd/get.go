@@ -54,12 +54,13 @@ func newGetCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get TYPE[/NAME] [NAME]",
 		Short: "List workloads of a type",
-		Long: "List workloads with a normalized phase, their semantic component breakdown, and " +
-			"aggregate requested GPUs, read through the Karta definition that covers each type.\n\n" +
+		Long: "List workloads with a normalized phase, read through the Karta definition that " +
+			"covers each type.\n\n" +
 			"Type matching is lenient: case-insensitive, singular or plural, and kubectl short " +
 			"names all resolve.\n\n" +
-			"Counts and GPUs come from the workload spec, so no pods are listed. -o wide adds the " +
-			"ORIGIN of the resolving definition; a NODES column arrives with the describe command.",
+			"The phase comes from the workload spec, so no pods are listed. -o wide adds the " +
+			"ORIGIN of the resolving definition; the component breakdown, requested GPUs and a " +
+			"NODES column arrive with the describe command.",
 		Example: "  # All JobSets in the current namespace\n" +
 			"  karta get jobset\n\n" +
 			"  # Failed JobSets\n" +
@@ -183,7 +184,7 @@ func runGet(cmd *cobra.Command, opts *getOptions) error {
 		return views[i].Name < views[j].Name
 	})
 
-	return generator.Render(cmd.OutOrStdout(), cmd.ErrOrStderr(), views, generator.Options{
+	return generator.RenderWorkloads(cmd.OutOrStdout(), cmd.ErrOrStderr(), views, generator.Options{
 		Output:    outputFormat(cmd),
 		Namespace: searched,
 		// An empty namespace means the type is cluster-scoped, so the search

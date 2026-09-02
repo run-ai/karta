@@ -5,13 +5,14 @@ package cmd
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/run-ai/karta/cli/pkg/generator"
 )
 
 func TestOutputSetValid(t *testing.T) {
-	o := NewOutputFlag()
+	o := NewOutputFlag(true)
 	for _, v := range o.Allowed() {
 		if err := o.Set(v); err != nil {
 			t.Errorf("Set(%q) returned error: %v", v, err)
@@ -26,7 +27,7 @@ func TestOutputSetValid(t *testing.T) {
 }
 
 func TestOutputSetInvalid(t *testing.T) {
-	o := NewOutputFlag()
+	o := NewOutputFlag(true)
 	err := o.Set("bogus")
 	if err == nil {
 		t.Fatal("expected error for invalid output value, got nil")
@@ -40,8 +41,23 @@ func TestOutputSetInvalid(t *testing.T) {
 	}
 }
 
+// A command rendering no extra columns leaves wide out, so the flag refuses it
+// at parse time rather than the command refusing it later.
+func TestOutputWithoutWide(t *testing.T) {
+	o := NewOutputFlag(false)
+	if slices.Contains(o.Allowed(), string(generator.OutputWide)) {
+		t.Errorf("wide is still allowed: %v", o.Allowed())
+	}
+	if err := o.Set(string(generator.OutputWide)); !errors.Is(err, ErrInvalidValue) {
+		t.Errorf("Set(wide) = %v, want ErrInvalidValue", err)
+	}
+	if !slices.Contains(NewOutputFlag(true).Allowed(), string(generator.OutputWide)) {
+		t.Error("wide is missing when the command supports it")
+	}
+}
+
 func TestOutputType(t *testing.T) {
-	if got := NewOutputFlag().Type(); got != "output" {
+	if got := NewOutputFlag(true).Type(); got != "output" {
 		t.Errorf("Type() = %q, want %q", got, "output")
 	}
 }

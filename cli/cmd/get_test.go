@@ -120,7 +120,7 @@ func TestGetListsWorkloadsOfAType(t *testing.T) {
 		t.Fatalf("expected exit 0, got %d\n%s", code, out)
 	}
 	for _, want := range []string{
-		"NAME", "NAMESPACE", "PHASE", "COMPONENTS", "GPU", "AGE", "preprocess", "ml-team", "etl(3)",
+		"NAME", "NAMESPACE", "PHASE", "AGE", "preprocess", "ml-team",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q\n%s", want, out)
@@ -306,7 +306,7 @@ func TestGetWideAddsOrigin(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d", code)
 	}
-	if !strings.Contains(out, "ORIGIN") || !strings.Contains(out, "community") {
+	if !strings.Contains(out, "ORIGIN") || !strings.Contains(out, "catalog") {
 		t.Errorf("expected the ORIGIN column\n%s", out)
 	}
 }
@@ -333,12 +333,12 @@ func TestGetJSONIsTypedAndAlwaysAnArray(t *testing.T) {
 	if !strings.HasPrefix(strings.TrimSpace(out), "[") {
 		t.Errorf("expected a JSON array, got %q", out)
 	}
-	// Counts are numbers, not display strings.
-	if !strings.Contains(out, `"replicas": 3`) {
-		t.Errorf("expected a numeric replica count\n%s", out)
+	// Typed values, not display strings: phases is a list, not a joined cell.
+	if !strings.Contains(out, `"phases": [`) {
+		t.Errorf("expected phases as a list\n%s", out)
 	}
-	if strings.Contains(out, `"3/3"`) {
-		t.Errorf("output must not contain display strings\n%s", out)
+	if !strings.Contains(out, `"name": "preprocess"`) {
+		t.Errorf("expected the workload name\n%s", out)
 	}
 }
 

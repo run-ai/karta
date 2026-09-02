@@ -1,150 +1,86 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 NVIDIA Corporation
 
-package generator
+package generator_test
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"strings"
-	"testing"
 
-	"github.com/run-ai/karta/cli/pkg/workload"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/run-ai/karta/cli/pkg/generator"
 )
 
-func TestComponentsElidesLongLists(t *testing.T) {
-	// Milvus declares eighteen components; a row that printed them all would
-	// push GPU and AGE off screen.
-	many := make([]workload.ComponentView, 0, 18)
-	for _, name := range []string{
-		"standalone", "proxy", "mixcoord", "datanode", "querynode",
-		"streamingnode", "indexnode", "rootcoord",
-	} {
-		many = append(many, workload.ComponentView{Name: name, Replicas: 1})
-	}
-
-	got := components(many)
-	if len(got) > componentsWidth+len(", +8 more") {
-		t.Errorf("cell not elided: %q", got)
-	}
-	if !strings.Contains(got, "more") {
-		t.Errorf("expected an elision marker, got %q", got)
-	}
-	if !strings.HasPrefix(got, "standalone(1)") {
-		t.Errorf("expected the first components to survive, got %q", got)
-	}
+type item struct {
+	Name string `json:"name"`
 }
 
-func TestComponentsRendersRoleAndCount(t *testing.T) {
-	got := components([]workload.ComponentView{
-		{Name: "master", Replicas: 1},
-		{Name: "worker", Replicas: 4},
-	})
-	if got != "master(1), worker(4)" {
-		t.Errorf("unexpected cell: %q", got)
-	}
+var items = []item{{Name: "alpha"}, {Name: "beta"}}
+
+// unusedTable fails the spec if a machine format reaches the table callback.
+func unusedTable(io.Writer) error {
+	Fail("the table callback must not run for a machine format")
+	return nil
 }
 
-// A workload whose definition extracts no pod-bearing component still needs a
-// cell, so the columns stay aligned.
-func TestComponentsWithNone(t *testing.T) {
-	if got := components(nil); got != "<none>" {
-		t.Errorf("unexpected cell: %q", got)
-	}
-}
+var _ = Describe("Render", func() {
+	DescribeTable("hands the human formats to the table callback",
+		func(format generator.Output) {
+			var out bytes.Buffer
+			called := false
+			Expect(generator.Render(&out, format, items, func(w io.Writer) error {
+				called = true
+				_, err := io.WriteString(w, "TABLE")
+				return err
+			})).To(Succeed())
 
-func TestRenderTableColumns(t *testing.T) {
-	views := []workload.View{{
-		Name:       "preprocess",
-		Namespace:  "ml-team",
-		Kind:       "JobSet",
-		Phases:     []string{"Completed"},
-		GPUs:       0,
-		Origin:     "community",
-		Components: []workload.ComponentView{{Name: "etl", Replicas: 3}},
-	}}
-
-	for _, tc := range []struct {
-		name    string
-		opts    Options
-		want    []string
-		notWant []string
-	}{
-		{
-			name:    "default columns",
-			opts:    Options{Output: OutputTable},
-			want:    []string{"NAME", "NAMESPACE", "ml-team", "PHASE", "COMPONENTS", "GPU", "AGE", "etl(3)"},
-			notWant: []string{"ORIGIN"},
+			Expect(called).To(BeTrue())
+			Expect(out.String()).To(Equal("TABLE"))
 		},
-		{
-			name: "wide adds ORIGIN",
-			opts: Options{Output: OutputWide},
-			want: []string{"ORIGIN", "community"},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			var out, errOut bytes.Buffer
-			if err := Render(&out, &errOut, views, tc.opts); err != nil {
-				t.Fatalf("render: %v", err)
-			}
-			for _, want := range tc.want {
-				if !strings.Contains(out.String(), want) {
-					t.Errorf("missing %q\n%s", want, out.String())
-				}
-			}
-			for _, notWant := range tc.notWant {
-				if strings.Contains(out.String(), notWant) {
-					t.Errorf("unexpected %q\n%s", notWant, out.String())
-				}
-			}
-		})
-	}
-}
+		Entry("table", generator.OutputTable),
+		// wide reaches the callback so a command that renders extra columns can.
+		// One that cannot must reject wide before calling Render.
+		Entry("wide", generator.OutputWide),
+	)
 
-// The empty notice must not reach stdout, where it would corrupt a pipe.
-func TestRenderEmptyGoesToStderr(t *testing.T) {
-	var out, errOut bytes.Buffer
-	if err := Render(&out, &errOut, nil, Options{Output: OutputTable, Namespace: "ml-team"}); err != nil {
-		t.Fatalf("render: %v", err)
-	}
-	if out.Len() != 0 {
-		t.Errorf("expected empty stdout, got %q", out.String())
-	}
-	if !strings.Contains(errOut.String(), "No workloads found in namespace ml-team.") {
-		t.Errorf("unexpected stderr: %q", errOut.String())
-	}
-}
-
-func TestRenderYAMLIsAlwaysASequence(t *testing.T) {
-	var out, errOut bytes.Buffer
-	if err := Render(&out, &errOut, nil, Options{Output: OutputYAML}); err != nil {
-		t.Fatalf("render: %v", err)
-	}
-	if strings.TrimSpace(out.String()) != "[]" {
-		t.Errorf("expected an empty sequence, got %q", out.String())
-	}
-	if errOut.Len() != 0 {
-		t.Errorf("machine output must not carry the empty notice, got %q", errOut.String())
-	}
-}
-
-func TestRenderUnsetAgeIsUnknown(t *testing.T) {
-	var out, errOut bytes.Buffer
-	views := []workload.View{{Name: "offline", Namespace: "ml-team"}}
-	if err := Render(&out, &errOut, views, Options{Output: OutputTable}); err != nil {
-		t.Fatalf("render: %v", err)
-	}
-	if !strings.Contains(out.String(), "<unknown>") {
-		t.Errorf("expected <unknown> for an unset timestamp\n%s", out.String())
-	}
-}
-
-// A multi-instance component takes its name from the instance key, which can
-// outgrow the cell on its own.
-func TestComponentsCapsASingleLongEntry(t *testing.T) {
-	got := components([]workload.ComponentView{
-		{Name: strings.Repeat("very-long-service-name", 4), Replicas: 2},
+	It("returns what the table callback returns", func() {
+		boom := errors.New("boom")
+		err := generator.Render(io.Discard, generator.OutputTable, items,
+			func(io.Writer) error { return boom })
+		Expect(err).To(MatchError(boom))
 	})
-	if len(got) > componentsWidth {
-		t.Errorf("cell exceeds the width budget at %d chars: %q", len(got), got)
-	}
-}
+
+	It("encodes json through the json tags", func() {
+		var out bytes.Buffer
+		Expect(generator.Render(&out, generator.OutputJSON, items, unusedTable)).To(Succeed())
+		Expect(out.String()).To(ContainSubstring(`"name": "alpha"`))
+	})
+
+	It("emits an empty json array for no items, not null", func() {
+		var out bytes.Buffer
+		Expect(generator.Render[item](&out, generator.OutputJSON, nil, unusedTable)).To(Succeed())
+		Expect(strings.TrimSpace(out.String())).To(Equal("[]"))
+	})
+
+	It("emits yaml as a document stream, not a list", func() {
+		var out bytes.Buffer
+		Expect(generator.Render(&out, generator.OutputYAML, items, unusedTable)).To(Succeed())
+
+		// Separator between documents, so two documents carry one separator.
+		Expect(strings.Count(out.String(), "\n---\n")).To(Equal(1))
+		Expect(strings.Split(out.String(), "\n---\n")).To(HaveLen(2))
+		Expect(out.String()).NotTo(ContainSubstring("- name:"))
+	})
+
+	It("names the format it cannot render", func() {
+		var out bytes.Buffer
+		err := generator.Render(&out, generator.Output("toml"), items, unusedTable)
+		Expect(err).To(MatchError(generator.ErrUnsupportedOutput))
+		Expect(err.Error()).To(ContainSubstring(`"toml"`))
+		Expect(out.String()).To(BeEmpty())
+	})
+})

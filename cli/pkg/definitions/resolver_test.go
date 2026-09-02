@@ -53,13 +53,13 @@ func namesOf(defs []Definition) []string {
 }
 
 var _ = Describe("Resolver merge and precedence", func() {
-	It("resolves a community definition when no cluster definitions exist", func() {
-		r := New([]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)}, nil)
+	It("resolves a catalog definition when no cluster definitions exist", func() {
+		r := New([]*v1alpha1.Karta{newKarta("catalog-deployment", deploymentGVK)}, nil)
 
 		def, err := r.Resolve(deploymentGVK)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(def.Karta.Name).To(Equal("community-deployment"))
-		Expect(def.Origin).To(Equal(OriginCommunity))
+		Expect(def.Karta.Name).To(Equal("catalog-deployment"))
+		Expect(def.Origin).To(Equal(OriginCatalog))
 	})
 
 	It("resolves a cluster definition when the catalog is empty", func() {
@@ -73,24 +73,24 @@ var _ = Describe("Resolver merge and precedence", func() {
 
 	It("unions disjoint sources", func() {
 		r := New(
-			[]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)},
+			[]*v1alpha1.Karta{newKarta("catalog-deployment", deploymentGVK)},
 			[]*v1alpha1.Karta{newKarta("cluster-job", jobGVK)},
 		)
 
 		deployment, err := r.Resolve(deploymentGVK)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(deployment.Origin).To(Equal(OriginCommunity))
+		Expect(deployment.Origin).To(Equal(OriginCatalog))
 
 		job, err := r.Resolve(jobGVK)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(job.Origin).To(Equal(OriginCluster))
 
-		Expect(namesOf(r.List())).To(Equal([]string{"community-deployment", "cluster-job"}))
+		Expect(namesOf(r.List())).To(Equal([]string{"catalog-deployment", "cluster-job"}))
 	})
 
-	It("lets a cluster definition override a community one on the same GVK", func() {
+	It("lets a cluster definition override a catalog one on the same GVK", func() {
 		r := New(
-			[]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)},
+			[]*v1alpha1.Karta{newKarta("catalog-deployment", deploymentGVK)},
 			[]*v1alpha1.Karta{newKarta("cluster-deployment", deploymentGVK)},
 		)
 
@@ -101,7 +101,7 @@ var _ = Describe("Resolver merge and precedence", func() {
 	})
 
 	It("returns ErrNotFound for an unknown GVK", func() {
-		r := New([]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)}, nil)
+		r := New([]*v1alpha1.Karta{newKarta("catalog-deployment", deploymentGVK)}, nil)
 
 		def, err := r.Resolve(jobGVK)
 		Expect(err).To(MatchError(ErrNotFound))
@@ -191,7 +191,7 @@ var _ = Describe("Resolver List", func() {
 
 	It("lists an overridden GVK exactly once, as the cluster definition", func() {
 		r := New(
-			[]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)},
+			[]*v1alpha1.Karta{newKarta("catalog-deployment", deploymentGVK)},
 			[]*v1alpha1.Karta{newKarta("cluster-deployment", deploymentGVK)},
 		)
 
@@ -201,7 +201,7 @@ var _ = Describe("Resolver List", func() {
 	})
 
 	It("orders deterministically across reordered input", func() {
-		community := []*v1alpha1.Karta{
+		catalog := []*v1alpha1.Karta{
 			newKarta("core-pod-v1", podGVK),
 			newKarta("batch-job-v1", jobGVK),
 		}
@@ -211,11 +211,11 @@ var _ = Describe("Resolver List", func() {
 		}
 		want := []string{"core-pod-v1", "aaa-deployment", "zzz-deployment", "batch-job-v1"}
 
-		Expect(namesOf(New(community, cluster).List())).To(Equal(want))
+		Expect(namesOf(New(catalog, cluster).List())).To(Equal(want))
 
-		reversedCommunity := []*v1alpha1.Karta{community[1], community[0]}
+		reversedCatalog := []*v1alpha1.Karta{catalog[1], catalog[0]}
 		reversedCluster := []*v1alpha1.Karta{cluster[1], cluster[0]}
-		Expect(namesOf(New(reversedCommunity, reversedCluster).List())).To(Equal(want))
+		Expect(namesOf(New(reversedCatalog, reversedCluster).List())).To(Equal(want))
 	})
 })
 
@@ -245,9 +245,9 @@ var _ = Describe("Resolver Collisions", func() {
 		}}))
 	})
 
-	It("does not record a collision when a cluster definition overrides a community one", func() {
+	It("does not record a collision when a cluster definition overrides a catalog one", func() {
 		r := New(
-			[]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)},
+			[]*v1alpha1.Karta{newKarta("catalog-deployment", deploymentGVK)},
 			[]*v1alpha1.Karta{newKarta("cluster-deployment", deploymentGVK)},
 		)
 
@@ -256,7 +256,7 @@ var _ = Describe("Resolver Collisions", func() {
 
 	It("records nothing when no GVK is claimed twice", func() {
 		r := New(
-			[]*v1alpha1.Karta{newKarta("community-deployment", deploymentGVK)},
+			[]*v1alpha1.Karta{newKarta("catalog-deployment", deploymentGVK)},
 			[]*v1alpha1.Karta{newKarta("cluster-job", jobGVK)},
 		)
 
@@ -347,7 +347,7 @@ var _ = Describe("Resolver ByName", func() {
 		def, err := r.ByName("batch-job-v1")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(def.Karta.Name).To(Equal("batch-job-v1"))
-		Expect(def.Origin).To(Equal(OriginCommunity))
+		Expect(def.Origin).To(Equal(OriginCatalog))
 	})
 
 	It("finds a definition that shares its GVK with another", func() {
@@ -356,6 +356,24 @@ var _ = Describe("Resolver ByName", func() {
 		Expect(def.Karta.Name).To(Equal("aaa-deployment"))
 		Expect(def.Origin).To(Equal(OriginCluster))
 	})
+
+	DescribeTable("prefers the cluster definition when a name is shared with the catalog",
+		func(catalogGVK, clusterGVK schema.GroupVersionKind) {
+			shared := New(
+				[]*v1alpha1.Karta{newKarta("apps-deployment-v1", catalogGVK)},
+				[]*v1alpha1.Karta{newKarta("apps-deployment-v1", clusterGVK)},
+			)
+
+			def, err := shared.ByName("apps-deployment-v1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(def.Origin).To(Equal(OriginCluster))
+		},
+		// Names are unique per source, so a shared name means the root GVKs
+		// differ, and definitions are ordered by GVK. Taking the first match
+		// would answer with the catalog one in the first case.
+		Entry("the catalog GVK sorts first", deploymentGVK, jobGVK),
+		Entry("the cluster GVK sorts first", jobGVK, deploymentGVK),
+	)
 
 	It("is case-sensitive", func() {
 		def, err := r.ByName("Batch-Job-V1")
