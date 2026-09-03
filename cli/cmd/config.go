@@ -79,8 +79,11 @@ func buildConfig(cmd *cobra.Command) (*Config, error) {
 		return nil, err
 	}
 
-	if f := cmd.Root().PersistentFlags().Lookup(flagOutput); f != nil {
-		if err := v.BindPFlag(flagOutput, f); err != nil {
+	// A command registering its own -o shadows the root's, so bind and set the
+	// flag it actually reads.
+	output := cmd.Flags().Lookup(flagOutput)
+	if output != nil {
+		if err := v.BindPFlag(flagOutput, output); err != nil {
 			return nil, err
 		}
 	}
@@ -89,10 +92,10 @@ func buildConfig(cmd *cobra.Command) (*Config, error) {
 	if err := v.UnmarshalExact(&cfg); err != nil {
 		return nil, fmt.Errorf("config: %w", err)
 	}
-	if f := cmd.Root().PersistentFlags().Lookup(flagOutput); f != nil {
+	if output != nil {
 		// Reached for a value from config or the environment; the same value
 		// given as a flag is rejected by pflag before this runs.
-		if err := f.Value.Set(cfg.Output); err != nil {
+		if err := output.Value.Set(cfg.Output); err != nil {
 			return nil, usageError(cmd, fmt.Errorf("output: %w", err))
 		}
 	}
