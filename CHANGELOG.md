@@ -5,11 +5,11 @@
 
 Notable changes per release. This file is the in-repo source of record: a release's entry is added here before the tag is pushed (see [RELEASE.md](RELEASE.md)), and the [GitHub Release](https://github.com/run-ai/karta/releases) body carries the same content, normalized to the repository Markdown rules in [AGENTS.md](AGENTS.md).
 
-Scope: this file covers minor and major releases, which are tagged from `main`. Patch releases are tagged from their release branch (`v0.1`, `v0.2`) and their entries live in that branch's changelog.
+Scope: this file covers releases tagged from `main`. Patch releases on a minor line are tagged from that line's release branch (`v0.1`, `v0.2`) and are documented in the changelog there. The v0.0.x releases predate that scheme and are summarized at the end.
 
 ## v0.2.0 - 2026-07-15
 
-This release extends Karta from a CRD and Go library into an optional runnable system. It lands the controller / operator (reconcile core, workload-tree model, Helm chart, container images), and a new pod-grouping API for better schedulers integration, alongside a much larger catalog of built-in workload samples. There are no breaking API changes; the previous grouping format is deprecated but still works. See [Deprecations](#%EF%B8%8F-deprecations) for the recommended migration.
+This release extends Karta from a CRD and Go library into an optional runnable system. It lands the controller / operator (reconcile core, workload-tree model, Helm chart, container images), and a new pod-grouping API for better schedulers integration, alongside a much larger catalog of built-in workload samples. There are no breaking API changes; the previous grouping format is deprecated but still works. See [Deprecations](#deprecations) for the recommended migration.
 
 ---
 
@@ -63,7 +63,7 @@ Correction added after release: this is not a drop-in migration at v0.2.0, and t
 
 - Karta's own instruction helpers read only `podGroups`. `pkg/instructions/summary.go` builds gang-scheduling candidates from `GangScheduling.PodGroups` and never reads `GangScheduling.PodGroup`. That is true at v0.2.0 and still true today. A consumer that relies on those helpers for grouping loses its grouping if it switches formats.
 - `podGroup` is honored by the scheduler integration instead. The KAI Karta podgrouper plugin prefers `podGroup` and falls back to `podGroups`. It shipped in KAI v0.17.0 on 2026-08-03, after this release, so at v0.2.0 nothing consumed the new field yet.
-- The two formats are not equivalent. A `podGroups` member carries `groupByKeyPaths`; a `subGroups` entry carries only `componentName` and `topology`, so per-component grouping keys have no direct counterpart.
+- The two formats are not equivalent. A `podGroups` member carries `groupByKeyPaths` and `filters`; a `subGroups` entry carries only `componentName` and `topology`, so per-component grouping keys and filters have no direct counterpart.
 
 Target shape of the new format:
 
@@ -159,7 +159,7 @@ Container images: see [packages page](https://github.com/run-ai/karta/pkgs/conta
 
 ## v0.1.0 - 2026-05-12
 
-This release completes the project rename from `ri` / `krt` to karta, decouples the library from `sigs.k8s.io/controller-runtime`, and introduces native suspend / resume support on the CRD. See [Breaking changes](#%EF%B8%8F-breaking-changes) for migration steps.
+This release completes the project rename from `ri` / `krt` to karta, decouples the library from `sigs.k8s.io/controller-runtime`, and introduces native suspend / resume support on the CRD. See [Breaking changes](#breaking-changes) for migration steps.
 
 ---
 
@@ -275,7 +275,7 @@ This is the dominant pattern across major K8s OSS - see the same idiom in [kubev
 - `ValidateParsedJQ` is now exported - external consumers that already hold a compiled `*gojq.Query` can run the read-only / safe-expression check without re-parsing. ([#53](https://github.com/run-ai/karta/pull/53) by @AviadHayumi)
 - Helm chart published to GHCR on every release - pull with `helm install karta oci://ghcr.io/run-ai/karta --version 0.1.0`. ([#27](https://github.com/run-ai/karta/pull/27) by @AviadHayumi)
 - Chart version bump enforcement in CI - `ct lint` blocks PRs that change the chart without bumping `Chart.yaml` version. Matches the prometheus-operator / argo enforcement model. ([#48](https://github.com/run-ai/karta/pull/48) by @AviadHayumi)
-- **`docs/examples/*.yaml` validated in CI** - example Kartas are exercised by CI so docs cant silently drift from the schema. ([#61](https://github.com/run-ai/karta/pull/61) by @Isan-Rivkin)
+- `docs/examples/*.yaml` validated in CI - example Kartas are exercised by CI so docs cannot silently drift from the schema. ([#61](https://github.com/run-ai/karta/pull/61) by @Isan-Rivkin)
 - Issue templates + code of conduct - bug / feature templates plus a contributor CoC. ([#38](https://github.com/run-ai/karta/pull/38) by @yuval-gr)
 - Helm chart annotated with OCI source - `helm.sh/chart-source` annotation links chart back to the GHCR package page. ([#49](https://github.com/run-ai/karta/pull/49) by @AviadHayumi)
 
