@@ -43,3 +43,15 @@ func withConfig(cmd *cobra.Command) {
 	cmd.PersistentFlags().String(flagConfig, "",
 		"Path to the config file (default $KARTA_CONFIG or $HOME/.karta/config.yaml)")
 }
+
+// withPhase registers the repeatable --phase enum flag on flags, along with its
+// shell completion.
+func withPhase(cmd *cobra.Command, flags *pflag.FlagSet) *EnumSlice[string] {
+	phase := NewPhaseFlag()
+	flags.Var(phase, flagPhase, usagePhase)
+	cobra.CheckErr(cmd.RegisterFlagCompletionFunc(flagPhase,
+		func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+			return phase.Allowed(), cobra.ShellCompDirectiveNoFileComp
+		}))
+	return phase
+}

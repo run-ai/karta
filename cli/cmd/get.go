@@ -7,8 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -25,7 +25,6 @@ import (
 	"github.com/run-ai/karta/cli/pkg/definitions"
 	"github.com/run-ai/karta/cli/pkg/generator"
 	"github.com/run-ai/karta/cli/pkg/workload"
-	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/catalog"
 )
 
@@ -33,10 +32,36 @@ const (
 	flagPhase     = "phase"
 	flagSelector  = "selector"
 	flagChunkSize = "chunk-size"
-)
 
-// defaultChunkSize follows the kubectl convention for list page size.
-const defaultChunkSize = 500
+	usagePhase     = "Filter by normalized phase; repeatable. Applied after resolution, so it does not reduce API cost"
+	usageSelector  = "Label selector on the workload root, kubectl syntax"
+	usageChunkSize = "API list page size; 0 lists without paging. Bounds memory and API pressure, not time to first row"
+
+	// defaultChunkSize follows the kubectl convention for list page size.
+	defaultChunkSize = 500
+
+	getUse   = "get TYPE[/NAME] [NAME]"
+	getShort = "List workloads of a type"
+
+	getLong = `List workloads with a normalized phase, read through the Karta definition that
+covers each type.
+
+Type matching is lenient: case-insensitive, singular or plural, and kubectl short names
+all resolve.
+
+The phase comes from the workload spec, so no pods are listed. -o wide adds the ORIGIN
+of the resolving definition; the component breakdown, requested GPUs and a NODES column
+arrive with the describe command.`
+
+	getExample = `  # All JobSets in the current namespace
+  kli get jobset
+
+  # Failed JobSets
+  kli get jobset --phase Failed
+
+  # Degraded or failed JobSets matching a selector, as JSON
+  kli get jobset --phase Degraded --phase Failed -l team=nlp -o json`
+)
 
 // getOptions holds the resolved inputs for one run of the get command.
 type getOptions struct {
@@ -47,45 +72,49 @@ type getOptions struct {
 	chunkSize int64
 }
 
-// newGetCommand builds the "karta get" command: one row per workload root.
+// newGetCommand builds the "kli get" command: one row per workload root.
 func newGetCommand() *cobra.Command {
 	opts := &getOptions{}
+	var (
+		output *Enum[generator.Output]
+		phase  *EnumSlice[string]
+	)
 
 	cmd := &cobra.Command{
-		Use:   "get TYPE[/NAME] [NAME]",
-		Short: "List workloads of a type",
-		Long: "List workloads with a normalized phase, read through the Karta definition that " +
-			"covers each type.\n\n" +
-			"Type matching is lenient: case-insensitive, singular or plural, and kubectl short " +
-			"names all resolve.\n\n" +
-			"The phase comes from the workload spec, so no pods are listed. -o wide adds the " +
-			"ORIGIN of the resolving definition; the component breakdown, requested GPUs and a " +
-			"NODES column arrive with the describe command.",
-		Example: "  # All JobSets in the current namespace\n" +
-			"  karta get jobset\n\n" +
-			"  # Failed JobSets\n" +
-			"  karta get jobset --phase Failed\n\n" +
-			"  # Degraded or failed JobSets matching a selector, as JSON\n" +
-			"  karta get jobset --phase Degraded --phase Failed -l team=nlp -o json",
-		Args: func(_ *cobra.Command, args []string) error {
-			if err := parseArgs(opts, args); err != nil {
-				return exitError{code: ExitUsage, err: err}
-			}
-			return nil
+		Use:     getUse,
+		Short:   getShort,
+		Long:    getLong,
+		Example: getExample,
+		Args:    usageArgs(func(_ *cobra.Command, args []string) error { return parseArgs(opts, args) }),
+		PreRunE: func(cmd *cobra.Command, _ []string) error {
+			opts.phases = phase.Get()
+			return validateOptions(cmd, opts)
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runGet(cmd, opts)
+			return runGet(cmd, opts, output.Get())
 		},
 	}
 
-	cmd.Flags().StringSliceVar(&opts.phases, flagPhase, nil,
-		"Filter by normalized phase; repeatable. Applied after resolution, so it does not reduce API cost")
-	cmd.Flags().StringVarP(&opts.selector, flagSelector, "l", "",
-		"Label selector on the workload root, kubectl syntax")
-	cmd.Flags().Int64Var(&opts.chunkSize, flagChunkSize, defaultChunkSize,
-		"API list page size; 0 lists without paging. Bounds memory and API pressure, not time to first row")
+	output = withOutput(cmd, cmd.Flags(), true)
+	phase = withPhase(cmd, cmd.Flags())
+	cmd.Flags().StringVarP(&opts.selector, flagSelector, "l", "", usageSelector)
+	cmd.Flags().Int64Var(&opts.chunkSize, flagChunkSize, defaultChunkSize, usageChunkSize)
 
 	return cmd
+}
+
+// validateOptions rejects the flag values and combinations the command cannot act on.
+func validateOptions(cmd *cobra.Command, opts *getOptions) error {
+	if opts.chunkSize < 0 {
+		return usageError(cmd, fmt.Errorf("--%s must not be negative", flagChunkSize))
+	}
+	if _, err := labels.Parse(opts.selector); err != nil {
+		return usageError(cmd, fmt.Errorf("--%s: %w", flagSelector, err))
+	}
+	if opts.selector != "" && opts.name != "" {
+		return usageError(cmd, fmt.Errorf("--%s cannot be combined with a NAME", flagSelector))
+	}
+	return nil
 }
 
 // parseArgs accepts the three kubectl argument forms: TYPE, TYPE/NAME, and
@@ -121,23 +150,8 @@ func parseArgs(opts *getOptions, args []string) error {
 	return nil
 }
 
-func runGet(cmd *cobra.Command, opts *getOptions) error {
+func runGet(cmd *cobra.Command, opts *getOptions, format generator.Output) error {
 	ctx := cmd.Context()
-
-	if opts.chunkSize < 0 {
-		return exitError{code: ExitUsage, err: fmt.Errorf("--%s must not be negative", flagChunkSize)}
-	}
-	if _, err := labels.Parse(opts.selector); err != nil {
-		return exitError{code: ExitUsage, err: fmt.Errorf("--%s: %w", flagSelector, err)}
-	}
-	if err := validatePhases(opts.phases); err != nil {
-		return exitError{code: ExitUsage, err: err}
-	}
-	if opts.selector != "" && opts.name != "" {
-		return exitError{code: ExitUsage, err: fmt.Errorf(
-			"--%s cannot be combined with a NAME", flagSelector)}
-	}
-
 	access := clusterAccess()
 
 	namespace, _, err := ResolvedNamespace(access)
@@ -146,8 +160,12 @@ func runGet(cmd *cobra.Command, opts *getOptions) error {
 	}
 
 	resolver, warnings := loadDefinitions(ctx, access)
+	messages := make([]string, 0, len(warnings))
 	for _, warning := range warnings {
-		fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", warning.Message)
+		messages = append(messages, warning.Message)
+	}
+	if err := printWarnings(cmd.ErrOrStderr(), messages); err != nil {
+		return err
 	}
 	if len(resolver.List()) == 0 {
 		return exitError{code: ExitNotFound, err: fmt.Errorf(
@@ -169,23 +187,23 @@ func runGet(cmd *cobra.Command, opts *getOptions) error {
 	}
 
 	views, searched, listWarnings, err := collect(ctx, dyn, mapper, target, namespace, opts)
-	for _, warning := range listWarnings {
-		fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", warning)
+	if writeErr := printWarnings(cmd.ErrOrStderr(), listWarnings); writeErr != nil {
+		return writeErr
 	}
 	if err != nil {
 		return err
 	}
 
 	// Newest first, so a freshly submitted workload is at the top.
-	sort.SliceStable(views, func(i, j int) bool {
-		if !views[i].CreatedAt.Equal(views[j].CreatedAt) {
-			return views[i].CreatedAt.After(views[j].CreatedAt)
+	slices.SortStableFunc(views, func(a, b workload.View) int {
+		if !a.CreatedAt.Equal(b.CreatedAt) {
+			return b.CreatedAt.Compare(a.CreatedAt)
 		}
-		return views[i].Name < views[j].Name
+		return strings.Compare(a.Name, b.Name)
 	})
 
 	return generator.RenderWorkloads(cmd.OutOrStdout(), cmd.ErrOrStderr(), views, generator.Options{
-		Output:    outputFormat(cmd),
+		Output:    format,
 		Namespace: searched,
 		// An empty namespace means the type is cluster-scoped, so the search
 		// spanned the cluster.
@@ -193,17 +211,12 @@ func runGet(cmd *cobra.Command, opts *getOptions) error {
 	})
 }
 
-// validatePhases checks values against the ResourceStatus enum, which Entries()
-// reports without Undefined.
-func validatePhases(phases []string) error {
-	allowed := []string{string(v1alpha1.UndefinedStatus)}
-	for _, entry := range (v1alpha1.StatusMappings{}).Entries() {
-		allowed = append(allowed, string(entry.Status))
-	}
-
-	for _, phase := range phases {
-		if !slices.ContainsFunc(allowed, func(a string) bool { return strings.EqualFold(a, phase) }) {
-			return fmt.Errorf("--%s %q: must be one of %s", flagPhase, phase, strings.Join(allowed, ", "))
+// printWarnings reports non-fatal diagnostics on stderr, where they stay clear
+// of machine-readable output.
+func printWarnings(out io.Writer, messages []string) error {
+	for _, message := range messages {
+		if _, err := fmt.Fprintf(out, "warning: %s\n", message); err != nil {
+			return fmt.Errorf("write warning: %w", err)
 		}
 	}
 	return nil
@@ -435,8 +448,9 @@ func matchesPhase(view *workload.View, requested []string) bool {
 	if len(requested) == 0 {
 		return true
 	}
+	// Both sides come from the ResourceStatus enum, so the match is exact.
 	for _, want := range requested {
-		if slices.ContainsFunc(view.Phases, func(got string) bool { return strings.EqualFold(got, want) }) {
+		if slices.Contains(view.Phases, want) {
 			return true
 		}
 	}
@@ -460,13 +474,4 @@ var newDynamicClient = func(rcg genericclioptions.RESTClientGetter) (dynamic.Int
 		return nil, fmt.Errorf("kubernetes dynamic client: %w", err)
 	}
 	return client, nil
-}
-
-// outputFormat reads the persistent -o flag off the root command.
-func outputFormat(cmd *cobra.Command) generator.Output {
-	flag := cmd.Root().PersistentFlags().Lookup(flagOutput)
-	if flag == nil {
-		return generator.OutputTable
-	}
-	return generator.Output(flag.Value.String())
 }
