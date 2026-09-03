@@ -193,13 +193,14 @@ func TestGetEmptyResultAsJSONIsAnArray(t *testing.T) {
 	}
 }
 
-// A named workload that does not exist is a distinct failure from an empty list.
+// A named workload that does not exist is a distinct failure from an empty
+// list, and from a cluster that could not be reached at all.
 func TestGetNamedWorkloadNotFound(t *testing.T) {
 	fakeCluster(t)
 
 	_, errOut, code := runGetCmd(t, "jobset/absent")
-	if code != ExitError {
-		t.Fatalf("expected exit %d, got %d\n%s", ExitError, code, errOut)
+	if code != ExitWorkloadNotFound {
+		t.Fatalf("expected exit %d, got %d\n%s", ExitWorkloadNotFound, code, errOut)
 	}
 	if !strings.Contains(errOut, "not found") {
 		t.Errorf("unexpected message: %s", errOut)
@@ -266,6 +267,20 @@ func TestGetUninstalledTypeIsAnEmptyResult(t *testing.T) {
 	}
 	if !strings.Contains(errOut, "PyTorchJob is not installed in this cluster") {
 		t.Errorf("expected the not-installed warning, got %q", errOut)
+	}
+}
+
+// Naming a workload of an absent type is not an empty result: the one workload
+// asked for is missing, which is the same fallback as a plain miss.
+func TestGetNamedWorkloadOfUninstalledType(t *testing.T) {
+	fakeCluster(t) // serves JobSet only
+
+	_, errOut, code := runGetCmd(t, "pytorchjob/absent")
+	if code != ExitWorkloadNotFound {
+		t.Fatalf("expected exit %d, got %d\n%s", ExitWorkloadNotFound, code, errOut)
+	}
+	if !strings.Contains(errOut, "PyTorchJob is not installed in this cluster") {
+		t.Errorf("unexpected message: %s", errOut)
 	}
 }
 

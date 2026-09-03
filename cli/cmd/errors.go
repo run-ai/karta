@@ -5,11 +5,15 @@ package cmd
 
 import "github.com/spf13/cobra"
 
-// Exit codes. The numbers are not a contract; only that conditions differ.
+// Exit codes. The numbers are not a contract; only that conditions differ. An
+// agent falls back differently per condition, so each one it can act on gets
+// its own code. 5 is reserved for a bare NAME matching more than one workload
+// type, which the describe command will accept later.
 const (
-	ExitError    = 1 // cluster unreachable, auth failure, workload not found
-	ExitUsage    = 2 // invalid flag value or argument
-	ExitNotFound = 4 // no Karta definition covers the requested type
+	ExitError            = 1 // cluster unreachable, auth failure
+	ExitUsage            = 2 // invalid flag value or argument
+	ExitWorkloadNotFound = 3 // no such workload of the requested type
+	ExitNotFound         = 4 // no Karta definition covers the requested type
 )
 
 // exitError carries the exit code a failure should produce. A plain error still
