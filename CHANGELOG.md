@@ -36,7 +36,7 @@ Full Changelog: https://github.com/run-ai/karta/compare/v0.2.0...v0.2.1
 
 ## v0.2.0 - 2026-07-15
 
-This release extends Karta from a CRD and Go library into an optional runnable system. It lands the controller / operator (reconcile core, workload-tree model, Helm chart, container images), and a new pod-grouping API for better schedulers integration, alongside a much larger catalog of built-in workload samples. There are no breaking API changes; the previous grouping format is deprecated but still works. See [Deprecations](#%EF%B8%8F-deprecations) for the recommended migration.
+This release extends Karta from a CRD and Go library into an optional runnable system. It lands the controller / operator (reconcile core, workload-tree model, Helm chart, container images), and a new pod-grouping API for better schedulers integration, alongside a much larger catalog of built-in workload samples. There are no breaking API changes; the previous grouping format is deprecated but still works. See [Deprecations](#deprecations) for the recommended migration.
 
 ---
 
@@ -90,7 +90,7 @@ Correction added after release: this is not a drop-in migration at v0.2.0, and t
 
 - Karta's own instruction helpers read only `podGroups`. `pkg/instructions/summary.go` builds gang-scheduling candidates from `GangScheduling.PodGroups` and never reads `GangScheduling.PodGroup`. That is true at v0.2.0 and still true today. A consumer that relies on those helpers for grouping loses its grouping if it switches formats.
 - `podGroup` is honored by the scheduler integration instead. The KAI Karta podgrouper plugin prefers `podGroup` and falls back to `podGroups`. It shipped in KAI v0.17.0 on 2026-08-03, after this release, so at v0.2.0 nothing consumed the new field yet.
-- The two formats are not equivalent. A `podGroups` member carries `groupByKeyPaths`; a `subGroups` entry carries only `componentName` and `topology`, so per-component grouping keys have no direct counterpart.
+- The two formats are not equivalent. A `podGroups` member carries `groupByKeyPaths` and `filters`; a `subGroups` entry carries only `componentName` and `topology`, so per-component grouping keys and filters have no direct counterpart.
 
 Target shape of the new format:
 
