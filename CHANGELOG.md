@@ -17,7 +17,7 @@ Full Changelog: https://github.com/run-ai/karta/compare/v0.1.0...v0.1.1
 
 ## v0.1.0 - 2026-05-12
 
-This release completes the project rename from `ri` / `krt` to karta, decouples the library from `sigs.k8s.io/controller-runtime`, and introduces native suspend / resume support on the CRD. See [Breaking changes](#%EF%B8%8F-breaking-changes) for migration steps.
+This release completes the project rename from `ri` / `krt` to karta, decouples the library from `sigs.k8s.io/controller-runtime`, and introduces native suspend / resume support on the CRD. See [Breaking changes](#breaking-changes) for migration steps.
 
 ---
 
@@ -133,7 +133,7 @@ This is the dominant pattern across major K8s OSS - see the same idiom in [kubev
 - `ValidateParsedJQ` is now exported - external consumers that already hold a compiled `*gojq.Query` can run the read-only / safe-expression check without re-parsing. ([#53](https://github.com/run-ai/karta/pull/53) by @AviadHayumi)
 - Helm chart published to GHCR on every release - pull with `helm install karta oci://ghcr.io/run-ai/karta --version 0.1.0`. ([#27](https://github.com/run-ai/karta/pull/27) by @AviadHayumi)
 - Chart version bump enforcement in CI - `ct lint` blocks PRs that change the chart without bumping `Chart.yaml` version. Matches the prometheus-operator / argo enforcement model. ([#48](https://github.com/run-ai/karta/pull/48) by @AviadHayumi)
-- **`docs/examples/*.yaml` validated in CI** - example Kartas are exercised by CI so docs cant silently drift from the schema. ([#61](https://github.com/run-ai/karta/pull/61) by @Isan-Rivkin)
+- `docs/examples/*.yaml` validated in CI - example Kartas are exercised by CI so docs cannot silently drift from the schema. ([#61](https://github.com/run-ai/karta/pull/61) by @Isan-Rivkin)
 - Issue templates + code of conduct - bug / feature templates plus a contributor CoC. ([#38](https://github.com/run-ai/karta/pull/38) by @yuval-gr)
 - Helm chart annotated with OCI source - `helm.sh/chart-source` annotation links chart back to the GHCR package page. ([#49](https://github.com/run-ai/karta/pull/49) by @AviadHayumi)
 
