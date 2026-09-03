@@ -318,8 +318,14 @@ func resolveVia(
 	gvr schema.GroupVersionResource,
 ) (definitions.Definition, bool, error) {
 	gvk, err := mapper.KindFor(gvr)
-	if err != nil {
+	switch {
+	case err == nil:
+	case meta.IsNoMatchError(err), meta.IsAmbiguousError(err):
 		return definitions.Definition{}, false, nil
+	default:
+		// Discovery failing is not the same as the type being unknown, and
+		// reporting it as unknown would depend on how the type was spelled.
+		return definitions.Definition{}, false, fmt.Errorf("discover %q: %w", gvr.Resource, err)
 	}
 
 	def, err := resolver.Resolve(gvk)
