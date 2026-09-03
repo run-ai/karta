@@ -7,11 +7,10 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"sigs.k8s.io/yaml"
 
 	"github.com/run-ai/karta/cli/pkg/generator"
 )
@@ -61,27 +60,20 @@ var _ = Describe("Render", func() {
 		Expect(out.String()).To(ContainSubstring(`"name": "alpha"`))
 	})
 
-	It("emits an empty item list for no items, not null", func() {
+	It("emits an empty json array for no items, not null", func() {
 		var out bytes.Buffer
 		Expect(generator.Render[item](&out, generator.OutputJSON, nil, unusedTable)).To(Succeed())
-
-		items, count := decodeEnvelope(out.String())
-		Expect(items).To(BeEmpty())
-		Expect(count).To(BeZero())
+		Expect(strings.TrimSpace(out.String())).To(Equal("[]"))
 	})
 
-	It("wraps yaml in the same envelope as json", func() {
-		var yamlOut, jsonOut bytes.Buffer
-		Expect(generator.Render(&yamlOut, generator.OutputYAML, items, unusedTable)).To(Succeed())
-		Expect(generator.Render(&jsonOut, generator.OutputJSON, items, unusedTable)).To(Succeed())
+	It("emits yaml as a document stream, not a list", func() {
+		var out bytes.Buffer
+		Expect(generator.Render(&out, generator.OutputYAML, items, unusedTable)).To(Succeed())
 
-		// One document, not a stream, so the two formats decode alike.
-		Expect(yamlOut.String()).NotTo(ContainSubstring("\n---\n"))
-
-		fromYAML, yamlCount := decodeEnvelope(yamlOut.String())
-		fromJSON, jsonCount := decodeEnvelope(jsonOut.String())
-		Expect(fromYAML).To(Equal(fromJSON))
-		Expect(yamlCount).To(Equal(jsonCount))
+		// Separator between documents, so two documents carry one separator.
+		Expect(strings.Count(out.String(), "\n---\n")).To(Equal(1))
+		Expect(strings.Split(out.String(), "\n---\n")).To(HaveLen(2))
+		Expect(out.String()).NotTo(ContainSubstring("- name:"))
 	})
 
 	It("names the format it cannot render", func() {
@@ -92,15 +84,3 @@ var _ = Describe("Render", func() {
 		Expect(out.String()).To(BeEmpty())
 	})
 })
-
-// decodeEnvelope reads the items and count the machine formats wrap a result in.
-// yaml decodes through json, so one decoder serves both.
-func decodeEnvelope(out string) ([]item, int) {
-	GinkgoHelper()
-	var envelope struct {
-		Items []item `json:"items"`
-		Count int    `json:"count"`
-	}
-	Expect(yaml.Unmarshal([]byte(out), &envelope)).To(Succeed())
-	return envelope.Items, envelope.Count
-}

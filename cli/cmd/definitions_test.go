@@ -6,6 +6,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -191,7 +192,8 @@ var _ = Describe("kli definitions", func() {
 			stdout, _, err := runDefinitions(noClusterGetter(), []string{"-o", "json"})
 			Expect(err).NotTo(HaveOccurred())
 
-			kartas := decodeKartas(stdout)
+			var kartas []v1alpha1.Karta
+			Expect(json.Unmarshal([]byte(stdout), &kartas)).To(Succeed())
 			Expect(kartas).NotTo(BeEmpty())
 			for _, karta := range kartas {
 				Expect(karta.APIVersion).To(Equal("run.ai/v1alpha1"))
@@ -201,13 +203,21 @@ var _ = Describe("kli definitions", func() {
 			Expect(stdout).NotTo(ContainSubstring(`"components"`))
 		})
 
-		It("agrees with json on the same definitions", func() {
+		It("emits a yaml document stream of the same definitions", func() {
 			yamlOut, _, err := runDefinitions(noClusterGetter(), []string{"-o", "yaml"})
 			Expect(err).NotTo(HaveOccurred())
 			jsonOut, _, err := runDefinitions(noClusterGetter(), []string{"-o", "json"})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(decodeKartas(yamlOut)).To(Equal(decodeKartas(jsonOut)))
+			// A document stream, not a yaml list, so decode document by document.
+			var fromYAML, fromJSON []v1alpha1.Karta
+			for _, doc := range strings.Split(strings.TrimSpace(yamlOut), "\n---\n") {
+				var karta v1alpha1.Karta
+				Expect(yaml.Unmarshal([]byte(doc), &karta)).To(Succeed())
+				fromYAML = append(fromYAML, karta)
+			}
+			Expect(json.Unmarshal([]byte(jsonOut), &fromJSON)).To(Succeed())
+			Expect(fromYAML).To(Equal(fromJSON))
 		})
 
 		It("rejects wide, which the root enum accepts for other commands", func() {
@@ -366,10 +376,10 @@ var _ = Describe("rendering an empty definition list", func() {
 		Expect(stderr.String()).To(ContainSubstring("No Karta definitions found."))
 	})
 
-	It("emits an empty json envelope with no note", func() {
+	It("emits an empty json array with no note", func() {
 		var stdout bytes.Buffer
 		Expect(generator.Render[*v1alpha1.Karta](&stdout, generator.OutputJSON, nil, unusedTable)).To(Succeed())
-		Expect(decodeKartas(stdout.String())).To(BeEmpty())
+		Expect(strings.TrimSpace(stdout.String())).To(Equal("[]"))
 	})
 })
 
@@ -392,20 +402,25 @@ var _ = Describe("kli definitions NAME", func() {
 		stdout, _, err := runDefinitions(noClusterGetter(), []string{pytorchDefinition, "-o", "json"})
 		Expect(err).NotTo(HaveOccurred())
 
-		kartas := decodeKartas(stdout)
+		var kartas []v1alpha1.Karta
+		Expect(json.Unmarshal([]byte(stdout), &kartas)).To(Succeed())
 		Expect(kartas).To(HaveLen(1))
 		Expect(kartas[0].Name).To(Equal(pytorchDefinition))
 		Expect(kartas[0].Kind).To(Equal("Karta"))
 	})
 
-	It("emits that definition itself in the yaml envelope", func() {
+	It("emits that definition itself as a single yaml document", func() {
 		stdout, _, err := runDefinitions(noClusterGetter(), []string{pytorchDefinition, "-o", "yaml"})
 		Expect(err).NotTo(HaveOccurred())
 
-		kartas := decodeKartas(stdout)
-		Expect(kartas).To(HaveLen(1))
-		Expect(kartas[0].Name).To(Equal(pytorchDefinition))
-		Expect(kartas[0].Kind).To(Equal("Karta"))
+		// Separator between documents, so one match carries none and the output
+		// is a bare Karta rather than a list of one.
+		Expect(stdout).NotTo(ContainSubstring("---"))
+
+		var karta v1alpha1.Karta
+		Expect(yaml.Unmarshal([]byte(stdout), &karta)).To(Succeed())
+		Expect(karta.Name).To(Equal(pytorchDefinition))
+		Expect(karta.Kind).To(Equal("Karta"))
 	})
 
 	It("prefers the cluster definition when a name exists in both sources", func() {
@@ -512,26 +527,29 @@ var _ = Describe("kli definitions --group --kind --version", func() {
 	)
 
 	Context("machine-readable output", func() {
-		It("carries several matches in one yaml envelope", func() {
+		It("separates several matches into a yaml document stream", func() {
 			stdout, _, err := runDefinitions(noClusterGetter(), []string{"--group", "nvidia.com", "--kind", "DynamoGraphDeployment", "-o", "yaml"})
 			Expect(err).NotTo(HaveOccurred())
 
-			kartas := decodeKartas(stdout)
-			Expect(kartas).To(HaveLen(2))
+			docs := strings.Split(strings.TrimSpace(stdout), "\n---\n")
+			Expect(docs).To(HaveLen(2))
 
-			names := make([]string, 0, len(kartas))
-			for _, karta := range kartas {
+			names := make([]string, 0, len(docs))
+			for _, doc := range docs {
+				var karta v1alpha1.Karta
+				Expect(yaml.Unmarshal([]byte(doc), &karta)).To(Succeed())
 				Expect(karta.Kind).To(Equal("Karta"))
 				names = append(names, karta.Name)
 			}
 			Expect(names).To(Equal([]string{dynamoV1alpha1Definition, dynamoV1beta1Definition}))
 		})
 
-		It("emits the raw definitions in the json envelope", func() {
+		It("emits the raw definitions as a json array", func() {
 			stdout, _, err := runDefinitions(noClusterGetter(), []string{"--group", "jobset.x-k8s.io", "-o", "json"})
 			Expect(err).NotTo(HaveOccurred())
 
-			kartas := decodeKartas(stdout)
+			var kartas []v1alpha1.Karta
+			Expect(json.Unmarshal([]byte(stdout), &kartas)).To(Succeed())
 			Expect(kartas).To(HaveLen(1))
 			Expect(kartas[0].Name).To(Equal(jobsetDefinition))
 			Expect(kartas[0].Spec.StructureDefinition.RootComponent.Name).NotTo(BeEmpty())
@@ -585,16 +603,3 @@ var _ = Describe("definitionFilter", func() {
 		Entry("the core group", definitionFilter{group: "", version: "v1", kind: "Pod"}, "/v1, Kind=Pod"),
 	)
 })
-
-// decodeKartas reads the items the machine formats wrap their result in. yaml
-// decodes through json, so one decoder serves both.
-func decodeKartas(out string) []v1alpha1.Karta {
-	GinkgoHelper()
-	var envelope struct {
-		Items []v1alpha1.Karta `json:"items"`
-		Count int              `json:"count"`
-	}
-	Expect(yaml.Unmarshal([]byte(out), &envelope)).To(Succeed())
-	Expect(envelope.Count).To(Equal(len(envelope.Items)))
-	return envelope.Items
-}

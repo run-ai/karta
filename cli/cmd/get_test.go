@@ -6,7 +6,6 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"strings"
@@ -187,9 +186,8 @@ func TestGetEmptyResultAsJSONIsAnArray(t *testing.T) {
 		t.Fatalf("expected exit 0, got %d", code)
 	}
 	// A consumer piping into jq must not receive empty input.
-	items, count := decodeEnvelope(t, out)
-	if len(items) != 0 || count != 0 {
-		t.Errorf("expected an empty envelope on stdout, got %q", out)
+	if strings.TrimSpace(out) != "[]" {
+		t.Errorf("expected an empty JSON array on stdout, got %q", out)
 	}
 }
 
@@ -330,11 +328,10 @@ func TestGetJSONIsTypedAndAlwaysAnArray(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d", code)
 	}
-	// Unlike kubectl, a single named workload is still wrapped, so consumers
+	// Unlike kubectl, a single named workload is still an array, so consumers
 	// never branch on shape.
-	items, count := decodeEnvelope(t, out)
-	if len(items) != 1 || count != 1 {
-		t.Errorf("expected one wrapped item, got %q", out)
+	if !strings.HasPrefix(strings.TrimSpace(out), "[") {
+		t.Errorf("expected a JSON array, got %q", out)
 	}
 	// Typed values, not display strings: phases is a list, not a joined cell.
 	if !strings.Contains(out, `"phases": [`) {
@@ -583,17 +580,4 @@ func TestRootRejectsUnknownCommand(t *testing.T) {
 	if !errors.As(err, &coded) || coded.ExitCode() != ExitUsage {
 		t.Errorf("expected exit %d, got %v", ExitUsage, err)
 	}
-}
-
-// decodeEnvelope reads the items and count the machine formats wrap a result in.
-func decodeEnvelope(t *testing.T, out string) ([]map[string]any, int) {
-	t.Helper()
-	var envelope struct {
-		Items []map[string]any `json:"items"`
-		Count int              `json:"count"`
-	}
-	if err := json.Unmarshal([]byte(out), &envelope); err != nil {
-		t.Fatalf("decode %q: %v", out, err)
-	}
-	return envelope.Items, envelope.Count
 }

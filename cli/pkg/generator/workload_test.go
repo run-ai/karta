@@ -117,7 +117,7 @@ var _ = Describe("RenderWorkloads", func() {
 			Expect(RenderWorkloads(&out, &errOut, nil,
 				Options{Output: OutputJSON, Namespace: "ml-team"})).To(Succeed())
 
-			Expect(out.String()).To(ContainSubstring(`"items": []`))
+			Expect(strings.TrimSpace(out.String())).To(Equal("[]"))
 			Expect(errOut.Len()).To(BeZero())
 		})
 	})
