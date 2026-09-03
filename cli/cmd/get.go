@@ -35,7 +35,7 @@ const (
 
 	usagePhase     = "Filter by normalized phase; repeatable, and applied after resolution so it does not reduce API cost. One of "
 	usageSelector  = "Label selector on the workload root, kubectl syntax"
-	usageChunkSize = "API list page size; 0 lists without paging. Bounds memory and API pressure, not time to first row"
+	usageChunkSize = "API list page size; 0 lists without paging. Bounds per-request pressure, not total memory or time to first row"
 
 	// defaultChunkSize follows the kubectl convention for list page size.
 	defaultChunkSize = 500

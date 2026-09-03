@@ -124,7 +124,7 @@ Rows are ordered newest first. Counts and GPU are read from the workload spec, s
 
 The cross-type view - every workload Karta covers, in one table, which is the view no native tool provides - is the next step for this command. It needs a rule for which objects are workload roots: the catalog covers Deployment and Pod but not ReplicaSet, so a single-level owner check either floods the table with a Deployment's pods or hides workloads whose controller Karta does not cover.
 
-Clusters can be huge - thousands of workloads across many types is a realistic scenario for our users. `karta get` pages through large result sets so memory and per-request API pressure stay bounded. Note that `--chunk-size` does not bound time-to-first-row: the default ordering is global and `--phase` is evaluated after resolution.
+Clusters can be huge - thousands of workloads across many types is a realistic scenario for our users. `karta get` pages through large result sets so per-request API pressure stays bounded. Note that `--chunk-size` bounds neither total memory nor time-to-first-row: every page is retained, and the default ordering is global, so the whole result is sorted before the first row is rendered.
 
 ### `karta workload tree <name>`
 
