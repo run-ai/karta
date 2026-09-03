@@ -9,6 +9,7 @@ Scope: this file covers minor and major releases, which are tagged from `main`. 
 
 Entries here were backfilled from the published GitHub release notes when this file was introduced.
 
+
 ## v0.2.0 - 2026-07-15
 
 This release extends Karta from a CRD and Go library into an optional runnable system. It lands the controller / operator (reconcile core, workload-tree model, Helm chart, container images), and a new pod-grouping API for better schedulers integration, alongside a much larger catalog of built-in workload samples. There are no breaking API changes; the previous grouping format is deprecated but still works. See [Deprecations](#%EF%B8%8F-deprecations) for the recommended migration.
@@ -150,6 +151,7 @@ plus automated dependency updates from [@dependabot](https://github.com/dependab
 **Full changelog** : https://github.com/run-ai/karta/compare/v0.1.0...v0.2.0
 **Helm chart** : `oci://ghcr.io/run-ai/karta:0.2.0`
 **Container images** : see [packages page](https://github.com/run-ai/karta/pkgs/container/karta)
+
 ## v0.1.0 - 2026-05-12
 
 This release completes the project rename from `ri` / `krt` to **karta** , decouples the library from `sigs.k8s.io/controller-runtime` , and introduces native suspend / resume support on the CRD. See [Breaking changes](#%EF%B8%8F-breaking-changes) for migration steps.
@@ -318,6 +320,7 @@ thanks to everyone who shipped this release :
 
 **Full changelog** : https://github.com/run-ai/karta/compare/v0.0.12...v0.1.0
 **Helm chart** : `oci://ghcr.io/run-ai/karta:0.1.0`
+
 ## v0.0.1 through v0.0.12 - 2025-09-03 to 2026-04-14
 
 Pre-rename development releases under the earlier project name. See the [release list](https://github.com/run-ai/karta/releases) for individual notes.
