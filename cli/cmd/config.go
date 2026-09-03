@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -96,7 +97,11 @@ func buildConfig(cmd *cobra.Command) (*Config, error) {
 		// Reached for a value from config or the environment; the same value
 		// given as a flag is rejected by pflag before this runs.
 		if err := output.Value.Set(cfg.Output); err != nil {
-			return nil, usageError(cmd, fmt.Errorf("output: %w", err))
+			// A format some other command renders is a preference this one
+			// cannot honour, not a mistake. Only an unknown format is an error.
+			if !slices.Contains(NewOutputFlag(true).Allowed(), cfg.Output) {
+				return nil, usageError(cmd, fmt.Errorf("output: %w", err))
+			}
 		}
 	}
 	return &cfg, nil

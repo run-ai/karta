@@ -33,7 +33,7 @@ const (
 	flagSelector  = "selector"
 	flagChunkSize = "chunk-size"
 
-	usagePhase     = "Filter by normalized phase; repeatable. Applied after resolution, so it does not reduce API cost"
+	usagePhase     = "Filter by normalized phase; repeatable, and applied after resolution so it does not reduce API cost. One of "
 	usageSelector  = "Label selector on the workload root, kubectl syntax"
 	usageChunkSize = "API list page size; 0 lists without paging. Bounds memory and API pressure, not time to first row"
 

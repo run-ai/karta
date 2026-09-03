@@ -86,18 +86,27 @@ func NewEnumSlice[T ~string](typeName string, allowed ...T) *EnumSlice[T] {
 // Get returns the values collected so far.
 func (e *EnumSlice[T]) Get() []T { return e.vals }
 
-func (e *EnumSlice[T]) String() string { return "[" + strings.Join(allowedStrings(e.vals), ",") + "]" }
+// String is empty for no values, which is how pflag knows not to print a default.
+func (e *EnumSlice[T]) String() string {
+	if len(e.vals) == 0 {
+		return ""
+	}
+	return strings.Join(allowedStrings(e.vals), ",")
+}
 
 func (e *EnumSlice[T]) Type() string { return e.typeName }
 
 func (e *EnumSlice[T]) Set(v string) error {
-	for _, part := range strings.Split(v, ",") {
+	parts := strings.Split(v, ",")
+	vals := make([]T, 0, len(parts))
+	for _, part := range parts {
 		val, err := oneOf(e.allowed, part)
 		if err != nil {
 			return err
 		}
-		e.vals = append(e.vals, val)
+		vals = append(vals, val)
 	}
+	e.vals = append(e.vals, vals...)
 	return nil
 }
 

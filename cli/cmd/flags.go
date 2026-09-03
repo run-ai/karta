@@ -48,7 +48,7 @@ func withConfig(cmd *cobra.Command) {
 // shell completion.
 func withPhase(cmd *cobra.Command, flags *pflag.FlagSet) *EnumSlice[string] {
 	phase := NewPhaseFlag()
-	flags.Var(phase, flagPhase, usagePhase)
+	flags.Var(phase, flagPhase, usagePhase+strings.Join(phase.Allowed(), ", "))
 	cobra.CheckErr(cmd.RegisterFlagCompletionFunc(flagPhase,
 		func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 			return phase.Allowed(), cobra.ShellCompDirectiveNoFileComp
