@@ -46,25 +46,6 @@ func (e *Enum[T]) Set(v string) error {
 	return nil
 }
 
-// oneOf resolves v against allowed, giving both flag types the same rejection.
-func oneOf[T ~string](allowed []T, v string) (T, error) {
-	for _, a := range allowed {
-		if string(a) == v {
-			return a, nil
-		}
-	}
-	var zero T
-	return zero, fmt.Errorf("%w: must be one of %s", ErrInvalidValue, strings.Join(allowedStrings(allowed), ", "))
-}
-
-func allowedStrings[T ~string](allowed []T) []string {
-	out := make([]string, len(allowed))
-	for i, a := range allowed {
-		out[i] = string(a)
-	}
-	return out
-}
-
 // Allowed returns the permitted values as strings, for usage text and shell
 // completion.
 func (e *Enum[T]) Allowed() []string { return allowedStrings(e.allowed) }
@@ -113,6 +94,25 @@ func (e *EnumSlice[T]) Set(v string) error {
 // Allowed returns the permitted values as strings, for usage text and shell
 // completion.
 func (e *EnumSlice[T]) Allowed() []string { return allowedStrings(e.allowed) }
+
+// oneOf resolves v against allowed, giving both flag types the same rejection.
+func oneOf[T ~string](allowed []T, v string) (T, error) {
+	for _, a := range allowed {
+		if string(a) == v {
+			return a, nil
+		}
+	}
+	var zero T
+	return zero, fmt.Errorf("%w: must be one of %s", ErrInvalidValue, strings.Join(allowedStrings(allowed), ", "))
+}
+
+func allowedStrings[T ~string](allowed []T) []string {
+	out := make([]string, len(allowed))
+	for i, a := range allowed {
+		out[i] = string(a)
+	}
+	return out
+}
 
 // NewOutputFlag returns an Enum backing the -o/--output flag, defaulting to
 // table. A command rendering no extra columns leaves wide out, so the flag

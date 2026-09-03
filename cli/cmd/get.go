@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"slices"
 	"strings"
 
@@ -63,6 +62,25 @@ arrive with the describe command.`
   kli get jobset --phase Degraded --phase Failed -l team=nlp -o json`
 )
 
+// loadDefinitions is a variable so tests can supply a definition set.
+var loadDefinitions = definitions.Load
+
+// newDynamicClient is a variable so tests can inject a fake cluster.
+var newDynamicClient = func(rcg genericclioptions.RESTClientGetter) (dynamic.Interface, error) {
+	cfg, err := RESTConfig(rcg)
+	if err != nil {
+		return nil, err
+	}
+	// Set per-config: a global handler would land in machine-readable stderr.
+	cfg.WarningHandler = rest.NoWarnings{}
+
+	client, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("kubernetes dynamic client: %w", err)
+	}
+	return client, nil
+}
+
 // getOptions holds the resolved inputs for one run of the get command.
 type getOptions struct {
 	typeToken string
@@ -85,7 +103,10 @@ func newGetCommand() *cobra.Command {
 		Short:   getShort,
 		Long:    getLong,
 		Example: getExample,
-		Args:    usageArgs(func(_ *cobra.Command, args []string) error { return parseArgs(opts, args) }),
+		Args: usageArgs(cobra.MatchAll(
+			cobra.RangeArgs(1, 2),
+			func(_ *cobra.Command, args []string) error { return parseArgs(opts, args) },
+		)),
 		PreRunE: func(cmd *cobra.Command, _ []string) error {
 			opts.phases = phase.Get()
 			return validateOptions(cmd, opts)
@@ -118,15 +139,9 @@ func validateOptions(cmd *cobra.Command, opts *getOptions) error {
 }
 
 // parseArgs accepts the three kubectl argument forms: TYPE, TYPE/NAME, and
-// TYPE NAME.
+// TYPE NAME. The count is already bounded by cobra.RangeArgs, so only the shape
+// of the arguments is checked here.
 func parseArgs(opts *getOptions, args []string) error {
-	switch {
-	case len(args) > 2:
-		return fmt.Errorf("accepts at most 2 arguments, received %d", len(args))
-	case len(args) == 0:
-		return fmt.Errorf("a TYPE argument is required")
-	}
-
 	var qualified bool
 	opts.typeToken, opts.name, qualified = strings.Cut(args[0], "/")
 	if qualified && opts.name == "" {
@@ -160,11 +175,7 @@ func runGet(cmd *cobra.Command, opts *getOptions, format generator.Output) error
 	}
 
 	resolver, warnings := loadDefinitions(ctx, access)
-	messages := make([]string, 0, len(warnings))
-	for _, warning := range warnings {
-		messages = append(messages, warning.Message)
-	}
-	if err := printWarnings(cmd.ErrOrStderr(), messages); err != nil {
+	if err := printLoadWarnings(cmd.ErrOrStderr(), warnings); err != nil {
 		return err
 	}
 	if len(resolver.List()) == 0 {
@@ -209,17 +220,6 @@ func runGet(cmd *cobra.Command, opts *getOptions, format generator.Output) error
 		// spanned the cluster.
 		AllNamespaces: searched == "",
 	})
-}
-
-// printWarnings reports non-fatal diagnostics on stderr, where they stay clear
-// of machine-readable output.
-func printWarnings(out io.Writer, messages []string) error {
-	for _, message := range messages {
-		if _, err := fmt.Fprintf(out, "warning: %s\n", message); err != nil {
-			return fmt.Errorf("write warning: %w", err)
-		}
-	}
-	return nil
 }
 
 // resolveTarget maps the requested type to the definition that covers it.
@@ -461,23 +461,4 @@ func matchesPhase(view *workload.View, requested []string) bool {
 		}
 	}
 	return false
-}
-
-// loadDefinitions is a variable so tests can supply a definition set.
-var loadDefinitions = definitions.Load
-
-// newDynamicClient is a variable so tests can inject a fake cluster.
-var newDynamicClient = func(rcg genericclioptions.RESTClientGetter) (dynamic.Interface, error) {
-	cfg, err := RESTConfig(rcg)
-	if err != nil {
-		return nil, err
-	}
-	// Set per-config: a global handler would land in machine-readable stderr.
-	cfg.WarningHandler = rest.NoWarnings{}
-
-	client, err := dynamic.NewForConfig(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("kubernetes dynamic client: %w", err)
-	}
-	return client, nil
 }
