@@ -1,12 +1,11 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- Copyright (c) 2026 NVIDIA Corporation -->
 
-# Changelog - v0.2 patch releases
+# Changelog - v0.2
 
-Patch releases on the `v0.2` line, tagged from this branch. Each entry is the published [GitHub Release](https://github.com/run-ai/karta/releases) body verbatim.
+Every release on the `v0.2` line: the `v0.2.0` minor and the patch releases tagged from this branch. Each entry is the published [GitHub Release](https://github.com/run-ai/karta/releases) body verbatim.
 
-Minor and major releases are tagged from `main` and documented in the changelog there.
-
+`main`'s changelog covers minor and major releases across all lines.
 
 ## v0.2.3 - 2026-08-17
 
@@ -34,3 +33,145 @@ image digests needed to install Karta in an air-gapped cluster.
 
 
 **Full Changelog**: https://github.com/run-ai/karta/compare/v0.2.0...v0.2.1
+
+## v0.2.0 - 2026-07-15
+
+This release extends Karta from a CRD and Go library into an optional runnable system. It lands the controller / operator (reconcile core, workload-tree model, Helm chart, container images), and a new pod-grouping API for better schedulers integration, alongside a much larger catalog of built-in workload samples. There are no breaking API changes; the previous grouping format is deprecated but still works. See [Deprecations](#%EF%B8%8F-deprecations) for the recommended migration.
+
+---
+
+### 🌟 Highlights
+
+| | |
+|---|---|
+| 🚀 **Controller / operator** | The reconcile core, an operator Helm chart, and container images all land, so Karta can now run as a controller rather than only being a CRD plus library. ([#77](https://github.com/run-ai/karta/pull/77), [#97](https://github.com/run-ai/karta/pull/97), [#91](https://github.com/run-ai/karta/pull/91)) |
+| 🌲 **WorkloadTree** | A `WorkloadTree` is the raw component hierarchy of a workload (its desired structure, scale, specs, and status) produced by the Karta library, giving clients a single shared tree to traverse and render. ([#87](https://github.com/run-ai/karta/pull/87))|
+| 🪶 **New pod-grouping API** | `gangScheduling.podGroup` adds subgroups and topology constraints for better schedulers integration; the old `gangScheduling.podGroups` is deprecated but still honored. ([#145](https://github.com/run-ai/karta/pull/145)) |
+
+---
+
+### 📦 Install
+
+**Helm chart** ( from GHCR ) :
+
+```bash
+helm install karta oci://ghcr.io/run-ai/karta/karta --version 0.2.0
+```
+
+**Go consumers** :
+
+```bash
+go get github.com/run-ai/karta@v0.2.0
+```
+
+```go
+import karta "github.com/run-ai/karta/pkg/api/runai/v1alpha1"
+```
+
+---
+
+### 📚 Compatibility
+
+| | |
+|---|---|
+| **Kubernetes** | tested against v1.31 – v1.35 ( `k8s.io/api v0.36.2` ) |
+| **Go** | 1.26.3 or later |
+| **Helm** | 3.14 or later |
+
+---
+
+### ⚠️ Deprecations
+
+#### `gangScheduling.podGroups` → `gangScheduling.podGroup`
+
+The alpha grouping format `podGroups` (a list) is deprecated in favor of the new `podGroup` mapping, which adds subgroups and topology constraints. Existing Kartas using `podGroups` continue to validate and run; migrate when convenient.
+
+```diff
+  optimizationInstructions:
+    gangScheduling:
+-     podGroups:
+-       - name: job
+-         members:
+-           - componentName: launcher
+-             groupByKeyPaths:
+-               - .metadata.labels["training.kubeflow.org/job-name"]
+-           - componentName: worker
+-             groupByKeyPaths:
+-               - .metadata.labels["training.kubeflow.org/job-name"]
++     podGroup:
++       name: job
++       subGroups:
++         - componentName: launcher
++         - componentName: worker
+```
+
+---
+
+### ✨ New features
+
+- **Controller reconcile core** — the operator's central reconcile logic. ([#77](https://github.com/run-ai/karta/pull/77) by @shaked-bouktus)
+- **`WorkloadTree` data model and builder** — a typed tree that assembles a workload's root and child components. ([#87](https://github.com/run-ai/karta/pull/87) by @rogirun)
+- **Operator Helm chart** — deploy the karta operator via Helm. ([#97](https://github.com/run-ai/karta/pull/97) by @shaked-bouktus)
+- **Operator container images** — Dockerfiles for the karta operator. ([#91](https://github.com/run-ai/karta/pull/91) by @shaked-bouktus)
+- **Operator Makefile** — build / run targets for the operator. ([#96](https://github.com/run-ai/karta/pull/96) by @shaked-bouktus)
+- **`karta` CLI** — CLI entrypoint and Cobra root command. ([#127](https://github.com/run-ai/karta/pull/127) by @rogirun)
+- **New pod-grouping API** — `gangScheduling.podGroup` with subgroups and topology. ([#145](https://github.com/run-ai/karta/pull/145) by @davidLif)
+- **Kind-based e2e provisioner** — `hack/e2e` spins up a kind cluster for end-to-end tests. ([#144](https://github.com/run-ai/karta/pull/144) by @AviadHayumi)
+- **Expanded workload sample catalog** — many additional built-in Karta samples across core, batch, training, serving, and Ray workloads. ([#155](https://github.com/run-ai/karta/pull/155) by @AviadHayumi)
+- **Grove `PodCliqueSet` sample** — `grove.io/v1alpha1` Karta example. ([#66](https://github.com/run-ai/karta/pull/66) by @shmuel-runai)
+- **Milvus sample** — `milvus.io/v1beta1` Karta example. ([#103](https://github.com/run-ai/karta/pull/103) by @ronlv10)
+- **Controller example with LWS** — a worked controller example over LeaderWorkerSet. ([#92](https://github.com/run-ai/karta/pull/92) by @yuval-gr)
+- **Quickstart controller example** — minimal controller to get started. ([#84](https://github.com/run-ai/karta/pull/84) by @yuval-gr)
+
+### 🐛 Bug fixes
+
+- Fix native resource discovery. ([#132](https://github.com/run-ai/karta/pull/132) by @shaked-bouktus)
+- Avoid append aliasing of caller-owned component slices. ([#129](https://github.com/run-ai/karta/pull/129) by @ronlv10)
+- Fix rayjob worker `instanceIdPath` nesting in the sample. ([#133](https://github.com/run-ai/karta/pull/133) by @lavianalon)
+- Fix dependabot missing code generation failing CI. ([#150](https://github.com/run-ai/karta/pull/150) by @Isan-Rivkin)
+
+### 🧹 Maintenance
+
+- Bump Go to 1.26.3 and update dependencies. ([#75](https://github.com/run-ai/karta/pull/75) by @yuval-gr)
+- Update `golang.org/x` dependencies to latest. ([#93](https://github.com/run-ai/karta/pull/93) by @yuval-gr)
+- Bump the go-minor-patch dependency group. ([#136](https://github.com/run-ai/karta/pull/136), [#147](https://github.com/run-ai/karta/pull/147) by @dependabot)
+- Add `dependabot.yml` for version updates. ([#120](https://github.com/run-ai/karta/pull/120) by @yuval-gr)
+- Create verified dependabot codegen commits via the GitHub API. ([#153](https://github.com/run-ai/karta/pull/153) by @Isan-Rivkin)
+- CI action bumps: checkout 4→7 ([#123](https://github.com/run-ai/karta/pull/123)), cache 4→6 ([#122](https://github.com/run-ai/karta/pull/122)), setup-go 5→6 ([#121](https://github.com/run-ai/karta/pull/121)), setup-buildx 3→4 ([#146](https://github.com/run-ai/karta/pull/146)). (by @dependabot)
+
+### 📖 Documentation
+
+- Add an authoring tutorial and troubleshooting guide. ([#130](https://github.com/run-ai/karta/pull/130) by @lavianalon)
+- Add ROADMAP and GOVERNANCE. ([#89](https://github.com/run-ai/karta/pull/89) by @lavianalon)
+- Add a maintainer ladder / emeritus policy and RELEASE.md. ([#128](https://github.com/run-ai/karta/pull/128) by @lavianalon)
+- Harden OSS health docs (security policy, code of conduct, contributing). ([#111](https://github.com/run-ai/karta/pull/111) by @lavianalon)
+- Add README badges, community section, and CoC link. ([#125](https://github.com/run-ai/karta/pull/125) by @lavianalon)
+- Add AGENTS.md guide for AI coding agents. ([#73](https://github.com/run-ai/karta/pull/73) by @lavianalon)
+- Add a CLI high-level design document. ([#31](https://github.com/run-ai/karta/pull/31) by @ronlv10)
+- Add KAI Scheduler to the "who uses Karta" section. ([#156](https://github.com/run-ai/karta/pull/156) by @lavianalon)
+- Drop the API group rename from the roadmap and governance. ([#119](https://github.com/run-ai/karta/pull/119) by @lavianalon)
+
+---
+
+### 📊 Dependencies
+
+#### Changed
+
+- Go `1.25.9` → **`1.26.3`**
+- `k8s.io/api` `v0.35.1` → **`v0.36.2`**
+
+---
+
+### 🤝 Contributors
+
+thanks to everyone who shipped this release :
+
+[@AviadHayumi](https://github.com/AviadHayumi) , [@Isan-Rivkin](https://github.com/Isan-Rivkin) , [@davidLif](https://github.com/davidLif) , [@lavianalon](https://github.com/lavianalon) , [@rogirun](https://github.com/rogirun) , [@ronlv10](https://github.com/ronlv10) , [@shaked-bouktus](https://github.com/shaked-bouktus) , [@shmuel-runai](https://github.com/shmuel-runai) , [@yuval-gr](https://github.com/yuval-gr)
+
+plus automated dependency updates from [@dependabot](https://github.com/dependabot).
+
+---
+
+**Full changelog** : https://github.com/run-ai/karta/compare/v0.1.0...v0.2.0
+**Helm chart** : `oci://ghcr.io/run-ai/karta:0.2.0`
+**Container images** : see [packages page](https://github.com/run-ai/karta/pkgs/container/karta)
