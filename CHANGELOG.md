@@ -5,31 +5,9 @@
 
 Notable changes per release. This file is the in-repo source of record: a release's entry is added here before the tag is pushed (see [RELEASE.md](RELEASE.md)), and the [GitHub Release](https://github.com/run-ai/karta/releases) body is written from it, so tagged source archives carry their own entry. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely. Versioning is pre-1.0: minor versions may include breaking changes, see each entry.
 
-Entries through v0.2.3 were backfilled from the published GitHub release notes when this file was introduced.
+Scope: this file covers minor and major releases. Patch releases are cut from their release branch (`v0.1`, `v0.2`) and their entries live on that branch, so this file stays a readable history of the line rather than a log of every tag.
 
-## v0.2.3 - 2026-08-17
-
-### Added
-
-- Digest-pinned air-gap image locks per release: per-platform `ImageLock` YAML assets (linux/amd64, linux/arm64) listing the exact image digests needed for air-gapped installs (#237).
-
-[Full changelog](https://github.com/run-ai/karta/compare/v0.2.2...v0.2.3)
-
-## v0.2.2 - 2026-07-23
-
-### Fixed
-
-- CRD cache transform fix for the v0.2 controller (#177).
-
-[Full changelog](https://github.com/run-ai/karta/compare/v0.2.1...v0.2.2)
-
-## v0.2.1 - 2026-07-20
-
-### Fixed
-
-- Helm chart: operator memory limit raised to 256Mi (#164).
-
-[Full changelog](https://github.com/run-ai/karta/compare/v0.2.0...v0.2.1)
+Entries here were backfilled from the published GitHub release notes when this file was introduced.
 
 ## v0.2.0 - 2026-07-15
 
@@ -37,24 +15,49 @@ Extends Karta from a CRD and Go library into an optional runnable system. No bre
 
 ### Added
 
-- Controller/operator: reconcile core, operator Helm chart, and container images. Karta can now run as a controller rather than only being a CRD plus library (#77, #97, #91).
+- Controller/operator: reconcile core, operator Helm chart, operator container images, and build/run Makefile targets. Karta can now run as a controller rather than only being a CRD plus library (#77, #97, #91, #96).
 - `WorkloadTree`: the raw component hierarchy of a workload (desired structure, scale, specs, status) produced by the library, giving clients a single shared tree to traverse and render (#87).
 - New pod-grouping API: `gangScheduling.podGroup` with subgroups and topology constraints for scheduler integrations (#145).
-- Larger catalog of built-in workload definitions under `docs/catalog/` (#155).
-
-### Deprecated
-
-- The previous `gangScheduling.podGroups` grouping format. Still honored; migrate to `gangScheduling.podGroup`.
-
-[Full changelog](https://github.com/run-ai/karta/compare/v0.1.1...v0.2.0)
-
-## v0.1.1 - 2026-06-01
+- `karta` CLI: entrypoint and Cobra root command (#127).
+- Kind-based e2e provisioner: `hack/e2e` spins up a kind cluster for end-to-end tests (#144).
+- Larger catalog of built-in workload definitions under `docs/catalog/`, spanning core, batch, training, serving, and Ray workloads (#155).
+- Additional samples: Grove `PodCliqueSet` (#66), Milvus (#103), a worked controller example over LeaderWorkerSet (#92), and a minimal quickstart controller (#84).
 
 ### Changed
 
-- Go toolchain bumped to 1.26.3; dependencies updated (#82).
+- Go toolchain `1.25.9` to `1.26.3`; `k8s.io/api` `v0.35.1` to `v0.36.2` (#75, #93).
 
-[Full changelog](https://github.com/run-ai/karta/compare/v0.1.0...v0.1.1)
+### Deprecated
+
+- The previous `gangScheduling.podGroups` grouping format. Still honored; migrate to `gangScheduling.podGroup`:
+
+  ```diff
+    optimizationInstructions:
+      gangScheduling:
+  -     podGroups:
+  -       - name: job
+  -         members:
+  -           - componentName: launcher
+  -             groupByKeyPaths:
+  -               - .metadata.labels["training.kubeflow.org/job-name"]
+  -           - componentName: worker
+  -             groupByKeyPaths:
+  -               - .metadata.labels["training.kubeflow.org/job-name"]
+  +     podGroup:
+  +       name: job
+  +       subGroups:
+  +         - componentName: launcher
+  +         - componentName: worker
+  ```
+
+### Fixed
+
+- Native resource discovery (#132).
+- Append aliasing of caller-owned component slices (#129).
+- RayJob worker `instanceIdPath` nesting in the sample (#133).
+- Dependabot missing code generation failing CI (#150).
+
+[Full changelog](https://github.com/run-ai/karta/compare/v0.1.0...v0.2.0)
 
 ## v0.1.0 - 2026-05-12
 
