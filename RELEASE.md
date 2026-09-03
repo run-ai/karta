@@ -20,8 +20,9 @@ release notes. Consumers should pin to a specific released version.
 
 Karta releases on an as-needed basis rather than a fixed calendar. A release is
 cut when a meaningful set of changes has accumulated on `main`, or when a fix needs
-to ship. There is no separate release branch while the project is pre-1.0; releases
-are tagged from `main`.
+to ship. Minor releases are tagged from `main`. Each minor line then gets a release
+branch (`v0.1`, `v0.2`), and patch releases are tagged from that branch, so patch
+fixes ship without waiting on `main`.
 
 ## Who can cut a release
 
