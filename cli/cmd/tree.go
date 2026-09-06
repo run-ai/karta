@@ -18,9 +18,9 @@ import (
 
 	"github.com/run-ai/karta/cli/pkg/definitions"
 	"github.com/run-ai/karta/cli/pkg/generator"
-	"github.com/run-ai/karta/cli/pkg/physical"
 	"github.com/run-ai/karta/cli/pkg/workload"
 	"github.com/run-ai/karta/pkg/catalog"
+	"github.com/run-ai/karta/pkg/physical"
 )
 
 const (

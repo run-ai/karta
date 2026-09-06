@@ -9,8 +9,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/run-ai/karta/cli/pkg/physical"
 	"github.com/run-ai/karta/cli/pkg/workload"
+	"github.com/run-ai/karta/pkg/physical"
 )
 
 // maxDevicesPerRow caps how many device names a single tree row prints before
