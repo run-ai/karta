@@ -18,10 +18,13 @@
 //	already bound to and reports readiness, cordon state, and topology domain.
 //
 //	Tier 2 (device): requires DRA. Reads the ResourceClaims named in
-//	pod.status.resourceClaimStatuses and pulls the allocated device identity
-//	out of the claim's allocation result. On the classic device-plugin path a
-//	pod only carries a count ("nvidia.com/gpu: 8"), so device identity is not
-//	recoverable and this tier stays empty.
+//	pod.status.resourceClaimStatuses (spec.resourceClaims pods) or
+//	pod.status.extendedResourceClaimStatus (a classic extended-resource
+//	request a DRA-aware scheduler backed with a synthetic claim, e.g. KAI's
+//	DRAExtendedResource support) and pulls the allocated device identity out
+//	of the claim's allocation result. On the plain classic device-plugin path
+//	a pod only carries a count ("nvidia.com/gpu: 8"), so device identity is
+//	not recoverable and this tier stays empty.
 //
 // Every read here is best-effort. The CLI runs under the user's own
 // kubeconfig, which frequently cannot read cluster-scoped Nodes, so a
@@ -239,10 +242,20 @@ func nodeFacts(node *corev1.Node, topologyLabels []string) NodeFacts {
 
 // resolveDevices maps pods to their allocated DRA devices.
 //
-// The hop that matters is pod.status.resourceClaimStatuses -> ResourceClaim
-// -> status.allocation.devices.results. Without DRA there is no object
-// anywhere in the API that says which physical device a pod holds, only how
-// many it requested, which is exactly the gap this tier closes.
+// Two hops both matter, and a pod can go through either one:
+//
+//   - pod.status.resourceClaimStatuses -> ResourceClaim: the pod declared
+//     spec.resourceClaims itself.
+//   - pod.status.extendedResourceClaimStatus -> ResourceClaim: the pod only
+//     requested a classic extended resource (nvidia.com/gpu), but a
+//     DRA-aware scheduler (e.g. KAI, when the DRAExtendedResource feature is
+//     on) backed it with a synthetic claim anyway. Reading only the first
+//     hop would silently show nothing for these, which is exactly the case
+//     this tier exists to close.
+//
+// Either way the claim's status.allocation.devices.results is the only place
+// that says which physical device a pod holds; the pod spec only says how
+// many it requested.
 func resolveDevices(ctx context.Context, dyn dynamic.Interface, mapper meta.RESTMapper, pods []corev1.Pod, snap *Snapshot) {
 	wanted := map[string][]string{} // claim name -> pod keys
 	namespace := ""
@@ -255,6 +268,11 @@ func resolveDevices(ctx context.Context, dyn dynamic.Interface, mapper meta.REST
 			namespace = p.Namespace
 			key := PodKey(p.Namespace, p.Name)
 			wanted[*cs.ResourceClaimName] = append(wanted[*cs.ResourceClaimName], key)
+		}
+		if ext := p.Status.ExtendedResourceClaimStatus; ext != nil && ext.ResourceClaimName != "" {
+			namespace = p.Namespace
+			key := PodKey(p.Namespace, p.Name)
+			wanted[ext.ResourceClaimName] = append(wanted[ext.ResourceClaimName], key)
 		}
 	}
 
