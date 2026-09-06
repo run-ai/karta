@@ -6,10 +6,16 @@ import { ApiProxy } from '@kinvolk/headlamp-plugin/lib';
 const PLUGIN_NAME = 'karta';
 const WASM_EXPORTS_TIMEOUT_MS = 3000;
 
-export type VersionFn = () => string;
+export interface Envelope {
+  data: string | null;
+  error: string | null;
+}
 
 export interface KartaEngine {
-  version: VersionFn;
+  buildTree(definitionJSON: string, workloadJSON: string): Envelope;
+  attributePods(definitionJSON: string, workloadJSON: string, podsJSON: string): Envelope;
+  evaluatePhases(definitionJSON: string, workloadJSON: string): Envelope;
+  listCatalog(): Envelope;
 }
 
 interface GoRuntime {
@@ -20,7 +26,7 @@ interface GoRuntime {
 declare global {
   interface Window {
     Go?: new () => GoRuntime;
-    kartaVersion?: VersionFn;
+    karta?: KartaEngine;
   }
 }
 
@@ -63,11 +69,15 @@ async function findPluginBase(): Promise<string> {
   return `plugins/${PLUGIN_NAME}`;
 }
 
+function isKartaLoaded(karta?: KartaEngine): karta is KartaEngine {
+  return !!karta && Object.keys(karta).length > 0;
+}
+
 async function waitForExports(): Promise<KartaEngine> {
   const deadline = Date.now() + WASM_EXPORTS_TIMEOUT_MS;
   while (Date.now() < deadline) {
-    if (typeof window.kartaVersion === 'function') {
-      return { version: window.kartaVersion };
+    if (isKartaLoaded(window.karta)) {
+      return window.karta;
     }
     await new Promise(resolve => setTimeout(resolve, 10));
   }
@@ -92,12 +102,10 @@ async function instantiate(): Promise<KartaEngine> {
 
   let instance: WebAssembly.Instance;
   try {
-    ({ instance } = await WebAssembly.instantiateStreaming(wasmResp.clone(), go.importObject));
-  } catch {
-    // instantiateStreaming requires an application/wasm content type; fall
-    // back to buffering for servers that mislabel it.
-    const buffer = await wasmResp.arrayBuffer();
-    ({ instance } = await WebAssembly.instantiate(buffer, go.importObject));
+    ({ instance } = await WebAssembly.instantiateStreaming(wasmResp, go.importObject));
+  } catch (err) {
+    console.error('karta: failed to instantiate the WASM module', err);
+    throw err;
   }
 
   go.run(instance);
