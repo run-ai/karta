@@ -50,7 +50,7 @@ Good example value:  image: ghcr.io/example/inference:v1.2.3
 Bad example value:   image: registry.internal.corp/team/inference:latest
 
 Good secret handling:  token := os.Getenv("GITHUB_TOKEN")
-Bad secret handling:   token := "ghp_..." hardcoded in a test
+Bad secret handling:   token := "<a real token pasted here>" hardcoded in a test
 ```
 
 For vulnerability handling and disclosure, `SECURITY.md` is authoritative.
