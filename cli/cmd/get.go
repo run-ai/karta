@@ -354,7 +354,9 @@ func collect(
 	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	switch {
 	case meta.IsNoMatchError(err) && opts.name != "":
-		return nil, namespace, nil, exitError{code: ExitError,
+		// The type is absent, so the named workload cannot exist: the caller
+		// needs the same "no such workload" fallback as a plain miss.
+		return nil, namespace, nil, exitError{code: ExitWorkloadNotFound,
 			err: fmt.Errorf("%s is not installed in this cluster", gvk.Kind)}
 	case meta.IsNoMatchError(err):
 		// No object of this type can exist, so an empty result is the answer.
@@ -376,7 +378,7 @@ func collect(
 	switch {
 	case err == nil:
 	case apierrors.IsNotFound(err) && opts.name != "":
-		return nil, namespace, nil, exitError{code: ExitError,
+		return nil, namespace, nil, exitError{code: ExitWorkloadNotFound,
 			err: fmt.Errorf("%s %q not found%s", gvk.Kind, opts.name, inNamespace(namespace))}
 	case opts.name != "":
 		return nil, namespace, nil, exitError{code: ExitError,
