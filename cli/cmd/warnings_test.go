@@ -12,6 +12,14 @@ import (
 	"github.com/run-ai/karta/cli/pkg/definitions"
 )
 
+var errWriteFailed = errors.New("write failed")
+
+// failingWriter stands in for a closed or full stderr. It returns a sentinel so
+// a test can assert the failure is wrapped rather than replaced.
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) { return 0, errWriteFailed }
+
 // Loading degrades to the catalog with a note rather than failing, so the note
 // is the only thing telling a reader their cluster definitions were not read.
 func TestWarningMessagesReachTheReader(t *testing.T) {
@@ -66,11 +74,3 @@ func TestPrintWarningsReportsAWriteFailure(t *testing.T) {
 		t.Errorf("expected the write failure to be wrapped, got %v", err)
 	}
 }
-
-var errWriteFailed = errors.New("write failed")
-
-// failingWriter stands in for a closed or full stderr. It returns a sentinel so
-// a test can assert the failure is wrapped rather than replaced.
-type failingWriter struct{}
-
-func (failingWriter) Write([]byte) (int, error) { return 0, errWriteFailed }
