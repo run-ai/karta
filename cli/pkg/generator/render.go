@@ -31,20 +31,31 @@ func newList[T any](items []T) list[T] {
 
 // Render writes items in the machine formats and hands the human ones to table.
 func Render[T any](out io.Writer, format Output, items []T, table func(io.Writer) error) error {
+	return render(out, format, newList(items), table)
+}
+
+// RenderOne is Render for a command answering about a single subject. The
+// envelope would say nothing there, so the object is emitted bare and a
+// consumer reads its fields without an items[0] hop.
+func RenderOne[T any](out io.Writer, format Output, item T, human func(io.Writer) error) error {
+	return render(out, format, item, human)
+}
+
+func render(out io.Writer, format Output, value any, human func(io.Writer) error) error {
 	switch format {
 	case OutputTable, OutputWide:
-		return table(out)
+		return human(out)
 
 	case OutputJSON:
 		encoder := json.NewEncoder(out)
 		encoder.SetIndent("", "  ")
-		if err := encoder.Encode(newList(items)); err != nil {
+		if err := encoder.Encode(value); err != nil {
 			return fmt.Errorf("encode as json: %w", err)
 		}
 		return nil
 
 	case OutputYAML:
-		data, err := yaml.Marshal(newList(items))
+		data, err := yaml.Marshal(value)
 		if err != nil {
 			return fmt.Errorf("encode as yaml: %w", err)
 		}
