@@ -25,9 +25,10 @@ import (
 const namespace = "ml-team"
 
 var (
-	deploymentGVK = schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
-	replicaSetGVK = schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "ReplicaSet"}
-	podGVK        = schema.GroupVersionKind{Version: "v1", Kind: "Pod"}
+	deploymentGVK   = schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
+	replicaSetGVK   = schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "ReplicaSet"}
+	podGVK          = schema.GroupVersionKind{Version: "v1", Kind: "Pod"}
+	clusterOwnerGVK = schema.GroupVersionKind{Group: "example.com", Version: "v1", Kind: "ClusterOwner"}
 )
 
 // owned builds an unstructured object of gvk owned by the named controller,
@@ -45,6 +46,13 @@ func owned(gvk schema.GroupVersionKind, name string, uid types.UID, owner *metav
 	if owner != nil {
 		obj.SetOwnerReferences([]metav1.OwnerReference{*owner})
 	}
+	return obj
+}
+
+// clusterScoped builds an owner that lives outside any namespace.
+func clusterScoped(name string, uid types.UID, owner *metav1.OwnerReference) *unstructured.Unstructured {
+	obj := owned(clusterOwnerGVK, name, uid, owner)
+	unstructured.RemoveNestedField(obj.Object, "metadata", "namespace")
 	return obj
 }
 
@@ -73,11 +81,13 @@ func fakeCluster(objects ...runtime.Object) (dynamic.Interface, meta.RESTMapper)
 	for _, gvk := range []schema.GroupVersionKind{deploymentGVK, replicaSetGVK, podGVK} {
 		mapper.Add(gvk, meta.RESTScopeNamespace)
 	}
+	mapper.Add(clusterOwnerGVK, meta.RESTScopeRoot)
 
 	listKinds := map[schema.GroupVersionResource]string{
 		podsGVR: "PodList",
-		{Group: "apps", Version: "v1", Resource: "replicasets"}: "ReplicaSetList",
-		{Group: "apps", Version: "v1", Resource: "deployments"}: "DeploymentList",
+		{Group: "example.com", Version: "v1", Resource: "clusterowners"}: "ClusterOwnerList",
+		{Group: "apps", Version: "v1", Resource: "replicasets"}:          "ReplicaSetList",
+		{Group: "apps", Version: "v1", Resource: "deployments"}:          "DeploymentList",
 	}
 	return dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds, objects...), mapper
 }
@@ -160,6 +170,15 @@ var _ = Describe("PodAttributor", func() {
 
 		Expect(attributor.Filter(ctx, pods, rootUID)).To(HaveLen(2))
 		Expect(gets).To(Equal(2), "one fetch for the shared ReplicaSet, one for the missing one")
+	})
+
+	// Without the scope check the pod is silently dropped from its workload.
+	It("climbs through a cluster-scoped owner", func() {
+		gateway := clusterScoped("gateway", "gateway-uid", controllerOf(deploymentGVK, "web", rootUID))
+		dyn, mapper := fakeCluster(deployment, gateway)
+
+		mine := pod("web-1", controllerOf(clusterOwnerGVK, "gateway", "gateway-uid"))
+		Expect(NewPodAttributor(dyn, mapper).Filter(ctx, []corev1.Pod{mine}, rootUID)).To(HaveLen(1))
 	})
 
 	// Malformed data can point an owner chain at itself; the walk must end.
