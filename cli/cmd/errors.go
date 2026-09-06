@@ -5,10 +5,7 @@ package cmd
 
 import "github.com/spf13/cobra"
 
-// Exit codes. The numbers are not a contract; only that conditions differ. An
-// agent falls back differently per condition, so each one it can act on gets
-// its own code. 5 is reserved for a bare NAME matching more than one workload
-// type, which the describe command will accept later.
+// Exit codes. The numbers are not a contract; only that conditions differ.
 const (
 	ExitError            = 1 // cluster unreachable, auth failure
 	ExitUsage            = 2 // invalid flag value or argument
