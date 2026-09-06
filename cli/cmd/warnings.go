@@ -10,8 +10,8 @@ import (
 	"github.com/run-ai/karta/cli/pkg/definitions"
 )
 
-// printWarnings reports non-fatal diagnostics on stderr, where they stay clear
-// of machine-readable output.
+// printWarnings writes each message with a warning: prefix. Callers pass stderr,
+// so a diagnostic never lands in the machine-readable output on stdout.
 func printWarnings(out io.Writer, messages []string) error {
 	for _, message := range messages {
 		if _, err := fmt.Fprintf(out, "warning: %s\n", message); err != nil {
@@ -21,13 +21,13 @@ func printWarnings(out io.Writer, messages []string) error {
 	return nil
 }
 
-// printLoadWarnings reports what definition loading could not do. Every command
-// that reads definitions degrades the same way - catalog-only, with a note - so
-// they report it the same way too.
-func printLoadWarnings(out io.Writer, warnings []definitions.Warning) error {
+// warningMessages drops the Reason from each warning. It is there for a caller
+// that branches on the kind of failure; one that only prints them wants the
+// message alone.
+func warningMessages(warnings []definitions.Warning) []string {
 	messages := make([]string, 0, len(warnings))
 	for _, warning := range warnings {
 		messages = append(messages, warning.Message)
 	}
-	return printWarnings(out, messages)
+	return messages
 }

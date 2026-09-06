@@ -98,7 +98,7 @@ func newDefinitionsCommand(rcg genericclioptions.RESTClientGetter) *cobra.Comman
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resolver, warnings := definitions.Load(cmd.Context(), rcg)
-			if err := printLoadWarnings(cmd.ErrOrStderr(), warnings); err != nil {
+			if err := printWarnings(cmd.ErrOrStderr(), warningMessages(warnings)); err != nil {
 				return err
 			}
 

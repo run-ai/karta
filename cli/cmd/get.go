@@ -175,7 +175,7 @@ func runGet(cmd *cobra.Command, opts *getOptions, format generator.Output) error
 	}
 
 	resolver, warnings := loadDefinitions(ctx, access)
-	if err := printLoadWarnings(cmd.ErrOrStderr(), warnings); err != nil {
+	if err := printWarnings(cmd.ErrOrStderr(), warningMessages(warnings)); err != nil {
 		return err
 	}
 	if len(resolver.List()) == 0 {
