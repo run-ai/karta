@@ -368,20 +368,33 @@ func sortedKeys(m map[string]struct{}) []string {
 }
 
 // FormatDevices renders a device list for a single tree row, capping the
-// output so a 72-GPU rack does not wrap the terminal.
+// output so a 72-GPU rack does not wrap the terminal. Each entry carries its
+// driver and pool - the fields that disambiguate identically-named devices
+// across vendors or pools, which matters once a cluster serves more than one
+// DRA driver.
 func FormatDevices(devices []Device, max int) string {
 	if len(devices) == 0 {
 		return ""
 	}
 	names := make([]string, 0, len(devices))
 	for _, d := range devices {
-		names = append(names, ShortDeviceName(d.Name))
+		names = append(names, formatDevice(d))
 	}
 	if max > 0 && len(names) > max {
 		extra := len(names) - max
 		names = append(names[:max:max], fmt.Sprintf("+%d more", extra))
 	}
 	return strings.Join(names, ",")
+}
+
+// formatDevice renders one device as "name (driver/pool)", omitting the
+// parenthetical when driver and pool are both unset (e.g. a fake test claim).
+func formatDevice(d Device) string {
+	name := ShortDeviceName(d.Name)
+	if d.Driver == "" && d.Pool == "" {
+		return name
+	}
+	return fmt.Sprintf("%s (%s/%s)", name, d.Driver, d.Pool)
 }
 
 // ShortDeviceName trims a device identifier for display. Real DRA drivers
