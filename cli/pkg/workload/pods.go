@@ -16,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
+
+	"github.com/run-ai/karta/pkg/physical"
 )
 
 // maxOwnerDepth bounds the owner-reference walk. Real controller chains (root
@@ -45,6 +47,24 @@ type PodStats struct {
 	// newest attributed pod, zero when there are none.
 	OldestPod time.Time `json:"oldestPod,omitempty"`
 	NewestPod time.Time `json:"newestPod,omitempty"`
+
+	// DeviceCount, DegradedNodes and Domains stay zero unless EnrichStats has
+	// run, so a plain "karta get" is unaffected.
+	//
+	// DeviceCount is the number of individually-identified DRA devices held
+	// across the attributed pods. It differs from AllocatedGPUs, which is the
+	// requested-and-running count off the pod spec: AllocatedGPUs is what was
+	// asked for, DeviceCount is what was actually allocated and can be named.
+	DeviceCount int `json:"deviceCount,omitempty"`
+	// Devices lists each allocated device as "name (driver/pool)".
+	Devices []string `json:"devices,omitempty"`
+	// DegradedNodes lists nodes among the attributed pods' nodes that are
+	// NotReady or cordoned.
+	DegradedNodes []string `json:"degradedNodes,omitempty"`
+	// Domains lists the distinct topology domains the attributed pods' nodes
+	// belong to. More than one entry means the workload spans a fabric
+	// boundary.
+	Domains []string `json:"domains,omitempty"`
 }
 
 // PodAttributor attributes live Pods to a workload root by walking each
@@ -117,6 +137,52 @@ func (a *PodAttributor) Attribute(ctx context.Context, pods []corev1.Pod, rootUI
 	slices.Sort(nodes)
 	stats.Nodes = slices.Compact(nodes)
 	return stats
+}
+
+// EnrichStats folds a physical snapshot into an already-computed PodStats,
+// annotating it with node health, topology domain and device identity for
+// pods (expected to already be Filter()-ed to one workload). It is a
+// separate pass, mirroring workload.EnrichTree, so a caller with no
+// node/ResourceClaim read permission or one that only wants spec-derived
+// stats is unaffected.
+func EnrichStats(stats *PodStats, pods []corev1.Pod, namespace string, snap *physical.Snapshot) {
+	if snap == nil {
+		return
+	}
+	degraded := map[string]struct{}{}
+	domains := map[string]struct{}{}
+	var devices []string
+	var deviceGPUs int64
+
+	for _, pod := range pods {
+		if facts, ok := snap.NodeFor(pod.Spec.NodeName); ok {
+			if !facts.Healthy() {
+				degraded[facts.Name] = struct{}{}
+			}
+			if facts.Domain != "" {
+				domains[facts.Domain] = struct{}{}
+			}
+		}
+		podDevices := snap.DevicesFor(namespace, pod.Name)
+		for _, d := range podDevices {
+			devices = append(devices, physical.FormatDevices([]physical.Device{d}, 0))
+		}
+		if pod.Status.Phase == corev1.PodRunning && len(podDevices) > 0 {
+			deviceGPUs += int64(len(podDevices))
+		}
+	}
+
+	stats.DeviceCount = len(devices)
+	stats.Devices = devices
+	stats.DegradedNodes = sortedSetKeys(degraded)
+	stats.Domains = sortedSetKeys(domains)
+	// A DRA pod requests devices through spec.resourceClaims, not through the
+	// nvidia.com/gpu extended resource, so the spec-derived count is zero for
+	// every GPU workload on a DRA cluster. The allocation result is the only
+	// truthful count available in that case.
+	if stats.AllocatedGPUs == 0 && deviceGPUs > 0 {
+		stats.AllocatedGPUs = deviceGPUs
+	}
 }
 
 // pendingReason reports the first scheduling failure on pod, empty when it is

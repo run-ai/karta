@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"sort"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"github.com/run-ai/karta/cli/pkg/workload"
 	"github.com/run-ai/karta/pkg/api/runai/v1alpha1"
 	"github.com/run-ai/karta/pkg/catalog"
+	"github.com/run-ai/karta/pkg/physical"
 )
 
 const (
@@ -43,11 +45,13 @@ const defaultChunkSize = 500
 
 // getOptions holds the resolved inputs for one run of the get command.
 type getOptions struct {
-	typeToken string
-	name      string
-	phases    []string
-	selector  string
-	chunkSize int64
+	typeToken      string
+	name           string
+	phases         []string
+	selector       string
+	chunkSize      int64
+	physical       bool
+	topologyLabels []string
 }
 
 // newGetCommand builds the "karta get" command: one row per workload root.
@@ -86,6 +90,10 @@ func newGetCommand() *cobra.Command {
 		"Label selector on the workload root, kubectl syntax")
 	cmd.Flags().Int64Var(&opts.chunkSize, flagChunkSize, defaultChunkSize,
 		"API list page size; 0 lists without paging. Bounds memory and API pressure, not time to first row")
+	cmd.Flags().BoolVar(&opts.physical, flagPhysical, false,
+		"resolve the physical layer: node health, topology domain, and per-device identity where DRA is in use")
+	cmd.Flags().StringSliceVar(&opts.topologyLabels, flagTopologyLabel, nil,
+		"node labels that name a topology domain, tried in order (default nvidia.com/gpu.clique, topology.kubernetes.io/zone)")
 
 	return cmd
 }
@@ -179,7 +187,7 @@ func runGet(cmd *cobra.Command, opts *getOptions) error {
 	}
 
 	if len(views) > 0 {
-		if podWarning := attributePods(ctx, dyn, mapper, searched, views); podWarning != nil {
+		if podWarning := attributePods(ctx, dyn, mapper, searched, views, opts, cmd.ErrOrStderr()); podWarning != nil {
 			fmt.Fprintf(cmd.ErrOrStderr(), "warning: %s\n", podWarning)
 		}
 	}
@@ -477,8 +485,13 @@ var podsGVR = schema.GroupVersionResource{Version: "v1", Resource: "pods"}
 // matching a cluster-scoped root's search) and, for each view, sets PodStats
 // from the pods whose owner-reference chain reaches its root UID. A listing
 // failure degrades to a warning: pod stats are an enrichment, not the result.
+//
+// With opts.physical set, it also resolves node health, topology domain and
+// DRA device identity per view, writing any read-permission warnings to
+// errOut rather than failing the command.
 func attributePods(
-	ctx context.Context, dyn dynamic.Interface, mapper meta.RESTMapper, namespace string, views []workload.View,
+	ctx context.Context, dyn dynamic.Interface, mapper meta.RESTMapper, namespace string,
+	views []workload.View, opts *getOptions, errOut io.Writer,
 ) error {
 	list, err := dyn.Resource(podsGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -495,8 +508,26 @@ func attributePods(
 	}
 
 	attributor := workload.NewPodAttributor(dyn, mapper)
+
+	var snap *physical.Snapshot
+	if opts.physical {
+		// Resolved once over every pod in namespace, not per view: a
+		// namespace-wide "karta get" would otherwise read every node and
+		// ResourceClaim once per workload and print the same permission
+		// warning once per workload too.
+		snap = physical.Resolve(ctx, dyn, mapper, pods, physical.Options{TopologyLabels: opts.topologyLabels})
+		for _, warning := range snap.Warnings {
+			fmt.Fprintf(errOut, "warning: %s\n", warning)
+		}
+	}
+
 	for i := range views {
-		views[i].PodStats = attributor.Attribute(ctx, pods, apitypes.UID(views[i].UID))
+		uid := apitypes.UID(views[i].UID)
+		views[i].PodStats = attributor.Attribute(ctx, pods, uid)
+		if opts.physical {
+			attributed := attributor.Filter(ctx, pods, uid)
+			workload.EnrichStats(&views[i].PodStats, attributed, views[i].Namespace, snap)
+		}
 	}
 	return nil
 }

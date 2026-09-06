@@ -80,7 +80,7 @@ func renderTable(out io.Writer, views []workload.View, opts Options) error {
 
 	headers := []string{"NAME", "NAMESPACE", "PHASE", "COMPONENTS", "PODS", "GPUS", "AGE"}
 	if opts.Output == OutputWide {
-		headers = append(headers, "CPU", "MEM", "RESTARTS", "NODES", "POD-SPREAD", "PENDING", "ORIGIN")
+		headers = append(headers, "CPU", "MEM", "RESTARTS", "NODES", "POD-SPREAD", "PENDING", "DEVICES", "DEGRADED", "DOMAIN", "ORIGIN")
 	}
 	fmt.Fprintln(writer, strings.Join(headers, "\t"))
 
@@ -102,6 +102,9 @@ func renderTable(out io.Writer, views []workload.View, opts Options) error {
 				truncated(strings.Join(stats.Nodes, ","), nodesWidth),
 				podSpread(stats),
 				truncated(orDash(stats.PendingReason), pendingWidth),
+				truncated(orDash(strings.Join(stats.Devices, ",")), nodesWidth),
+				truncated(orDash(strings.Join(stats.DegradedNodes, ",")), nodesWidth),
+				domainCell(stats.Domains),
 				view.Origin,
 			)
 		}
@@ -130,6 +133,19 @@ func orDash(s string) string {
 		return "-"
 	}
 	return s
+}
+
+// domainCell renders the topology domains a workload's pods span, flagging
+// more than one as a fabric-boundary split.
+func domainCell(domains []string) string {
+	if len(domains) == 0 {
+		return "-"
+	}
+	joined := strings.Join(domains, ",")
+	if len(domains) > 1 {
+		joined += " (split)"
+	}
+	return joined
 }
 
 // truncated elides s past width so a long value cannot push later columns
